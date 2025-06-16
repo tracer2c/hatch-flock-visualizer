@@ -122,7 +122,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                 <Tooltip 
                   formatter={(value, name) => [
                     `${typeof value === 'number' ? value.toFixed(1) : value}%`, 
-                    name.replace('avg', 'Avg ')
+                    String(name).replace('avg', 'Avg ')
                   ]}
                 />
                 <Bar dataKey="avgFertility" fill="#8884d8" name="avgFertility" />

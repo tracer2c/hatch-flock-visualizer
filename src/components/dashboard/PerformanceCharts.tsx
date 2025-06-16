@@ -84,7 +84,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 <Tooltip 
                   formatter={(value, name) => [
                     `${value}%`, 
-                    name.charAt(0).toUpperCase() + name.slice(1)
+                    String(name).charAt(0).toUpperCase() + String(name).slice(1)
                   ]}
                 />
                 <Bar dataKey="fertility" fill="#8884d8" name="fertility" />
@@ -106,7 +106,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 <Tooltip 
                   formatter={(value, name) => [
                     `${value}%`, 
-                    name.charAt(0).toUpperCase() + name.slice(1)
+                    String(name).charAt(0).toUpperCase() + String(name).slice(1)
                   ]}
                 />
                 <Area type="monotone" dataKey="fertility" stackId="1" stroke="#8884d8" fill="#8884d8" />
@@ -132,8 +132,8 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
               <Tooltip 
                 cursor={{ strokeDasharray: '3 3' }}
                 formatter={(value, name) => [
-                  `${value}${name === 'age' ? ' weeks' : '%'}`, 
-                  name.charAt(0).toUpperCase() + name.slice(1)
+                  `${value}${String(name) === 'age' ? ' weeks' : '%'}`, 
+                  String(name).charAt(0).toUpperCase() + String(name).slice(1)
                 ]}
               />
               <Scatter name="Fertility vs Age" dataKey="fertility" fill="#8884d8" />
