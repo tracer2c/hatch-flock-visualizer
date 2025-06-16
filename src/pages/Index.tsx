@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, BarChart3, LineChart, PieChart, TrendingUp, Filter } from "lucide-react";
+import { Upload, BarChart3, LineChart, PieChart, TrendingUp, Filter, FileInput } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import OverviewDashboard from "@/components/dashboard/OverviewDashboard";
 import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
 import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import DataUpload from "@/components/dashboard/DataUpload";
+import DataEntry from "@/components/dashboard/DataEntry";
 
 // Sample data
 const initialData = [
@@ -102,7 +103,7 @@ const Index = () => {
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Overview
@@ -114,6 +115,10 @@ const Index = () => {
             <TabsTrigger value="comparison" className="flex items-center gap-2">
               <LineChart className="h-4 w-4" />
               Comparison
+            </TabsTrigger>
+            <TabsTrigger value="entry" className="flex items-center gap-2">
+              <FileInput className="h-4 w-4" />
+              Data Entry
             </TabsTrigger>
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
@@ -131,6 +136,10 @@ const Index = () => {
 
           <TabsContent value="comparison">
             <ComparisonAnalysis data={filteredData} />
+          </TabsContent>
+
+          <TabsContent value="entry">
+            <DataEntry data={data} onDataUpdate={handleDataUpdate} />
           </TabsContent>
 
           <TabsContent value="upload">

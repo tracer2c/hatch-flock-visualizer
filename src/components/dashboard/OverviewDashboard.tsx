@@ -165,7 +165,7 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
               <Tooltip 
                 formatter={(value, name) => [
                   `${typeof value === 'number' ? value.toFixed(1) : value}%`, 
-                  name.charAt(0).toUpperCase() + name.slice(1)
+                  String(name).charAt(0).toUpperCase() + String(name).slice(1)
                 ]}
               />
               <Line type="monotone" dataKey="fertility" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
