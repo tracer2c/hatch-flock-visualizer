@@ -1,16 +1,57 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, AreaChart, Area } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { useState } from "react";
+import DemoTutorial from "./DemoTutorial";
 
 interface PerformanceChartsProps {
   data: any[];
 }
 
+const performanceDemoSteps = [
+  {
+    id: "chart-controls",
+    title: "Chart Controls",
+    description: "Use these controls to customize your view. Sort data by different metrics and switch between chart types for better insights.",
+    target: "chart-controls",
+    position: "bottom" as const
+  },
+  {
+    id: "main-chart",
+    title: "Detailed Performance Analysis",
+    description: "This main chart displays all performance metrics for each flock. You can switch between bar and area charts to visualize data differently.",
+    target: "main-chart",
+    position: "top" as const
+  },
+  {
+    id: "correlation-chart",
+    title: "Correlation Analysis",
+    description: "This scatter plot helps identify relationships between flock age and fertility performance, revealing important patterns.",
+    target: "correlation-chart",
+    position: "top" as const
+  },
+  {
+    id: "top-performers",
+    title: "Top Performers",
+    description: "These cards highlight your best performing flocks based on fertility rates, helping you identify successful operations.",
+    target: "top-performers",
+    position: "top" as const
+  },
+  {
+    id: "bottom-performers",
+    title: "Bottom Performers",
+    description: "These cards show flocks that need attention, allowing you to focus improvement efforts where they're needed most.",
+    target: "bottom-performers",
+    position: "top" as const
+  }
+];
+
 const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
   const [sortBy, setSortBy] = useState("fertility");
   const [chartType, setChartType] = useState("bar");
+  const [showDemo, setShowDemo] = useState(false);
 
   // Sort data based on selected metric
   const sortedData = [...data].sort((a, b) => {
@@ -24,8 +65,20 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Demo Button */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          View Demo
+        </Button>
+      </div>
+
       {/* Controls */}
-      <Card>
+      <Card data-demo-id="chart-controls">
         <CardHeader>
           <CardTitle>Chart Controls</CardTitle>
         </CardHeader>
@@ -64,7 +117,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
       </Card>
 
       {/* Main Performance Chart */}
-      <Card>
+      <Card data-demo-id="main-chart">
         <CardHeader>
           <CardTitle>Detailed Performance Analysis</CardTitle>
         </CardHeader>
@@ -119,7 +172,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
       </Card>
 
       {/* Correlation Analysis */}
-      <Card>
+      <Card data-demo-id="correlation-chart">
         <CardHeader>
           <CardTitle>Correlation Analysis: Age vs Performance</CardTitle>
         </CardHeader>
@@ -144,7 +197,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
 
       {/* Top and Bottom Performers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card data-demo-id="top-performers">
           <CardHeader>
             <CardTitle className="text-green-600">Top 5 Performers (Fertility)</CardTitle>
           </CardHeader>
@@ -166,7 +219,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-demo-id="bottom-performers">
           <CardHeader>
             <CardTitle className="text-red-600">Bottom 5 Performers (Fertility)</CardTitle>
           </CardHeader>
@@ -188,6 +241,14 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Demo Tutorial */}
+      <DemoTutorial 
+        steps={performanceDemoSteps}
+        isActive={showDemo}
+        onClose={() => setShowDemo(false)}
+        pageName="Performance"
+      />
     </div>
   );
 };

@@ -1,7 +1,9 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Activity, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import DemoTutorial from "./DemoTutorial";
 
 interface OverviewDashboardProps {
   data: any[];
@@ -9,7 +11,40 @@ interface OverviewDashboardProps {
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
 
+const overviewDemoSteps = [
+  {
+    id: "kpi-cards",
+    title: "Key Performance Indicators",
+    description: "These cards show the average performance metrics across all your hatchery data. Each card represents a critical KPI for monitoring hatchery operations.",
+    target: "kpi-cards",
+    position: "bottom" as const
+  },
+  {
+    id: "hatchery-comparison",
+    title: "Hatchery Performance Comparison",
+    description: "This bar chart compares average fertility and hatch rates across different hatcheries, helping you identify top performers.",
+    target: "hatchery-comparison",
+    position: "top" as const
+  },
+  {
+    id: "age-distribution",
+    title: "Flock Age Distribution",
+    description: "This pie chart shows how your flocks are distributed across different age ranges, helping with planning and resource allocation.",
+    target: "age-distribution",
+    position: "top" as const
+  },
+  {
+    id: "performance-trend",
+    title: "Performance Trends",
+    description: "This line chart shows performance trends across all flocks, helping you identify patterns and outliers in your data.",
+    target: "performance-trend",
+    position: "top" as const
+  }
+];
+
 const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
+  const [showDemo, setShowDemo] = useState(false);
+
   // Calculate KPIs
   const avgFertility = data.reduce((sum, item) => sum + item.fertility, 0) / data.length;
   const avgHatch = data.reduce((sum, item) => sum + item.hatch, 0) / data.length;
@@ -49,8 +84,20 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Demo Button */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          View Demo
+        </Button>
+      </div>
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-demo-id="kpi-cards">
         <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Fertility</CardTitle>
@@ -99,7 +146,7 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hatchery Performance Bar Chart */}
-        <Card>
+        <Card data-demo-id="hatchery-comparison">
           <CardHeader>
             <CardTitle>Hatchery Performance Comparison</CardTitle>
           </CardHeader>
@@ -123,7 +170,7 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
         </Card>
 
         {/* Age Distribution Pie Chart */}
-        <Card>
+        <Card data-demo-id="age-distribution">
           <CardHeader>
             <CardTitle>Flock Age Distribution</CardTitle>
           </CardHeader>
@@ -152,7 +199,7 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
       </div>
 
       {/* Performance Trend Line Chart */}
-      <Card>
+      <Card data-demo-id="performance-trend">
         <CardHeader>
           <CardTitle>Performance Metrics Trend by Flock</CardTitle>
         </CardHeader>
@@ -175,6 +222,14 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Demo Tutorial */}
+      <DemoTutorial 
+        steps={overviewDemoSteps}
+        isActive={showDemo}
+        onClose={() => setShowDemo(false)}
+        pageName="Overview"
+      />
     </div>
   );
 };

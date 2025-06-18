@@ -1,18 +1,51 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import DemoTutorial from "./DemoTutorial";
 
 interface ComparisonAnalysisProps {
   data: any[];
 }
 
+const comparisonDemoSteps = [
+  {
+    id: "item-selection",
+    title: "Item Selection",
+    description: "Select up to 5 flocks to compare their performance side by side. Click on any flock to add it to your comparison.",
+    target: "item-selection",
+    position: "bottom" as const
+  },
+  {
+    id: "hatchery-comparison",
+    title: "Hatchery Comparison",
+    description: "Compare overall performance between different hatcheries with detailed statistics and visual charts.",
+    target: "hatchery-comparison",
+    position: "top" as const
+  },
+  {
+    id: "radar-chart",
+    title: "Radar Chart Comparison",
+    description: "The radar chart provides a comprehensive view of multiple metrics for selected items, making it easy to spot strengths and weaknesses.",
+    target: "radar-chart",
+    position: "top" as const
+  },
+  {
+    id: "comparison-table",
+    title: "Detailed Comparison Table",
+    description: "The table shows exact values for easy comparison of key metrics between your selected flocks.",
+    target: "comparison-table",
+    position: "top" as const
+  }
+];
+
 const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [comparisonMetric, setComparisonMetric] = useState("fertility");
+  const [showDemo, setShowDemo] = useState(false);
 
   const handleItemSelect = (flock: string) => {
     if (selectedItems.includes(flock)) {
@@ -69,8 +102,20 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Demo Button */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          View Demo
+        </Button>
+      </div>
+
       {/* Item Selection */}
-      <Card>
+      <Card data-demo-id="item-selection">
         <CardHeader>
           <CardTitle>Select Items to Compare (Max 5)</CardTitle>
         </CardHeader>
@@ -108,7 +153,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
       </Card>
 
       {/* Hatchery Comparison */}
-      <Card>
+      <Card data-demo-id="hatchery-comparison">
         <CardHeader>
           <CardTitle>Hatchery Performance Comparison</CardTitle>
         </CardHeader>
@@ -161,20 +206,22 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Radar Chart */}
-              <ResponsiveContainer width="100%" height={400}>
-                <RadarChart data={radarData.length > 0 ? radarData : []}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar name="Performance" dataKey="fertility" stroke="#8884d8" fill="#8884d8" fillOpacity={0.1} />
-                  <Radar name="Hatch Rate" dataKey="hatch" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.1} />
-                  <Radar name="HOI" dataKey="hoi" stroke="#ffc658" fill="#ffc658" fillOpacity={0.1} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
+              <div data-demo-id="radar-chart">
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={radarData.length > 0 ? radarData : []}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                    <Radar name="Performance" dataKey="fertility" stroke="#8884d8" fill="#8884d8" fillOpacity={0.1} />
+                    <Radar name="Hatch Rate" dataKey="hatch" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.1} />
+                    <Radar name="HOI" dataKey="hoi" stroke="#ffc658" fill="#ffc658" fillOpacity={0.1} />
+                    <Legend />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
 
               {/* Comparison Table */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" data-demo-id="comparison-table">
                 <table className="w-full border-collapse border border-gray-200">
                   <thead>
                     <tr className="bg-gray-50">
@@ -207,6 +254,14 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Demo Tutorial */}
+      <DemoTutorial 
+        steps={comparisonDemoSteps}
+        isActive={showDemo}
+        onClose={() => setShowDemo(false)}
+        pageName="Comparison"
+      />
     </div>
   );
 };
