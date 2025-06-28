@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, BarChart3, LineChart, PieChart, TrendingUp, Filter, FileInput, Egg } from "lucide-react";
+import { Upload, BarChart3, LineChart, PieChart, TrendingUp, Filter, FileInput, Egg, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import OverviewDashboard from "@/components/dashboard/OverviewDashboard";
@@ -14,6 +13,7 @@ import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import DataUpload from "@/components/dashboard/DataUpload";
 import DataEntry from "@/components/dashboard/DataEntry";
 import FertilityDataEntry from "@/components/dashboard/FertilityDataEntry";
+import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
 
 // Sample data
 const initialData = [
@@ -40,6 +40,7 @@ const initialData = [
 const Index = () => {
   const [data, setData] = useState(initialData);
   const [fertilityData, setFertilityData] = useState([]);
+  const [residueData, setResidueData] = useState([]);
   const [selectedHatchery, setSelectedHatchery] = useState("all");
   const { toast } = useToast();
 
@@ -56,6 +57,14 @@ const Index = () => {
     toast({
       title: "Fertility Data Updated",
       description: `Successfully updated ${newData.length} fertility records.`,
+    });
+  };
+
+  const handleResidueDataUpdate = (newData: any[]) => {
+    setResidueData(newData);
+    toast({
+      title: "Residue Data Updated",
+      description: `Successfully updated ${newData.length} residue analysis records.`,
     });
   };
 
@@ -113,7 +122,7 @@ const Index = () => {
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[900px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[1050px]">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Overview
@@ -134,6 +143,10 @@ const Index = () => {
               <Egg className="h-4 w-4" />
               Fertility
             </TabsTrigger>
+            <TabsTrigger value="residue" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Residue
+            </TabsTrigger>
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Data Upload
@@ -141,7 +154,11 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="overview">
-            <OverviewDashboard data={filteredData} />
+            <OverviewDashboard 
+              data={filteredData} 
+              fertilityData={fertilityData}
+              residueData={residueData}
+            />
           </TabsContent>
 
           <TabsContent value="performance">
@@ -158,6 +175,10 @@ const Index = () => {
 
           <TabsContent value="fertility">
             <FertilityDataEntry data={fertilityData} onDataUpdate={handleFertilityDataUpdate} />
+          </TabsContent>
+
+          <TabsContent value="residue">
+            <ResidueDataEntry data={residueData} onDataUpdate={handleResidueDataUpdate} />
           </TabsContent>
 
           <TabsContent value="upload">

@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Activity, Eye } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Activity, Eye, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import DemoTutorial from "./DemoTutorial";
 
 interface OverviewDashboardProps {
   data: any[];
+  fertilityData?: any[];
+  residueData?: any[];
 }
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
@@ -42,7 +44,7 @@ const overviewDemoSteps = [
   }
 ];
 
-const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
+const OverviewDashboard = ({ data, fertilityData = [], residueData = [] }: OverviewDashboardProps) => {
   const [showDemo, setShowDemo] = useState(false);
 
   // Calculate KPIs
@@ -81,6 +83,26 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
     range: range.range,
     count: data.filter(item => item.age >= range.min && item.age <= range.max).length
   }));
+
+  // Enhanced correlation analysis with residue data
+  const getCorrelationInsights = () => {
+    if (residueData.length === 0) return null;
+
+    const avgContamination = residueData.reduce((sum: number, item: any) => sum + item.contaminationPercent, 0) / residueData.length;
+    const avgMold = residueData.reduce((sum: number, item: any) => sum + item.moldPercent, 0) / residueData.length;
+    const avgLateDeath = residueData.reduce((sum: number, item: any) => sum + item.lateDeathPercent, 0) / residueData.length;
+    const avgAbnormal = residueData.reduce((sum: number, item: any) => sum + item.abnormalPercent, 0) / residueData.length;
+
+    return {
+      avgContamination: Number(avgContamination.toFixed(2)),
+      avgMold: Number(avgMold.toFixed(2)),
+      avgLateDeath: Number(avgLateDeath.toFixed(2)),
+      avgAbnormal: Number(avgAbnormal.toFixed(2)),
+      totalFlocks: residueData.length
+    };
+  };
+
+  const correlationData = getCorrelationInsights();
 
   return (
     <div className="space-y-6">
@@ -142,6 +164,55 @@ const OverviewDashboard = ({ data }: OverviewDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Residue Correlation Cards */}
+      {correlationData && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Contamination</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-yellow-100" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{correlationData.avgContamination}%</div>
+              <p className="text-xs text-yellow-100">Sanitation issues</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-green-600 to-teal-600 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Mold</CardTitle>
+              <TrendingDown className="h-4 w-4 text-green-100" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{correlationData.avgMold}%</div>
+              <p className="text-xs text-green-100">Environment quality</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Late Death</CardTitle>
+              <Activity className="h-4 w-4 text-red-100" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{correlationData.avgLateDeath}%</div>
+              <p className="text-xs text-red-100">Hatcher performance</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Abnormal</CardTitle>
+              <Target className="h-4 w-4 text-indigo-100" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{correlationData.avgAbnormal}%</div>
+              <p className="text-xs text-indigo-100">Breeding quality</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
