@@ -1,225 +1,235 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Activity, Eye, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import DemoTutorial from "./DemoTutorial";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
+import { TrendingUp, TrendingDown, AlertTriangle, Target, Package, Egg } from 'lucide-react';
 
 interface OverviewDashboardProps {
   data: any[];
   fertilityData?: any[];
   residueData?: any[];
+  eggPackData?: any[];
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
+const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ 
+  data, 
+  fertilityData = [], 
+  residueData = [],
+  eggPackData = []
+}) => {
+  // Performance calculations
+  const totalFertility = data.reduce((sum, item) => sum + item.fertility, 0);
+  const averageFertility = data.length > 0 ? totalFertility / data.length : 0;
 
-const overviewDemoSteps = [
-  {
-    id: "kpi-cards",
-    title: "Key Performance Indicators",
-    description: "These cards show the average performance metrics across all your hatchery data. Each card represents a critical KPI for monitoring hatchery operations.",
-    target: "kpi-cards",
-    position: "bottom" as const
-  },
-  {
-    id: "hatchery-comparison",
-    title: "Hatchery Performance Comparison",
-    description: "This bar chart compares average fertility and hatch rates across different hatcheries, helping you identify top performers.",
-    target: "hatchery-comparison",
-    position: "top" as const
-  },
-  {
-    id: "age-distribution",
-    title: "Flock Age Distribution",
-    description: "This pie chart shows how your flocks are distributed across different age ranges, helping with planning and resource allocation.",
-    target: "age-distribution",
-    position: "top" as const
-  },
-  {
-    id: "performance-trend",
-    title: "Performance Trends",
-    description: "This line chart shows performance trends across all flocks, helping you identify patterns and outliers in your data.",
-    target: "performance-trend",
-    position: "top" as const
-  }
-];
+  const totalHatch = data.reduce((sum, item) => sum + item.hatch, 0);
+  const averageHatch = data.length > 0 ? totalHatch / data.length : 0;
 
-const OverviewDashboard = ({ data, fertilityData = [], residueData = [] }: OverviewDashboardProps) => {
-  const [showDemo, setShowDemo] = useState(false);
+  const lowPerformanceFlocks = data.filter(item => item.fertility < 75).length;
 
-  // Calculate KPIs
-  const avgFertility = data.reduce((sum, item) => sum + item.fertility, 0) / data.length;
-  const avgHatch = data.reduce((sum, item) => sum + item.hatch, 0) / data.length;
-  const avgHOI = data.reduce((sum, item) => sum + item.hoi, 0) / data.length;
-  const avgEarlyDead = data.reduce((sum, item) => sum + item.earlyDead, 0) / data.length;
-
-  // Hatchery performance summary
-  const hatcheryPerformance = data.reduce((acc, item) => {
-    if (!acc[item.hatchery]) {
-      acc[item.hatchery] = { hatchery: item.hatchery, count: 0, totalFertility: 0, totalHatch: 0 };
-    }
-    acc[item.hatchery].count++;
-    acc[item.hatchery].totalFertility += item.fertility;
-    acc[item.hatchery].totalHatch += item.hatch;
-    return acc;
-  }, {} as any);
-
-  const hatcheryData = Object.values(hatcheryPerformance).map((item: any) => ({
-    hatchery: item.hatchery,
-    avgFertility: (item.totalFertility / item.count).toFixed(1),
-    avgHatch: (item.totalHatch / item.count).toFixed(1),
-    count: item.count
+  const hatcheryData = Object.entries(
+    data.reduce((acc: { [key: string]: { total: number; count: number } }, item) => {
+      const hatchery = item.hatchery;
+      if (!acc[hatchery]) {
+        acc[hatchery] = { total: 0, count: 0 };
+      }
+      acc[hatchery].total += item.fertility;
+      acc[hatchery].count += 1;
+      return acc;
+    }, {})
+  ).map(([hatchery, values]) => ({
+    hatchery,
+    avgFertility: values.total / values.count,
   }));
 
-  // Age distribution
-  const ageRanges = [
-    { range: '20-30', min: 20, max: 30 },
-    { range: '31-40', min: 31, max: 40 },
-    { range: '41-50', min: 41, max: 50 },
-    { range: '51-60', min: 51, max: 60 }
-  ];
-
-  const ageDistribution = ageRanges.map(range => ({
-    range: range.range,
-    count: data.filter(item => item.age >= range.min && item.age <= range.max).length
+  const ageDistribution = Object.entries(
+    data.reduce((acc: { [key: string]: number }, item) => {
+      const age = item.age;
+      acc[age] = (acc[age] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([age, count]) => ({
+    name: `${age} weeks`,
+    count: count,
   }));
 
-  // Enhanced correlation analysis with residue data
-  const getCorrelationInsights = () => {
-    if (residueData.length === 0) return null;
+  // Egg Pack Quality Metrics
+  const eggPackMetrics = eggPackData.length > 0 ? {
+    totalFlocks: eggPackData.length,
+    avgQualityScore: eggPackData.reduce((sum: number, entry: any) => {
+      const totalDefects = entry.stained + entry.dirty + entry.small + entry.cracked + entry.abnormal + entry.contaminated;
+      const defectRate = (totalDefects / entry.totalEggsPulled) * 100;
+      return sum + Math.max(0, 100 - defectRate);
+    }, 0) / eggPackData.length,
+    avgUsdRate: eggPackData.reduce((sum: number, entry: any) => 
+      sum + ((entry.usd / entry.totalEggsPulled) * 100), 0) / eggPackData.length,
+    totalEggsAssessed: eggPackData.reduce((sum: number, entry: any) => sum + entry.totalEggsPulled, 0),
+    topDefectTypes: eggPackData.length > 0 ? (() => {
+      const defectTotals = {
+        stained: eggPackData.reduce((sum: number, entry: any) => sum + entry.stained, 0),
+        dirty: eggPackData.reduce((sum: number, entry: any) => sum + entry.dirty, 0),
+        small: eggPackData.reduce((sum: number, entry: any) => sum + entry.small, 0),
+        cracked: eggPackData.reduce((sum: number, entry: any) => sum + entry.cracked, 0),
+        abnormal: eggPackData.reduce((sum: number, entry: any) => sum + entry.abnormal, 0),
+        contaminated: eggPackData.reduce((sum: number, entry: any) => sum + entry.contaminated, 0)
+      };
+      return Object.entries(defectTotals)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 3)
+        .map(([type, count]) => ({ type, count }));
+    })() : []
+  } : null;
 
-    const avgContamination = residueData.reduce((sum: number, item: any) => sum + item.contaminationPercent, 0) / residueData.length;
-    const avgMold = residueData.reduce((sum: number, item: any) => sum + item.moldPercent, 0) / residueData.length;
-    const avgLateDeath = residueData.reduce((sum: number, item: any) => sum + item.lateDeathPercent, 0) / residueData.length;
-    const avgAbnormal = residueData.reduce((sum: number, item: any) => sum + item.abnormalPercent, 0) / residueData.length;
+  // Data flow correlation
+  const dataFlowAnalysis = () => {
+    if (eggPackData.length === 0 || fertilityData.length === 0) return null;
+    
+    const correlatedFlocks = eggPackData.filter((pack: any) => 
+      fertilityData.some((fert: any) => fert.flockNumber === pack.flockNumber)
+    );
 
-    return {
-      avgContamination: Number(avgContamination.toFixed(2)),
-      avgMold: Number(avgMold.toFixed(2)),
-      avgLateDeath: Number(avgLateDeath.toFixed(2)),
-      avgAbnormal: Number(avgAbnormal.toFixed(2)),
-      totalFlocks: residueData.length
-    };
+    return correlatedFlocks.map((pack: any) => {
+      const fertility = fertilityData.find((fert: any) => fert.flockNumber === pack.flockNumber);
+      const qualityScore = Math.max(0, 100 - ((pack.stained + pack.dirty + pack.small + pack.cracked + pack.abnormal + pack.contaminated) / pack.totalEggsPulled) * 100);
+      
+      return {
+        flockNumber: pack.flockNumber,
+        flock: pack.flock,
+        qualityScore,
+        fertilityRate: fertility?.fertilityRate || 0,
+        hatchRate: fertility?.hatchOfFertile || 0
+      };
+    });
   };
 
-  const correlationData = getCorrelationInsights();
+  const correlationData = dataFlowAnalysis();
+
+  // Colors for charts
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   return (
     <div className="space-y-6">
-      {/* Demo Button */}
-      <div className="flex justify-end">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowDemo(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          View Demo
-        </Button>
+      {/* Performance KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Fertility</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{averageFertility.toFixed(1)}%</div>
+            <p className={`text-xs ${averageFertility > 85 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+              {averageFertility > 85 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+              {averageFertility > 85 ? 'Above target (85%)' : 'Below target (85%)'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Hatch Rate</CardTitle>
+            <Egg className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{averageHatch.toFixed(1)}%</div>
+            <p className={`text-xs ${averageHatch > 80 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+              {averageHatch > 80 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+              {averageHatch > 80 ? 'Above target (80%)' : 'Below target (80%)'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Flocks</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Active breeding flocks
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Alert Count</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{lowPerformanceFlocks}</div>
+            <p className="text-xs text-muted-foreground">
+              Flocks below 75% fertility
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-demo-id="kpi-cards">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Fertility</CardTitle>
-            <Target className="h-4 w-4 text-blue-100" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgFertility.toFixed(1)}%</div>
-            <p className="text-xs text-blue-100">Across all flocks</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Hatch Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-100" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgHatch.toFixed(1)}%</div>
-            <p className="text-xs text-green-100">Overall performance</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg HOI</CardTitle>
-            <Activity className="h-4 w-4 text-purple-100" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgHOI.toFixed(1)}%</div>
-            <p className="text-xs text-purple-100">Hatch of incubated</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Early Dead</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-100" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgEarlyDead.toFixed(1)}%</div>
-            <p className="text-xs text-red-100">Early mortality rate</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Residue Correlation Cards */}
-      {correlationData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+      {/* Egg Pack Quality Overview */}
+      {eggPackMetrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Contamination</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-100" />
+              <CardTitle className="text-sm font-medium">Avg Quality Score</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{correlationData.avgContamination}%</div>
-              <p className="text-xs text-yellow-100">Sanitation issues</p>
+              <div className="text-2xl font-bold">{eggPackMetrics.avgQualityScore.toFixed(1)}%</div>
+              <p className={`text-xs ${eggPackMetrics.avgQualityScore > 95 ? 'text-green-600' : 'text-yellow-600'} flex items-center`}>
+                {eggPackMetrics.avgQualityScore > 95 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                Pre-incubation quality
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-green-600 to-teal-600 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Mold</CardTitle>
-              <TrendingDown className="h-4 w-4 text-green-100" />
+              <CardTitle className="text-sm font-medium">USD Rate</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{correlationData.avgMold}%</div>
-              <p className="text-xs text-green-100">Environment quality</p>
+              <div className="text-2xl font-bold">{eggPackMetrics.avgUsdRate.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">
+                Unsettable eggs
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Late Death</CardTitle>
-              <Activity className="h-4 w-4 text-red-100" />
+              <CardTitle className="text-sm font-medium">Eggs Assessed</CardTitle>
+              <Egg className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{correlationData.avgLateDeath}%</div>
-              <p className="text-xs text-red-100">Hatcher performance</p>
+              <div className="text-2xl font-bold">{eggPackMetrics.totalEggsAssessed.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Total quality checks
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Abnormal</CardTitle>
-              <Target className="h-4 w-4 text-indigo-100" />
+              <CardTitle className="text-sm font-medium">Top Defect</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{correlationData.avgAbnormal}%</div>
-              <p className="text-xs text-indigo-100">Breeding quality</p>
+              <div className="text-2xl font-bold capitalize">
+                {eggPackMetrics.topDefectTypes[0]?.type || 'None'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {eggPackMetrics.topDefectTypes[0]?.count || 0} eggs affected
+              </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Charts Row */}
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Hatchery Performance Bar Chart */}
-        <Card data-demo-id="hatchery-comparison">
+        {/* Fertility by Hatchery */}
+        <Card>
           <CardHeader>
-            <CardTitle>Hatchery Performance Comparison</CardTitle>
+            <CardTitle>Fertility Performance by Hatchery</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -227,21 +237,15 @@ const OverviewDashboard = ({ data, fertilityData = [], residueData = [] }: Overv
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="hatchery" />
                 <YAxis />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    `${value}%`, 
-                    name === 'avgFertility' ? 'Avg Fertility' : 'Avg Hatch Rate'
-                  ]}
-                />
-                <Bar dataKey="avgFertility" fill="#8884d8" name="avgFertility" />
-                <Bar dataKey="avgHatch" fill="#82ca9d" name="avgHatch" />
+                <Tooltip />
+                <Bar dataKey="avgFertility" fill="#8884d8" name="Avg Fertility %" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Age Distribution Pie Chart */}
-        <Card data-demo-id="age-distribution">
+        {/* Age Distribution */}
+        <Card>
           <CardHeader>
             <CardTitle>Flock Age Distribution</CardTitle>
           </CardHeader>
@@ -253,7 +257,7 @@ const OverviewDashboard = ({ data, fertilityData = [], residueData = [] }: Overv
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ range, count, percent }) => `${range}: ${count} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ name, value }) => `${name}: ${value}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
@@ -269,38 +273,89 @@ const OverviewDashboard = ({ data, fertilityData = [], residueData = [] }: Overv
         </Card>
       </div>
 
-      {/* Performance Trend Line Chart */}
-      <Card data-demo-id="performance-trend">
-        <CardHeader>
-          <CardTitle>Performance Metrics Trend by Flock</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="flock" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [
-                  `${typeof value === 'number' ? value.toFixed(1) : value}%`, 
-                  String(name).charAt(0).toUpperCase() + String(name).slice(1)
-                ]}
-              />
-              <Line type="monotone" dataKey="fertility" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="hatch" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="hoi" stroke="#ffc658" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Data Flow Correlation Analysis */}
+      {correlationData && correlationData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Egg Quality vs Performance Correlation</CardTitle>
+            <p className="text-sm text-gray-600">
+              Relationship between pre-incubation egg quality and hatch performance
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <AreaChart data={correlationData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="flock" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `${value}%`, 
+                    name === 'qualityScore' ? 'Quality Score' : 
+                    name === 'fertilityRate' ? 'Fertility Rate' : 'Hatch Rate'
+                  ]}
+                />
+                <Area type="monotone" dataKey="qualityScore" stackId="1" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="fertilityRate" stackId="2" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="hatchRate" stackId="3" stroke="#ffc658" fill="#ffc658" fillOpacity={0.6} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Demo Tutorial */}
-      <DemoTutorial 
-        steps={overviewDemoSteps}
-        isActive={showDemo}
-        onClose={() => setShowDemo(false)}
-        pageName="Overview"
-      />
+      {/* Residue Analysis - Top Causes */}
+      {residueData && residueData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Residue Analysis Causes</CardTitle>
+            <p className="text-sm text-gray-600">
+              Common reasons for unhatched eggs
+            </p>
+          </CardHeader>
+          <CardContent>
+            {residueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={residueData.slice(0, 5)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="cause" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#82ca9d" name="Occurrences" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-4 text-gray-500">No residue data available.</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Residue Analysis - Recent Findings */}
+      {residueData && residueData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Residue Findings</CardTitle>
+            <p className="text-sm text-gray-600">
+              Latest analysis of unhatched eggs
+            </p>
+          </CardHeader>
+          <CardContent>
+            {residueData.length > 0 ? (
+              <ul>
+                {residueData.slice(0, 3).map((item, index) => (
+                  <li key={index} className="py-2 border-b last:border-b-0">
+                    <div className="font-medium">{item.cause}</div>
+                    <div className="text-sm text-gray-600">Flock: {item.flock}, Date: {item.date}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-4 text-gray-500">No residue data available.</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
