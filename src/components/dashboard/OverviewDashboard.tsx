@@ -1,21 +1,22 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, AlertTriangle, Target, Package, Egg } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle, Target, Package, Egg, Thermometer, Droplets, RotateCcw } from 'lucide-react';
 
 interface OverviewDashboardProps {
   data: any[];
   fertilityData?: any[];
   residueData?: any[];
   eggPackData?: any[];
+  qaData?: any[];
 }
 
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ 
   data, 
   fertilityData = [], 
   residueData = [],
-  eggPackData = []
+  eggPackData = [],
+  qaData = []
 }) => {
   // Performance calculations
   const totalFertility = data.reduce((sum, item) => sum + item.fertility, 0);
@@ -51,6 +52,33 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     name: `${age} weeks`,
     count: count,
   }));
+
+  // QA Metrics
+  const qaMetrics = qaData.length > 0 ? {
+    totalChecks: qaData.length,
+    temperatureAlerts: qaData.filter(entry => 
+      (entry.type === 'setter_temperature' && !entry.isWithinRange) ||
+      (entry.type === 'rectal_temperature' && !entry.isWithinRange)
+    ).length,
+    sanitationFailures: qaData.filter(entry => 
+      entry.type === 'tray_wash_temperature' && !entry.allPassed
+    ).length,
+    equipmentIssues: qaData.filter(entry => 
+      entry.type === 'setter_angle' && !entry.isBalanced
+    ).length,
+    avgSetterTemp: qaData
+      .filter(entry => entry.type === 'setter_temperature')
+      .reduce((sum, entry) => sum + (entry.leftTemps.average + entry.rightTemps.average) / 2, 0) / 
+      Math.max(1, qaData.filter(entry => entry.type === 'setter_temperature').length),
+    recentAlerts: qaData
+      .filter(entry => 
+        (entry.type === 'setter_temperature' && !entry.isWithinRange) ||
+        (entry.type === 'rectal_temperature' && !entry.isWithinRange) ||
+        (entry.type === 'tray_wash_temperature' && !entry.allPassed) ||
+        (entry.type === 'specific_gravity' && !entry.isGoodQuality)
+      )
+      .slice(-5)
+  } : null;
 
   // Egg Pack Quality Metrics
   const eggPackMetrics = eggPackData.length > 0 ? {
@@ -165,6 +193,64 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         </Card>
       </div>
 
+      {/* QA Monitoring Overview */}
+      {qaMetrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Setter Temp</CardTitle>
+              <Thermometer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{qaMetrics.avgSetterTemp.toFixed(1)}°F</div>
+              <p className={`text-xs ${qaMetrics.avgSetterTemp >= 99.5 && qaMetrics.avgSetterTemp <= 100.5 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+                {qaMetrics.avgSetterTemp >= 99.5 && qaMetrics.avgSetterTemp <= 100.5 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                {qaMetrics.avgSetterTemp >= 99.5 && qaMetrics.avgSetterTemp <= 100.5 ? 'Within range' : 'Out of range'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Temperature Alerts</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{qaMetrics.temperatureAlerts}</div>
+              <p className="text-xs text-muted-foreground">
+                Out of range readings
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sanitation Issues</CardTitle>
+              <Droplets className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{qaMetrics.sanitationFailures}</div>
+              <p className="text-xs text-muted-foreground">
+                Wash temp failures
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Equipment Issues</CardTitle>
+              <RotateCcw className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{qaMetrics.equipmentIssues}</div>
+              <p className="text-xs text-muted-foreground">
+                Angle imbalances
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Egg Pack Quality Overview */}
       {eggPackMetrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -223,6 +309,46 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* QA Alerts Summary */}
+      {qaMetrics && qaMetrics.recentAlerts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent QA Alerts</CardTitle>
+            <p className="text-sm text-gray-600">
+              Critical issues requiring immediate attention
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {qaMetrics.recentAlerts.map((alert, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <div>
+                      <div className="font-medium text-red-800">
+                        {alert.type === 'setter_temperature' && `Setter ${alert.setterNumber} Temperature Alert`}
+                        {alert.type === 'rectal_temperature' && `${alert.location} Temperature Alert`}
+                        {alert.type === 'tray_wash_temperature' && 'Sanitization Temperature Failure'}
+                        {alert.type === 'specific_gravity' && `Flock ${alert.flockNumber} Shell Quality Issue`}
+                      </div>
+                      <div className="text-sm text-red-600">
+                        {alert.type === 'setter_temperature' && `Avg: ${((alert.leftTemps.average + alert.rightTemps.average) / 2).toFixed(1)}°F`}
+                        {alert.type === 'rectal_temperature' && `${alert.temperature}°F`}
+                        {alert.type === 'tray_wash_temperature' && `Min: ${Math.min(alert.firstCheck, alert.secondCheck, alert.thirdCheck)}°F`}
+                        {alert.type === 'specific_gravity' && `${alert.floatPercentage}% float rate`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {alert.checkDate || alert.testDate || alert.washDate}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Charts Section */}
