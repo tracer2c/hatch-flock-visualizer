@@ -1,10 +1,4 @@
-Here's your updated README file — rewritten to focus entirely on the **product** and its features, with no mention of Lovable:
 
----
-
-# Welcome to Your Project
-
-## 🌐 Project Overview
 
 This application is a modern, responsive web app built to deliver a fast, seamless, and accessible user experience. Designed using a minimal and elegant UI framework, it enables intuitive interactions and flexible customization, making it suitable for both end-users and developers.
 
@@ -88,7 +82,3 @@ Then follow your hosting provider's documentation to deploy the output in the `d
 ├── vite.config.ts   # Vite configuration
 └── package.json     # Project metadata and dependencies
 ```
-
----
-
-Let me know if you'd like to add a **demo link**, **API integration info**, or **user guide section**!
