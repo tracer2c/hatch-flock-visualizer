@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
@@ -35,7 +36,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
       acc[hatchery].count += 1;
       return acc;
     }, {})
-  ).map(([hatchery, values]) => ({
+  ).map(([hatchery, values]: [string, { total: number; count: number }]) => ({
     hatchery,
     avgFertility: values.total / values.count,
   }));
