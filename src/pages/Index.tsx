@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -140,9 +141,29 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Main Dashboard Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        {/* Main Dashboard Tabs - Reordered to follow process workflow */}
+        <Tabs defaultValue="entry" className="space-y-6">
           <TabsList className="grid w-full grid-cols-9 lg:w-[1350px]">
+            <TabsTrigger value="entry" className="flex items-center gap-2">
+              <FileInput className="h-4 w-4" />
+              Data Entry
+            </TabsTrigger>
+            <TabsTrigger value="eggpack" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Egg Pack
+            </TabsTrigger>
+            <TabsTrigger value="fertility" className="flex items-center gap-2">
+              <Egg className="h-4 w-4" />
+              Fertility
+            </TabsTrigger>
+            <TabsTrigger value="qa" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              QA
+            </TabsTrigger>
+            <TabsTrigger value="residue" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Residue
+            </TabsTrigger>
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Overview
@@ -155,31 +176,31 @@ const Index = () => {
               <LineChart className="h-4 w-4" />
               Comparison
             </TabsTrigger>
-            <TabsTrigger value="entry" className="flex items-center gap-2">
-              <FileInput className="h-4 w-4" />
-              Data Entry
-            </TabsTrigger>
-            <TabsTrigger value="qa" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              QA
-            </TabsTrigger>
-            <TabsTrigger value="eggpack" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Egg Pack
-            </TabsTrigger>
-            <TabsTrigger value="fertility" className="flex items-center gap-2">
-              <Egg className="h-4 w-4" />
-              Fertility
-            </TabsTrigger>
-            <TabsTrigger value="residue" className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Residue
-            </TabsTrigger>
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Data Upload
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="entry">
+            <DataEntry data={data} onDataUpdate={handleDataUpdate} />
+          </TabsContent>
+
+          <TabsContent value="eggpack">
+            <EggPackDataEntry data={eggPackData} onDataUpdate={handleEggPackDataUpdate} />
+          </TabsContent>
+
+          <TabsContent value="fertility">
+            <FertilityDataEntry data={fertilityData} onDataUpdate={handleFertilityDataUpdate} />
+          </TabsContent>
+
+          <TabsContent value="qa">
+            <QADataEntry data={qaData} onDataUpdate={handleQADataUpdate} />
+          </TabsContent>
+
+          <TabsContent value="residue">
+            <ResidueDataEntry data={residueData} onDataUpdate={handleResidueDataUpdate} />
+          </TabsContent>
 
           <TabsContent value="overview">
             <OverviewDashboard 
@@ -197,26 +218,6 @@ const Index = () => {
 
           <TabsContent value="comparison">
             <ComparisonAnalysis data={filteredData} />
-          </TabsContent>
-
-          <TabsContent value="entry">
-            <DataEntry data={data} onDataUpdate={handleDataUpdate} />
-          </TabsContent>
-
-          <TabsContent value="qa">
-            <QADataEntry data={qaData} onDataUpdate={handleQADataUpdate} />
-          </TabsContent>
-
-          <TabsContent value="eggpack">
-            <EggPackDataEntry data={eggPackData} onDataUpdate={handleEggPackDataUpdate} />
-          </TabsContent>
-
-          <TabsContent value="fertility">
-            <FertilityDataEntry data={fertilityData} onDataUpdate={handleFertilityDataUpdate} />
-          </TabsContent>
-
-          <TabsContent value="residue">
-            <ResidueDataEntry data={residueData} onDataUpdate={handleResidueDataUpdate} />
           </TabsContent>
 
           <TabsContent value="upload">
