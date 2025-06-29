@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -606,7 +605,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate }) => {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Tray Wash Temperature Validation</CardTitle>
-                  <p className="text-sm text-gray-600">Must be >140°F to kill pathogens</p>
+                  <p className="text-sm text-gray-600">Must be &gt;140°F to kill pathogens</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -662,7 +661,327 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate }) => {
               </Card>
             </TabsContent>
 
-            {/* ... Additional tab contents for other sections ... */}
+            <TabsContent value="culls" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Cull Checks</CardTitle>
+                  <p className="text-sm text-gray-600">Track chick defects and culling rates</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="flock-number">Flock Number</Label>
+                      <Input
+                        id="flock-number"
+                        value={cullChecks.flockNumber}
+                        onChange={(e) => setCullChecks({...cullChecks, flockNumber: e.target.value})}
+                        placeholder="6414"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="male-count">Male Culls</Label>
+                      <Input
+                        id="male-count"
+                        type="number"
+                        value={cullChecks.maleCount}
+                        onChange={(e) => setCullChecks({...cullChecks, maleCount: e.target.value})}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="female-count">Female Culls</Label>
+                      <Input
+                        id="female-count"
+                        type="number"
+                        value={cullChecks.femaleCount}
+                        onChange={(e) => setCullChecks({...cullChecks, femaleCount: e.target.value})}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="defect-type">Defect Type</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={cullChecks.defectType}
+                        onChange={(e) => setCullChecks({...cullChecks, defectType: e.target.value})}
+                      >
+                        <option value="">Select defect</option>
+                        <option value="deformity">Deformity</option>
+                        <option value="weak">Weak/Lethargic</option>
+                        <option value="injury">Injury</option>
+                        <option value="infection">Infection</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cull-date">Check Date</Label>
+                      <Input
+                        id="cull-date"
+                        type="date"
+                        value={cullChecks.checkDate}
+                        onChange={(e) => setCullChecks({...cullChecks, checkDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleAddCullCheck} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Cull Check
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="gravity" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Specific Gravity Testing</CardTitle>
+                  <p className="text-sm text-gray-600">Eggshell quality assessment (Float % should be &lt;10% for ages 25-40 weeks)</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sg-flock">Flock Number</Label>
+                      <Input
+                        id="sg-flock"
+                        value={specificGravity.flockNumber}
+                        onChange={(e) => setSpecificGravity({...specificGravity, flockNumber: e.target.value})}
+                        placeholder="6400"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="flock-age">Age (weeks)</Label>
+                      <Input
+                        id="flock-age"
+                        type="number"
+                        value={specificGravity.age}
+                        onChange={(e) => setSpecificGravity({...specificGravity, age: e.target.value})}
+                        placeholder="32"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="float-percentage">Float Percentage</Label>
+                      <Input
+                        id="float-percentage"
+                        type="number"
+                        step="0.1"
+                        value={specificGravity.floatPercentage}
+                        onChange={(e) => setSpecificGravity({...specificGravity, floatPercentage: e.target.value})}
+                        placeholder="8.5"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sg-date">Test Date</Label>
+                      <Input
+                        id="sg-date"
+                        type="date"
+                        value={specificGravity.testDate}
+                        onChange={(e) => setSpecificGravity({...specificGravity, testDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleAddSpecificGravity} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Specific Gravity Test
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="angles" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Setter Angle Monitoring</CardTitle>
+                  <p className="text-sm text-gray-600">Angles should be balanced (35–45°)</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="angle-setter">Setter Number</Label>
+                      <Input
+                        id="angle-setter"
+                        value={setterAngles.setterNumber}
+                        onChange={(e) => setSetterAngles({...setterAngles, setterNumber: e.target.value})}
+                        placeholder="14"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="left-angle">Left Angle (°)</Label>
+                      <Input
+                        id="left-angle"
+                        type="number"
+                        step="0.1"
+                        value={setterAngles.leftAngle}
+                        onChange={(e) => setSetterAngles({...setterAngles, leftAngle: e.target.value})}
+                        placeholder="43.0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="right-angle">Right Angle (°)</Label>
+                      <Input
+                        id="right-angle"
+                        type="number"
+                        step="0.1"
+                        value={setterAngles.rightAngle}
+                        onChange={(e) => setSetterAngles({...setterAngles, rightAngle: e.target.value})}
+                        placeholder="32.4"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="angle-date">Check Date</Label>
+                      <Input
+                        id="angle-date"
+                        type="date"
+                        value={setterAngles.checkDate}
+                        onChange={(e) => setSetterAngles({...setterAngles, checkDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleAddSetterAngle} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Setter Angle Check
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="hatch" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Hatch Progression Monitoring</CardTitle>
+                  <p className="text-sm text-gray-600">Track hatch timing and efficiency</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="hatch-flock">Flock Number</Label>
+                      <Input
+                        id="hatch-flock"
+                        value={hatchProgression.flockNumber}
+                        onChange={(e) => setHatchProgression({...hatchProgression, flockNumber: e.target.value})}
+                        placeholder="6428"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hatch-stage">Stage</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={hatchProgression.stage}
+                        onChange={(e) => setHatchProgression({...hatchProgression, stage: e.target.value})}
+                      >
+                        <option value="A">Stage A</option>
+                        <option value="B">Stage B</option>
+                        <option value="C">Stage C</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="total-count">Total Count</Label>
+                      <Input
+                        id="total-count"
+                        type="number"
+                        value={hatchProgression.totalCount}
+                        onChange={(e) => setHatchProgression({...hatchProgression, totalCount: e.target.value})}
+                        placeholder="648"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hatched-count">Hatched Count</Label>
+                      <Input
+                        id="hatched-count"
+                        type="number"
+                        value={hatchProgression.hatchedCount}
+                        onChange={(e) => setHatchProgression({...hatchProgression, hatchedCount: e.target.value})}
+                        placeholder="120"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="check-hour">Check Hour</Label>
+                      <Input
+                        id="check-hour"
+                        type="number"
+                        value={hatchProgression.checkHour}
+                        onChange={(e) => setHatchProgression({...hatchProgression, checkHour: e.target.value})}
+                        placeholder="16"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hatch-date-input">Hatch Date</Label>
+                      <Input
+                        id="hatch-date-input"
+                        type="date"
+                        value={hatchProgression.hatchDate}
+                        onChange={(e) => setHatchProgression({...hatchProgression, hatchDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleAddHatchProgression} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Hatch Progression
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="moisture" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Moisture Loss Monitoring</CardTitle>
+                  <p className="text-sm text-gray-600">Ideal moisture loss: 10-12%</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="moisture-flock">Flock Number</Label>
+                      <Input
+                        id="moisture-flock"
+                        value={moistureLoss.flockNumber}
+                        onChange={(e) => setMoistureLoss({...moistureLoss, flockNumber: e.target.value})}
+                        placeholder="6383"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="day1-weight">Day 1 Weight (g)</Label>
+                      <Input
+                        id="day1-weight"
+                        type="number"
+                        step="0.1"
+                        value={moistureLoss.day1Weight}
+                        onChange={(e) => setMoistureLoss({...moistureLoss, day1Weight: e.target.value})}
+                        placeholder="65.0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="day18-weight">Day 18 Weight (g)</Label>
+                      <Input
+                        id="day18-weight"
+                        type="number"
+                        step="0.1"
+                        value={moistureLoss.day18Weight}
+                        onChange={(e) => setMoistureLoss({...moistureLoss, day18Weight: e.target.value})}
+                        placeholder="58.4"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="moisture-date">Test Date</Label>
+                      <Input
+                        id="moisture-date"
+                        type="date"
+                        value={moistureLoss.testDate}
+                        onChange={(e) => setMoistureLoss({...moistureLoss, testDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button onClick={handleAddMoistureLoss} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Moisture Loss Data
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
