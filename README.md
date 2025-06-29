@@ -20,7 +20,7 @@ To develop locally, make sure you have **Node.js** and **npm** installed. If you
 
 ```sh
 # Step 1: Clone the repository using your Git URL
-git clone <YOUR_GIT_URL>
+git clone https://github.com/tracer2c/hatch-flock-visualizer.git
 
 # Step 2: Navigate into the project directory
 cd <YOUR_PROJECT_NAME>
