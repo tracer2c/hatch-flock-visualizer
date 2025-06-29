@@ -2,16 +2,12 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Upload, BarChart3, LineChart, TrendingUp, Filter, FileInput, Activity } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import Navigation from "@/components/Navigation";
+import { TrendingUp, BarChart3, LineChart, Filter } from "lucide-react";
 import OverviewDashboard from "@/components/dashboard/OverviewDashboard";
 import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
 import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
-import DataUpload from "@/components/dashboard/DataUpload";
 
 // Sample data
 const initialData = [
@@ -35,22 +31,13 @@ const initialData = [
   { hatchery: "ENT", name: "Wing 1&2", flock: 6369, age: 55, fertility: 68.83, ifDev: -3.9, hatch: 58.16, hoi: 89.57, hof: 84.50, earlyDead: 4.4 }
 ];
 
-const Index = () => {
-  const [data, setData] = useState(initialData);
-  const [fertilityData, setFertilityData] = useState([]);
-  const [residueData, setResidueData] = useState([]);
-  const [eggPackData, setEggPackData] = useState([]);
-  const [qaData, setQAData] = useState([]);
+const AnalyticsDashboard = () => {
+  const [data] = useState(initialData);
+  const [fertilityData] = useState([]);
+  const [residueData] = useState([]);
+  const [eggPackData] = useState([]);
+  const [qaData] = useState([]);
   const [selectedHatchery, setSelectedHatchery] = useState("all");
-  const { toast } = useToast();
-
-  const handleDataUpdate = (newData: any[]) => {
-    setData(newData);
-    toast({
-      title: "Data Updated",
-      description: `Successfully loaded ${newData.length} records.`,
-    });
-  };
 
   const filteredData = selectedHatchery === "all" 
     ? data 
@@ -64,15 +51,12 @@ const Index = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Hatchery Performance Dashboard
+            Analytics Dashboard
           </h1>
           <p className="text-gray-600 text-lg">
-            Comprehensive analytics and insights for hatchery operations
+            Comprehensive performance analytics and insights
           </p>
         </div>
-
-        {/* Navigation */}
-        <Navigation />
 
         {/* Filter Controls */}
         <Card className="mb-6">
@@ -107,9 +91,9 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Main Dashboard Tabs */}
+        {/* Analytics Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Overview
@@ -121,10 +105,6 @@ const Index = () => {
             <TabsTrigger value="comparison" className="flex items-center gap-2">
               <LineChart className="h-4 w-4" />
               Comparison
-            </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Data Upload
             </TabsTrigger>
           </TabsList>
 
@@ -145,14 +125,10 @@ const Index = () => {
           <TabsContent value="comparison">
             <ComparisonAnalysis data={filteredData} />
           </TabsContent>
-
-          <TabsContent value="upload">
-            <DataUpload onDataUpdate={handleDataUpdate} />
-          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 };
 
-export default Index;
+export default AnalyticsDashboard;
