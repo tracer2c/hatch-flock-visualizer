@@ -9,7 +9,401 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      batches: {
+        Row: {
+          actual_hatch_date: string | null
+          batch_number: string
+          created_at: string
+          expected_hatch_date: string
+          flock_id: string
+          humidity_avg: number | null
+          id: string
+          machine_id: string
+          notes: string | null
+          set_date: string
+          status: Database["public"]["Enums"]["batch_status"]
+          temperature_avg: number | null
+          total_eggs_set: number
+          updated_at: string
+        }
+        Insert: {
+          actual_hatch_date?: string | null
+          batch_number: string
+          created_at?: string
+          expected_hatch_date: string
+          flock_id: string
+          humidity_avg?: number | null
+          id?: string
+          machine_id: string
+          notes?: string | null
+          set_date: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          temperature_avg?: number | null
+          total_eggs_set: number
+          updated_at?: string
+        }
+        Update: {
+          actual_hatch_date?: string | null
+          batch_number?: string
+          created_at?: string
+          expected_hatch_date?: string
+          flock_id?: string
+          humidity_avg?: number | null
+          id?: string
+          machine_id?: string
+          notes?: string | null
+          set_date?: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          temperature_avg?: number | null
+          total_eggs_set?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      egg_pack_quality: {
+        Row: {
+          batch_id: string
+          cracked: number
+          created_at: string
+          dirty: number
+          grade_a: number
+          grade_b: number
+          grade_c: number
+          id: string
+          inspection_date: string
+          inspector_name: string | null
+          large: number
+          notes: string | null
+          sample_size: number
+          shell_thickness_avg: number | null
+          small: number
+          weight_avg: number | null
+        }
+        Insert: {
+          batch_id: string
+          cracked?: number
+          created_at?: string
+          dirty?: number
+          grade_a?: number
+          grade_b?: number
+          grade_c?: number
+          id?: string
+          inspection_date?: string
+          inspector_name?: string | null
+          large?: number
+          notes?: string | null
+          sample_size?: number
+          shell_thickness_avg?: number | null
+          small?: number
+          weight_avg?: number | null
+        }
+        Update: {
+          batch_id?: string
+          cracked?: number
+          created_at?: string
+          dirty?: number
+          grade_a?: number
+          grade_b?: number
+          grade_c?: number
+          id?: string
+          inspection_date?: string
+          inspector_name?: string | null
+          large?: number
+          notes?: string | null
+          sample_size?: number
+          shell_thickness_avg?: number | null
+          small?: number
+          weight_avg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "egg_pack_quality_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fertility_analysis: {
+        Row: {
+          analysis_date: string
+          batch_id: string
+          created_at: string
+          cull_chicks: number
+          early_dead: number
+          fertile_eggs: number
+          fertility_percent: number | null
+          hatch_percent: number | null
+          hof_percent: number | null
+          id: string
+          infertile_eggs: number
+          late_dead: number
+          notes: string | null
+          sample_size: number
+          technician_name: string | null
+        }
+        Insert: {
+          analysis_date?: string
+          batch_id: string
+          created_at?: string
+          cull_chicks?: number
+          early_dead: number
+          fertile_eggs: number
+          fertility_percent?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          id?: string
+          infertile_eggs: number
+          late_dead: number
+          notes?: string | null
+          sample_size?: number
+          technician_name?: string | null
+        }
+        Update: {
+          analysis_date?: string
+          batch_id?: string
+          created_at?: string
+          cull_chicks?: number
+          early_dead?: number
+          fertile_eggs?: number
+          fertility_percent?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          id?: string
+          infertile_eggs?: number
+          late_dead?: number
+          notes?: string | null
+          sample_size?: number
+          technician_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fertility_analysis_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flocks: {
+        Row: {
+          age_weeks: number
+          arrival_date: string
+          breed: Database["public"]["Enums"]["breed_type"]
+          created_at: string
+          flock_name: string
+          flock_number: number
+          house_number: string | null
+          id: string
+          notes: string | null
+          total_birds: number | null
+          updated_at: string
+        }
+        Insert: {
+          age_weeks: number
+          arrival_date: string
+          breed: Database["public"]["Enums"]["breed_type"]
+          created_at?: string
+          flock_name: string
+          flock_number: number
+          house_number?: string | null
+          id?: string
+          notes?: string | null
+          total_birds?: number | null
+          updated_at?: string
+        }
+        Update: {
+          age_weeks?: number
+          arrival_date?: string
+          breed?: Database["public"]["Enums"]["breed_type"]
+          created_at?: string
+          flock_name?: string
+          flock_number?: number
+          house_number?: string | null
+          id?: string
+          notes?: string | null
+          total_birds?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      machines: {
+        Row: {
+          capacity: number
+          created_at: string
+          id: string
+          last_maintenance: string | null
+          location: string | null
+          machine_number: string
+          machine_type: Database["public"]["Enums"]["machine_type"]
+          notes: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          id?: string
+          last_maintenance?: string | null
+          location?: string | null
+          machine_number: string
+          machine_type: Database["public"]["Enums"]["machine_type"]
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          id?: string
+          last_maintenance?: string | null
+          location?: string | null
+          machine_number?: string
+          machine_type?: Database["public"]["Enums"]["machine_type"]
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      qa_monitoring: {
+        Row: {
+          batch_id: string
+          candling_results: string | null
+          check_date: string
+          check_time: string
+          co2_level: number | null
+          created_at: string
+          day_of_incubation: number
+          humidity: number
+          id: string
+          inspector_name: string
+          mortality_count: number | null
+          notes: string | null
+          temperature: number
+          turning_frequency: number | null
+          ventilation_rate: number | null
+        }
+        Insert: {
+          batch_id: string
+          candling_results?: string | null
+          check_date?: string
+          check_time?: string
+          co2_level?: number | null
+          created_at?: string
+          day_of_incubation: number
+          humidity: number
+          id?: string
+          inspector_name: string
+          mortality_count?: number | null
+          notes?: string | null
+          temperature: number
+          turning_frequency?: number | null
+          ventilation_rate?: number | null
+        }
+        Update: {
+          batch_id?: string
+          candling_results?: string | null
+          check_date?: string
+          check_time?: string
+          co2_level?: number | null
+          created_at?: string
+          day_of_incubation?: number
+          humidity?: number
+          id?: string
+          inspector_name?: string
+          mortality_count?: number | null
+          notes?: string | null
+          temperature?: number
+          turning_frequency?: number | null
+          ventilation_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_monitoring_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      residue_analysis: {
+        Row: {
+          analysis_date: string
+          batch_id: string
+          contaminated_eggs: number
+          created_at: string
+          id: string
+          lab_technician: string | null
+          malformed_chicks: number
+          microscopy_results: string | null
+          notes: string | null
+          pathology_findings: string | null
+          pipped_not_hatched: number
+          residue_percent: number | null
+          total_residue_count: number
+          unhatched_fertile: number
+        }
+        Insert: {
+          analysis_date?: string
+          batch_id: string
+          contaminated_eggs?: number
+          created_at?: string
+          id?: string
+          lab_technician?: string | null
+          malformed_chicks?: number
+          microscopy_results?: string | null
+          notes?: string | null
+          pathology_findings?: string | null
+          pipped_not_hatched?: number
+          residue_percent?: number | null
+          total_residue_count: number
+          unhatched_fertile?: number
+        }
+        Update: {
+          analysis_date?: string
+          batch_id?: string
+          contaminated_eggs?: number
+          created_at?: string
+          id?: string
+          lab_technician?: string | null
+          malformed_chicks?: number
+          microscopy_results?: string | null
+          notes?: string | null
+          pathology_findings?: string | null
+          pipped_not_hatched?: number
+          residue_percent?: number | null
+          total_residue_count?: number
+          unhatched_fertile?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "residue_analysis_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +412,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      batch_status:
+        | "planned"
+        | "setting"
+        | "incubating"
+        | "hatching"
+        | "completed"
+        | "cancelled"
+      breed_type: "broiler" | "layer" | "breeder"
+      machine_type: "setter" | "hatcher" | "combo"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +535,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      batch_status: [
+        "planned",
+        "setting",
+        "incubating",
+        "hatching",
+        "completed",
+        "cancelled",
+      ],
+      breed_type: ["broiler", "layer", "breeder"],
+      machine_type: ["setter", "hatcher", "combo"],
+    },
   },
 } as const
