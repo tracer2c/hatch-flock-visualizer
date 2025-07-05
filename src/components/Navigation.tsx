@@ -1,7 +1,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
-import { FileInput, BarChart3, ArrowLeft } from "lucide-react";
+import { FileInput, BarChart3, ArrowLeft, Settings } from "lucide-react";
 
 const Navigation = () => {
   const location = useLocation();
@@ -18,6 +18,12 @@ const Navigation = () => {
       label: 'Data Entry',
       icon: FileInput,
       description: 'Input all data types'
+    },
+    {
+      path: '/management',
+      label: 'Management',
+      icon: Settings,
+      description: 'Manage flocks & machines'
     }
   ];
 
