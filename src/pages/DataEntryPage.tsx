@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileInput } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BatchManager from "@/components/dashboard/BatchManager";
-import BatchDataEntry from "@/components/dashboard/BatchDataEntry";
+import DataTypeSelection from "@/components/dashboard/DataTypeSelection";
 
 const DataEntryPage = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
@@ -12,6 +12,20 @@ const DataEntryPage = () => {
   const handleBatchSelect = (batchId: string) => {
     setSelectedBatchId(batchId);
   };
+
+  const handleBackToBatchSelection = () => {
+    setSelectedBatchId(null);
+  };
+
+  // If a batch is selected, show the data type selection
+  if (selectedBatchId) {
+    return (
+      <DataTypeSelection 
+        batchId={selectedBatchId} 
+        onBack={handleBackToBatchSelection}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -35,11 +49,6 @@ const DataEntryPage = () => {
             onBatchSelect={handleBatchSelect}
             selectedBatch={selectedBatchId}
           />
-          
-          {/* Data Entry for Selected Batch */}
-          {selectedBatchId && (
-            <BatchDataEntry batchId={selectedBatchId} />
-          )}
         </div>
       </div>
     </div>
