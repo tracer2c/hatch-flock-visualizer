@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Users, Home, Calendar } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +27,15 @@ const FlockManager = () => {
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingFlock, setEditingFlock] = useState<Flock | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    flockNumber: '',
+    flockName: '',
+    houseNumber: '',
+    minAge: '',
+    maxAge: '',
+    breed: [] as string[]
+  });
   const [formData, setFormData] = useState({
     flock_number: '',
     flock_name: '',
@@ -169,6 +179,82 @@ const FlockManager = () => {
     }
   };
 
+  const filteredFlocks = useMemo(() => {
+    return flocks.filter(flock => {
+      // Flock number filter
+      if (filters.flockNumber && !flock.flock_number.toString().includes(filters.flockNumber)) {
+        return false;
+      }
+      
+      // Flock name filter
+      if (filters.flockName && !flock.flock_name.toLowerCase().includes(filters.flockName.toLowerCase())) {
+        return false;
+      }
+      
+      // House number filter
+      if (filters.houseNumber && flock.house_number !== filters.houseNumber) {
+        return false;
+      }
+      
+      // Age range filter
+      if (filters.minAge && flock.age_weeks < parseInt(filters.minAge)) {
+        return false;
+      }
+      if (filters.maxAge && flock.age_weeks > parseInt(filters.maxAge)) {
+        return false;
+      }
+      
+      // Breed filter
+      if (filters.breed.length > 0 && !filters.breed.includes(flock.breed)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [flocks, filters]);
+
+  const uniqueHouseNumbers = useMemo(() => {
+    return [...new Set(flocks.map(f => f.house_number).filter(Boolean))].sort();
+  }, [flocks]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.flockNumber) count++;
+    if (filters.flockName) count++;
+    if (filters.houseNumber) count++;
+    if (filters.minAge) count++;
+    if (filters.maxAge) count++;
+    if (filters.breed.length > 0) count++;
+    return count;
+  }, [filters]);
+
+  const clearAllFilters = () => {
+    setFilters({
+      flockNumber: '',
+      flockName: '',
+      houseNumber: '',
+      minAge: '',
+      maxAge: '',
+      breed: []
+    });
+  };
+
+  const clearFilter = (filterKey: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterKey]: filterKey === 'breed' ? [] : ''
+    }));
+  };
+
+  const handleBreedToggle = (breed: string) => {
+    setFilters(prev => ({
+      ...prev,
+      breed: prev.breed.includes(breed) 
+        ? prev.breed.filter(b => b !== breed)
+        : [...prev.breed, breed]
+    }));
+  };
+
   const getBreedColor = (breed: string) => {
     switch (breed) {
       case 'broiler': return 'bg-blue-100 text-blue-800';
@@ -185,8 +271,24 @@ const FlockManager = () => {
           <span className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Flock Management
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
+              </Badge>
+            )}
           </span>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -283,11 +385,148 @@ const FlockManager = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+          <CollapsibleContent className="mb-6">
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Flock Number</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search flock number..."
+                      value={filters.flockNumber}
+                      onChange={(e) => setFilters(prev => ({ ...prev, flockNumber: e.target.value }))}
+                    />
+                    {filters.flockNumber && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('flockNumber')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Flock Name</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search flock name..."
+                      value={filters.flockName}
+                      onChange={(e) => setFilters(prev => ({ ...prev, flockName: e.target.value }))}
+                    />
+                    {filters.flockName && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('flockName')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">House Number</Label>
+                  <Select value={filters.houseNumber} onValueChange={(value) => setFilters(prev => ({ ...prev, houseNumber: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All houses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All houses</SelectItem>
+                      {uniqueHouseNumbers.map((house) => (
+                        <SelectItem key={house} value={house}>{house}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Min Age (weeks)</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="Min age..."
+                      value={filters.minAge}
+                      onChange={(e) => setFilters(prev => ({ ...prev, minAge: e.target.value }))}
+                    />
+                    {filters.minAge && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('minAge')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Max Age (weeks)</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="Max age..."
+                      value={filters.maxAge}
+                      onChange={(e) => setFilters(prev => ({ ...prev, maxAge: e.target.value }))}
+                    />
+                    {filters.maxAge && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('maxAge')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Breed</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['broiler', 'layer', 'breeder'].map((breed) => (
+                      <Button
+                        key={breed}
+                        variant={filters.breed.includes(breed) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleBreedToggle(breed)}
+                        className="capitalize"
+                      >
+                        {breed}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    {filteredFlocks.length} of {flocks.length} flocks shown
+                  </span>
+                  <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {flocks.map((flock) => (
+          {filteredFlocks.map((flock) => (
             <div key={flock.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -330,6 +569,11 @@ const FlockManager = () => {
             </div>
           ))}
         </div>
+        {filteredFlocks.length === 0 && flocks.length > 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No flocks match your current filters. Try adjusting your search criteria.
+          </div>
+        )}
         {flocks.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             No flocks found. Create your first flock to get started.

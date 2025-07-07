@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Factory, MapPin, Wrench } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,6 +26,15 @@ const MachineManager = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    machineNumber: '',
+    machineType: [] as string[],
+    status: [] as string[],
+    location: '',
+    minCapacity: '',
+    maxCapacity: ''
+  });
   const [formData, setFormData] = useState({
     machine_number: '',
     machine_type: '',
@@ -174,6 +184,82 @@ const MachineManager = () => {
     }
   };
 
+  const filteredMachines = useMemo(() => {
+    return machines.filter(machine => {
+      // Machine number filter
+      if (filters.machineNumber && !machine.machine_number.toLowerCase().includes(filters.machineNumber.toLowerCase())) {
+        return false;
+      }
+      
+      // Machine type filter
+      if (filters.machineType.length > 0 && !filters.machineType.includes(machine.machine_type)) {
+        return false;
+      }
+      
+      // Status filter
+      if (filters.status.length > 0 && !filters.status.includes(machine.status || 'available')) {
+        return false;
+      }
+      
+      // Location filter
+      if (filters.location && (!machine.location || !machine.location.toLowerCase().includes(filters.location.toLowerCase()))) {
+        return false;
+      }
+      
+      // Capacity range filter
+      if (filters.minCapacity && machine.capacity < parseInt(filters.minCapacity)) {
+        return false;
+      }
+      if (filters.maxCapacity && machine.capacity > parseInt(filters.maxCapacity)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [machines, filters]);
+
+  const uniqueLocations = useMemo(() => {
+    return [...new Set(machines.map(m => m.location).filter(Boolean))].sort();
+  }, [machines]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.machineNumber) count++;
+    if (filters.machineType.length > 0) count++;
+    if (filters.status.length > 0) count++;
+    if (filters.location) count++;
+    if (filters.minCapacity) count++;
+    if (filters.maxCapacity) count++;
+    return count;
+  }, [filters]);
+
+  const clearAllFilters = () => {
+    setFilters({
+      machineNumber: '',
+      machineType: [],
+      status: [],
+      location: '',
+      minCapacity: '',
+      maxCapacity: ''
+    });
+  };
+
+  const clearFilter = (filterKey: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterKey]: ['machineType', 'status'].includes(filterKey) ? [] : ''
+    }));
+  };
+
+  const handleArrayToggle = (filterKey: 'machineType' | 'status', value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterKey]: prev[filterKey].includes(value) 
+        ? prev[filterKey].filter(v => v !== value)
+        : [...prev[filterKey], value]
+    }));
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'setter': return 'bg-blue-100 text-blue-800';
@@ -190,8 +276,24 @@ const MachineManager = () => {
           <span className="flex items-center gap-2">
             <Factory className="h-5 w-5" />
             Machine Management
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
+              </Badge>
+            )}
           </span>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -284,11 +386,150 @@ const MachineManager = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+          <CollapsibleContent className="mb-6">
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Machine Number</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search machine number..."
+                      value={filters.machineNumber}
+                      onChange={(e) => setFilters(prev => ({ ...prev, machineNumber: e.target.value }))}
+                    />
+                    {filters.machineNumber && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('machineNumber')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Machine Type</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['setter', 'hatcher', 'combo'].map((type) => (
+                      <Button
+                        key={type}
+                        variant={filters.machineType.includes(type) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleArrayToggle('machineType', type)}
+                        className="capitalize"
+                      >
+                        {type}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Status</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['available', 'in-use', 'maintenance', 'offline'].map((status) => (
+                      <Button
+                        key={status}
+                        variant={filters.status.includes(status) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleArrayToggle('status', status)}
+                        className="capitalize"
+                      >
+                        {status.replace('-', ' ')}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Location</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search location..."
+                      value={filters.location}
+                      onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                    />
+                    {filters.location && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('location')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Min Capacity</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="Min capacity..."
+                      value={filters.minCapacity}
+                      onChange={(e) => setFilters(prev => ({ ...prev, minCapacity: e.target.value }))}
+                    />
+                    {filters.minCapacity && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('minCapacity')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Max Capacity</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="Max capacity..."
+                      value={filters.maxCapacity}
+                      onChange={(e) => setFilters(prev => ({ ...prev, maxCapacity: e.target.value }))}
+                    />
+                    {filters.maxCapacity && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                        onClick={() => clearFilter('maxCapacity')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    {filteredMachines.length} of {machines.length} machines shown
+                  </span>
+                  <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {machines.map((machine) => (
+          {filteredMachines.map((machine) => (
             <div key={machine.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -333,6 +574,11 @@ const MachineManager = () => {
             </div>
           ))}
         </div>
+        {filteredMachines.length === 0 && machines.length > 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No machines match your current filters. Try adjusting your search criteria.
+          </div>
+        )}
         {machines.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             No machines found. Create your first machine to get started.
