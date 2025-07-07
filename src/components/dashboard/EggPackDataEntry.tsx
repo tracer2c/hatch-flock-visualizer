@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Package, AlertTriangle, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EggPackData {
   id: string;
@@ -26,17 +27,27 @@ interface EggPackData {
   hatchWeek?: string;
 }
 
+interface BatchInfo {
+  id: string;
+  batch_number: string;
+  flock_name: string;
+  flock_number: number;
+  machine_number: string;
+  house_number?: string;
+}
+
 interface EggPackDataEntryProps {
   data: EggPackData[];
   onDataUpdate: (data: EggPackData[]) => void;
+  batchInfo: BatchInfo;
 }
 
-const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate }) => {
+const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate, batchInfo }) => {
   const [localData, setLocalData] = useState<EggPackData[]>(data);
   const [newEntry, setNewEntry] = useState<Partial<EggPackData>>({
-    flock: '',
-    flockNumber: 0,
-    houseNumber: '',
+    flock: batchInfo.flock_name,
+    flockNumber: batchInfo.flock_number,
+    houseNumber: batchInfo.house_number || '1',
     totalEggsPulled: 648,
     stained: 0,
     dirty: 0,
@@ -55,58 +66,108 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate 
     return total > 0 ? Math.round((value / total) * 10000) / 100 : 0;
   };
 
-  const addEntry = () => {
-    if (!newEntry.flock || !newEntry.flockNumber || !newEntry.houseNumber) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields (Flock, Flock #, House #).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const entry: EggPackData = {
-      id: Date.now().toString(),
-      flock: newEntry.flock || '',
-      flockNumber: newEntry.flockNumber || 0,
-      houseNumber: newEntry.houseNumber || '',
-      totalEggsPulled: newEntry.totalEggsPulled || 648,
-      stained: newEntry.stained || 0,
-      dirty: newEntry.dirty || 0,
+  const addEntry = async () => {
+    const entry = {
+      batch_id: batchInfo.id,
+      sample_size: newEntry.totalEggsPulled || 648,
+      large: 0, // Calculated from total - small
       small: newEntry.small || 0,
+      dirty: newEntry.dirty || 0,
       cracked: newEntry.cracked || 0,
-      abnormal: newEntry.abnormal || 0,
-      contaminated: newEntry.contaminated || 0,
-      totalSampled: newEntry.totalSampled || 648,
-      usd: newEntry.usd || 0,
-      setWeek: newEntry.setWeek || '',
-      hatchWeek: newEntry.hatchWeek || ''
+      grade_a: 0, // You can add these fields if needed
+      grade_b: 0,
+      grade_c: 0,
+      inspection_date: new Date().toISOString().split('T')[0],
+      notes: `Stained: ${newEntry.stained}, Abnormal: ${newEntry.abnormal}, Contaminated: ${newEntry.contaminated}, USD: ${newEntry.usd}${newEntry.setWeek ? `, Set Week: ${newEntry.setWeek}` : ''}`
     };
 
-    const updatedData = [...localData, entry];
-    setLocalData(updatedData);
-    setNewEntry({
-      flock: '',
-      flockNumber: 0,
-      houseNumber: '',
-      totalEggsPulled: 648,
-      stained: 0,
-      dirty: 0,
-      small: 0,
-      cracked: 0,
-      abnormal: 0,
-      contaminated: 0,
-      totalSampled: 648,
-      usd: 0,
-      setWeek: '',
-      hatchWeek: ''
-    });
+    const { error } = await supabase
+      .from('egg_pack_quality')
+      .insert([entry]);
 
-    toast({
-      title: "Entry Added",
-      description: `Added egg pack data for ${entry.flock} (Flock #${entry.flockNumber}).`,
-    });
+    if (error) {
+      toast({
+        title: "Error saving data",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Entry Added",
+        description: `Added egg pack quality assessment for ${batchInfo.flock_name}`,
+      });
+      
+      // Reset form but keep batch info
+      setNewEntry({
+        flock: batchInfo.flock_name,
+        flockNumber: batchInfo.flock_number,
+        houseNumber: batchInfo.house_number || '1',
+        totalEggsPulled: 648,
+        stained: 0,
+        dirty: 0,
+        small: 0,
+        cracked: 0,
+        abnormal: 0,
+        contaminated: 0,
+        totalSampled: 648,
+        usd: 0,
+        setWeek: '',
+        hatchWeek: ''
+      });
+      
+      // Refresh data
+      loadEggPackData();
+    }
   };
+
+  const loadEggPackData = async () => {
+    const { data, error } = await supabase
+      .from('egg_pack_quality')
+      .select('*')
+      .eq('batch_id', batchInfo.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading egg pack data:', error);
+    } else {
+      // Convert database records to component format
+      const convertedData = data.map(record => ({
+        id: record.id,
+        flock: batchInfo.flock_name,
+        flockNumber: batchInfo.flock_number,
+        houseNumber: batchInfo.house_number || '1',
+        totalEggsPulled: record.sample_size,
+        stained: extractFromNotes(record.notes, 'Stained'),
+        dirty: record.dirty,
+        small: record.small,
+        cracked: record.cracked,
+        abnormal: extractFromNotes(record.notes, 'Abnormal'),
+        contaminated: extractFromNotes(record.notes, 'Contaminated'),
+        totalSampled: record.sample_size,
+        usd: extractFromNotes(record.notes, 'USD'),
+        setWeek: extractStringFromNotes(record.notes, 'Set Week'),
+        hatchWeek: '' // Not stored in current schema
+      }));
+      setLocalData(convertedData);
+      onDataUpdate(convertedData);
+    }
+  };
+
+  const extractFromNotes = (notes: string | null, field: string): number => {
+    if (!notes) return 0;
+    const match = notes.match(new RegExp(`${field}:\\s*(\\d+)`));
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  const extractStringFromNotes = (notes: string | null, field: string): string => {
+    if (!notes) return '';
+    const match = notes.match(new RegExp(`${field}:\\s*([^,]+)`));
+    return match ? match[1].trim() : '';
+  };
+
+  useEffect(() => {
+    loadEggPackData();
+  }, [batchInfo.id]);
 
   const removeEntry = (id: string) => {
     const updatedData = localData.filter(entry => entry.id !== id);
@@ -155,33 +216,39 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate 
           <CardTitle>Add New Egg Pack Entry</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Selected Batch:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
+            </p>
+            <p className="text-sm text-gray-600">Quality assessment data will be automatically linked to this batch.</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="flock">Flock Name *</Label>
+              <Label htmlFor="flock">Flock Name</Label>
               <Input
                 id="flock"
                 value={newEntry.flock}
-                onChange={(e) => setNewEntry({...newEntry, flock: e.target.value})}
-                placeholder="e.g., SCHOFIELD"
+                disabled
+                className="bg-gray-100"
               />
             </div>
             <div>
-              <Label htmlFor="flockNumber">Flock # *</Label>
+              <Label htmlFor="flockNumber">Flock #</Label>
               <Input
                 id="flockNumber"
                 type="number"
                 value={newEntry.flockNumber}
-                onChange={(e) => setNewEntry({...newEntry, flockNumber: parseInt(e.target.value) || 0})}
-                placeholder="e.g., 6425"
+                disabled
+                className="bg-gray-100"
               />
             </div>
             <div>
-              <Label htmlFor="houseNumber">House # *</Label>
+              <Label htmlFor="houseNumber">House #</Label>
               <Input
                 id="houseNumber"
                 value={newEntry.houseNumber}
-                onChange={(e) => setNewEntry({...newEntry, houseNumber: e.target.value})}
-                placeholder="e.g., 1"
+                disabled
+                className="bg-gray-100"
               />
             </div>
             <div>

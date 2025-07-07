@@ -17,6 +17,7 @@ interface BatchInfo {
   flock_name: string;
   flock_number: number;
   machine_number: string;
+  house_number: string;
   set_date: string;
   expected_hatch_date: string;
   total_eggs_set: number;
@@ -47,7 +48,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
       .from('batches')
       .select(`
         *,
-        flocks(flock_name, flock_number),
+        flocks(flock_name, flock_number, house_number),
         machines(machine_number)
       `)
       .eq('id', batchId)
@@ -66,6 +67,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         flock_name: data.flocks?.flock_name || '',
         flock_number: data.flocks?.flock_number || 0,
         machine_number: data.machines?.machine_number || '',
+        house_number: data.flocks?.house_number || '1',
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
@@ -222,7 +224,18 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         </TabsList>
 
         <TabsContent value="eggpack">
-          <EggPackDataEntry data={eggPackData} onDataUpdate={handleEggPackDataUpdate} />
+          <EggPackDataEntry 
+            data={eggPackData} 
+            onDataUpdate={handleEggPackDataUpdate}
+            batchInfo={{
+              id: batchInfo.id,
+              batch_number: batchInfo.batch_number,
+              flock_name: batchInfo.flock_name,
+              flock_number: batchInfo.flock_number,
+              machine_number: batchInfo.machine_number,
+              house_number: batchInfo.house_number
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="fertility">
