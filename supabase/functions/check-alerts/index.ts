@@ -150,6 +150,74 @@ serve(async (req: Request) => {
       }
     }
 
+    // Check for incomplete checklists
+    console.log("Checking for incomplete checklists...");
+    
+    for (const batch of batches || []) {
+      const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Get today's required checklist items for this day
+      const { data: checklistItems, error: checklistError } = await supabase
+        .from('daily_checklist_items')
+        .select('*')
+        .contains('applicable_days', [daysSinceSet])
+        .eq('is_required', true);
+
+      if (checklistError) {
+        console.error("Error fetching checklist items:", checklistError);
+        continue;
+      }
+
+      if (checklistItems && checklistItems.length > 0) {
+        // Get today's completions for this batch
+        const { data: completions, error: completionsError } = await supabase
+          .from('checklist_completions')
+          .select('checklist_item_id')
+          .eq('batch_id', batch.id)
+          .eq('day_of_incubation', daysSinceSet);
+
+        if (completionsError) {
+          console.error("Error fetching completions:", completionsError);
+          continue;
+        }
+
+        const completedItemIds = new Set(completions?.map(c => c.checklist_item_id) || []);
+        const incompleteItems = checklistItems.filter(item => !completedItemIds.has(item.id));
+
+        if (incompleteItems.length > 0) {
+          // Check if alert already exists
+          const existingAlert = await supabase
+            .from('alerts')
+            .select('id')
+            .eq('batch_id', batch.id)
+            .eq('alert_type', 'checklist_incomplete')
+            .eq('batch_day', daysSinceSet)
+            .eq('status', 'active');
+
+          if (!existingAlert.data?.length) {
+            const alert = {
+              alert_type: 'checklist_incomplete',
+              batch_id: batch.id,
+              severity: incompleteItems.length >= 3 ? 'critical' : 'warning',
+              title: `Incomplete Checklist - ${batch.batch_number}`,
+              message: `${incompleteItems.length} required checklist items incomplete for Day ${daysSinceSet}`,
+              batch_day: daysSinceSet,
+              status: 'active'
+            };
+
+            const { error: insertError } = await supabase
+              .from('alerts')
+              .insert(alert);
+
+            if (!insertError) {
+              alertsGenerated.push(alert);
+              console.log(`Generated checklist incomplete alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
+            }
+          }
+        }
+      }
+    }
+
     // Check for machine maintenance alerts
     console.log("Checking for machine maintenance alerts...");
     const { data: machines, error: machineError } = await supabase

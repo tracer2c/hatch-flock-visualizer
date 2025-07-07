@@ -11,6 +11,7 @@ import FertilityEntryPage from "./pages/FertilityEntryPage";
 import QAEntryPage from "./pages/QAEntryPage";
 import ResidueEntryPage from "./pages/ResidueEntryPage";
 import ManagementPage from "./pages/ManagementPage";
+import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,8 @@ const App = () => (
           <Route path="/data-entry/batch/:batchId/fertility" element={<FertilityEntryPage />} />
           <Route path="/data-entry/batch/:batchId/qa" element={<QAEntryPage />} />
           <Route path="/data-entry/batch/:batchId/residue" element={<ResidueEntryPage />} />
+          <Route path="/checklist" element={<ChecklistPage />} />
+          <Route path="/checklist/batch/:batchId" element={<ChecklistPage />} />
           <Route path="/management" element={<ManagementPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -1,7 +1,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
-import { FileInput, BarChart3, ArrowLeft, Settings } from "lucide-react";
+import { FileInput, BarChart3, ArrowLeft, Settings, CheckSquare } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 
 const Navigation = () => {
@@ -19,6 +19,12 @@ const Navigation = () => {
       label: 'Data Entry',
       icon: FileInput,
       description: 'Input all data types'
+    },
+    {
+      path: '/checklist',
+      label: 'Daily Checklist',
+      icon: CheckSquare,
+      description: 'Track daily tasks'
     },
     {
       path: '/management',

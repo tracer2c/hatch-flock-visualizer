@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveAlerts, useCheckAlerts } from "@/hooks/useAlerts";
-import { Bell, RefreshCw, AlertTriangle, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock } from "lucide-react";
+import { Bell, RefreshCw, AlertTriangle, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock, CheckSquare } from "lucide-react";
 import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/useAlerts";
 
 const NotificationBell = () => {
@@ -23,6 +23,7 @@ const NotificationBell = () => {
       case 'humidity': return <Droplets className="h-3 w-3" />;
       case 'critical_day': return <Calendar className="h-3 w-3" />;
       case 'machine_maintenance': return <Wrench className="h-3 w-3" />;
+      case 'checklist_incomplete': return <CheckSquare className="h-3 w-3" />;
       default: return <AlertTriangle className="h-3 w-3" />;
     }
   };
