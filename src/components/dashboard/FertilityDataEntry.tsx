@@ -23,16 +23,24 @@ interface FertilityRecord {
   hofPercent: number;
 }
 
+interface BatchInfo {
+  id: string;
+  batch_number: string;
+  flock_name: string;
+  flock_number: number;
+}
+
 interface FertilityDataEntryProps {
   data: FertilityRecord[];
   onDataUpdate: (data: FertilityRecord[]) => void;
+  batchInfo: BatchInfo;
 }
 
-const FertilityDataEntry = ({ data, onDataUpdate }: FertilityDataEntryProps) => {
+const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntryProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    flockNumber: '',
+    name: batchInfo.flock_name,
+    flockNumber: batchInfo.flock_number.toString(),
     age: '',
     size: '648',
     infertile: '',
