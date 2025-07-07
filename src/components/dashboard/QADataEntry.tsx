@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle } from "lucide-react";
+import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BatchInfo {
   id: string;
   batch_number: string;
   flock_name: string;
   flock_number: number;
+  machine_id: string;
+  house_number?: string;
+}
+
+interface Machine {
+  id: string;
+  machine_number: string;
+  machine_type: string;
+  location: string;
+  status: string;
 }
 
 interface QADataEntryProps {
@@ -22,10 +33,63 @@ interface QADataEntryProps {
 
 const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo }) => {
   const { toast } = useToast();
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [currentMachine, setCurrentMachine] = useState<Machine | null>(null);
 
-  // Form states for different sections
+  useEffect(() => {
+    loadMachines();
+    loadCurrentMachine();
+  }, [batchInfo.machine_id]);
+
+  const loadMachines = async () => {
+    const { data: machinesData, error } = await supabase
+      .from('machines')
+      .select('*')
+      .order('machine_number');
+    
+    if (error) {
+      toast({
+        title: "Error loading machines",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      setMachines(machinesData || []);
+    }
+  };
+
+  const loadCurrentMachine = async () => {
+    if (batchInfo.machine_id) {
+      const { data: machineData, error } = await supabase
+        .from('machines')
+        .select('*')
+        .eq('id', batchInfo.machine_id)
+        .single();
+      
+      if (!error && machineData) {
+        setCurrentMachine(machineData);
+      }
+    }
+  };
+
+  // Get setter machines for dropdown
+  const setterMachines = machines.filter(m => m.machine_type === 'setter' || m.machine_type === 'combo');
+  
+  // Get location options based on facility setup
+  const locationOptions = [
+    { value: 'hatcher', label: 'Hatcher (104-106°F)', temp_range: '104-106°F' },
+    { value: 'chick_room', label: 'Chick Room (103-105°F)', temp_range: '103-105°F' },
+    { value: 'separator_room', label: 'Separator Room (104-106°F)', temp_range: '104-106°F' },
+    ...(currentMachine?.location ? [{ 
+      value: currentMachine.location.toLowerCase().replace(/\s+/g, '_'), 
+      label: `${currentMachine.location} (104-106°F)`, 
+      temp_range: '104-106°F' 
+    }] : [])
+  ];
+
+  // Form states for different sections - with pre-populated flock numbers
   const [setterTemps, setSetterTemps] = useState({
-    setterNumber: '',
+    setterNumber: currentMachine?.machine_number || '',
     leftTopTemp: '',
     leftMiddleTemp: '',
     leftBottomTemp: '',
@@ -50,7 +114,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   });
 
   const [cullChecks, setCullChecks] = useState({
-    flockNumber: '',
+    flockNumber: batchInfo.flock_number.toString(),
     maleCount: '',
     femaleCount: '',
     defectType: '',
@@ -58,21 +122,21 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   });
 
   const [specificGravity, setSpecificGravity] = useState({
-    flockNumber: '',
+    flockNumber: batchInfo.flock_number.toString(),
     age: '',
     floatPercentage: '',
     testDate: new Date().toISOString().split('T')[0]
   });
 
   const [setterAngles, setSetterAngles] = useState({
-    setterNumber: '',
+    setterNumber: currentMachine?.machine_number || '',
     leftAngle: '',
     rightAngle: '',
     checkDate: new Date().toISOString().split('T')[0]
   });
 
   const [hatchProgression, setHatchProgression] = useState({
-    flockNumber: '',
+    flockNumber: batchInfo.flock_number.toString(),
     stage: 'A',
     percentageOut: '',
     totalCount: '',
@@ -82,12 +146,20 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   });
 
   const [moistureLoss, setMoistureLoss] = useState({
-    flockNumber: '',
+    flockNumber: batchInfo.flock_number.toString(),
     day1Weight: '',
     day18Weight: '',
     lossPercentage: '',
     testDate: new Date().toISOString().split('T')[0]
   });
+
+  // Update form states when currentMachine changes
+  useEffect(() => {
+    if (currentMachine) {
+      setSetterTemps(prev => ({ ...prev, setterNumber: currentMachine.machine_number }));
+      setSetterAngles(prev => ({ ...prev, setterNumber: currentMachine.machine_number }));
+    }
+  }, [currentMachine]);
 
   const handleAddSetterTemp = () => {
     const leftAvg = ((parseFloat(setterTemps.leftTopTemp) + parseFloat(setterTemps.leftMiddleTemp) + parseFloat(setterTemps.leftBottomTemp)) / 3).toFixed(1);
@@ -118,7 +190,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setSetterTemps({
-      setterNumber: '',
+      setterNumber: currentMachine?.machine_number || '',
       leftTopTemp: '',
       leftMiddleTemp: '',
       leftBottomTemp: '',
@@ -226,7 +298,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setCullChecks({
-      flockNumber: '',
+      flockNumber: batchInfo.flock_number.toString(),
       maleCount: '',
       femaleCount: '',
       defectType: '',
@@ -259,7 +331,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setSpecificGravity({
-      flockNumber: '',
+      flockNumber: batchInfo.flock_number.toString(),
       age: '',
       floatPercentage: '',
       testDate: new Date().toISOString().split('T')[0]
@@ -291,7 +363,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setSetterAngles({
-      setterNumber: '',
+      setterNumber: currentMachine?.machine_number || '',
       leftAngle: '',
       rightAngle: '',
       checkDate: new Date().toISOString().split('T')[0]
@@ -326,7 +398,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setHatchProgression({
-      flockNumber: '',
+      flockNumber: batchInfo.flock_number.toString(),
       stage: 'A',
       percentageOut: '',
       totalCount: '',
@@ -363,7 +435,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     onDataUpdate(updatedData);
     
     setMoistureLoss({
-      flockNumber: '',
+      flockNumber: batchInfo.flock_number.toString(),
       day1Weight: '',
       day18Weight: '',
       lossPercentage: '',
@@ -396,6 +468,41 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
           <p className="text-sm text-gray-600">
             Monitor incubation conditions, chick health, and equipment performance
           </p>
+          
+          {/* Batch Context Header */}
+          <div className="mt-4 p-4 bg-muted rounded-lg border">
+            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              Batch Context
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="space-y-1">
+                <span className="text-muted-foreground">Batch Number:</span>
+                <div className="font-medium">{batchInfo.batch_number}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground">Flock:</span>
+                <div className="font-medium">{batchInfo.flock_name} (#{batchInfo.flock_number})</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground">House:</span>
+                <div className="font-medium">{batchInfo.house_number || 'N/A'}</div>
+              </div>
+              <div className="space-y-1 flex items-center gap-2">
+                <span className="text-muted-foreground">Machine:</span>
+                <div className="font-medium flex items-center gap-1">
+                  {currentMachine ? (
+                    <>
+                      <MapPin className="h-3 w-3" />
+                      {currentMachine.machine_number} ({currentMachine.location})
+                    </>
+                  ) : (
+                    'Loading...'
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="setter-temps" className="space-y-4">
@@ -443,13 +550,24 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="setter-number">Setter Number</Label>
-                      <Input
-                        id="setter-number"
+                      <Label htmlFor="setter-number">Setter Machine</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={setterTemps.setterNumber}
                         onChange={(e) => setSetterTemps({...setterTemps, setterNumber: e.target.value})}
-                        placeholder="e.g., 51"
-                      />
+                      >
+                        <option value="">Select setter machine</option>
+                        {setterMachines.map((machine) => (
+                          <option key={machine.id} value={machine.machine_number}>
+                            {machine.machine_number} - {machine.location} ({machine.status})
+                          </option>
+                        ))}
+                      </select>
+                      {currentMachine && (
+                        <p className="text-xs text-muted-foreground">
+                          Current batch machine: {currentMachine.machine_number}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="check-date">Check Date</Label>
@@ -565,10 +683,17 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         value={rectalTemps.location}
                         onChange={(e) => setRectalTemps({...rectalTemps, location: e.target.value})}
                       >
-                        <option value="hatcher">Hatcher (104-106°F)</option>
-                        <option value="chick_room">Chick Room (103-105°F)</option>
-                        <option value="separator_room">Separator Room (104-106°F)</option>
+                        {locationOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
+                      {currentMachine && (
+                        <p className="text-xs text-muted-foreground">
+                          Machine location: {currentMachine.location}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="temperature">Temperature (°F)</Label>
@@ -678,13 +803,16 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="flock-number">Flock Number</Label>
+                      <Label htmlFor="flock-number">Flock Number (Auto-filled)</Label>
                       <Input
                         id="flock-number"
                         value={cullChecks.flockNumber}
-                        onChange={(e) => setCullChecks({...cullChecks, flockNumber: e.target.value})}
-                        placeholder="6414"
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        From batch: {batchInfo.flock_name}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="male-count">Male Culls</Label>
@@ -749,13 +877,16 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="sg-flock">Flock Number</Label>
+                      <Label htmlFor="sg-flock">Flock Number (Auto-filled)</Label>
                       <Input
                         id="sg-flock"
                         value={specificGravity.flockNumber}
-                        onChange={(e) => setSpecificGravity({...specificGravity, flockNumber: e.target.value})}
-                        placeholder="6400"
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        From batch: {batchInfo.flock_name}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="flock-age">Age (weeks)</Label>
@@ -806,13 +937,24 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="angle-setter">Setter Number</Label>
-                      <Input
-                        id="angle-setter"
+                      <Label htmlFor="angle-setter">Setter Machine</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={setterAngles.setterNumber}
                         onChange={(e) => setSetterAngles({...setterAngles, setterNumber: e.target.value})}
-                        placeholder="14"
-                      />
+                      >
+                        <option value="">Select setter machine</option>
+                        {setterMachines.map((machine) => (
+                          <option key={machine.id} value={machine.machine_number}>
+                            {machine.machine_number} - {machine.location} ({machine.status})
+                          </option>
+                        ))}
+                      </select>
+                      {currentMachine && (
+                        <p className="text-xs text-muted-foreground">
+                          Current batch machine: {currentMachine.machine_number}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="left-angle">Left Angle (°)</Label>
@@ -864,13 +1006,16 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="hatch-flock">Flock Number</Label>
+                      <Label htmlFor="hatch-flock">Flock Number (Auto-filled)</Label>
                       <Input
                         id="hatch-flock"
                         value={hatchProgression.flockNumber}
-                        onChange={(e) => setHatchProgression({...hatchProgression, flockNumber: e.target.value})}
-                        placeholder="6428"
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        From batch: {batchInfo.flock_name}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="hatch-stage">Stage</Label>
@@ -942,13 +1087,16 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="moisture-flock">Flock Number</Label>
+                      <Label htmlFor="moisture-flock">Flock Number (Auto-filled)</Label>
                       <Input
                         id="moisture-flock"
                         value={moistureLoss.flockNumber}
-                        onChange={(e) => setMoistureLoss({...moistureLoss, flockNumber: e.target.value})}
-                        placeholder="6383"
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        From batch: {batchInfo.flock_name}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="day1-weight">Day 1 Weight (g)</Label>

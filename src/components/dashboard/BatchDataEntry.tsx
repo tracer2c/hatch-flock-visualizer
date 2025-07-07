@@ -16,6 +16,7 @@ interface BatchInfo {
   batch_number: string;
   flock_name: string;
   flock_number: number;
+  machine_id: string;
   machine_number: string;
   house_number: string;
   set_date: string;
@@ -49,7 +50,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
       .select(`
         *,
         flocks(flock_name, flock_number, house_number),
-        machines(machine_number)
+        machines(id, machine_number, machine_type, location)
       `)
       .eq('id', batchId)
       .single();
@@ -66,6 +67,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         batch_number: data.batch_number,
         flock_name: data.flocks?.flock_name || '',
         flock_number: data.flocks?.flock_number || 0,
+        machine_id: data.machine_id,
         machine_number: data.machines?.machine_number || '',
         house_number: data.flocks?.house_number || '1',
         set_date: data.set_date,
@@ -259,7 +261,9 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
               id: batchInfo.id,
               batch_number: batchInfo.batch_number,
               flock_name: batchInfo.flock_name,
-              flock_number: batchInfo.flock_number
+              flock_number: batchInfo.flock_number,
+              machine_id: batchInfo.machine_id,
+              house_number: batchInfo.house_number
             }}
           />
         </TabsContent>
