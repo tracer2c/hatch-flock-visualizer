@@ -6,6 +6,7 @@ import BatchOverviewDashboard from "@/components/dashboard/BatchOverviewDashboar
 import ProcessFlowDashboard from "@/components/dashboard/ProcessFlowDashboard";
 import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
 import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
+import AlertCenter from "@/components/alerts/AlertCenter";
 import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
 
 const Index = () => {
@@ -26,6 +27,11 @@ const Index = () => {
 
         {/* Navigation */}
         <Navigation />
+
+        {/* Alert Center */}
+        <div className="mb-6">
+          <AlertCenter />
+        </div>
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">

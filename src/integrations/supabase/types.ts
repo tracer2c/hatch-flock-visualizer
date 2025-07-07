@@ -14,6 +14,145 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_configs: {
+        Row: {
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          created_at: string
+          critical_days: number[] | null
+          description: string | null
+          id: string
+          is_enabled: boolean
+          maintenance_days_interval: number | null
+          maintenance_hours_interval: number | null
+          max_humidity: number | null
+          max_temperature: number | null
+          min_humidity: number | null
+          min_temperature: number | null
+          name: string
+          reminder_hours_before: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          created_at?: string
+          critical_days?: number[] | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          maintenance_days_interval?: number | null
+          maintenance_hours_interval?: number | null
+          max_humidity?: number | null
+          max_temperature?: number | null
+          min_humidity?: number | null
+          min_temperature?: number | null
+          name: string
+          reminder_hours_before?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: Database["public"]["Enums"]["alert_type"]
+          created_at?: string
+          critical_days?: number[] | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          maintenance_days_interval?: number | null
+          maintenance_hours_interval?: number | null
+          max_humidity?: number | null
+          max_temperature?: number | null
+          min_humidity?: number | null
+          min_temperature?: number | null
+          name?: string
+          reminder_hours_before?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_config_id: string | null
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          batch_day: number | null
+          batch_id: string | null
+          created_at: string
+          current_humidity: number | null
+          current_temperature: number | null
+          id: string
+          machine_id: string | null
+          message: string
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["alert_severity"]
+          status: Database["public"]["Enums"]["alert_status"]
+          title: string
+          triggered_at: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_config_id?: string | null
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          batch_day?: number | null
+          batch_id?: string | null
+          created_at?: string
+          current_humidity?: number | null
+          current_temperature?: number | null
+          id?: string
+          machine_id?: string | null
+          message: string
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          status?: Database["public"]["Enums"]["alert_status"]
+          title: string
+          triggered_at?: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_config_id?: string | null
+          alert_type?: Database["public"]["Enums"]["alert_type"]
+          batch_day?: number | null
+          batch_id?: string | null
+          created_at?: string
+          current_humidity?: number | null
+          current_temperature?: number | null
+          id?: string
+          machine_id?: string | null
+          message?: string
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["alert_severity"]
+          status?: Database["public"]["Enums"]["alert_status"]
+          title?: string
+          triggered_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_alert_config_id_fkey"
+            columns: ["alert_config_id"]
+            isOneToOne: false
+            referencedRelation: "alert_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           actual_hatch_date: string | null
@@ -288,6 +427,54 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          browser_enabled: boolean
+          created_at: string
+          critical_day_alerts: boolean
+          email_enabled: boolean
+          humidity_alerts: boolean
+          id: string
+          maintenance_alerts: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          schedule_reminders: boolean
+          temperature_alerts: boolean
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          browser_enabled?: boolean
+          created_at?: string
+          critical_day_alerts?: boolean
+          email_enabled?: boolean
+          humidity_alerts?: boolean
+          id?: string
+          maintenance_alerts?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          schedule_reminders?: boolean
+          temperature_alerts?: boolean
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          browser_enabled?: boolean
+          created_at?: string
+          critical_day_alerts?: boolean
+          email_enabled?: boolean
+          humidity_alerts?: boolean
+          id?: string
+          maintenance_alerts?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          schedule_reminders?: boolean
+          temperature_alerts?: boolean
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
       qa_monitoring: {
         Row: {
           batch_id: string
@@ -417,6 +604,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      alert_severity: "info" | "warning" | "critical"
+      alert_status: "active" | "acknowledged" | "resolved" | "dismissed"
+      alert_type:
+        | "temperature"
+        | "humidity"
+        | "schedule_reminder"
+        | "critical_day"
+        | "machine_maintenance"
       batch_status:
         | "planned"
         | "setting"
@@ -553,6 +748,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alert_severity: ["info", "warning", "critical"],
+      alert_status: ["active", "acknowledged", "resolved", "dismissed"],
+      alert_type: [
+        "temperature",
+        "humidity",
+        "schedule_reminder",
+        "critical_day",
+        "machine_maintenance",
+      ],
       batch_status: [
         "planned",
         "setting",
