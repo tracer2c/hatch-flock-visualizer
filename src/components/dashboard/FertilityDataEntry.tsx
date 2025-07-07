@@ -158,8 +158,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   const handleCancel = () => {
     setEditingId(null);
     setFormData({
-      name: '',
-      flockNumber: '',
+      name: batchInfo.flock_name,
+      flockNumber: batchInfo.flock_number.toString(),
       age: '',
       size: '648',
       infertile: '',
