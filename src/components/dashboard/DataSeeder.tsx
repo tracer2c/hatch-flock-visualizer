@@ -71,6 +71,17 @@ const DataSeeder = () => {
     };
   };
 
+  const clearExistingData = async () => {
+    // Delete in reverse dependency order to avoid foreign key constraints
+    await supabase.from('fertility_analysis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('checklist_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('daily_checklist_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('sop_templates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('batches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('flocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('machines').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  };
+
   const updateProgress = (newProgress: number, newStatus: string) => {
     setProgress(newProgress);
     setStatus(newStatus);
@@ -81,8 +92,12 @@ const DataSeeder = () => {
     setProgress(0);
 
     try {
+      // Step 0: Clear existing data first
+      updateProgress(5, 'Clearing existing data...');
+      await clearExistingData();
+
       // Step 1: Create flocks
-      updateProgress(10, 'Creating flocks...');
+      updateProgress(15, 'Creating flocks...');
       for (const flock of referenceFlocks) {
         const { error } = await supabase.from('flocks').insert({
           flock_number: flock.number,
