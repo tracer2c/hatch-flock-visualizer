@@ -7,7 +7,7 @@ import { ArrowLeft, Activity, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import QADataEntry from "@/components/dashboard/QADataEntry";
-import Navigation from "@/components/Navigation";
+
 
 interface BatchInfo {
   id: string;
@@ -125,7 +125,6 @@ const QAEntryPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-7xl mx-auto">
-          <Navigation />
           <Card>
             <CardContent className="p-8 text-center">
               <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
@@ -141,7 +140,6 @@ const QAEntryPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-4">
-        <Navigation />
         
         {/* Header with Navigation */}
         <div className="mb-6">
