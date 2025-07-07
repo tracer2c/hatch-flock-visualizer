@@ -55,7 +55,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
 
   // Sort data based on selected metric
   const sortedData = [...data].sort((a, b) => {
-    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "name") return a.batchNumber.localeCompare(b.batchNumber);
     return b[sortBy] - a[sortBy];
   });
 
@@ -93,7 +93,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 <SelectContent>
                   <SelectItem value="fertility">Fertility</SelectItem>
                   <SelectItem value="hatch">Hatch Rate</SelectItem>
-                  <SelectItem value="hoi">HOI</SelectItem>
+                  <SelectItem value="qualityScore">Quality Score</SelectItem>
                   <SelectItem value="hof">HOF</SelectItem>
                   <SelectItem value="age">Age</SelectItem>
                   <SelectItem value="name">Name</SelectItem>
@@ -127,7 +127,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
               <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="name" 
+                  dataKey="batchNumber" 
                   angle={-45}
                   textAnchor="end"
                   height={100}
@@ -142,14 +142,14 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 />
                 <Bar dataKey="fertility" fill="#8884d8" name="fertility" />
                 <Bar dataKey="hatch" fill="#82ca9d" name="hatch" />
-                <Bar dataKey="hoi" fill="#ffc658" name="hoi" />
+                <Bar dataKey="qualityScore" fill="#ffc658" name="qualityScore" />
                 <Bar dataKey="hof" fill="#ff7c7c" name="hof" />
               </BarChart>
             ) : (
               <AreaChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="name" 
+                  dataKey="batchNumber" 
                   angle={-45}
                   textAnchor="end"
                   height={100}
@@ -164,7 +164,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 />
                 <Area type="monotone" dataKey="fertility" stackId="1" stroke="#8884d8" fill="#8884d8" />
                 <Area type="monotone" dataKey="hatch" stackId="2" stroke="#82ca9d" fill="#82ca9d" />
-                <Area type="monotone" dataKey="hoi" stackId="3" stroke="#ffc658" fill="#ffc658" />
+                <Area type="monotone" dataKey="qualityScore" stackId="3" stroke="#ffc658" fill="#ffc658" />
               </AreaChart>
             )}
           </ResponsiveContainer>
@@ -204,10 +204,10 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           <CardContent>
             <div className="space-y-3">
               {topPerformers.map((item, index) => (
-                <div key={item.flock} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div key={item.batchNumber} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-600">{item.hatchery} - Flock {item.flock}</div>
+                    <div className="font-medium">Batch {item.batchNumber}</div>
+                    <div className="text-sm text-gray-600">{item.flockName} - {item.breed}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-green-600">{item.fertility.toFixed(1)}%</div>
@@ -226,10 +226,10 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           <CardContent>
             <div className="space-y-3">
               {bottomPerformers.map((item, index) => (
-                <div key={item.flock} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                <div key={item.batchNumber} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-600">{item.hatchery} - Flock {item.flock}</div>
+                    <div className="font-medium">Batch {item.batchNumber}</div>
+                    <div className="text-sm text-gray-600">{item.flockName} - {item.breed}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-red-600">{item.fertility.toFixed(1)}%</div>

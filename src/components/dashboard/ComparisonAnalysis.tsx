@@ -20,9 +20,9 @@ const comparisonDemoSteps = [
     position: "bottom" as const
   },
   {
-    id: "hatchery-comparison",
-    title: "Hatchery Comparison",
-    description: "Compare overall performance between different hatcheries with detailed statistics and visual charts.",
+    id: "breed-comparison",
+    title: "Breed Comparison",
+    description: "Compare performance between different breeds with detailed statistics and visual charts.",
     target: "hatchery-comparison",
     position: "top" as const
   },
@@ -47,43 +47,43 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [comparisonMetric, setComparisonMetric] = useState("fertility");
   const [showDemo, setShowDemo] = useState(false);
 
-  const handleItemSelect = (flock: string) => {
-    if (selectedItems.includes(flock)) {
-      setSelectedItems(selectedItems.filter(item => item !== flock));
+  const handleItemSelect = (batchNumber: string) => {
+    if (selectedItems.includes(batchNumber)) {
+      setSelectedItems(selectedItems.filter(item => item !== batchNumber));
     } else if (selectedItems.length < 5) {
-      setSelectedItems([...selectedItems, flock]);
+      setSelectedItems([...selectedItems, batchNumber]);
     }
   };
 
-  const selectedData = data.filter(item => selectedItems.includes(item.flock.toString()));
+  const selectedData = data.filter(item => selectedItems.includes(item.batchNumber));
 
-  // Hatchery comparison data
-  const hatcheryComparison = data.reduce((acc, item) => {
-    if (!acc[item.hatchery]) {
-      acc[item.hatchery] = {
-        hatchery: item.hatchery,
+  // Breed comparison data
+  const breedComparison = data.reduce((acc, item) => {
+    if (!acc[item.breed]) {
+      acc[item.breed] = {
+        breed: item.breed,
         fertility: [],
         hatch: [],
-        hoi: [],
+        qualityScore: [],
         hof: [],
         earlyDead: []
       };
     }
-    acc[item.hatchery].fertility.push(item.fertility);
-    acc[item.hatchery].hatch.push(item.hatch);
-    acc[item.hatchery].hoi.push(item.hoi);
-    acc[item.hatchery].hof.push(item.hof);
-    acc[item.hatchery].earlyDead.push(item.earlyDead);
+    acc[item.breed].fertility.push(item.fertility);
+    acc[item.breed].hatch.push(item.hatch);
+    acc[item.breed].qualityScore.push(item.qualityScore);
+    acc[item.breed].hof.push(item.hof);
+    acc[item.breed].earlyDead.push(item.earlyDead);
     return acc;
   }, {} as any);
 
-  const hatcheryStats = Object.keys(hatcheryComparison).map(hatchery => {
-    const stats = hatcheryComparison[hatchery];
+  const breedStats = Object.keys(breedComparison).map(breed => {
+    const stats = breedComparison[breed];
     return {
-      hatchery,
+      breed,
       avgFertility: stats.fertility.reduce((a: number, b: number) => a + b, 0) / stats.fertility.length,
       avgHatch: stats.hatch.reduce((a: number, b: number) => a + b, 0) / stats.hatch.length,
-      avgHOI: stats.hoi.reduce((a: number, b: number) => a + b, 0) / stats.hoi.length,
+      avgQualityScore: stats.qualityScore.reduce((a: number, b: number) => a + b, 0) / stats.qualityScore.length,
       avgHOF: stats.hof.reduce((a: number, b: number) => a + b, 0) / stats.hof.length,
       avgEarlyDead: stats.earlyDead.reduce((a: number, b: number) => a + b, 0) / stats.earlyDead.length,
       count: stats.fertility.length
@@ -92,10 +92,10 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
 
   // Prepare radar chart data for selected items
   const radarData = selectedData.map(item => ({
-    name: `${item.name} (${item.hatchery})`,
+    name: `Batch ${item.batchNumber} (${item.flockName})`,
     fertility: item.fertility,
     hatch: item.hatch,
-    hoi: item.hoi,
+    qualityScore: item.qualityScore,
     hof: item.hof,
     earlyDead: 10 - item.earlyDead // Invert early dead for better visualization
   }));
@@ -122,11 +122,11 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
         <CardContent>
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 mb-4">
-              {selectedItems.map(flock => {
-                const item = data.find(d => d.flock.toString() === flock);
+              {selectedItems.map(batchNumber => {
+                const item = data.find(d => d.batchNumber === batchNumber);
                 return (
-                  <Badge key={flock} variant="secondary" className="cursor-pointer" onClick={() => handleItemSelect(flock)}>
-                    {item?.name} ({item?.hatchery}) ×
+                  <Badge key={batchNumber} variant="secondary" className="cursor-pointer" onClick={() => handleItemSelect(batchNumber)}>
+                    Batch {item?.batchNumber} ({item?.flockName}) ×
                   </Badge>
                 );
               })}
@@ -134,16 +134,16 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
               {data.map(item => (
                 <Button
-                  key={item.flock}
-                  variant={selectedItems.includes(item.flock.toString()) ? "default" : "outline"}
+                  key={item.batchNumber}
+                  variant={selectedItems.includes(item.batchNumber) ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleItemSelect(item.flock.toString())}
-                  disabled={!selectedItems.includes(item.flock.toString()) && selectedItems.length >= 5}
+                  onClick={() => handleItemSelect(item.batchNumber)}
+                  disabled={!selectedItems.includes(item.batchNumber) && selectedItems.length >= 5}
                   className="justify-start text-left"
                 >
                   <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-xs opacity-70">{item.hatchery} - {item.fertility.toFixed(1)}%</div>
+                    <div className="font-medium">Batch {item.batchNumber}</div>
+                    <div className="text-xs opacity-70">{item.flockName} - {item.fertility.toFixed(1)}%</div>
                   </div>
                 </Button>
               ))}
@@ -152,17 +152,17 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
         </CardContent>
       </Card>
 
-      {/* Hatchery Comparison */}
+      {/* Breed Comparison */}
       <Card data-demo-id="hatchery-comparison">
         <CardHeader>
-          <CardTitle>Hatchery Performance Comparison</CardTitle>
+          <CardTitle>Breed Performance Comparison</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hatcheryStats}>
+              <BarChart data={breedStats}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hatchery" />
+                <XAxis dataKey="breed" />
                 <YAxis />
                 <Tooltip 
                   formatter={(value, name) => [
@@ -172,22 +172,22 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                 />
                 <Bar dataKey="avgFertility" fill="#8884d8" name="avgFertility" />
                 <Bar dataKey="avgHatch" fill="#82ca9d" name="avgHatch" />
-                <Bar dataKey="avgHOI" fill="#ffc658" name="avgHOI" />
+                <Bar dataKey="avgQualityScore" fill="#ffc658" name="avgQualityScore" />
               </BarChart>
             </ResponsiveContainer>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Hatchery Statistics</h3>
-              {hatcheryStats.map(stat => (
-                <div key={stat.hatchery} className="p-4 border rounded-lg">
+              <h3 className="text-lg font-semibold">Breed Statistics</h3>
+              {breedStats.map(stat => (
+                <div key={stat.breed} className="p-4 border rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium text-lg">{stat.hatchery}</h4>
-                    <Badge>{stat.count} flocks</Badge>
+                    <h4 className="font-medium text-lg">{stat.breed}</h4>
+                    <Badge>{stat.count} batches</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>Fertility: <span className="font-medium">{stat.avgFertility.toFixed(1)}%</span></div>
                     <div>Hatch: <span className="font-medium">{stat.avgHatch.toFixed(1)}%</span></div>
-                    <div>HOI: <span className="font-medium">{stat.avgHOI.toFixed(1)}%</span></div>
+                    <div>Quality: <span className="font-medium">{stat.avgQualityScore.toFixed(1)}%</span></div>
                     <div>Early Dead: <span className="font-medium">{stat.avgEarlyDead.toFixed(1)}%</span></div>
                   </div>
                 </div>
@@ -212,9 +212,9 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                     <PolarGrid />
                     <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar name="Performance" dataKey="fertility" stroke="#8884d8" fill="#8884d8" fillOpacity={0.1} />
+                    <Radar name="Fertility" dataKey="fertility" stroke="#8884d8" fill="#8884d8" fillOpacity={0.1} />
                     <Radar name="Hatch Rate" dataKey="hatch" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.1} />
-                    <Radar name="HOI" dataKey="hoi" stroke="#ffc658" fill="#ffc658" fillOpacity={0.1} />
+                    <Radar name="Quality Score" dataKey="qualityScore" stroke="#ffc658" fill="#ffc658" fillOpacity={0.1} />
                     <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -225,25 +225,25 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                 <table className="w-full border-collapse border border-gray-200">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="border border-gray-200 p-2 text-left text-sm font-medium">Name</th>
+                      <th className="border border-gray-200 p-2 text-left text-sm font-medium">Batch</th>
                       <th className="border border-gray-200 p-2 text-sm font-medium">Fertility</th>
                       <th className="border border-gray-200 p-2 text-sm font-medium">Hatch</th>
-                      <th className="border border-gray-200 p-2 text-sm font-medium">HOI</th>
+                      <th className="border border-gray-200 p-2 text-sm font-medium">Quality</th>
                       <th className="border border-gray-200 p-2 text-sm font-medium">Age</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedData.map(item => (
-                      <tr key={item.flock}>
+                      <tr key={item.batchNumber}>
                         <td className="border border-gray-200 p-2 text-sm">
                           <div>
-                            <div className="font-medium">{item.name}</div>
-                            <div className="text-xs text-gray-500">{item.hatchery}</div>
+                            <div className="font-medium">Batch {item.batchNumber}</div>
+                            <div className="text-xs text-gray-500">{item.flockName}</div>
                           </div>
                         </td>
                         <td className="border border-gray-200 p-2 text-sm text-center">{item.fertility.toFixed(1)}%</td>
                         <td className="border border-gray-200 p-2 text-sm text-center">{item.hatch.toFixed(1)}%</td>
-                        <td className="border border-gray-200 p-2 text-sm text-center">{item.hoi.toFixed(1)}%</td>
+                        <td className="border border-gray-200 p-2 text-sm text-center">{item.qualityScore.toFixed(1)}%</td>
                         <td className="border border-gray-200 p-2 text-sm text-center">{item.age}w</td>
                       </tr>
                     ))}
