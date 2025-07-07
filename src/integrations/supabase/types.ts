@@ -219,6 +219,98 @@ export type Database = {
           },
         ]
       }
+      checklist_completions: {
+        Row: {
+          batch_id: string
+          checklist_item_id: string
+          completed_at: string
+          completed_by: string
+          created_at: string
+          day_of_incubation: number
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          batch_id: string
+          checklist_item_id: string
+          completed_at?: string
+          completed_by: string
+          created_at?: string
+          day_of_incubation: number
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          batch_id?: string
+          checklist_item_id?: string
+          completed_at?: string
+          completed_by?: string
+          created_at?: string
+          day_of_incubation?: number
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_completions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_checklist_items: {
+        Row: {
+          applicable_days: number[]
+          created_at: string
+          description: string | null
+          id: string
+          is_required: boolean
+          order_index: number
+          sop_template_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_days?: number[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          order_index?: number
+          sop_template_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_days?: number[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          order_index?: number
+          sop_template_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_checklist_items_sop_template_id_fkey"
+            columns: ["sop_template_id"]
+            isOneToOne: false
+            referencedRelation: "sop_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       egg_pack_quality: {
         Row: {
           batch_id: string
@@ -596,6 +688,42 @@ export type Database = {
           },
         ]
       }
+      sop_templates: {
+        Row: {
+          category: string
+          content: Json | null
+          created_at: string
+          day_of_incubation: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content?: Json | null
+          created_at?: string
+          day_of_incubation?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: Json | null
+          created_at?: string
+          day_of_incubation?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -612,6 +740,7 @@ export type Database = {
         | "schedule_reminder"
         | "critical_day"
         | "machine_maintenance"
+        | "checklist_incomplete"
       batch_status:
         | "planned"
         | "setting"
@@ -756,6 +885,7 @@ export const Constants = {
         "schedule_reminder",
         "critical_day",
         "machine_maintenance",
+        "checklist_incomplete",
       ],
       batch_status: [
         "planned",
