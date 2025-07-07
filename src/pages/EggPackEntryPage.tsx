@@ -139,56 +139,51 @@ const EggPackEntryPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-4">
         
-        {/* Header with Navigation */}
-        <div className="mb-6">
+        {/* Main Header */}
+        <div className="mb-8">
           <Button 
             variant="outline" 
             onClick={handleBack}
-            className="mb-4 flex items-center gap-2"
+            className="mb-6 flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Data Entry
           </Button>
           
-          {/* Breadcrumb */}
-          <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; Batch {batchInfo.batch_number} &gt; Egg Pack Quality
+          {/* Page Title */}
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-2">
+              <Package className="h-8 w-8 text-blue-600" />
+              Egg Pack Worksheet - Pre-Incubation Quality Assessment
+            </h1>
+            <p className="text-gray-600">Quality control assessment of eggs before incubation. Standard sampling: 648 eggs per flock.</p>
           </div>
           
-          {/* Batch Context Header */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-3">
-                  <Package className="h-6 w-6 text-blue-600" />
-                  Egg Pack Quality - Batch {batchInfo.batch_number}
-                </CardTitle>
-                <Badge className={getStatusColor(batchInfo.status)}>
-                  {batchInfo.status}
-                </Badge>
+          {/* Batch Info - Streamlined */}
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Batch {batchInfo.batch_number}
+              </h2>
+              <Badge className={getStatusColor(batchInfo.status)}>
+                {batchInfo.status}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Flock:</span> <span className="font-medium ml-1">{batchInfo.flock_number} - {batchInfo.flock_name}</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">Flock</p>
-                  <p className="font-medium">{batchInfo.flock_number} - {batchInfo.flock_name}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Machine</p>
-                  <p className="font-medium">{batchInfo.machine_number}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Set Date</p>
-                  <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Total Eggs</p>
-                  <p className="font-medium">{batchInfo.total_eggs_set.toLocaleString()}</p>
-                </div>
+              <div>
+                <span className="text-gray-600">Machine:</span> <span className="font-medium ml-1">{batchInfo.machine_number}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{new Date(batchInfo.set_date).toLocaleDateString()}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Total Eggs:</span> <span className="font-medium ml-1">{batchInfo.total_eggs_set.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Egg Pack Data Entry Component */}

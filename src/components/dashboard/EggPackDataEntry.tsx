@@ -198,18 +198,6 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            Egg Pack Worksheet - Pre-Incubation Quality Assessment
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            Quality control assessment of eggs before incubation. Standard sampling: 648 eggs per flock.
-          </p>
-        </CardHeader>
-      </Card>
 
       {/* Quality Summary - Moved to Top */}
       {localData.length > 0 && (
