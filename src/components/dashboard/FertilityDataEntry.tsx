@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,20 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FertilityRecord {
   id: string;
-  name: string;
-  flockNumber: number;
-  age: number;
-  size: number;
-  infertile: number;
-  dead: number;
-  deadPercent: number;
-  fertility: number;
-  fertilityAvg?: number;
-  hatchPercent: number;
-  hofPercent: number;
+  batch_id: string;
+  sample_size: number;
+  infertile_eggs: number;
+  fertile_eggs: number;
+  early_dead: number;
+  late_dead: number;
+  fertility_percent: number;
+  hatch_percent: number;
+  hof_percent: number;
+  analysis_date: string;
+  technician_name?: string;
+  notes?: string;
 }
 
 interface BatchInfo {
@@ -38,25 +40,53 @@ interface FertilityDataEntryProps {
 
 const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntryProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: batchInfo.flock_name,
-    flockNumber: batchInfo.flock_number.toString(),
-    age: '',
-    size: '648',
-    infertile: '',
-    dead: '',
-    hatchPercent: ''
+    sampleSize: '648',
+    infertileEggs: '',
+    earlyDead: '',
+    lateDead: '',
+    hatchPercent: '',
+    technicianName: '',
+    notes: ''
   });
   const { toast } = useToast();
 
-  const calculateValues = (size: number, infertile: number, dead: number, hatchPercent: number) => {
-    const deadPercent = (dead / size) * 100;
-    const fertility = ((size - infertile) / size) * 100;
-    const hofPercent = (hatchPercent / fertility) * 100;
+  useEffect(() => {
+    loadFertilityData();
+  }, [batchInfo.id]);
+
+  const loadFertilityData = async () => {
+    try {
+      const { data: fertilityData, error } = await supabase
+        .from('fertility_analysis')
+        .select('*')
+        .eq('batch_id', batchInfo.id)
+        .order('analysis_date', { ascending: false });
+
+      if (error) throw error;
+      
+      if (fertilityData) {
+        onDataUpdate(fertilityData);
+      }
+    } catch (error) {
+      console.error('Error loading fertility data:', error);
+      toast({
+        title: "Error loading data",
+        description: "Failed to load fertility analysis data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const calculateValues = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, hatchPercent: number) => {
+    const fertileEggs = sampleSize - infertile;
+    const fertilityPercent = (fertileEggs / sampleSize) * 100;
+    const hofPercent = (hatchPercent / fertilityPercent) * 100;
     
     return {
-      deadPercent: Number(deadPercent.toFixed(2)),
-      fertility: Number(fertility.toFixed(2)),
+      fertileEggs,
+      fertilityPercent: Number(fertilityPercent.toFixed(2)),
       hofPercent: Number(hofPercent.toFixed(2))
     };
   };
@@ -66,20 +96,21 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   };
 
   const validateForm = () => {
-    const size = Number(formData.size);
-    const infertile = Number(formData.infertile);
-    const dead = Number(formData.dead);
+    const sampleSize = Number(formData.sampleSize);
+    const infertile = Number(formData.infertileEggs);
+    const earlyDead = Number(formData.earlyDead);
+    const lateDead = Number(formData.lateDead);
     
-    if (infertile + dead > size) {
+    if (infertile + earlyDead + lateDead > sampleSize) {
       toast({
         title: "Validation Error",
-        description: "Infertile + Dead eggs cannot exceed total size",
+        description: "Infertile + Dead eggs cannot exceed sample size",
         variant: "destructive"
       });
       return false;
     }
     
-    if (!formData.name || !formData.flockNumber || !formData.age) {
+    if (!formData.sampleSize || !formData.infertileEggs || !formData.hatchPercent) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -91,96 +122,192 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     return true;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) return;
+  const handleSubmit = async () => {
+    if (!validateForm() || loading) return;
     
-    const size = Number(formData.size);
-    const infertile = Number(formData.infertile);
-    const dead = Number(formData.dead);
-    const hatchPercent = Number(formData.hatchPercent);
+    setLoading(true);
     
-    const calculated = calculateValues(size, infertile, dead, hatchPercent);
-    
-    const newRecord: FertilityRecord = {
-      id: editingId || Date.now().toString(),
-      name: formData.name,
-      flockNumber: Number(formData.flockNumber),
-      age: Number(formData.age),
-      size,
-      infertile,
-      dead,
-      deadPercent: calculated.deadPercent,
-      fertility: calculated.fertility,
-      hatchPercent,
-      hofPercent: calculated.hofPercent
-    };
+    try {
+      const sampleSize = Number(formData.sampleSize);
+      const infertile = Number(formData.infertileEggs);
+      const earlyDead = Number(formData.earlyDead);
+      const lateDead = Number(formData.lateDead);
+      const hatchPercent = Number(formData.hatchPercent);
+      
+      const calculated = calculateValues(sampleSize, infertile, earlyDead, lateDead, hatchPercent);
+      
+      const recordData = {
+        batch_id: batchInfo.id,
+        sample_size: sampleSize,
+        infertile_eggs: infertile,
+        fertile_eggs: calculated.fertileEggs,
+        early_dead: earlyDead,
+        late_dead: lateDead,
+        fertility_percent: calculated.fertilityPercent,
+        hatch_percent: hatchPercent,
+        hof_percent: calculated.hofPercent,
+        analysis_date: new Date().toISOString().split('T')[0],
+        technician_name: formData.technicianName || null,
+        notes: formData.notes || null
+      };
 
-    if (editingId) {
-      const updatedData = data.map(item => item.id === editingId ? newRecord : item);
-      onDataUpdate(updatedData);
+      let result;
+      if (editingId) {
+        result = await supabase
+          .from('fertility_analysis')
+          .update(recordData)
+          .eq('id', editingId)
+          .select()
+          .single();
+      } else {
+        result = await supabase
+          .from('fertility_analysis')
+          .insert(recordData)
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+
+      // Update local state
+      if (editingId) {
+        const updatedData = data.map(item => item.id === editingId ? result.data : item);
+        onDataUpdate(updatedData);
+        toast({
+          title: "Record Updated",
+          description: "Fertility record updated successfully"
+        });
+      } else {
+        onDataUpdate([...data, result.data]);
+        toast({
+          title: "Record Added",
+          description: "New fertility record added successfully"
+        });
+      }
+
+      // Check and update batch status
+      await checkBatchStatus();
+      
+      handleCancel();
+    } catch (error) {
+      console.error('Error saving fertility data:', error);
       toast({
-        title: "Record Updated",
-        description: "Fertility record updated successfully"
+        title: "Error saving record",
+        description: "Failed to save fertility analysis data",
+        variant: "destructive"
       });
-    } else {
-      onDataUpdate([...data, newRecord]);
-      toast({
-        title: "Record Added",
-        description: "New fertility record added successfully"
-      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    handleCancel();
+  const checkBatchStatus = async () => {
+    try {
+      // Get batch info with set date
+      const { data: batch, error: batchError } = await supabase
+        .from('batches')
+        .select('set_date, status')
+        .eq('id', batchInfo.id)
+        .single();
+
+      if (batchError) throw batchError;
+
+      const setDate = new Date(batch.set_date);
+      const today = new Date();
+      const daysSinceSet = Math.floor((today.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      let newStatus = batch.status;
+
+      // Auto-progress status based on days since set
+      if (daysSinceSet >= 21 && batch.status !== 'completed') {
+        // After 21 days and fertility data is recorded, mark as completed
+        newStatus = 'completed';
+      } else if (daysSinceSet >= 18 && batch.status === 'incubating') {
+        newStatus = 'hatching';
+      } else if (daysSinceSet >= 1 && batch.status === 'setting') {
+        newStatus = 'incubating';
+      }
+
+      if (newStatus !== batch.status) {
+        const { error: updateError } = await supabase
+          .from('batches')
+          .update({ status: newStatus })
+          .eq('id', batchInfo.id);
+
+        if (!updateError) {
+          toast({
+            title: "Batch Status Updated",
+            description: `Batch status changed to ${newStatus}`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating batch status:', error);
+    }
   };
 
   const handleEdit = (record: FertilityRecord) => {
     setEditingId(record.id);
     setFormData({
-      name: record.name,
-      flockNumber: record.flockNumber.toString(),
-      age: record.age.toString(),
-      size: record.size.toString(),
-      infertile: record.infertile.toString(),
-      dead: record.dead.toString(),
-      hatchPercent: record.hatchPercent.toString()
+      sampleSize: record.sample_size.toString(),
+      infertileEggs: record.infertile_eggs.toString(),
+      earlyDead: record.early_dead.toString(),
+      lateDead: record.late_dead.toString(),
+      hatchPercent: record.hatch_percent.toString(),
+      technicianName: record.technician_name || '',
+      notes: record.notes || ''
     });
   };
 
-  const handleDelete = (id: string) => {
-    const updatedData = data.filter(item => item.id !== id);
-    onDataUpdate(updatedData);
-    toast({
-      title: "Record Deleted",
-      description: "Fertility record deleted successfully"
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('fertility_analysis')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updatedData = data.filter(item => item.id !== id);
+      onDataUpdate(updatedData);
+      toast({
+        title: "Record Deleted",
+        description: "Fertility record deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting fertility record:', error);
+      toast({
+        title: "Error deleting record",
+        description: "Failed to delete fertility record",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancel = () => {
     setEditingId(null);
     setFormData({
-      name: batchInfo.flock_name,
-      flockNumber: batchInfo.flock_number.toString(),
-      age: '',
-      size: '648',
-      infertile: '',
-      dead: '',
-      hatchPercent: ''
+      sampleSize: '648',
+      infertileEggs: '',
+      earlyDead: '',
+      lateDead: '',
+      hatchPercent: '',
+      technicianName: '',
+      notes: ''
     });
   };
 
   const calculateOverallAverages = () => {
     if (data.length === 0) return null;
     
-    const totalEggs = data.reduce((sum, record) => sum + record.size, 0);
-    const totalInfertile = data.reduce((sum, record) => sum + record.infertile, 0);
-    const avgAge = data.reduce((sum, record) => sum + record.age, 0) / data.length;
-    const avgFertility = data.reduce((sum, record) => sum + record.fertility, 0) / data.length;
-    const avgHatch = data.reduce((sum, record) => sum + record.hatchPercent, 0) / data.length;
-    const avgHOF = (avgHatch / avgFertility) * 100;
+    const totalSampleSize = data.reduce((sum, record) => sum + record.sample_size, 0);
+    const totalInfertile = data.reduce((sum, record) => sum + record.infertile_eggs, 0);
+    const avgFertility = data.reduce((sum, record) => sum + (record.fertility_percent || 0), 0) / data.length;
+    const avgHatch = data.reduce((sum, record) => sum + (record.hatch_percent || 0), 0) / data.length;
+    const avgHOF = data.reduce((sum, record) => sum + (record.hof_percent || 0), 0) / data.length;
     
     return {
-      avgAge: Number(avgAge.toFixed(1)),
-      totalEggs,
+      totalSampleSize,
       totalInfertile,
       avgFertility: Number(avgFertility.toFixed(2)),
       avgHatch: Number(avgHatch.toFixed(2)),
@@ -203,65 +330,47 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Flock Name *</Label>
+              <Label htmlFor="sampleSize">Sample Size *</Label>
               <Input
-                id="name"
-                placeholder="e.g., LMJ #1"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="flockNumber">Flock Number *</Label>
-              <Input
-                id="flockNumber"
+                id="sampleSize"
                 type="number"
-                placeholder="e.g., 6375"
-                value={formData.flockNumber}
-                onChange={(e) => handleInputChange('flockNumber', e.target.value)}
+                placeholder="e.g., 648"
+                value={formData.sampleSize}
+                onChange={(e) => handleInputChange('sampleSize', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="age">Age (weeks) *</Label>
+              <Label htmlFor="infertileEggs">Infertile Eggs *</Label>
               <Input
-                id="age"
-                type="number"
-                placeholder="e.g., 64"
-                value={formData.age}
-                onChange={(e) => handleInputChange('age', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="size">Total Eggs Set</Label>
-              <Input
-                id="size"
-                type="number"
-                value={formData.size}
-                onChange={(e) => handleInputChange('size', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="infertile">Infertile Eggs</Label>
-              <Input
-                id="infertile"
+                id="infertileEggs"
                 type="number"
                 placeholder="e.g., 210"
-                value={formData.infertile}
-                onChange={(e) => handleInputChange('infertile', e.target.value)}
+                value={formData.infertileEggs}
+                onChange={(e) => handleInputChange('infertileEggs', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dead">Dead Embryos</Label>
+              <Label htmlFor="earlyDead">Early Dead</Label>
               <Input
-                id="dead"
+                id="earlyDead"
                 type="number"
-                placeholder="e.g., 45"
-                value={formData.dead}
-                onChange={(e) => handleInputChange('dead', e.target.value)}
+                placeholder="e.g., 25"
+                value={formData.earlyDead}
+                onChange={(e) => handleInputChange('earlyDead', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hatchPercent">Hatch %</Label>
+              <Label htmlFor="lateDead">Late Dead</Label>
+              <Input
+                id="lateDead"
+                type="number"
+                placeholder="e.g., 20"
+                value={formData.lateDead}
+                onChange={(e) => handleInputChange('lateDead', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hatchPercent">Hatch % *</Label>
               <Input
                 id="hatchPercent"
                 type="number"
@@ -271,11 +380,29 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                 onChange={(e) => handleInputChange('hatchPercent', e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="technicianName">Technician Name</Label>
+              <Input
+                id="technicianName"
+                placeholder="e.g., John Doe"
+                value={formData.technicianName}
+                onChange={(e) => handleInputChange('technicianName', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                placeholder="Additional notes or observations"
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+              />
+            </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <Button onClick={handleSubmit} className="flex items-center gap-2">
+            <Button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2">
               <Save className="h-4 w-4" />
-              {editingId ? 'Update Record' : 'Add Record'}
+              {loading ? 'Saving...' : (editingId ? 'Update Record' : 'Add Record')}
             </Button>
             {editingId && (
               <Button variant="outline" onClick={handleCancel} className="flex items-center gap-2">
@@ -297,32 +424,32 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Flock #</TableHead>
-                  <TableHead>Age</TableHead>
-                  <TableHead>Size</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Sample Size</TableHead>
                   <TableHead>Infertile</TableHead>
-                  <TableHead>Dead</TableHead>
-                  <TableHead>Dead %</TableHead>
+                  <TableHead>Early Dead</TableHead>
+                  <TableHead>Late Dead</TableHead>
                   <TableHead>Fertility %</TableHead>
                   <TableHead>Hatch %</TableHead>
                   <TableHead>HOF %</TableHead>
+                  <TableHead>Technician</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="font-medium">{record.name}</TableCell>
-                    <TableCell>{record.flockNumber}</TableCell>
-                    <TableCell>{record.age}</TableCell>
-                    <TableCell>{record.size}</TableCell>
-                    <TableCell>{record.infertile}</TableCell>
-                    <TableCell>{record.dead}</TableCell>
-                    <TableCell>{record.deadPercent}%</TableCell>
-                    <TableCell>{record.fertility}%</TableCell>
-                    <TableCell>{record.hatchPercent}%</TableCell>
-                    <TableCell>{record.hofPercent}%</TableCell>
+                    <TableCell className="font-medium">
+                      {new Date(record.analysis_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>{record.sample_size}</TableCell>
+                    <TableCell>{record.infertile_eggs}</TableCell>
+                    <TableCell>{record.early_dead}</TableCell>
+                    <TableCell>{record.late_dead}</TableCell>
+                    <TableCell>{record.fertility_percent}%</TableCell>
+                    <TableCell>{record.hatch_percent}%</TableCell>
+                    <TableCell>{record.hof_percent}%</TableCell>
+                    <TableCell>{record.technician_name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -348,15 +475,14 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                 {overallAverages && (
                   <TableRow className="bg-gray-50 font-medium">
                     <TableCell>OVERALL AVERAGES</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>{overallAverages.avgAge}</TableCell>
-                    <TableCell>{overallAverages.totalEggs}</TableCell>
+                    <TableCell>{overallAverages.totalSampleSize}</TableCell>
                     <TableCell>{overallAverages.totalInfertile}</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>{overallAverages.avgFertility}%</TableCell>
                     <TableCell>{overallAverages.avgHatch}%</TableCell>
                     <TableCell>{overallAverages.avgHOF}%</TableCell>
+                    <TableCell>-</TableCell>
                     <TableCell>-</TableCell>
                   </TableRow>
                 )}
