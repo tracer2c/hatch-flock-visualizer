@@ -143,7 +143,6 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         fertile_eggs: calculated.fertileEggs,
         early_dead: earlyDead,
         late_dead: lateDead,
-        fertility_percent: calculated.fertilityPercent,
         hatch_percent: hatchPercent,
         hof_percent: calculated.hofPercent,
         analysis_date: new Date().toISOString().split('T')[0],
