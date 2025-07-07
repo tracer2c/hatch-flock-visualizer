@@ -4,6 +4,7 @@ import MachineManager from "@/components/dashboard/MachineManager";
 import DataCleanup from "@/components/dashboard/DataCleanup";
 import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import SOPManager from "@/components/dashboard/SOPManager";
+import DataSeeder from "@/components/dashboard/DataSeeder";
 import { Settings } from "lucide-react";
 
 const ManagementPage = () => {
@@ -25,6 +26,7 @@ const ManagementPage = () => {
 
         {/* Management Sections */}
         <div className="space-y-8">
+          <DataSeeder />
           <BatchStatusSettings />
           <SOPManager />
           <FlockManager />
