@@ -192,7 +192,7 @@ const FlockManager = () => {
       }
       
       // House number filter
-      if (filters.houseNumber && flock.house_number !== filters.houseNumber) {
+      if (filters.houseNumber && filters.houseNumber !== "all" && flock.house_number !== filters.houseNumber) {
         return false;
       }
       
@@ -221,7 +221,7 @@ const FlockManager = () => {
     let count = 0;
     if (filters.flockNumber) count++;
     if (filters.flockName) count++;
-    if (filters.houseNumber) count++;
+    if (filters.houseNumber && filters.houseNumber !== "all") count++;
     if (filters.minAge) count++;
     if (filters.maxAge) count++;
     if (filters.breed.length > 0) count++;
@@ -242,7 +242,7 @@ const FlockManager = () => {
   const clearFilter = (filterKey: string) => {
     setFilters(prev => ({
       ...prev,
-      [filterKey]: filterKey === 'breed' ? [] : ''
+      [filterKey]: filterKey === 'breed' ? [] : filterKey === 'houseNumber' ? 'all' : ''
     }));
   };
 
@@ -437,12 +437,12 @@ const FlockManager = () => {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">House Number</Label>
-                  <Select value={filters.houseNumber} onValueChange={(value) => setFilters(prev => ({ ...prev, houseNumber: value }))}>
+                  <Select value={filters.houseNumber} onValueChange={(value) => setFilters(prev => ({ ...prev, houseNumber: value === "all" ? "" : value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="All houses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All houses</SelectItem>
+                      <SelectItem value="all">All houses</SelectItem>
                       {uniqueHouseNumbers.map((house) => (
                         <SelectItem key={house} value={house}>{house}</SelectItem>
                       ))}
