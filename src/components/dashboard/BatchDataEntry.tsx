@@ -252,11 +252,30 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         </TabsContent>
 
         <TabsContent value="qa">
-          <QADataEntry data={qaData} onDataUpdate={handleQADataUpdate} />
+          <QADataEntry 
+            data={qaData} 
+            onDataUpdate={handleQADataUpdate}
+            batchInfo={{
+              id: batchInfo.id,
+              batch_number: batchInfo.batch_number,
+              flock_name: batchInfo.flock_name,
+              flock_number: batchInfo.flock_number
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="residue">
-          <ResidueDataEntry data={residueData} onDataUpdate={handleResidueDataUpdate} />
+          <ResidueDataEntry 
+            data={residueData} 
+            onDataUpdate={handleResidueDataUpdate}
+            batchInfo={{
+              id: batchInfo.id,
+              batch_number: batchInfo.batch_number,
+              flock_name: batchInfo.flock_name,
+              flock_number: batchInfo.flock_number,
+              house_number: batchInfo.house_number
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>

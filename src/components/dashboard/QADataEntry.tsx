@@ -7,12 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle } from "lucide-react";
 
+interface BatchInfo {
+  id: string;
+  batch_number: string;
+  flock_name: string;
+  flock_number: number;
+}
+
 interface QADataEntryProps {
   data: any[];
   onDataUpdate: (data: any[]) => void;
+  batchInfo: BatchInfo;
 }
 
-const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate }) => {
+const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo }) => {
   const { toast } = useToast();
 
   // Form states for different sections

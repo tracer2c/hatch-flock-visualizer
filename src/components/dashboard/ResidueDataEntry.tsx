@@ -48,17 +48,26 @@ interface ResidueRecord {
   totalEggs: number;
 }
 
+interface BatchInfo {
+  id: string;
+  batch_number: string;
+  flock_name: string;
+  flock_number: number;
+  house_number?: string;
+}
+
 interface ResidueDataEntryProps {
   data: ResidueRecord[];
   onDataUpdate: (data: ResidueRecord[]) => void;
+  batchInfo: BatchInfo;
 }
 
-const ResidueDataEntry = ({ data, onDataUpdate }: ResidueDataEntryProps) => {
+const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    flockNumber: '',
-    houseNumber: '',
+    name: batchInfo.flock_name,
+    flockNumber: batchInfo.flock_number.toString(),
+    houseNumber: batchInfo.house_number || '1',
     infertile: '',
     chicks: '',
     earlyDeath: '',
@@ -226,9 +235,9 @@ const ResidueDataEntry = ({ data, onDataUpdate }: ResidueDataEntryProps) => {
   const handleCancel = () => {
     setEditingId(null);
     setFormData({
-      name: '',
-      flockNumber: '',
-      houseNumber: '',
+      name: batchInfo.flock_name,
+      flockNumber: batchInfo.flock_number.toString(),
+      houseNumber: batchInfo.house_number || '1',
       infertile: '',
       chicks: '',
       earlyDeath: '',
@@ -263,35 +272,41 @@ const ResidueDataEntry = ({ data, onDataUpdate }: ResidueDataEntryProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Selected Batch:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
+            </p>
+            <p className="text-sm text-gray-600">Residue analysis data will be automatically linked to this batch.</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Basic Information */}
+            {/* Basic Information - Auto-populated from batch */}
             <div className="space-y-2">
-              <Label htmlFor="name">Flock Name *</Label>
+              <Label htmlFor="name">Flock Name</Label>
               <Input
                 id="name"
-                placeholder="e.g., PHIL FARRIS 3&4"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                disabled
+                className="bg-gray-100"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="flockNumber">Flock Number *</Label>
+              <Label htmlFor="flockNumber">Flock Number</Label>
               <Input
                 id="flockNumber"
                 type="number"
-                placeholder="e.g., 6427"
                 value={formData.flockNumber}
-                onChange={(e) => handleInputChange('flockNumber', e.target.value)}
+                disabled
+                className="bg-gray-100"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="houseNumber">House Number *</Label>
+              <Label htmlFor="houseNumber">House Number</Label>
               <Input
                 id="houseNumber"
                 type="number"
-                placeholder="e.g., 3"
                 value={formData.houseNumber}
-                onChange={(e) => handleInputChange('houseNumber', e.target.value)}
+                disabled
+                className="bg-gray-100"
               />
             </div>
 
