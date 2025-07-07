@@ -13,60 +13,107 @@ const ProcessFlowDashboard = () => {
   if (!performanceMetrics || performanceMetrics.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No completed batches found for analysis. Complete some batches to see performance data.
+        No batches found for analysis. Create some batches to see process flow data.
       </div>
     );
   }
 
-  // Data flow analysis
-  const flowData = performanceMetrics.map(batch => ({
+  // Filter out batches with any meaningful data for display
+  const meaningfulBatches = performanceMetrics.filter(batch => 
+    batch.hasEggQuality || batch.hasFertilityData || batch.hasQAData
+  );
+
+  if (meaningfulBatches.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No batches with data found. Add some data entry to see process flow analysis.
+      </div>
+    );
+  }
+
+  // Data flow analysis - use meaningful data
+  const flowData = meaningfulBatches.map(batch => ({
     batch: batch.batchNumber,
-    eggQuality: batch.qualityScore,
-    fertility: batch.fertility,
-    hatch: batch.hatch,
-    flockAge: batch.age
+    eggQuality: batch.qualityScore || 0,
+    fertility: batch.fertility || 0,
+    hatch: batch.hatch || 0,
+    flockAge: batch.age,
+    status: batch.status,
+    daysSinceSet: batch.daysSinceSet
   }));
 
-  // Correlation analysis
-  const correlationData = performanceMetrics.map(batch => ({
-    x: batch.qualityScore,
-    y: batch.fertility,
-    name: batch.batchNumber,
-    flockAge: batch.age
-  }));
+  // Correlation analysis - only include batches with both quality and fertility data
+  const correlationData = meaningfulBatches
+    .filter(batch => batch.qualityScore && batch.fertility)
+    .map(batch => ({
+      x: batch.qualityScore,
+      y: batch.fertility,
+      name: batch.batchNumber,
+      flockAge: batch.age
+    }));
 
-  // Age vs Performance
-  const agePerformanceData = performanceMetrics.reduce((acc: any[], batch) => {
+  // Age vs Performance - handle null values properly
+  const agePerformanceData = meaningfulBatches.reduce((acc: any[], batch) => {
     const existing = acc.find(item => item.age === batch.age);
     if (existing) {
-      existing.fertility = (existing.fertility + batch.fertility) / 2;
-      existing.hatch = (existing.hatch + batch.hatch) / 2;
+      if (batch.fertility) {
+        existing.fertility = existing.fertilityCount > 0 
+          ? (existing.fertility * existing.fertilityCount + batch.fertility) / (existing.fertilityCount + 1)
+          : batch.fertility;
+        existing.fertilityCount += 1;
+      }
+      if (batch.hatch) {
+        existing.hatch = existing.hatchCount > 0 
+          ? (existing.hatch * existing.hatchCount + batch.hatch) / (existing.hatchCount + 1)
+          : batch.hatch;
+        existing.hatchCount += 1;
+      }
       existing.count += 1;
     } else {
       acc.push({
         age: batch.age,
-        fertility: batch.fertility,
-        hatch: batch.hatch,
+        fertility: batch.fertility || 0,
+        hatch: batch.hatch || 0,
+        fertilityCount: batch.fertility ? 1 : 0,
+        hatchCount: batch.hatch ? 1 : 0,
         count: 1
       });
     }
     return acc;
   }, []).sort((a, b) => a.age - b.age);
 
-  // Process efficiency by breed
-  const breedData = performanceMetrics.reduce((acc: any[], batch) => {
+  // Process efficiency by breed - handle null values
+  const breedData = meaningfulBatches.reduce((acc: any[], batch) => {
     const existing = acc.find(item => item.breed === batch.breed);
     if (existing) {
-      existing.fertility = (existing.fertility + batch.fertility) / 2;
-      existing.hatch = (existing.hatch + batch.hatch) / 2;
-      existing.quality = (existing.quality + batch.qualityScore) / 2;
+      if (batch.fertility) {
+        existing.fertility = existing.fertilityCount > 0 
+          ? (existing.fertility * existing.fertilityCount + batch.fertility) / (existing.fertilityCount + 1)
+          : batch.fertility;
+        existing.fertilityCount += 1;
+      }
+      if (batch.hatch) {
+        existing.hatch = existing.hatchCount > 0 
+          ? (existing.hatch * existing.hatchCount + batch.hatch) / (existing.hatchCount + 1)
+          : batch.hatch;
+        existing.hatchCount += 1;
+      }
+      if (batch.qualityScore) {
+        existing.quality = existing.qualityCount > 0 
+          ? (existing.quality * existing.qualityCount + batch.qualityScore) / (existing.qualityCount + 1)
+          : batch.qualityScore;
+        existing.qualityCount += 1;
+      }
       existing.count += 1;
     } else {
       acc.push({
         breed: batch.breed,
-        fertility: batch.fertility,
-        hatch: batch.hatch,
-        quality: batch.qualityScore,
+        fertility: batch.fertility || 0,
+        hatch: batch.hatch || 0,
+        quality: batch.qualityScore || 0,
+        fertilityCount: batch.fertility ? 1 : 0,
+        hatchCount: batch.hatch ? 1 : 0,
+        qualityCount: batch.qualityScore ? 1 : 0,
         count: 1
       });
     }
@@ -208,18 +255,36 @@ const ProcessFlowDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Best Performing Batch</CardTitle>
+            <CardTitle className="text-sm font-medium">Best Quality Batch</CardTitle>
           </CardHeader>
           <CardContent>
             {(() => {
-              const best = performanceMetrics.reduce((prev, current) => 
-                (prev.fertility > current.fertility) ? prev : current
-              );
+              const withData = meaningfulBatches.filter(batch => batch.qualityScore || batch.fertility);
+              if (withData.length === 0) {
+                return (
+                  <div>
+                    <div className="text-2xl font-bold text-muted-foreground">-</div>
+                    <div className="text-sm text-muted-foreground">No data available</div>
+                  </div>
+                );
+              }
+              
+              const best = withData.reduce((prev, current) => {
+                const prevScore = prev.fertility || prev.qualityScore || 0;
+                const currentScore = current.fertility || current.qualityScore || 0;
+                return prevScore > currentScore ? prev : current;
+              });
+              
               return (
                 <div>
                   <div className="text-2xl font-bold text-primary">{best.batchNumber}</div>
                   <div className="text-sm text-muted-foreground">
-                    {best.fertility.toFixed(1)}% fertility • {best.flockName}
+                    {best.fertility 
+                      ? `${best.fertility.toFixed(1)}% fertility` 
+                      : best.qualityScore 
+                        ? `${best.qualityScore.toFixed(1)}% quality`
+                        : 'No metrics'
+                    } • {best.flockName}
                   </div>
                 </div>
               );
@@ -233,24 +298,24 @@ const ProcessFlowDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {performanceMetrics.reduce((sum, batch) => sum + batch.totalEggs, 0).toLocaleString()}
+              {meaningfulBatches.reduce((sum, batch) => sum + batch.totalEggs, 0).toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">
-              Across {performanceMetrics.length} completed batches
+              Across {meaningfulBatches.length} batches with data
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Average Process Efficiency</CardTitle>
+            <CardTitle className="text-sm font-medium">Data Coverage</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {(performanceMetrics.reduce((sum, batch) => sum + (batch.fertility * batch.hatch / 100), 0) / performanceMetrics.length).toFixed(1)}%
+              {Math.round((meaningfulBatches.length / performanceMetrics.length) * 100)}%
             </div>
             <div className="text-sm text-muted-foreground">
-              Overall egg-to-chick conversion
+              {meaningfulBatches.length} of {performanceMetrics.length} batches have data
             </div>
           </CardContent>
         </Card>
