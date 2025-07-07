@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Package, AlertTriangle, Save } from "lucide-react";
+import { Plus, Trash2, Package, AlertTriangle, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,6 +44,7 @@ interface EggPackDataEntryProps {
 
 const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate, batchInfo }) => {
   const [localData, setLocalData] = useState<EggPackData[]>(data);
+  const [showDataEntry, setShowDataEntry] = useState(false);
   const [newEntry, setNewEntry] = useState<Partial<EggPackData>>({
     flock: batchInfo.flock_name,
     flockNumber: batchInfo.flock_number,
@@ -210,149 +211,203 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
         </CardHeader>
       </Card>
 
-      {/* Data Entry Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Egg Pack Entry</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-gray-600 mb-2">
-              <strong>Selected Batch:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
-            </p>
-            <p className="text-sm text-gray-600">Quality assessment data will be automatically linked to this batch.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="flock">Flock Name</Label>
-              <Input
-                id="flock"
-                value={newEntry.flock}
-                disabled
-                className="bg-gray-100"
-              />
+      {/* Quality Summary - Moved to Top */}
+      {localData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Quality Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {localData.length}
+                </div>
+                <div className="text-sm text-gray-600">Total Flocks</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {(localData.reduce((sum, entry) => sum + overallQualityScore(entry), 0) / localData.length).toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-600">Avg Quality Score</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {(localData.reduce((sum, entry) => sum + calculatePercentage(entry.usd, entry.totalEggsPulled), 0) / localData.length).toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-600">Avg USD Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {localData.reduce((sum, entry) => sum + entry.totalEggsPulled, 0).toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Total Eggs Assessed</div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="flockNumber">Flock #</Label>
-              <Input
-                id="flockNumber"
-                type="number"
-                value={newEntry.flockNumber}
-                disabled
-                className="bg-gray-100"
-              />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Data Entry Toggle Button */}
+      <div className="flex justify-center">
+        <Button 
+          onClick={() => setShowDataEntry(!showDataEntry)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          {showDataEntry ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {showDataEntry ? 'Hide Data Entry Form' : 'Show Data Entry Form'}
+        </Button>
+      </div>
+
+      {/* Data Entry Form - Collapsible */}
+      {showDataEntry && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add New Egg Pack Entry</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Selected Batch:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
+              </p>
+              <p className="text-sm text-gray-600">Quality assessment data will be automatically linked to this batch.</p>
             </div>
-            <div>
-              <Label htmlFor="houseNumber">House #</Label>
-              <Input
-                id="houseNumber"
-                value={newEntry.houseNumber}
-                disabled
-                className="bg-gray-100"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="flock">Flock Name</Label>
+                <Input
+                  id="flock"
+                  value={newEntry.flock}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="flockNumber">Flock #</Label>
+                <Input
+                  id="flockNumber"
+                  type="number"
+                  value={newEntry.flockNumber}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="houseNumber">House #</Label>
+                <Input
+                  id="houseNumber"
+                  value={newEntry.houseNumber}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalEggsPulled">Total Eggs Pulled</Label>
+                <Input
+                  id="totalEggsPulled"
+                  type="number"
+                  value={newEntry.totalEggsPulled}
+                  onChange={(e) => setNewEntry({...newEntry, totalEggsPulled: parseInt(e.target.value) || 648})}
+                  placeholder="648"
+                />
+              </div>
+              <div>
+                <Label htmlFor="stained">Stained</Label>
+                <Input
+                  id="stained"
+                  type="number"
+                  value={newEntry.stained}
+                  onChange={(e) => setNewEntry({...newEntry, stained: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dirty">Dirty</Label>
+                <Input
+                  id="dirty"
+                  type="number"
+                  value={newEntry.dirty}
+                  onChange={(e) => setNewEntry({...newEntry, dirty: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="small">Small</Label>
+                <Input
+                  id="small"
+                  type="number"
+                  value={newEntry.small}
+                  onChange={(e) => setNewEntry({...newEntry, small: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="cracked">Cracked</Label>
+                <Input
+                  id="cracked"
+                  type="number"
+                  value={newEntry.cracked}
+                  onChange={(e) => setNewEntry({...newEntry, cracked: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="abnormal">Abnormal</Label>
+                <Input
+                  id="abnormal"
+                  type="number"
+                  value={newEntry.abnormal}
+                  onChange={(e) => setNewEntry({...newEntry, abnormal: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="contaminated">Contaminated</Label>
+                <Input
+                  id="contaminated"
+                  type="number"
+                  value={newEntry.contaminated}
+                  onChange={(e) => setNewEntry({...newEntry, contaminated: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="usd">USD (Unsettable)</Label>
+                <Input
+                  id="usd"
+                  type="number"
+                  value={newEntry.usd}
+                  onChange={(e) => setNewEntry({...newEntry, usd: parseInt(e.target.value) || 0})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="setWeek">Set Week</Label>
+                <Input
+                  id="setWeek"
+                  value={newEntry.setWeek}
+                  onChange={(e) => setNewEntry({...newEntry, setWeek: e.target.value})}
+                  placeholder="Week 1"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="totalEggsPulled">Total Eggs Pulled</Label>
-              <Input
-                id="totalEggsPulled"
-                type="number"
-                value={newEntry.totalEggsPulled}
-                onChange={(e) => setNewEntry({...newEntry, totalEggsPulled: parseInt(e.target.value) || 648})}
-                placeholder="648"
-              />
+            <div className="flex gap-2 mt-4">
+              <Button onClick={addEntry} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Entry
+              </Button>
+              <Button onClick={saveData} variant="outline" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save All Data
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="stained">Stained</Label>
-              <Input
-                id="stained"
-                type="number"
-                value={newEntry.stained}
-                onChange={(e) => setNewEntry({...newEntry, stained: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="dirty">Dirty</Label>
-              <Input
-                id="dirty"
-                type="number"
-                value={newEntry.dirty}
-                onChange={(e) => setNewEntry({...newEntry, dirty: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="small">Small</Label>
-              <Input
-                id="small"
-                type="number"
-                value={newEntry.small}
-                onChange={(e) => setNewEntry({...newEntry, small: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="cracked">Cracked</Label>
-              <Input
-                id="cracked"
-                type="number"
-                value={newEntry.cracked}
-                onChange={(e) => setNewEntry({...newEntry, cracked: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="abnormal">Abnormal</Label>
-              <Input
-                id="abnormal"
-                type="number"
-                value={newEntry.abnormal}
-                onChange={(e) => setNewEntry({...newEntry, abnormal: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="contaminated">Contaminated</Label>
-              <Input
-                id="contaminated"
-                type="number"
-                value={newEntry.contaminated}
-                onChange={(e) => setNewEntry({...newEntry, contaminated: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="usd">USD (Unsettable)</Label>
-              <Input
-                id="usd"
-                type="number"
-                value={newEntry.usd}
-                onChange={(e) => setNewEntry({...newEntry, usd: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="setWeek">Set Week</Label>
-              <Input
-                id="setWeek"
-                value={newEntry.setWeek}
-                onChange={(e) => setNewEntry({...newEntry, setWeek: e.target.value})}
-                placeholder="Week 1"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button onClick={addEntry} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Entry
-            </Button>
-            <Button onClick={saveData} variant="outline" className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              Save All Data
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Data Table */}
       <Card>
@@ -441,45 +496,6 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
         </CardContent>
       </Card>
 
-      {/* Summary Statistics */}
-      {localData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Quality Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {localData.length}
-                </div>
-                <div className="text-sm text-gray-600">Total Flocks</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {(localData.reduce((sum, entry) => sum + overallQualityScore(entry), 0) / localData.length).toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-600">Avg Quality Score</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {(localData.reduce((sum, entry) => sum + calculatePercentage(entry.usd, entry.totalEggsPulled), 0) / localData.length).toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-600">Avg USD Rate</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {localData.reduce((sum, entry) => sum + entry.totalEggsPulled, 0).toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-600">Total Eggs Assessed</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
