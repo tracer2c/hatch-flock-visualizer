@@ -94,14 +94,15 @@ const NotificationBell = () => {
             </div>
 
             {/* Alert List */}
-            <ScrollArea className="max-h-80">
-              {isLoading ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  Loading alerts...
-                </div>
-              ) : alerts && alerts.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {alerts.slice(0, 10).map((alert) => (
+            <div className="max-h-80 overflow-y-auto">
+              <ScrollArea className="h-full">
+                {isLoading ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Loading alerts...
+                  </div>
+                ) : alerts && alerts.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {alerts.slice(0, 10).map((alert) => (
                     <div key={alert.id} className={`p-3 hover:bg-muted/50 ${getSeverityColor(alert.severity)}`}>
                       <div className="flex items-start gap-3">
                         <div className="mt-1">
@@ -192,16 +193,17 @@ const NotificationBell = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">No notifications</p>
-                  <p className="text-sm">All systems operating normally</p>
-                </div>
-              )}
-            </ScrollArea>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="font-medium">No notifications</p>
+                    <p className="text-sm">All systems operating normally</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
 
             {/* Footer */}
             {alerts && alerts.length > 10 && (

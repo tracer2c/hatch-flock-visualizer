@@ -53,7 +53,7 @@ const BatchOverviewDashboard = () => {
     <div className="space-y-6">
       {/* Key Performance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
+        <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Batches</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -64,7 +64,7 @@ const BatchOverviewDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Fertility</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -78,7 +78,7 @@ const BatchOverviewDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Hatch Rate</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -92,7 +92,7 @@ const BatchOverviewDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">QA Alerts</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -103,7 +103,7 @@ const BatchOverviewDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Machine Utilization</CardTitle>
             <Thermometer className="h-4 w-4 text-muted-foreground" />
@@ -116,7 +116,7 @@ const BatchOverviewDashboard = () => {
       </div>
 
       {/* Active Batches Pipeline */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -168,7 +168,7 @@ const BatchOverviewDashboard = () => {
 
       {/* QA Alerts */}
       {qaAlerts && qaAlerts.length > 0 && (
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
@@ -201,7 +201,7 @@ const BatchOverviewDashboard = () => {
       )}
 
       {/* Machine Utilization */}
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle>Machine Utilization Status</CardTitle>
         </CardHeader>
