@@ -55,27 +55,34 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
     }
   };
 
-  const selectedData = data.filter(item => selectedItems.includes(item.batchNumber));
+  // Filter data for comparison - only show batches with some meaningful data
+  const displayData = data.filter(batch => 
+    batch.hasEggQuality || batch.hasFertilityData || batch.hasQAData
+  );
 
-  // Breed comparison data
-  const breedComparison = data.reduce((acc, item) => {
-    if (!acc[item.breed]) {
-      acc[item.breed] = {
-        breed: item.breed,
-        fertility: [],
-        hatch: [],
-        qualityScore: [],
-        hof: [],
-        earlyDead: []
-      };
-    }
-    acc[item.breed].fertility.push(item.fertility);
-    acc[item.breed].hatch.push(item.hatch);
-    acc[item.breed].qualityScore.push(item.qualityScore);
-    acc[item.breed].hof.push(item.hof);
-    acc[item.breed].earlyDead.push(item.earlyDead);
-    return acc;
-  }, {} as any);
+  const selectedData = displayData.filter(item => selectedItems.includes(item.batchNumber));
+
+  // Breed comparison data - only include batches with fertility data for breed comparison
+  const breedComparison = data
+    .filter(batch => batch.hasFertilityData && batch.fertility !== null)
+    .reduce((acc, item) => {
+      if (!acc[item.breed]) {
+        acc[item.breed] = {
+          breed: item.breed,
+          fertility: [],
+          hatch: [],
+          qualityScore: [],
+          hof: [],
+          earlyDead: []
+        };
+      }
+      acc[item.breed].fertility.push(item.fertility);
+      acc[item.breed].hatch.push(item.hatch || 0);
+      acc[item.breed].qualityScore.push(item.qualityScore || 0);
+      acc[item.breed].hof.push(item.hof || 0);
+      acc[item.breed].earlyDead.push(item.earlyDead || 0);
+      return acc;
+    }, {} as any);
 
   const breedStats = Object.keys(breedComparison).map(breed => {
     const stats = breedComparison[breed];
@@ -93,11 +100,11 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   // Prepare radar chart data for selected items
   const radarData = selectedData.map(item => ({
     name: `Batch ${item.batchNumber} (${item.flockName})`,
-    fertility: item.fertility,
-    hatch: item.hatch,
-    qualityScore: item.qualityScore,
-    hof: item.hof,
-    earlyDead: 10 - item.earlyDead // Invert early dead for better visualization
+    fertility: item.fertility || 0,
+    hatch: item.hatch || 0,
+    qualityScore: item.qualityScore || 0,
+    hof: item.hof || 0,
+    earlyDead: item.earlyDead ? 10 - item.earlyDead : 10 // Invert early dead for better visualization
   }));
 
   return (
@@ -132,7 +139,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
               })}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-              {data.map(item => (
+              {displayData.map(item => (
                 <Button
                   key={item.batchNumber}
                   variant={selectedItems.includes(item.batchNumber) ? "default" : "outline"}
@@ -141,9 +148,16 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                   disabled={!selectedItems.includes(item.batchNumber) && selectedItems.length >= 5}
                   className="justify-start text-left"
                 >
-                  <div>
-                    <div className="font-medium">Batch {item.batchNumber}</div>
-                    <div className="text-xs opacity-70">{item.flockName} - {item.fertility.toFixed(1)}%</div>
+                  <div className="w-full">
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">Batch {item.batchNumber}</div>
+                      <Badge variant="outline" className="text-xs">
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <div className="text-xs opacity-70">
+                      {item.flockName} - {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
+                    </div>
                   </div>
                 </Button>
               ))}
@@ -241,9 +255,15 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                             <div className="text-xs text-gray-500">{item.flockName}</div>
                           </div>
                         </td>
-                        <td className="border border-gray-200 p-2 text-sm text-center">{item.fertility.toFixed(1)}%</td>
-                        <td className="border border-gray-200 p-2 text-sm text-center">{item.hatch.toFixed(1)}%</td>
-                        <td className="border border-gray-200 p-2 text-sm text-center">{item.qualityScore.toFixed(1)}%</td>
+                         <td className="border border-gray-200 p-2 text-sm text-center">
+                           {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
+                         </td>
+                         <td className="border border-gray-200 p-2 text-sm text-center">
+                           {item.hatch ? `${item.hatch.toFixed(1)}%` : 'Pending'}
+                         </td>
+                         <td className="border border-gray-200 p-2 text-sm text-center">
+                           {item.qualityScore ? `${item.qualityScore.toFixed(1)}%` : 'Pending'}
+                         </td>
                         <td className="border border-gray-200 p-2 text-sm text-center">{item.age}w</td>
                       </tr>
                     ))}

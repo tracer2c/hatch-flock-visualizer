@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useBatchData";
+import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization, useOngoingBatchMetrics } from "@/hooks/useBatchData";
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package } from "lucide-react";
 
 const BatchOverviewDashboard = () => {
@@ -14,14 +14,20 @@ const BatchOverviewDashboard = () => {
     return <div className="text-center py-8 text-muted-foreground">Loading dashboard data...</div>;
   }
 
-  // Calculate key metrics
+  // Calculate key metrics - handle null values
   const totalActiveBatches = activeBatches?.length || 0;
-  const avgFertility = performanceMetrics?.length 
-    ? performanceMetrics.reduce((sum, batch) => sum + batch.fertility, 0) / performanceMetrics.length 
+  
+  // Only calculate averages from batches with fertility data
+  const fertilityData = performanceMetrics?.filter(batch => batch.fertility !== null) || [];
+  const avgFertility = fertilityData.length > 0 
+    ? fertilityData.reduce((sum, batch) => sum + batch.fertility, 0) / fertilityData.length 
     : 0;
-  const avgHatch = performanceMetrics?.length 
-    ? performanceMetrics.reduce((sum, batch) => sum + batch.hatch, 0) / performanceMetrics.length 
+    
+  const hatchData = performanceMetrics?.filter(batch => batch.hatch !== null) || [];
+  const avgHatch = hatchData.length > 0 
+    ? hatchData.reduce((sum, batch) => sum + batch.hatch, 0) / hatchData.length 
     : 0;
+    
   const totalAlerts = qaAlerts?.length || 0;
   const avgMachineUtil = machineUtil?.length 
     ? machineUtil.reduce((sum, machine) => sum + machine.utilization, 0) / machineUtil.length 

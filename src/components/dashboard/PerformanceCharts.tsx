@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, AreaChart, Area } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import DemoTutorial from "./DemoTutorial";
 
@@ -53,15 +54,29 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
   const [chartType, setChartType] = useState("bar");
   const [showDemo, setShowDemo] = useState(false);
 
-  // Sort data based on selected metric
-  const sortedData = [...data].sort((a, b) => {
+  // Filter data for display - only show batches with some data
+  const displayData = data.filter(batch => 
+    batch.hasEggQuality || batch.hasFertilityData || batch.hasQAData
+  );
+
+  // Sort data based on selected metric (handle null values)
+  const sortedData = [...displayData].sort((a, b) => {
     if (sortBy === "name") return a.batchNumber.localeCompare(b.batchNumber);
-    return b[sortBy] - a[sortBy];
+    
+    const aValue = a[sortBy] || 0;
+    const bValue = b[sortBy] || 0;
+    
+    // Put null values at the end
+    if (aValue === 0 && bValue !== 0) return 1;
+    if (bValue === 0 && aValue !== 0) return -1;
+    
+    return bValue - aValue;
   });
 
-  // Top and bottom performers
-  const topPerformers = [...data].sort((a, b) => b.fertility - a.fertility).slice(0, 5);
-  const bottomPerformers = [...data].sort((a, b) => a.fertility - b.fertility).slice(0, 5);
+  // Top and bottom performers (only completed batches with fertility data)
+  const completedBatches = data.filter(batch => batch.hasFertilityData && batch.fertility !== null);
+  const topPerformers = [...completedBatches].sort((a, b) => b.fertility - a.fertility).slice(0, 5);
+  const bottomPerformers = [...completedBatches].sort((a, b) => a.fertility - b.fertility).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -115,6 +130,62 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Ongoing Batches Status */}
+      {data.filter(batch => batch.status !== 'completed').length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Ongoing Batches Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data
+                .filter(batch => batch.status !== 'completed')
+                .map(batch => (
+                  <div key={batch.batchNumber} className="p-4 border rounded-lg bg-card">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-medium">Batch {batch.batchNumber}</div>
+                      <Badge variant={batch.status === 'hatching' ? 'default' : 'secondary'}>
+                        {batch.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-2">
+                      {batch.flockName} - Day {batch.currentDay || batch.daysSinceSet}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      {batch.hasEggQuality && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          Egg Quality
+                        </div>
+                      )}
+                      {batch.hasQAData && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          QA Data
+                        </div>
+                      )}
+                      {batch.hasFertilityData && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          Fertility
+                        </div>
+                      )}
+                    </div>
+                    {batch.hasQAData && (
+                      <div className="text-xs text-muted-foreground">
+                        Latest: {batch.latestTemp}°F, {batch.latestHumidity}%
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Performance Chart */}
       <Card data-demo-id="main-chart">

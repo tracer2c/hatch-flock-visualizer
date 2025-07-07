@@ -68,6 +68,158 @@ export const useBatchPerformanceMetrics = () => {
           batch_number,
           status,
           total_eggs_set,
+          set_date,
+          flocks (flock_number, flock_name, age_weeks, breed),
+          fertility_analysis (
+            fertility_percent,
+            hatch_percent,
+            hof_percent,
+            early_dead,
+            late_dead,
+            sample_size
+          ),
+          egg_pack_quality (
+            grade_a,
+            grade_b,
+            grade_c,
+            cracked,
+            dirty,
+            sample_size
+          ),
+          qa_monitoring (
+            temperature,
+            humidity,
+            day_of_incubation,
+            check_date
+          )
+        `)
+        .order('set_date', { ascending: false });
+
+      if (error) throw error;
+      
+      // Calculate performance metrics for all batches
+      return data?.map(batch => {
+        const fertility = batch.fertility_analysis?.[0];
+        const eggQuality = batch.egg_pack_quality?.[0];
+        const qaData = batch.qa_monitoring || [];
+        
+        const qualityScore = eggQuality ? 
+          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : null;
+        
+        // Calculate days since set for ongoing batches
+        const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Determine data availability
+        const hasEggQuality = !!eggQuality;
+        const hasFertilityData = !!fertility;
+        const hasQAData = qaData.length > 0;
+        
+        return {
+          batchNumber: batch.batch_number,
+          flockName: batch.flocks?.flock_name || 'Unknown',
+          flockNumber: batch.flocks?.flock_number || 0,
+          age: batch.flocks?.age_weeks || 0,
+          breed: batch.flocks?.breed || 'unknown',
+          fertility: fertility?.fertility_percent || null,
+          hatch: fertility?.hatch_percent || null,
+          hof: fertility?.hof_percent || null,
+          earlyDead: fertility ? ((fertility.early_dead || 0) / (fertility.sample_size || 1)) * 100 : null,
+          qualityScore,
+          totalEggs: batch.total_eggs_set,
+          status: batch.status,
+          daysSinceSet,
+          setDate: batch.set_date,
+          // Data availability flags
+          hasEggQuality,
+          hasFertilityData,
+          hasQAData,
+          // Latest QA readings for ongoing batches
+          latestTemp: hasQAData ? qaData[qaData.length - 1]?.temperature : null,
+          latestHumidity: hasQAData ? qaData[qaData.length - 1]?.humidity : null,
+          currentDay: hasQAData ? qaData[qaData.length - 1]?.day_of_incubation : daysSinceSet
+        };
+      }) || [];
+    },
+  });
+};
+
+export const useOngoingBatchMetrics = () => {
+  return useQuery({
+    queryKey: ['ongoing-batch-metrics'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select(`
+          id,
+          batch_number,
+          status,
+          total_eggs_set,
+          set_date,
+          flocks (flock_number, flock_name, age_weeks, breed),
+          egg_pack_quality (
+            grade_a,
+            grade_b,
+            grade_c,
+            cracked,
+            dirty,
+            sample_size
+          ),
+          qa_monitoring (
+            temperature,
+            humidity,
+            day_of_incubation,
+            check_date
+          )
+        `)
+        .in('status', ['setting', 'incubating', 'hatching'])
+        .order('set_date', { ascending: false });
+
+      if (error) throw error;
+      
+      return data?.map(batch => {
+        const eggQuality = batch.egg_pack_quality?.[0];
+        const qaData = batch.qa_monitoring || [];
+        
+        const qualityScore = eggQuality ? 
+          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : null;
+        
+        const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          batchNumber: batch.batch_number,
+          flockName: batch.flocks?.flock_name || 'Unknown',
+          flockNumber: batch.flocks?.flock_number || 0,
+          age: batch.flocks?.age_weeks || 0,
+          breed: batch.flocks?.breed || 'unknown',
+          totalEggs: batch.total_eggs_set,
+          status: batch.status,
+          daysSinceSet,
+          setDate: batch.set_date,
+          qualityScore,
+          hasEggQuality: !!eggQuality,
+          hasQAData: qaData.length > 0,
+          latestTemp: qaData.length > 0 ? qaData[qaData.length - 1]?.temperature : null,
+          latestHumidity: qaData.length > 0 ? qaData[qaData.length - 1]?.humidity : null,
+          currentDay: qaData.length > 0 ? qaData[qaData.length - 1]?.day_of_incubation : daysSinceSet,
+          progressPercent: Math.min(100, (daysSinceSet / 21) * 100)
+        };
+      }) || [];
+    },
+  });
+};
+
+export const useCompletedBatchMetrics = () => {
+  return useQuery({
+    queryKey: ['completed-batch-metrics'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select(`
+          id,
+          batch_number,
+          status,
+          total_eggs_set,
+          set_date,
           flocks (flock_number, flock_name, age_weeks, breed),
           fertility_analysis (
             fertility_percent,
@@ -87,11 +239,11 @@ export const useBatchPerformanceMetrics = () => {
           )
         `)
         .eq('status', 'completed')
-        .not('fertility_analysis', 'is', null);
+        .not('fertility_analysis', 'is', null)
+        .order('set_date', { ascending: false });
 
       if (error) throw error;
       
-      // Calculate performance metrics
       return data?.map(batch => {
         const fertility = batch.fertility_analysis?.[0];
         const eggQuality = batch.egg_pack_quality?.[0];
@@ -111,7 +263,8 @@ export const useBatchPerformanceMetrics = () => {
           earlyDead: ((fertility?.early_dead || 0) / (fertility?.sample_size || 1)) * 100,
           qualityScore,
           totalEggs: batch.total_eggs_set,
-          status: batch.status
+          status: batch.status,
+          setDate: batch.set_date
         };
       }) || [];
     },
