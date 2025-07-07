@@ -2,6 +2,7 @@ import Navigation from "@/components/Navigation";
 import FlockManager from "@/components/dashboard/FlockManager";
 import MachineManager from "@/components/dashboard/MachineManager";
 import DataCleanup from "@/components/dashboard/DataCleanup";
+import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import { Settings } from "lucide-react";
 
 const ManagementPage = () => {
@@ -23,6 +24,7 @@ const ManagementPage = () => {
 
         {/* Management Sections */}
         <div className="space-y-8">
+          <BatchStatusSettings />
           <FlockManager />
           <MachineManager />
           <DataCleanup />
