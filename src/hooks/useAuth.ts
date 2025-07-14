@@ -176,7 +176,7 @@ export const useAuth = () => {
   const createDefaultAdmin = async () => {
     try {
       const { error } = await supabase.auth.signUp({
-        email: 'admin@default.com',
+        email: 'admin@company.local',
         password: 'admin123',
         options: {
           data: {
