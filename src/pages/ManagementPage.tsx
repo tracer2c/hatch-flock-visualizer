@@ -4,7 +4,8 @@ import MachineManager from "@/components/dashboard/MachineManager";
 import DataCleanup from "@/components/dashboard/DataCleanup";
 import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import SOPManager from "@/components/dashboard/SOPManager";
-import { Settings, Clock, FileText, Users, Cog, Database } from "lucide-react";
+import UserManager from "@/components/dashboard/UserManager";
+import { Settings, Clock, FileText, Users, Cog, Database, UserCheck } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const ManagementPage = () => {
@@ -83,6 +84,21 @@ const ManagementPage = () => {
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6">
               <MachineManager />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="user-manager" className="bg-white rounded-lg shadow-sm border">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <UserCheck className="h-5 w-5 text-indigo-600" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-lg">User Management</h3>
+                  <p className="text-gray-600 text-sm">Manage user accounts, roles, and permissions</p>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <UserManager />
             </AccordionContent>
           </AccordionItem>
 

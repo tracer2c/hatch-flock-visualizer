@@ -46,7 +46,7 @@ const Navigation = () => {
       icon: Settings,
       description: 'Manage flocks & machines',
       requiresAuth: true,
-      requiredRole: 'operations_head' as const
+      requiredRole: 'company_admin' as const
     }
   ];
 
