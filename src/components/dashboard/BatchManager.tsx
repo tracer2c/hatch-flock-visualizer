@@ -41,10 +41,9 @@ interface Batch {
 interface BatchManagerProps {
   onBatchSelect: (batchId: string) => void;
   selectedBatch: string | null;
-  compact?: boolean;
 }
 
-const BatchManager = ({ onBatchSelect, selectedBatch, compact = false }: BatchManagerProps) => {
+const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -193,117 +192,6 @@ const BatchManager = ({ onBatchSelect, selectedBatch, compact = false }: BatchMa
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  if (compact) {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Compact New Batch Button */}
-        <div className="p-4 border-b border-gray-200">
-          <Button 
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            variant={showCreateForm ? "outline" : "default"}
-            className="w-full"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {showCreateForm ? "Cancel" : "New Batch"}
-          </Button>
-        </div>
-
-        {/* Compact Create Form */}
-        {showCreateForm && (
-          <div className="p-4 border-b border-gray-200 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Flock *</Label>
-              <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
-                <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Choose flock" />
-                </SelectTrigger>
-                <SelectContent>
-                  {flocks.map((flock) => (
-                    <SelectItem key={flock.id} value={flock.id}>
-                      {flock.flock_number} - {flock.flock_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Machine *</Label>
-              <Select value={formData.machineId} onValueChange={(value) => setFormData(prev => ({ ...prev, machineId: value }))}>
-                <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Choose machine" />
-                </SelectTrigger>
-                <SelectContent>
-                  {machines.map((machine) => (
-                    <SelectItem key={machine.id} value={machine.id}>
-                      {machine.machine_number} - {machine.machine_type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Set Date *</Label>
-              <Input
-                type="date"
-                value={formData.setDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, setDate: e.target.value }))}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Total Eggs *</Label>
-              <Input
-                type="number"
-                placeholder="45000"
-                value={formData.totalEggs}
-                onChange={(e) => setFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
-                className="h-8"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={createBatch} size="sm" className="flex-1">Create</Button>
-              <Button variant="outline" onClick={() => setShowCreateForm(false)} size="sm" className="flex-1">Cancel</Button>
-            </div>
-          </div>
-        )}
-
-        {/* Compact Batch List */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-2 space-y-2">
-            {batches.map((batch) => (
-              <div
-                key={batch.id}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                  selectedBatch === batch.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => onBatchSelect(batch.id)}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-medium text-sm">{batch.batch_number}</h4>
-                  <Badge className={getStatusColor(batch.status)} variant="secondary">
-                    {batch.status}
-                  </Badge>
-                </div>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>Flock {batch.flock_number}</div>
-                  <div>Machine {batch.machine_number}</div>
-                  <div>{new Date(batch.set_date).toLocaleDateString()}</div>
-                  <div>{(batch.total_eggs_set / 1000).toFixed(0)}k eggs</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {batches.length === 0 && (
-            <div className="text-center py-8 text-gray-500 text-sm">
-              No batches found.
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

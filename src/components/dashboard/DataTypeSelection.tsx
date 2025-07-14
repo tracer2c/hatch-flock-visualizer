@@ -23,10 +23,9 @@ interface BatchInfo {
 interface DataTypeSelectionProps {
   batchId: string;
   onBack: () => void;
-  embedded?: boolean;
 }
 
-const DataTypeSelection = ({ batchId, onBack, embedded = false }: DataTypeSelectionProps) => {
+const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
   const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
   const [dataCounts, setDataCounts] = useState({
     eggPack: 0,
@@ -145,112 +144,14 @@ const DataTypeSelection = ({ batchId, onBack, embedded = false }: DataTypeSelect
   ];
 
   if (!batchInfo) {
-    const loadingContent = (
-      <div className="p-8 text-center">
-        <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Batch Information</h3>
-        <p className="text-gray-600">Please wait while we load the batch details...</p>
-      </div>
-    );
-    
-    if (embedded) {
-      return <div className="flex-1 flex items-center justify-center">{loadingContent}</div>;
-    }
-    
     return (
       <Card>
-        <CardContent>{loadingContent}</CardContent>
+        <CardContent className="p-8 text-center">
+          <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Batch Information</h3>
+          <p className="text-gray-600">Please wait while we load the batch details...</p>
+        </CardContent>
       </Card>
-    );
-  }
-
-  if (embedded) {
-    return (
-      <div className="flex-1 flex flex-col h-full">
-        {/* Compact Header */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={onBack}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <div className="h-4 border-l border-gray-300" />
-              <h1 className="text-lg font-semibold text-gray-900">
-                {batchInfo.batch_number}
-              </h1>
-            </div>
-            <Badge className={getStatusColor(batchInfo.status)} variant="secondary">
-              {batchInfo.status}
-            </Badge>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-4 text-xs">
-            <div>
-              <p className="text-gray-500">Flock</p>
-              <p className="font-medium">{batchInfo.flock_number}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Machine</p>
-              <p className="font-medium">{batchInfo.machine_number}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Set Date</p>
-              <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Eggs</p>
-              <p className="font-medium">{(batchInfo.total_eggs_set / 1000).toFixed(0)}k</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Data Type Selection */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Data Entry</h2>
-            <p className="text-gray-600 text-sm">Choose what type of data to enter</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {dataTypes.map((dataType) => {
-              const IconComponent = dataType.icon;
-              return (
-                <Card 
-                  key={dataType.id}
-                  className="cursor-pointer hover:shadow-md transition-all duration-200 hover:border-blue-200"
-                  onClick={() => navigate(dataType.route)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className={`p-2 rounded-lg bg-gradient-to-r ${dataType.color} text-white`}>
-                        <IconComponent className="h-5 w-5" />
-                      </div>
-                      {dataType.count > 0 && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                          {dataType.count}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-sm">{dataType.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-gray-600 text-xs mb-3">{dataType.description}</p>
-                    <Button className="w-full" variant="outline" size="sm">
-                      Enter Data
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </div>
     );
   }
 
