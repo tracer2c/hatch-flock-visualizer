@@ -15,7 +15,7 @@ INSERT INTO public.user_profiles (
 ) VALUES (
   '00000000-0000-0000-0000-000000000002'::uuid,
   '00000000-0000-0000-0000-000000000001'::uuid,
-  'admin@company.local',
+  'admin@example.com',
   'Default',
   'Admin',
   'active'
