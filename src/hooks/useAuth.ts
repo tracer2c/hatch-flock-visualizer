@@ -173,6 +173,30 @@ export const useAuth = () => {
     }
   };
 
+  const createDefaultAdmin = async () => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: 'admin@default.com',
+        password: 'admin123',
+        options: {
+          data: {
+            first_name: 'Default',
+            last_name: 'Admin',
+          }
+        }
+      });
+      
+      if (error && !error.message.includes('already been registered')) {
+        throw error;
+      }
+      
+      return { error: null };
+    } catch (error: any) {
+      console.error('Error creating default admin:', error);
+      return { error };
+    }
+  };
+
   const hasRole = (role: 'company_admin' | 'operations_head' | 'staff') => {
     return roles.some(r => r.role === role);
   };
@@ -190,6 +214,7 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    createDefaultAdmin,
     hasRole,
     isAdmin,
     isOperationsHead,

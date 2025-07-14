@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export const useAlerts = () => {
   return useQuery({
@@ -67,15 +68,18 @@ export const useCriticalAlerts = () => {
 export const useAcknowledgeAlert = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   return useMutation({
     mutationFn: async (alertId: string) => {
+      const acknowledgedBy = profile ? `${profile.first_name} ${profile.last_name}`.trim() || profile.email : 'Unknown User';
+      
       const { error } = await supabase
         .from('alerts')
         .update({
           status: 'acknowledged',
           acknowledged_at: new Date().toISOString(),
-          acknowledged_by: 'current_user' // TODO: Replace with actual user
+          acknowledged_by: acknowledgedBy
         })
         .eq('id', alertId);
 

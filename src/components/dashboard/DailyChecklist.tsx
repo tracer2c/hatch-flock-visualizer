@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useActiveBatches } from "@/hooks/useBatchData";
 import { useDailyChecklistItems, useChecklistCompletions, useCompleteChecklistItem, useBatchChecklistProgress } from "@/hooks/useSOPData";
+import { useAuth } from "@/hooks/useAuth";
 import { CheckCircle, Circle, Calendar, Clock, User, AlertTriangle, CheckSquare } from "lucide-react";
 
 interface DailyChecklistProps {
@@ -18,6 +19,7 @@ interface DailyChecklistProps {
 
 const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
   const { data: activeBatches } = useActiveBatches();
+  const { profile } = useAuth();
   const [currentBatchId, setCurrentBatchId] = useState(selectedBatchId || '');
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [noteValues, setNoteValues] = useState<Record<string, string>>({});
@@ -39,11 +41,13 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
 
     if (isCompleted) {
       const notes = noteValues[itemId] || '';
+      const completedBy = profile ? `${profile.first_name} ${profile.last_name}`.trim() || profile.email : 'Unknown User';
+      
       await completeItem.mutateAsync({
         checklistItemId: itemId,
         batchId: currentBatchId,
         dayOfIncubation,
-        completedBy: 'Current User', // TODO: Replace with actual user
+        completedBy,
         notes
       });
     }
