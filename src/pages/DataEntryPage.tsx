@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileInput } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BatchManager from "@/components/dashboard/BatchManager";
@@ -17,38 +16,53 @@ const DataEntryPage = () => {
     setSelectedBatchId(null);
   };
 
-  // If a batch is selected, show the data type selection
-  if (selectedBatchId) {
-    return (
-      <DataTypeSelection 
-        batchId={selectedBatchId} 
-        onBack={handleBackToBatchSelection}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto">
-        <Navigation />
-        
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <FileInput className="h-8 w-8" />
-            Data Entry Center
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Track your hatchery operations from egg pack to residue analysis
-          </p>
+    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <Navigation />
+      
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - Batch Management */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FileInput className="h-5 w-5" />
+              Batch Management
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Select a batch to enter data
+            </p>
+          </div>
+          
+          <div className="flex-1 overflow-hidden">
+            <BatchManager 
+              onBatchSelect={handleBatchSelect}
+              selectedBatch={selectedBatchId}
+              compact={true}
+            />
+          </div>
         </div>
 
-        {/* Batch Management */}
-        <div className="space-y-6">
-          <BatchManager 
-            onBatchSelect={handleBatchSelect}
-            selectedBatch={selectedBatchId}
-          />
+        {/* Right Panel - Data Type Selection or Welcome */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedBatchId ? (
+            <DataTypeSelection 
+              batchId={selectedBatchId} 
+              onBack={handleBackToBatchSelection}
+              embedded={true}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-md">
+                <FileInput className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Data Entry Center
+                </h3>
+                <p className="text-gray-600 text-lg">
+                  Select a batch from the sidebar to start entering data for your hatchery operations
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
