@@ -17,6 +17,7 @@ export type Database = {
       alert_configs: {
         Row: {
           alert_type: Database["public"]["Enums"]["alert_type"]
+          company_id: string
           created_at: string
           critical_days: number[] | null
           description: string | null
@@ -34,6 +35,7 @@ export type Database = {
         }
         Insert: {
           alert_type: Database["public"]["Enums"]["alert_type"]
+          company_id?: string
           created_at?: string
           critical_days?: number[] | null
           description?: string | null
@@ -51,6 +53,7 @@ export type Database = {
         }
         Update: {
           alert_type?: Database["public"]["Enums"]["alert_type"]
+          company_id?: string
           created_at?: string
           critical_days?: number[] | null
           description?: string | null
@@ -66,7 +69,15 @@ export type Database = {
           reminder_hours_before?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alert_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alerts: {
         Row: {
@@ -157,6 +168,7 @@ export type Database = {
         Row: {
           actual_hatch_date: string | null
           batch_number: string
+          company_id: string
           created_at: string
           expected_hatch_date: string
           flock_id: string
@@ -173,6 +185,7 @@ export type Database = {
         Insert: {
           actual_hatch_date?: string | null
           batch_number: string
+          company_id?: string
           created_at?: string
           expected_hatch_date: string
           flock_id: string
@@ -189,6 +202,7 @@ export type Database = {
         Update: {
           actual_hatch_date?: string | null
           batch_number?: string
+          company_id?: string
           created_at?: string
           expected_hatch_date?: string
           flock_id?: string
@@ -203,6 +217,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "batches_flock_id_fkey"
             columns: ["flock_id"]
@@ -267,9 +288,40 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+          subscription_type: Database["public"]["Enums"]["subscription_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["company_status"]
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["company_status"]
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_checklist_items: {
         Row: {
           applicable_days: number[]
+          company_id: string
           created_at: string
           description: string | null
           id: string
@@ -281,6 +333,7 @@ export type Database = {
         }
         Insert: {
           applicable_days?: number[]
+          company_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -292,6 +345,7 @@ export type Database = {
         }
         Update: {
           applicable_days?: number[]
+          company_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -302,6 +356,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_checklist_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_checklist_items_sop_template_id_fkey"
             columns: ["sop_template_id"]
@@ -443,6 +504,7 @@ export type Database = {
           age_weeks: number
           arrival_date: string
           breed: Database["public"]["Enums"]["breed_type"]
+          company_id: string
           created_at: string
           flock_name: string
           flock_number: number
@@ -456,6 +518,7 @@ export type Database = {
           age_weeks: number
           arrival_date: string
           breed: Database["public"]["Enums"]["breed_type"]
+          company_id?: string
           created_at?: string
           flock_name: string
           flock_number: number
@@ -469,6 +532,7 @@ export type Database = {
           age_weeks?: number
           arrival_date?: string
           breed?: Database["public"]["Enums"]["breed_type"]
+          company_id?: string
           created_at?: string
           flock_name?: string
           flock_number?: number
@@ -478,11 +542,20 @@ export type Database = {
           total_birds?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "flocks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       machines: {
         Row: {
           capacity: number
+          company_id: string
           created_at: string
           id: string
           last_maintenance: string | null
@@ -495,6 +568,7 @@ export type Database = {
         }
         Insert: {
           capacity: number
+          company_id?: string
           created_at?: string
           id?: string
           last_maintenance?: string | null
@@ -507,6 +581,7 @@ export type Database = {
         }
         Update: {
           capacity?: number
+          company_id?: string
           created_at?: string
           id?: string
           last_maintenance?: string | null
@@ -517,7 +592,15 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "machines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_preferences: {
         Row: {
@@ -691,6 +774,7 @@ export type Database = {
       sop_templates: {
         Row: {
           category: string
+          company_id: string
           content: Json | null
           created_at: string
           day_of_incubation: number | null
@@ -702,6 +786,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          company_id?: string
           content?: Json | null
           created_at?: string
           day_of_incubation?: number | null
@@ -713,6 +798,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          company_id?: string
           content?: Json | null
           created_at?: string
           day_of_incubation?: number | null
@@ -722,14 +808,111 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sop_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          company_id: string
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_company: {
+        Args: { _user_id: string }
+        Returns: string
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       alert_severity: "info" | "warning" | "critical"
@@ -749,7 +932,11 @@ export type Database = {
         | "completed"
         | "cancelled"
       breed_type: "broiler" | "layer" | "breeder"
+      company_status: "active" | "suspended" | "cancelled"
       machine_type: "setter" | "hatcher" | "combo"
+      subscription_type: "trial" | "basic" | "premium" | "enterprise"
+      user_role: "company_admin" | "operations_head" | "staff"
+      user_status: "active" | "inactive" | "pending"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -896,7 +1083,11 @@ export const Constants = {
         "cancelled",
       ],
       breed_type: ["broiler", "layer", "breeder"],
+      company_status: ["active", "suspended", "cancelled"],
       machine_type: ["setter", "hatcher", "combo"],
+      subscription_type: ["trial", "basic", "premium", "enterprise"],
+      user_role: ["company_admin", "operations_head", "staff"],
+      user_status: ["active", "inactive", "pending"],
     },
   },
 } as const

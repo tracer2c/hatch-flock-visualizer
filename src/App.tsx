@@ -13,6 +13,8 @@ import ResidueEntryPage from "./pages/ResidueEntryPage";
 import ManagementPage from "./pages/ManagementPage";
 import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -23,15 +25,52 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/data-entry" element={<DataEntryPage />} />
-          <Route path="/data-entry/batch/:batchId/egg-pack" element={<EggPackEntryPage />} />
-          <Route path="/data-entry/batch/:batchId/fertility" element={<FertilityEntryPage />} />
-          <Route path="/data-entry/batch/:batchId/qa" element={<QAEntryPage />} />
-          <Route path="/data-entry/batch/:batchId/residue" element={<ResidueEntryPage />} />
-          <Route path="/checklist" element={<ChecklistPage />} />
-          <Route path="/checklist/batch/:batchId" element={<ChecklistPage />} />
-          <Route path="/management" element={<ManagementPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-entry" element={
+            <ProtectedRoute>
+              <DataEntryPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-entry/batch/:batchId/egg-pack" element={
+            <ProtectedRoute>
+              <EggPackEntryPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-entry/batch/:batchId/fertility" element={
+            <ProtectedRoute>
+              <FertilityEntryPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-entry/batch/:batchId/qa" element={
+            <ProtectedRoute>
+              <QAEntryPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-entry/batch/:batchId/residue" element={
+            <ProtectedRoute>
+              <ResidueEntryPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/checklist" element={
+            <ProtectedRoute>
+              <ChecklistPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/checklist/batch/:batchId" element={
+            <ProtectedRoute>
+              <ChecklistPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/management" element={
+            <ProtectedRoute requiredRole="operations_head">
+              <ManagementPage />
+            </ProtectedRoute>
+          } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
