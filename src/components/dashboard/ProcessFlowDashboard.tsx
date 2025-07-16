@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ScatterChart, Scatter } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
 import { ArrowRight, TrendingUp } from "lucide-react";
+import { AITooltip } from "@/components/ui/ai-tooltip";
 
 const ProcessFlowDashboard = () => {
   const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
@@ -147,10 +148,28 @@ const ProcessFlowDashboard = () => {
               />
               <YAxis stroke="hsl(var(--muted-foreground))" />
               <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px"
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <AITooltip 
+                        chartType="process-flow" 
+                        data={payload} 
+                        chartConfig={{ label, type: 'area' }}
+                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                      >
+                        <div>
+                          <p className="font-medium mb-2">{label}</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span style={{ color: entry.color }}>{entry.name}: </span>
+                              <span className="font-medium">{entry.value}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </AITooltip>
+                    );
+                  }
+                  return null;
                 }}
               />
               <Area type="monotone" dataKey="eggQuality" stackId="1" stroke="hsl(220 70% 50%)" fill="hsl(220 70% 50%)" fillOpacity={0.6} name="Egg Quality %" />
@@ -178,12 +197,38 @@ const ProcessFlowDashboard = () => {
                 <YAxis dataKey="y" name="Fertility" unit="%" stroke="hsl(var(--muted-foreground))" />
                 <Tooltip 
                   cursor={{ strokeDasharray: '3 3' }}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px"
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0]?.payload;
+                      return (
+                        <AITooltip 
+                          chartType="correlation" 
+                          data={data} 
+                          chartConfig={{ type: 'scatter' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">{data?.name}</p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between">
+                                <span>Egg Quality:</span>
+                                <span className="font-medium">{data?.x}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Fertility:</span>
+                                <span className="font-medium">{data?.y}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Flock Age:</span>
+                                <span className="font-medium">{data?.flockAge}w</span>
+                              </div>
+                            </div>
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
                   }}
-                  formatter={(value, name) => [`${value}%`, name === 'x' ? 'Egg Quality' : 'Fertility']}
                 />
                 <Scatter name="Batches" dataKey="y" fill="hsl(var(--primary))" />
               </ScatterChart>
@@ -205,10 +250,28 @@ const ProcessFlowDashboard = () => {
                 <XAxis dataKey="age" name="Age" unit=" weeks" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip 
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px"
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <AITooltip 
+                          chartType="age-performance" 
+                          data={{ age: label, metrics: payload }} 
+                          chartConfig={{ type: 'line' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">Age: {label} weeks</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span style={{ color: entry.color }}>{entry.name}: </span>
+                                <span className="font-medium">{entry.value}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
                   }}
                 />
                 <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
@@ -237,10 +300,28 @@ const ProcessFlowDashboard = () => {
               <XAxis dataKey="breed" stroke="hsl(var(--muted-foreground))" />
               <YAxis stroke="hsl(var(--muted-foreground))" />
               <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px"
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <AITooltip 
+                        chartType="breed-performance" 
+                        data={{ breed: label, metrics: payload }} 
+                        chartConfig={{ type: 'bar' }}
+                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                      >
+                        <div>
+                          <p className="font-medium mb-2">{label}</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span style={{ color: entry.color }}>{entry.name}: </span>
+                              <span className="font-medium">{entry.value}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </AITooltip>
+                    );
+                  }
+                  return null;
                 }}
               />
               <Bar dataKey="quality" fill="hsl(220 70% 50%)" name="Egg Quality %" />

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Eye, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import DemoTutorial from "./DemoTutorial";
+import { AITooltip } from "@/components/ui/ai-tooltip";
 
 interface PerformanceChartsProps {
   data: any[];
@@ -206,10 +207,29 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    `${value}%`, 
-                    String(name).charAt(0).toUpperCase() + String(name).slice(1)
-                  ]}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <AITooltip 
+                          chartType="performance-trends" 
+                          data={{ batch: label, metrics: payload }} 
+                          chartConfig={{ type: 'bar' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">Batch {label}</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span style={{ color: entry.color }}>{String(entry.name).charAt(0).toUpperCase() + String(entry.name).slice(1)}: </span>
+                                <span className="font-medium">{entry.value}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
+                  }}
                 />
                 <Bar dataKey="fertility" fill="#8884d8" name="fertility" />
                 <Bar dataKey="hatch" fill="#82ca9d" name="hatch" />
@@ -228,10 +248,29 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    `${value}%`, 
-                    String(name).charAt(0).toUpperCase() + String(name).slice(1)
-                  ]}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <AITooltip 
+                          chartType="performance-trends" 
+                          data={{ batch: label, metrics: payload }} 
+                          chartConfig={{ type: 'area' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">Batch {label}</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span style={{ color: entry.color }}>{String(entry.name).charAt(0).toUpperCase() + String(entry.name).slice(1)}: </span>
+                                <span className="font-medium">{entry.value}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
+                  }}
                 />
                 <Area type="monotone" dataKey="fertility" stackId="1" stroke="#8884d8" fill="#8884d8" />
                 <Area type="monotone" dataKey="hatch" stackId="2" stroke="#82ca9d" fill="#82ca9d" />
@@ -255,10 +294,38 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
               <YAxis dataKey="fertility" name="Fertility" unit="%" />
               <Tooltip 
                 cursor={{ strokeDasharray: '3 3' }}
-                formatter={(value, name) => [
-                  `${value}${String(name) === 'age' ? ' weeks' : '%'}`, 
-                  String(name).charAt(0).toUpperCase() + String(name).slice(1)
-                ]}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0]?.payload;
+                    return (
+                      <AITooltip 
+                        chartType="correlation" 
+                        data={data} 
+                        chartConfig={{ type: 'scatter' }}
+                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                      >
+                        <div>
+                          <p className="font-medium mb-2">Batch {data?.batchNumber}</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span>Age:</span>
+                              <span className="font-medium">{data?.age} weeks</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Fertility:</span>
+                              <span className="font-medium">{data?.fertility}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Breed:</span>
+                              <span className="font-medium">{data?.breed}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </AITooltip>
+                    );
+                  }
+                  return null;
+                }}
               />
               <Scatter name="Fertility vs Age" dataKey="fertility" fill="#8884d8" />
             </ScatterChart>

@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization, useOngoingBatchMetrics } from "@/hooks/useBatchData";
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package } from "lucide-react";
+import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
@@ -53,30 +55,65 @@ const BatchOverviewDashboard = () => {
     <div className="space-y-6">
       {/* Key Performance Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="glass-card hover:scale-105 transition-transform duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Batches</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalActiveBatches}</div>
-            <p className="text-xs text-muted-foreground">Currently in process</p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="glass-card hover:scale-105 transition-transform duration-200 cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Batches</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{totalActiveBatches}</div>
+                  <p className="text-xs text-muted-foreground">Currently in process</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent asChild>
+              <EnhancedTooltip 
+                chartType="batch-overview"
+                data={{ totalActiveBatches, activeBatches }}
+                title="Active Batches"
+                metrics={[
+                  { label: "Total Active", value: totalActiveBatches },
+                  { label: "Status", value: "Currently processing" }
+                ]}
+              />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-        <Card className="glass-card hover:scale-105 transition-transform duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Fertility</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{avgFertility.toFixed(1)}%</div>
-            <p className={`text-xs flex items-center ${avgFertility > 85 ? 'text-green-600' : 'text-destructive'}`}>
-              {avgFertility > 85 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-              {avgFertility > 85 ? 'Above target' : 'Below target'}
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="glass-card hover:scale-105 transition-transform duration-200 cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Fertility</CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{avgFertility.toFixed(1)}%</div>
+                  <p className={`text-xs flex items-center ${avgFertility > 85 ? 'text-green-600' : 'text-destructive'}`}>
+                    {avgFertility > 85 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                    {avgFertility > 85 ? 'Above target' : 'Below target'}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent asChild>
+              <EnhancedTooltip 
+                chartType="batch-overview"
+                data={{ avgFertility, fertilityData, target: 85 }}
+                title="Average Fertility"
+                metrics={[
+                  { label: "Current Average", value: `${avgFertility.toFixed(1)}%` },
+                  { label: "Target", value: "85%" },
+                  { label: "Sample Size", value: `${fertilityData.length} batches` }
+                ]}
+              />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <Card className="glass-card hover:scale-105 transition-transform duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
