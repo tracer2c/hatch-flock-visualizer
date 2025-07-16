@@ -69,7 +69,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/management" element={
-              <ProtectedRoute requiredRole="operations_head">
+              <ProtectedRoute>
                 <ManagementPage />
               </ProtectedRoute>
             } />
