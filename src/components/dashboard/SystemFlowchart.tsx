@@ -22,6 +22,7 @@ flowchart TD
     Dashboard --> Tab2[🔄 Process Flow]
     Dashboard --> Tab3[📊 Performance Charts]
     Dashboard --> Tab4[📈 Analysis & Comparison]
+    Dashboard --> Tab5[🧠 Advanced Analytics]
     
     %% Data Entry Flow
     Tab1 --> DataEntry[📝 Data Entry Navigation]
@@ -62,6 +63,19 @@ flowchart TD
     ComparisonAnalysis --> BenchmarkAnalysis[🎯 Benchmark Analysis]
     ComparisonAnalysis --> TrendPrediction[🔮 Trend Prediction]
     
+    %% Advanced Analytics
+    Tab5 --> AdvancedAnalytics[🧠 Advanced Analytics Hub]
+    AdvancedAnalytics --> EnvironmentalCalendar[📅 Environmental Calendar]
+    AdvancedAnalytics --> IncubationTimeline[⏰ Incubation Timeline]
+    AdvancedAnalytics --> BatchFlowSankey[📊 Batch Flow Analysis]
+    AdvancedAnalytics --> PredictiveAnalytics[🔮 Predictive Analytics]
+    
+    %% Advanced Analytics Data Flows
+    BatchFlowSankey --> ActiveBatchData[📦 Active Batch Integration]
+    BatchFlowSankey --> ProjectedMetrics[📈 Projected Metrics]
+    EnvironmentalCalendar --> QAMonitoringData[🌡️ QA Monitoring Data]
+    IncubationTimeline --> RealTimeTracking[⏱️ Real-time Batch Tracking]
+    
     %% Alert System
     AlertSystem[🚨 Alert & Monitoring System]
     AlertSystem --> TempAlerts[🌡️ Temperature Alerts]
@@ -80,6 +94,12 @@ flowchart TD
     Analytics --> Tab2
     Analytics --> Tab3
     Analytics --> Tab4
+    
+    %% Advanced Analytics Engine
+    DataEngine --> AdvancedEngine[🧠 Advanced Analytics Engine]
+    AdvancedEngine --> Tab5
+    AdvancedEngine --> ProjectedMetrics
+    AdvancedEngine --> ActiveBatchData
     
     %% Database Integration
     DataEngine --> Database[(🗄️ Supabase Database)]
@@ -107,11 +127,12 @@ flowchart TD
     classDef data fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
     classDef storage fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
     
-    class Dashboard,Tab1,Tab2,Tab3,Tab4 primary
+    class Dashboard,Tab1,Tab2,Tab3,Tab4,Tab5 primary
     class DataEntry,EggQuality,Fertility,QA,Residue secondary
     class Management,BatchMgmt,SOPMgmt,FlockMgmt,MachineMgmt accent
-    class DataEngine,Analytics,AlertSystem data
+    class DataEngine,Analytics,AlertSystem,AdvancedEngine data
     class Database,Batches,Flocks,Machines,QualityData,Alerts storage
+    class AdvancedAnalytics,EnvironmentalCalendar,IncubationTimeline,BatchFlowSankey,PredictiveAnalytics primary
   `;
 
   useEffect(() => {

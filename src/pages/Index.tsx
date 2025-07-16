@@ -48,13 +48,13 @@ const Index = () => {
               <LineChart className="h-4 w-4" />
               Analysis
             </TabsTrigger>
-            <TabsTrigger value="flowchart" className="flex items-center gap-2">
-              <Workflow className="h-4 w-4" />
-              System Flow
-            </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               Advanced Analytics
+            </TabsTrigger>
+            <TabsTrigger value="flowchart" className="flex items-center gap-2">
+              <Workflow className="h-4 w-4" />
+              System Flow
             </TabsTrigger>
           </TabsList>
 
@@ -74,12 +74,12 @@ const Index = () => {
             <ComparisonAnalysis data={performanceMetrics || []} />
           </TabsContent>
 
-          <TabsContent value="flowchart">
-            <SystemFlowchart />
-          </TabsContent>
-
           <TabsContent value="advanced">
             <AdvancedAnalytics />
+          </TabsContent>
+
+          <TabsContent value="flowchart">
+            <SystemFlowchart />
           </TabsContent>
         </Tabs>
       </div>
