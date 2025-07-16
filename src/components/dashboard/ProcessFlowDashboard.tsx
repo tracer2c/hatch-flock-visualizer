@@ -44,26 +44,34 @@ const ProcessFlowDashboard = () => {
     daysSinceSet: batch.daysSinceSet
   }));
 
-  // Correlation analysis - include batches with quality OR fertility data
+  // Correlation analysis - only include batches with meaningful quality scores (>10%) AND fertility data
   const correlationData = meaningfulBatches
-    .filter(batch => (batch.qualityScore !== null && batch.qualityScore > 0) || (batch.fertility !== null && batch.fertility > 0))
+    .filter(batch => 
+      batch.qualityScore !== null && 
+      batch.qualityScore > 10 && 
+      batch.fertility !== null && 
+      batch.fertility > 0
+    )
     .map(batch => ({
-      x: batch.qualityScore || 0,
-      y: batch.fertility || 0,
+      x: batch.qualityScore,
+      y: batch.fertility,
       name: batch.batchNumber,
       flockAge: batch.age
     }));
 
-  // Static fallback data for demonstration when no real correlation data exists
+  // Static demonstration data showing ideal correlation patterns
   const staticCorrelationData = [
-    { x: 85, y: 88, name: "Sample A", flockAge: 28, isStatic: true },
-    { x: 92, y: 85, name: "Sample B", flockAge: 32, isStatic: true },
-    { x: 78, y: 82, name: "Sample C", flockAge: 26, isStatic: true },
-    { x: 88, y: 90, name: "Sample D", flockAge: 30, isStatic: true },
-    { x: 82, y: 87, name: "Sample E", flockAge: 29, isStatic: true }
+    { x: 85, y: 88, name: "Demo Batch A", flockAge: 28, isStatic: true },
+    { x: 92, y: 85, name: "Demo Batch B", flockAge: 32, isStatic: true },
+    { x: 78, y: 82, name: "Demo Batch C", flockAge: 26, isStatic: true },
+    { x: 88, y: 90, name: "Demo Batch D", flockAge: 30, isStatic: true },
+    { x: 82, y: 87, name: "Demo Batch E", flockAge: 29, isStatic: true },
+    { x: 95, y: 92, name: "Demo Batch F", flockAge: 31, isStatic: true }
   ];
 
-  const displayCorrelationData = correlationData.length > 0 ? correlationData : staticCorrelationData;
+  // Show static data when we don't have meaningful correlation data
+  const hasRealCorrelationData = correlationData.length >= 3;
+  const displayCorrelationData = hasRealCorrelationData ? correlationData : staticCorrelationData;
 
   // Age vs Performance - handle null values properly
   const agePerformanceData = meaningfulBatches.reduce((acc: any[], batch) => {
@@ -214,10 +222,10 @@ const ProcessFlowDashboard = () => {
             </p>
           </CardHeader>
           <CardContent id="correlation-chart">
-            {correlationData.length === 0 && (
-              <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-dashed">
-                <p className="text-sm text-muted-foreground text-center">
-                  🔍 Showing sample data for demonstration. Real correlation will appear once you have egg quality and fertility data.
+            {!hasRealCorrelationData && (
+              <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-dashed border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300 text-center font-medium">
+                  📊 Sample data shown - Real correlation analysis will appear with quality data {'>'}10% and fertility data
                 </p>
               </div>
             )}
@@ -267,7 +275,8 @@ const ProcessFlowDashboard = () => {
                 <Scatter 
                   name="Batches" 
                   dataKey="y" 
-                  fill={correlationData.length > 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+                  fill={hasRealCorrelationData ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
+                  opacity={hasRealCorrelationData ? 1 : 0.7}
                 />
               </ScatterChart>
             </ResponsiveContainer>
