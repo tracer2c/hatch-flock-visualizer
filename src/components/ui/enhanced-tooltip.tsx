@@ -88,7 +88,11 @@ export const EnhancedTooltip: React.FC<EnhancedTooltipProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
                 className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {isExpanded ? (

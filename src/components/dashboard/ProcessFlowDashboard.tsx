@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AITooltip } from "@/components/ui/ai-tooltip";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 
 const ProcessFlowDashboard = () => {
   const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
@@ -126,15 +127,21 @@ const ProcessFlowDashboard = () => {
       {/* Process Flow Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowRight className="h-5 w-5" />
-            Complete Process Flow Analysis
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowRight className="h-5 w-5" />
+              Complete Process Flow Analysis
+            </div>
+            <ChartDownloadButton 
+              chartId="process-flow-chart" 
+              filename="process-flow-analysis.png" 
+            />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Tracking data flow from egg quality through to final hatch performance
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent id="process-flow-chart">
           <ResponsiveContainer width="100%" height={400}>
             <AreaChart data={flowData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -184,12 +191,18 @@ const ProcessFlowDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Egg Quality vs Fertility Correlation</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <div>Egg Quality vs Fertility Correlation</div>
+              <ChartDownloadButton 
+                chartId="correlation-chart" 
+                filename="egg-quality-fertility-correlation.png" 
+              />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               Relationship between pre-incubation quality and fertility rates
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent id="correlation-chart">
             <ResponsiveContainer width="100%" height={300}>
               <ScatterChart data={correlationData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -238,12 +251,18 @@ const ProcessFlowDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Performance by Flock Age</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <div>Performance by Flock Age</div>
+              <ChartDownloadButton 
+                chartId="age-performance-chart" 
+                filename="performance-by-flock-age.png" 
+              />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               How flock age affects fertility and hatch rates
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent id="age-performance-chart">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={agePerformanceData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -285,15 +304,21 @@ const ProcessFlowDashboard = () => {
       {/* Breed Performance Comparison */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Performance by Breed Type
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Performance by Breed Type
+            </div>
+            <ChartDownloadButton 
+              chartId="breed-performance-chart" 
+              filename="performance-by-breed-type.png" 
+            />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Comparative analysis across different breed types
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent id="breed-performance-chart">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={breedData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

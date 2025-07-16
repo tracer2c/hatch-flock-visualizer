@@ -7,6 +7,7 @@ import { Eye, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import DemoTutorial from "./DemoTutorial";
 import { AITooltip } from "@/components/ui/ai-tooltip";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 
 interface PerformanceChartsProps {
   data: any[];
@@ -191,9 +192,15 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
       {/* Main Performance Chart */}
       <Card data-demo-id="main-chart">
         <CardHeader>
-          <CardTitle>Detailed Performance Analysis</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <div>Detailed Performance Analysis</div>
+            <ChartDownloadButton 
+              chartId="main-performance-chart" 
+              filename="detailed-performance-analysis.png" 
+            />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="main-performance-chart">
           <ResponsiveContainer width="100%" height={500}>
             {chartType === "bar" ? (
               <BarChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
@@ -284,9 +291,15 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
       {/* Correlation Analysis */}
       <Card data-demo-id="correlation-chart">
         <CardHeader>
-          <CardTitle>Correlation Analysis: Age vs Performance</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <div>Correlation Analysis: Age vs Performance</div>
+            <ChartDownloadButton 
+              chartId="correlation-analysis-chart" 
+              filename="correlation-age-vs-performance.png" 
+            />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="correlation-analysis-chart">
           <ResponsiveContainer width="100%" height={400}>
             <ScatterChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />

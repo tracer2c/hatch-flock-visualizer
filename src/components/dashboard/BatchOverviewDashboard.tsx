@@ -5,6 +5,7 @@ import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUt
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
@@ -155,12 +156,18 @@ const BatchOverviewDashboard = () => {
       {/* Active Batches Pipeline */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Active Batches Pipeline
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Active Batches Pipeline
+            </div>
+            <ChartDownloadButton 
+              chartId="active-batches-pipeline" 
+              filename="active-batches-pipeline.png" 
+            />
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="active-batches-pipeline">
           {activeBatches && activeBatches.length > 0 ? (
             <div className="space-y-4">
               {activeBatches.map((batch) => (
@@ -240,9 +247,15 @@ const BatchOverviewDashboard = () => {
       {/* Machine Utilization */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Machine Utilization Status</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <div>Machine Utilization Status</div>
+            <ChartDownloadButton 
+              chartId="machine-utilization-status" 
+              filename="machine-utilization-status.png" 
+            />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent id="machine-utilization-status">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {machineUtil?.map((machine) => (
               <div key={machine.id} className="p-4 border border-border rounded-lg bg-card">
