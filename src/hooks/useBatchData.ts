@@ -294,6 +294,78 @@ export const useQAAlerts = () => {
   });
 };
 
+export const useActiveBatchFlowData = () => {
+  return useQuery({
+    queryKey: ['active-batch-flow-data'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select(`
+          id,
+          batch_number,
+          status,
+          total_eggs_set,
+          set_date,
+          flocks (flock_number, flock_name, age_weeks, breed),
+          fertility_analysis (
+            fertility_percent,
+            hatch_percent,
+            hof_percent,
+            early_dead,
+            late_dead,
+            sample_size
+          ),
+          egg_pack_quality (
+            grade_a,
+            grade_b,
+            grade_c,
+            cracked,
+            dirty,
+            sample_size
+          )
+        `)
+        .in('status', ['setting', 'incubating', 'hatching'])
+        .order('set_date', { ascending: false });
+
+      if (error) throw error;
+      
+      return data?.map(batch => {
+        const fertility = batch.fertility_analysis?.[0];
+        const eggQuality = batch.egg_pack_quality?.[0];
+        
+        // Use actual fertility data if available, otherwise estimate based on flock age and breed
+        const estimatedFertility = !fertility ? (
+          batch.flocks?.age_weeks && batch.flocks.age_weeks < 60 ? 85 : 75
+        ) : fertility.fertility_percent;
+        
+        // Use actual hatch data if available, otherwise estimate
+        const estimatedHatch = !fertility?.hatch_percent ? 85 : fertility.hatch_percent;
+        
+        const qualityScore = eggQuality ? 
+          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : 90;
+        
+        return {
+          batchNumber: batch.batch_number,
+          flockName: batch.flocks?.flock_name || 'Unknown',
+          flockNumber: batch.flocks?.flock_number || 0,
+          age: batch.flocks?.age_weeks || 0,
+          breed: batch.flocks?.breed || 'unknown',
+          fertility: estimatedFertility || 80,
+          hatch: estimatedHatch || 85,
+          hof: fertility?.hof_percent || 80,
+          qualityScore,
+          totalEggs: batch.total_eggs_set,
+          status: batch.status,
+          setDate: batch.set_date,
+          isProjected: !fertility || !fertility.hatch_percent,
+          hasActualFertility: !!fertility,
+          hasActualQuality: !!eggQuality
+        };
+      }) || [];
+    },
+  });
+};
+
 export const useMachineUtilization = () => {
   return useQuery({
     queryKey: ['machine-utilization'],
