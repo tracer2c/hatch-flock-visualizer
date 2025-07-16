@@ -73,12 +73,16 @@ export const AITooltip: React.FC<AITooltipProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => {
+                onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setIsExpanded(!isExpanded);
                 }}
-                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 {isExpanded ? (
                   <>
