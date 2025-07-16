@@ -1,12 +1,13 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, BarChart3, LineChart, Activity, Workflow } from "lucide-react";
+import { TrendingUp, BarChart3, LineChart, Activity, Workflow, Brain } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BatchOverviewDashboard from "@/components/dashboard/BatchOverviewDashboard";
 import ProcessFlowDashboard from "@/components/dashboard/ProcessFlowDashboard";
 import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
 import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import SystemFlowchart from "@/components/dashboard/SystemFlowchart";
+import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
 
 const Index = () => {
@@ -30,7 +31,7 @@ const Index = () => {
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               Live Overview
@@ -50,6 +51,10 @@ const Index = () => {
             <TabsTrigger value="flowchart" className="flex items-center gap-2">
               <Workflow className="h-4 w-4" />
               System Flow
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              Advanced Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -71,6 +76,10 @@ const Index = () => {
 
           <TabsContent value="flowchart">
             <SystemFlowchart />
+          </TabsContent>
+
+          <TabsContent value="advanced">
+            <AdvancedAnalytics />
           </TabsContent>
         </Tabs>
       </div>
