@@ -67,21 +67,26 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
     gradeA: 0, gradeB: 0, gradeC: 0, culls: 0, batchCount: 0
   };
 
-  const FlowBox = ({ title, value, color, percentage }: { 
+  const FlowBox = ({ title, value, color, percentage, description }: { 
     title: string; 
     value: number; 
     color: string; 
     percentage: number;
+    description?: string;
   }) => (
-    <div className={`p-4 rounded-lg ${color} text-white min-h-[80px] flex flex-col justify-between relative overflow-hidden`}>
+    <div className={`p-4 rounded-lg ${color} text-white min-h-[100px] flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-lg group`}>
       <div className="relative z-10">
-        <div className="text-sm opacity-90">{title}</div>
-        <div className="text-xl font-bold">{value.toLocaleString()}</div>
-        <div className="text-xs opacity-75">{percentage.toFixed(1)}%</div>
+        <div className="text-sm opacity-90 font-medium">{title}</div>
+        <div className="text-xl font-bold mb-1">{value.toLocaleString()}</div>
+        <div className="text-xs opacity-80">{percentage.toFixed(1)}% of previous stage</div>
+        {description && (
+          <div className="text-xs opacity-70 mt-1 group-hover:opacity-100 transition-opacity">
+            {description}
+          </div>
+        )}
       </div>
       <div 
-        className="absolute bottom-0 left-0 right-0 bg-white/20"
-        style={{ height: `${Math.min(100, percentage)}%` }}
+        className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-50"
       ></div>
     </div>
   );
@@ -112,13 +117,27 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
         <div id="batch-flow-sankey" className="space-y-8">
           {/* Flow Visualization */}
           <div className="space-y-6">
+            {/* How to Read This Chart */}
+            <div className="mb-6 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <span className="h-4 w-4 rounded-full bg-primary"></span>
+                How to Read This Flow Analysis
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                This diagram shows the complete journey from eggs set to final output. 
+                Each stage represents a checkpoint in the incubation process, 
+                with percentages showing success rates at each transition.
+              </p>
+            </div>
+
             {/* Stage 1: Total Eggs */}
             <div className="text-center">
               <FlowBox
                 title="Total Eggs Set"
                 value={flowData.totalEggs}
-                color="bg-slate-600"
+                color="bg-slate-500"
                 percentage={100}
+                description="Initial eggs placed in incubators"
               />
             </div>
 
@@ -129,14 +148,16 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               <FlowBox
                 title="Fertile Eggs"
                 value={flowData.fertile}
-                color="bg-green-600"
+                color="bg-emerald-700"
                 percentage={(flowData.fertile / flowData.totalEggs) * 100}
+                description="Eggs containing viable embryos"
               />
               <FlowBox
                 title="Infertile Eggs"
                 value={flowData.infertile}
-                color="bg-red-500"
+                color="bg-gray-500"
                 percentage={(flowData.infertile / flowData.totalEggs) * 100}
+                description="Clear eggs with no development"
               />
             </div>
 
@@ -147,14 +168,16 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               <FlowBox
                 title="Successfully Hatched"
                 value={flowData.hatched}
-                color="bg-emerald-600"
+                color="bg-teal-600"
                 percentage={(flowData.hatched / flowData.fertile) * 100}
+                description="Healthy chicks emerged from shell"
               />
               <FlowBox
                 title="Dead in Shell"
                 value={flowData.deadInShell}
-                color="bg-orange-500"
+                color="bg-amber-600"
                 percentage={(flowData.deadInShell / flowData.fertile) * 100}
+                description="Embryos that didn't complete hatching"
               />
             </div>
 
@@ -165,26 +188,30 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               <FlowBox
                 title="Grade A"
                 value={flowData.gradeA}
-                color="bg-green-700"
+                color="bg-green-800"
                 percentage={(flowData.gradeA / flowData.hatched) * 100}
+                description="Premium quality chicks"
               />
               <FlowBox
                 title="Grade B"
                 value={flowData.gradeB}
-                color="bg-yellow-600"
+                color="bg-slate-600"
                 percentage={(flowData.gradeB / flowData.hatched) * 100}
+                description="Good quality chicks"
               />
               <FlowBox
                 title="Grade C"
                 value={flowData.gradeC}
-                color="bg-orange-600"
+                color="bg-stone-600"
                 percentage={(flowData.gradeC / flowData.hatched) * 100}
+                description="Lower grade chicks"
               />
               <FlowBox
                 title="Culls"
                 value={flowData.culls}
-                color="bg-red-600"
+                color="bg-gray-600"
                 percentage={(flowData.culls / flowData.hatched) * 100}
+                description="Chicks removed due to defects"
               />
             </div>
           </div>
