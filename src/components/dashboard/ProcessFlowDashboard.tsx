@@ -230,10 +230,22 @@ const ProcessFlowDashboard = () => {
               </div>
             )}
             <ResponsiveContainer width="100%" height={300}>
-              <ScatterChart data={displayCorrelationData}>
+              <ScatterChart width={400} height={300} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="x" name="Egg Quality" unit="%" stroke="hsl(var(--muted-foreground))" />
-                <YAxis dataKey="y" name="Fertility" unit="%" stroke="hsl(var(--muted-foreground))" />
+                <XAxis 
+                  type="number" 
+                  domain={[70, 100]} 
+                  name="Egg Quality" 
+                  unit="%" 
+                  stroke="hsl(var(--muted-foreground))" 
+                />
+                <YAxis 
+                  type="number" 
+                  domain={[75, 95]} 
+                  name="Fertility" 
+                  unit="%" 
+                  stroke="hsl(var(--muted-foreground))" 
+                />
                 <Tooltip 
                   cursor={{ strokeDasharray: '3 3' }}
                   content={({ active, payload, label }) => {
@@ -274,7 +286,7 @@ const ProcessFlowDashboard = () => {
                 />
                 <Scatter 
                   name="Batches" 
-                  dataKey="y" 
+                  data={displayCorrelationData}
                   fill={hasRealCorrelationData ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
                   opacity={hasRealCorrelationData ? 1 : 0.7}
                 />
