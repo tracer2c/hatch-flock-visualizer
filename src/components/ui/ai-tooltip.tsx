@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { Brain, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Brain, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useChartInsights } from '@/hooks/useChartInsights';
+import { Button } from './button';
 
 interface AITooltipProps {
   chartType: string;
@@ -18,6 +19,13 @@ export const AITooltip: React.FC<AITooltipProps> = ({
   className = ""
 }) => {
   const { explanation, isLoading, error, getInsight } = useChartInsights();
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const truncateLength = 80;
+  const shouldTruncate = explanation && explanation.length > truncateLength;
+  const displayText = shouldTruncate && !isExpanded 
+    ? explanation.slice(0, truncateLength) + "..." 
+    : explanation;
 
   useEffect(() => {
     // Debounce the insight request
@@ -54,9 +62,34 @@ export const AITooltip: React.FC<AITooltipProps> = ({
         )}
         
         {explanation && !isLoading && (
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {explanation}
-          </p>
+          <div className="space-y-2">
+            <div className="max-w-xs">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {displayText}
+              </p>
+            </div>
+            
+            {shouldTruncate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronUp className="h-3 w-3 mr-1" />
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3 mr-1" />
+                    Read more
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </div>
