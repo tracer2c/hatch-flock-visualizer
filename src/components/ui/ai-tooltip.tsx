@@ -37,12 +37,12 @@ export const AITooltip: React.FC<AITooltipProps> = ({
   }, [chartType, data, chartConfig, getInsight]);
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`space-y-3 ${className}`} style={{ pointerEvents: 'auto' }}>
       {/* Original tooltip content */}
       {children}
       
       {/* AI Insight Section */}
-      <div className="border-t border-border pt-3">
+      <div className="border-t border-border pt-3" style={{ pointerEvents: 'auto' }}>
         <div className="flex items-center gap-2 mb-2">
           <Brain className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground">AI Insight</span>
@@ -73,16 +73,15 @@ export const AITooltip: React.FC<AITooltipProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
+                  console.log('AI Tooltip button clicked, expanded:', isExpanded);
                   e.preventDefault();
                   e.stopPropagation();
+                  e.nativeEvent.stopImmediatePropagation();
                   setIsExpanded(!isExpanded);
                 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer relative z-50"
+                style={{ pointerEvents: 'auto' }}
               >
                 {isExpanded ? (
                   <>
