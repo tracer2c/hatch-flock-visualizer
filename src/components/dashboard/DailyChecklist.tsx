@@ -31,7 +31,7 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
 
   const { data: checklistItems } = useDailyChecklistItems(dayOfIncubation);
   const { data: completions } = useChecklistCompletions(currentBatchId, dayOfIncubation);
-  const { data: progress } = useBatchChecklistProgress(currentBatchId);
+  const { data: progress } = useBatchChecklistProgress(currentBatchId, dayOfIncubation);
   const completeItem = useCompleteChecklistItem();
 
   const completedItemIds = new Set(completions?.map(c => c.checklist_item_id) || []);

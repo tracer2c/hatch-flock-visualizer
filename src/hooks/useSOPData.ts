@@ -198,17 +198,15 @@ export const useCreateChecklistItem = () => {
   });
 };
 
-export const useBatchChecklistProgress = (batchId: string) => {
-  const daysSinceSet = Math.floor((new Date().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-  
+export const useBatchChecklistProgress = (batchId: string, dayOfIncubation: number) => {
   return useQuery({
-    queryKey: ['batch-checklist-progress', batchId, daysSinceSet],
+    queryKey: ['batch-checklist-progress', batchId, dayOfIncubation],
     queryFn: async () => {
       // Get today's applicable checklist items
       const { data: items, error: itemsError } = await supabase
         .from('daily_checklist_items')
         .select('*')
-        .contains('applicable_days', [daysSinceSet]);
+        .contains('applicable_days', [dayOfIncubation]);
 
       if (itemsError) throw itemsError;
 
@@ -217,7 +215,7 @@ export const useBatchChecklistProgress = (batchId: string) => {
         .from('checklist_completions')
         .select('checklist_item_id')
         .eq('batch_id', batchId)
-        .eq('day_of_incubation', daysSinceSet);
+        .eq('day_of_incubation', dayOfIncubation);
 
       if (completionsError) throw completionsError;
 
@@ -234,7 +232,7 @@ export const useBatchChecklistProgress = (batchId: string) => {
           (completedRequired.length / requiredItems.length) * 100 : 100,
         isComplete: requiredItems.length > 0 ? 
           completedRequired.length === requiredItems.length : true,
-        dayOfIncubation: daysSinceSet
+        dayOfIncubation: dayOfIncubation
       };
     },
     enabled: !!batchId,
