@@ -104,7 +104,7 @@ export const useBatchPerformanceMetrics = () => {
         const qaData = batch.qa_monitoring || [];
         
         const qualityScore = eggQuality ? 
-          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : null;
+          (((eggQuality.sample_size - eggQuality.grade_c - eggQuality.cracked - eggQuality.dirty) / eggQuality.sample_size) * 100) : null;
         
         // Calculate days since set for ongoing batches
         const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));

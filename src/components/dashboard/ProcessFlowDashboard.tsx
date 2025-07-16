@@ -44,15 +44,26 @@ const ProcessFlowDashboard = () => {
     daysSinceSet: batch.daysSinceSet
   }));
 
-  // Correlation analysis - only include batches with both quality and fertility data
+  // Correlation analysis - include batches with quality OR fertility data
   const correlationData = meaningfulBatches
-    .filter(batch => batch.qualityScore && batch.fertility)
+    .filter(batch => (batch.qualityScore !== null && batch.qualityScore > 0) || (batch.fertility !== null && batch.fertility > 0))
     .map(batch => ({
-      x: batch.qualityScore,
-      y: batch.fertility,
+      x: batch.qualityScore || 0,
+      y: batch.fertility || 0,
       name: batch.batchNumber,
       flockAge: batch.age
     }));
+
+  // Static fallback data for demonstration when no real correlation data exists
+  const staticCorrelationData = [
+    { x: 85, y: 88, name: "Sample A", flockAge: 28, isStatic: true },
+    { x: 92, y: 85, name: "Sample B", flockAge: 32, isStatic: true },
+    { x: 78, y: 82, name: "Sample C", flockAge: 26, isStatic: true },
+    { x: 88, y: 90, name: "Sample D", flockAge: 30, isStatic: true },
+    { x: 82, y: 87, name: "Sample E", flockAge: 29, isStatic: true }
+  ];
+
+  const displayCorrelationData = correlationData.length > 0 ? correlationData : staticCorrelationData;
 
   // Age vs Performance - handle null values properly
   const agePerformanceData = meaningfulBatches.reduce((acc: any[], batch) => {
@@ -203,8 +214,15 @@ const ProcessFlowDashboard = () => {
             </p>
           </CardHeader>
           <CardContent id="correlation-chart">
+            {correlationData.length === 0 && (
+              <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+                <p className="text-sm text-muted-foreground text-center">
+                  🔍 Showing sample data for demonstration. Real correlation will appear once you have egg quality and fertility data.
+                </p>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height={300}>
-              <ScatterChart data={correlationData}>
+              <ScatterChart data={displayCorrelationData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="x" name="Egg Quality" unit="%" stroke="hsl(var(--muted-foreground))" />
                 <YAxis dataKey="y" name="Fertility" unit="%" stroke="hsl(var(--muted-foreground))" />
@@ -221,7 +239,10 @@ const ProcessFlowDashboard = () => {
                           className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
                         >
                           <div>
-                            <p className="font-medium mb-2">{data?.name}</p>
+                            <p className="font-medium mb-2">
+                              {data?.name}
+                              {data?.isStatic && <span className="text-xs text-muted-foreground ml-2">(Sample)</span>}
+                            </p>
                             <div className="space-y-1">
                               <div className="flex justify-between">
                                 <span>Egg Quality:</span>
@@ -243,7 +264,11 @@ const ProcessFlowDashboard = () => {
                     return null;
                   }}
                 />
-                <Scatter name="Batches" dataKey="y" fill="hsl(var(--primary))" />
+                <Scatter 
+                  name="Batches" 
+                  dataKey="y" 
+                  fill={correlationData.length > 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+                />
               </ScatterChart>
             </ResponsiveContainer>
           </CardContent>
