@@ -1,51 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Check, Activity, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import DemoTutorial from "./DemoTutorial";
 
 interface ComparisonAnalysisProps {
   data: any[];
 }
 
-const comparisonDemoSteps = [
-  {
-    id: "item-selection",
-    title: "Item Selection",
-    description: "Select up to 5 flocks to compare their performance side by side. Click on any flock to add it to your comparison.",
-    target: "item-selection",
-    position: "bottom" as const
-  },
-  {
-    id: "breed-comparison",
-    title: "Breed Comparison",
-    description: "Compare performance between different breeds with detailed statistics and visual charts.",
-    target: "hatchery-comparison",
-    position: "top" as const
-  },
-  {
-    id: "radar-chart",
-    title: "Radar Chart Comparison",
-    description: "The radar chart provides a comprehensive view of multiple metrics for selected items, making it easy to spot strengths and weaknesses.",
-    target: "radar-chart",
-    position: "top" as const
-  },
-  {
-    id: "comparison-table",
-    title: "Detailed Comparison Table",
-    description: "The table shows exact values for easy comparison of key metrics between your selected flocks.",
-    target: "comparison-table",
-    position: "top" as const
-  }
-];
 
 const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [comparisonMetric, setComparisonMetric] = useState("fertility");
-  const [showDemo, setShowDemo] = useState(false);
 
   const handleItemSelect = (batchNumber: string) => {
     if (selectedItems.includes(batchNumber)) {
@@ -108,68 +75,120 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Demo Button */}
-      <div className="flex justify-end">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowDemo(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          View Demo
-        </Button>
-      </div>
-
+    <div className="space-y-8">
       {/* Item Selection */}
-      <Card data-demo-id="item-selection">
+      <Card>
         <CardHeader>
-          <CardTitle>Select Items to Compare (Max 5)</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Select Batches to Compare
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Choose up to 5 batches for detailed performance comparison. Click on batches to select or deselect them.
+          </p>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedItems.map(batchNumber => {
-                const item = data.find(d => d.batchNumber === batchNumber);
+        <CardContent className="space-y-6">
+          {/* Selected Items Display */}
+          {selectedItems.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Selected for Comparison:</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedItems.map(batchNumber => {
+                  const item = data.find(d => d.batchNumber === batchNumber);
+                  return (
+                    <Badge 
+                      key={batchNumber} 
+                      variant="default" 
+                      className="cursor-pointer px-3 py-1 text-sm hover:bg-primary/80"
+                      onClick={() => handleItemSelect(batchNumber)}
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Batch {item?.batchNumber} ({item?.flockName})
+                      <span className="ml-2 text-xs">×</span>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Batch Selection Grid */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Available Batches ({displayData.length})
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-80 overflow-y-auto">
+              {displayData.map(item => {
+                const isSelected = selectedItems.includes(item.batchNumber);
+                const isDisabled = !isSelected && selectedItems.length >= 5;
+                
                 return (
-                  <Badge key={batchNumber} variant="secondary" className="cursor-pointer" onClick={() => handleItemSelect(batchNumber)}>
-                    Batch {item?.batchNumber} ({item?.flockName}) ×
-                  </Badge>
+                  <Card
+                    key={item.batchNumber}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      isSelected 
+                        ? 'ring-2 ring-primary bg-primary/5' 
+                        : isDisabled 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : 'hover:bg-muted/50'
+                    }`}
+                    onClick={() => !isDisabled && handleItemSelect(item.batchNumber)}
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold text-sm">Batch {item.batchNumber}</div>
+                        {isSelected && <Check className="h-4 w-4 text-primary" />}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Flock:</span>
+                          <span className="text-xs font-medium">{item.flockName}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Status:</span>
+                          <Badge variant={item.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                            {item.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Fertility:</span>
+                          <span className="text-xs font-medium">
+                            {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
+                          </span>
+                        </div>
+                        
+                        {item.hatch && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Hatch Rate:</span>
+                            <span className="text-xs font-medium">{item.hatch.toFixed(1)}%</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-              {displayData.map(item => (
-                <Button
-                  key={item.batchNumber}
-                  variant={selectedItems.includes(item.batchNumber) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleItemSelect(item.batchNumber)}
-                  disabled={!selectedItems.includes(item.batchNumber) && selectedItems.length >= 5}
-                  className="justify-start text-left"
-                >
-                  <div className="w-full">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">Batch {item.batchNumber}</div>
-                      <Badge variant="outline" className="text-xs">
-                        {item.status}
-                      </Badge>
-                    </div>
-                    <div className="text-xs opacity-70">
-                      {item.flockName} - {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
           </div>
+          
+          {selectedItems.length >= 5 && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              Maximum of 5 batches selected. Remove some to select others.
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Breed Comparison */}
-      <Card data-demo-id="hatchery-comparison">
+      <Card>
         <CardHeader>
-          <CardTitle>Breed Performance Comparison</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Breed Performance Comparison
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -218,70 +237,67 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
             <CardTitle>Selected Items Detailed Comparison</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Radar Chart */}
-              <div data-demo-id="radar-chart">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Performance Radar Chart</h3>
                 <ResponsiveContainer width="100%" height={400}>
                   <RadarChart data={radarData.length > 0 ? radarData : []}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar name="Fertility" dataKey="fertility" stroke="#8884d8" fill="#8884d8" fillOpacity={0.1} />
-                    <Radar name="Hatch Rate" dataKey="hatch" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.1} />
-                    <Radar name="Quality Score" dataKey="qualityScore" stroke="#ffc658" fill="#ffc658" fillOpacity={0.1} />
+                    <Radar name="Fertility" dataKey="fertility" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.1} />
+                    <Radar name="Hatch Rate" dataKey="hatch" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.1} />
+                    <Radar name="Quality Score" dataKey="qualityScore" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3))" fillOpacity={0.1} />
                     <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Comparison Table */}
-              <div className="overflow-x-auto" data-demo-id="comparison-table">
-                <table className="w-full border-collapse border border-gray-200">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 p-2 text-left text-sm font-medium">Batch</th>
-                      <th className="border border-gray-200 p-2 text-sm font-medium">Fertility</th>
-                      <th className="border border-gray-200 p-2 text-sm font-medium">Hatch</th>
-                      <th className="border border-gray-200 p-2 text-sm font-medium">Quality</th>
-                      <th className="border border-gray-200 p-2 text-sm font-medium">Age</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedData.map(item => (
-                      <tr key={item.batchNumber}>
-                        <td className="border border-gray-200 p-2 text-sm">
-                          <div>
-                            <div className="font-medium">Batch {item.batchNumber}</div>
-                            <div className="text-xs text-gray-500">{item.flockName}</div>
-                          </div>
-                        </td>
-                         <td className="border border-gray-200 p-2 text-sm text-center">
-                           {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
-                         </td>
-                         <td className="border border-gray-200 p-2 text-sm text-center">
-                           {item.hatch ? `${item.hatch.toFixed(1)}%` : 'Pending'}
-                         </td>
-                         <td className="border border-gray-200 p-2 text-sm text-center">
-                           {item.qualityScore ? `${item.qualityScore.toFixed(1)}%` : 'Pending'}
-                         </td>
-                        <td className="border border-gray-200 p-2 text-sm text-center">{item.age}w</td>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Detailed Metrics</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Batch</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">Fertility</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">Hatch</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">Quality</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">Age</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {selectedData.map(item => (
+                        <tr key={item.batchNumber} className="border-b hover:bg-muted/50">
+                          <td className="p-3">
+                            <div>
+                              <div className="font-medium text-sm">Batch {item.batchNumber}</div>
+                              <div className="text-xs text-muted-foreground">{item.flockName}</div>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center text-sm">
+                            {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}
+                          </td>
+                          <td className="p-3 text-center text-sm">
+                            {item.hatch ? `${item.hatch.toFixed(1)}%` : 'Pending'}
+                          </td>
+                          <td className="p-3 text-center text-sm">
+                            {item.qualityScore ? `${item.qualityScore.toFixed(1)}%` : 'Pending'}
+                          </td>
+                          <td className="p-3 text-center text-sm">{item.age}w</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Demo Tutorial */}
-      <DemoTutorial 
-        steps={comparisonDemoSteps}
-        isActive={showDemo}
-        onClose={() => setShowDemo(false)}
-        pageName="Comparison"
-      />
     </div>
   );
 };
