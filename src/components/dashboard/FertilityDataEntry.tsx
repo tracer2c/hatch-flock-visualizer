@@ -20,6 +20,8 @@ interface FertilityRecord {
   fertility_percent: number;
   hatch_percent: number;
   hof_percent: number;
+  hoi_percent?: number;
+  if_dev_percent?: number;
   analysis_date: string;
   technician_name?: string;
   notes?: string;
@@ -47,6 +49,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     earlyDead: '',
     lateDead: '',
     hatchPercent: '',
+    hoiPercent: '',
+    ifDevPercent: '',
     technicianName: '',
     notes: ''
   });
@@ -145,6 +149,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         late_dead: lateDead,
         hatch_percent: hatchPercent,
         hof_percent: calculated.hofPercent,
+        hoi_percent: formData.hoiPercent ? Number(formData.hoiPercent) : null,
+        if_dev_percent: formData.ifDevPercent ? Number(formData.ifDevPercent) : null,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
@@ -253,6 +259,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       earlyDead: record.early_dead.toString(),
       lateDead: record.late_dead.toString(),
       hatchPercent: record.hatch_percent.toString(),
+      hoiPercent: record.hoi_percent?.toString() || '',
+      ifDevPercent: record.if_dev_percent?.toString() || '',
       technicianName: record.technician_name || '',
       notes: record.notes || ''
     });
@@ -291,6 +299,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       earlyDead: '',
       lateDead: '',
       hatchPercent: '',
+      hoiPercent: '',
+      ifDevPercent: '',
       technicianName: '',
       notes: ''
     });
@@ -380,6 +390,28 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="hoiPercent">HOI %</Label>
+              <Input
+                id="hoiPercent"
+                type="number"
+                step="0.01"
+                placeholder="e.g., 85.50"
+                value={formData.hoiPercent}
+                onChange={(e) => handleInputChange('hoiPercent', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ifDevPercent">I/F dev. %</Label>
+              <Input
+                id="ifDevPercent"
+                type="number"
+                step="0.01"
+                placeholder="e.g., 4.20"
+                value={formData.ifDevPercent}
+                onChange={(e) => handleInputChange('ifDevPercent', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="technicianName">Technician Name</Label>
               <Input
                 id="technicianName"
@@ -431,6 +463,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                   <TableHead>Fertility %</TableHead>
                   <TableHead>Hatch %</TableHead>
                   <TableHead>HOF %</TableHead>
+                  <TableHead>HOI %</TableHead>
+                  <TableHead>I/F dev. %</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -448,6 +482,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                     <TableCell>{record.fertility_percent}%</TableCell>
                     <TableCell>{record.hatch_percent}%</TableCell>
                     <TableCell>{record.hof_percent}%</TableCell>
+                    <TableCell>{record.hoi_percent ? `${record.hoi_percent}%` : '-'}</TableCell>
+                    <TableCell>{record.if_dev_percent ? `${record.if_dev_percent}%` : '-'}</TableCell>
                     <TableCell>{record.technician_name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">

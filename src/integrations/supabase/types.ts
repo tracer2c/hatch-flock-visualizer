@@ -448,7 +448,9 @@ export type Database = {
           fertility_percent: number | null
           hatch_percent: number | null
           hof_percent: number | null
+          hoi_percent: number | null
           id: string
+          if_dev_percent: number | null
           infertile_eggs: number
           late_dead: number
           notes: string | null
@@ -465,7 +467,9 @@ export type Database = {
           fertility_percent?: number | null
           hatch_percent?: number | null
           hof_percent?: number | null
+          hoi_percent?: number | null
           id?: string
+          if_dev_percent?: number | null
           infertile_eggs: number
           late_dead: number
           notes?: string | null
@@ -482,7 +486,9 @@ export type Database = {
           fertility_percent?: number | null
           hatch_percent?: number | null
           hof_percent?: number | null
+          hoi_percent?: number | null
           id?: string
+          if_dev_percent?: number | null
           infertile_eggs?: number
           late_dead?: number
           notes?: string | null
