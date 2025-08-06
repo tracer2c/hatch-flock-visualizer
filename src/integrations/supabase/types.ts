@@ -902,6 +902,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_next_house_number: {
+        Args: { flock_uuid: string }
+        Returns: number
+      }
       get_user_company: {
         Args: { _user_id: string }
         Returns: string
