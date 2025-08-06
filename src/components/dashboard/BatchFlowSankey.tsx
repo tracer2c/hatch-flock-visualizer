@@ -57,33 +57,33 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
     const totalEggs = batch.totalEggs;
     const fertile = Math.round(totalEggs * (batch.fertility / 100));
     const hatched = Math.round(fertile * (batch.hatch / 100));
-    const gradeA = Math.round(hatched * (batch.qualityScore / 100) * 0.7);
-    const gradeB = Math.round(hatched * (batch.qualityScore / 100) * 0.3);
-    const gradeC = Math.round(hatched * 0.05);
-    const culls = Math.max(0, hatched - gradeA - gradeB - gradeC);
+    
+    // Calculate embryonic mortality counts
+    const earlyDead = batch.earlyDead || 0;
+    const midDead = batch.midDead || 0;
+    const lateDead = batch.lateDead || 0;
+    const pipped = batch.pipped || 0;
 
     return {
       totalEggs: acc.totalEggs + totalEggs,
       infertile: acc.infertile + (totalEggs - fertile),
       fertile: acc.fertile + fertile,
-      deadInShell: acc.deadInShell + (fertile - hatched),
       hatched: acc.hatched + hatched,
-      gradeA: acc.gradeA + gradeA,
-      gradeB: acc.gradeB + gradeB,
-      gradeC: acc.gradeC + gradeC,
-      culls: acc.culls + culls,
+      earlyDead: acc.earlyDead + earlyDead,
+      midDead: acc.midDead + midDead,
+      lateDead: acc.lateDead + lateDead,
+      pipped: acc.pipped + pipped,
       batchCount: acc.batchCount + 1
     };
   }, {
     totalEggs: 0,
     infertile: 0,
     fertile: 0,
-    deadInShell: 0,
     hatched: 0,
-    gradeA: 0,
-    gradeB: 0,
-    gradeC: 0,
-    culls: 0,
+    earlyDead: 0,
+    midDead: 0,
+    lateDead: 0,
+    pipped: 0,
     batchCount: 0
   });
 
@@ -275,45 +275,45 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
                   description="Healthy chicks emerged from shell"
                 />
                 <FlowBox
-                  title="Dead in Shell"
-                  value={flowData.deadInShell}
+                  title="Total Embryonic Mortality"
+                  value={flowData.earlyDead + flowData.midDead + flowData.lateDead + flowData.pipped}
                   color="bg-amber-600"
-                  percentage={(flowData.deadInShell / flowData.fertile) * 100}
-                  description="Embryos that didn't complete hatching"
+                  percentage={((flowData.earlyDead + flowData.midDead + flowData.lateDead + flowData.pipped) / flowData.fertile) * 100}
+                  description="All embryos that failed to hatch"
                 />
               </div>
 
               <FlowArrow width="50%" />
 
-              {/* Stage 4: Quality Grading */}
+              {/* Stage 4: Embryonic Mortality Analysis */}
               <div className="grid grid-cols-4 gap-2">
                 <FlowBox
-                  title="Grade A"
-                  value={flowData.gradeA}
-                  color="bg-green-800"
-                  percentage={(flowData.gradeA / flowData.hatched) * 100}
-                  description="Premium quality chicks"
+                  title="Early Dead"
+                  value={flowData.earlyDead}
+                  color="bg-red-700"
+                  percentage={(flowData.earlyDead / flowData.fertile) * 100}
+                  description="Embryos died in early development (0-7 days)"
                 />
                 <FlowBox
-                  title="Grade B"
-                  value={flowData.gradeB}
-                  color="bg-slate-600"
-                  percentage={(flowData.gradeB / flowData.hatched) * 100}
-                  description="Good quality chicks"
+                  title="Mid Dead"
+                  value={flowData.midDead}
+                  color="bg-orange-600"
+                  percentage={(flowData.midDead / flowData.fertile) * 100}
+                  description="Embryos died in mid development (8-14 days)"
                 />
                 <FlowBox
-                  title="Grade C"
-                  value={flowData.gradeC}
-                  color="bg-stone-600"
-                  percentage={(flowData.gradeC / flowData.hatched) * 100}
-                  description="Lower grade chicks"
+                  title="Late Dead"
+                  value={flowData.lateDead}
+                  color="bg-amber-600"
+                  percentage={(flowData.lateDead / flowData.fertile) * 100}
+                  description="Embryos died in late development (15-21 days)"
                 />
                 <FlowBox
-                  title="Culls"
-                  value={flowData.culls}
-                  color="bg-gray-600"
-                  percentage={(flowData.culls / flowData.hatched) * 100}
-                  description="Chicks removed due to defects"
+                  title="Pipped"
+                  value={flowData.pipped}
+                  color="bg-yellow-600"
+                  percentage={(flowData.pipped / flowData.fertile) * 100}
+                  description="Embryos that pipped but didn't hatch"
                 />
               </div>
 
@@ -333,15 +333,15 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold text-primary">
-                    {(((flowData.gradeA + flowData.gradeB) / flowData.hatched) * 100).toFixed(1)}%
+                    {(((flowData.fertile - flowData.earlyDead - flowData.midDead - flowData.lateDead - flowData.pipped) / flowData.fertile) * 100).toFixed(1)}%
                   </div>
-                  <div className="text-sm text-muted-foreground">Quality Rate (A+B)</div>
+                  <div className="text-sm text-muted-foreground">Embryo Survival Rate</div>
                 </div>
               </div>
 
               {/* Detailed Breakdown */}
               <div className="mt-6 pt-6 border-t">
-                <h4 className="text-lg font-semibold mb-4">Detailed Flow Breakdown</h4>
+                <h4 className="text-lg font-semibold mb-4">Detailed Embryonic Development Breakdown</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Total Eggs Set:</span>
@@ -352,24 +352,24 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
                     <span>{flowData.fertile.toLocaleString()} ({((flowData.fertile / flowData.totalEggs) * 100).toFixed(1)}%)</span>
                   </div>
                   <div className="flex justify-between pl-8">
-                    <span>→ Hatched:</span>
-                    <span>{flowData.hatched.toLocaleString()} ({((flowData.hatched / flowData.fertile) * 100).toFixed(1)}%)</span>
+                    <span>→ Successfully Hatched:</span>
+                    <span className="text-green-600 font-medium">{flowData.hatched.toLocaleString()} ({((flowData.hatched / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
-                  <div className="flex justify-between pl-12">
-                    <span>→ Grade A:</span>
-                    <span>{flowData.gradeA.toLocaleString()} ({((flowData.gradeA / flowData.hatched) * 100).toFixed(1)}%)</span>
+                  <div className="flex justify-between pl-8 text-red-600">
+                    <span>→ Early Dead (0-7 days):</span>
+                    <span>{flowData.earlyDead.toLocaleString()} ({((flowData.earlyDead / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
-                  <div className="flex justify-between pl-12">
-                    <span>→ Grade B:</span>
-                    <span>{flowData.gradeB.toLocaleString()} ({((flowData.gradeB / flowData.hatched) * 100).toFixed(1)}%)</span>
+                  <div className="flex justify-between pl-8 text-orange-600">
+                    <span>→ Mid Dead (8-14 days):</span>
+                    <span>{flowData.midDead.toLocaleString()} ({((flowData.midDead / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
-                  <div className="flex justify-between pl-12">
-                    <span>→ Grade C:</span>
-                    <span>{flowData.gradeC.toLocaleString()} ({((flowData.gradeC / flowData.hatched) * 100).toFixed(1)}%)</span>
+                  <div className="flex justify-between pl-8 text-amber-600">
+                    <span>→ Late Dead (15-21 days):</span>
+                    <span>{flowData.lateDead.toLocaleString()} ({((flowData.lateDead / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
-                  <div className="flex justify-between pl-12">
-                    <span>→ Culls:</span>
-                    <span>{flowData.culls.toLocaleString()} ({((flowData.culls / flowData.hatched) * 100).toFixed(1)}%)</span>
+                  <div className="flex justify-between pl-8 text-yellow-600">
+                    <span>→ Pipped (didn't hatch):</span>
+                    <span>{flowData.pipped.toLocaleString()} ({((flowData.pipped / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
                 </div>
               </div>

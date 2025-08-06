@@ -229,13 +229,9 @@ export const useCompletedBatchMetrics = () => {
             late_dead,
             sample_size
           ),
-          egg_pack_quality (
-            grade_a,
-            grade_b,
-            grade_c,
-            cracked,
-            dirty,
-            sample_size
+          residue_analysis (
+            pipped_not_hatched,
+            total_residue_count
           )
         `)
         .eq('status', 'completed')
@@ -246,10 +242,18 @@ export const useCompletedBatchMetrics = () => {
       
       return data?.map(batch => {
         const fertility = batch.fertility_analysis?.[0];
-        const eggQuality = batch.egg_pack_quality?.[0];
+        const residue = batch.residue_analysis?.[0];
         
-        const qualityScore = eggQuality ? 
-          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : 0;
+        // Calculate embryonic mortality data
+        const earlyDead = fertility?.early_dead || 0;
+        const lateDead = fertility?.late_dead || 0;
+        const pipped = residue?.pipped_not_hatched || 0;
+        
+        // Calculate mid dead as remaining dead embryos
+        const totalFertile = fertility?.sample_size || 0;
+        const totalHatched = Math.round((totalFertile * (fertility?.hatch_percent || 0)) / 100);
+        const totalDead = totalFertile - totalHatched;
+        const midDead = Math.max(0, totalDead - earlyDead - lateDead - pipped);
         
         return {
           batchNumber: batch.batch_number,
@@ -260,11 +264,14 @@ export const useCompletedBatchMetrics = () => {
           fertility: fertility?.fertility_percent || 0,
           hatch: fertility?.hatch_percent || 0,
           hof: fertility?.hof_percent || 0,
-          earlyDead: ((fertility?.early_dead || 0) / (fertility?.sample_size || 1)) * 100,
-          qualityScore,
           totalEggs: batch.total_eggs_set,
           status: batch.status,
-          setDate: batch.set_date
+          setDate: batch.set_date,
+          // Embryonic mortality data
+          earlyDead,
+          midDead,
+          lateDead,
+          pipped
         };
       }) || [];
     },
@@ -315,13 +322,9 @@ export const useActiveBatchFlowData = () => {
             late_dead,
             sample_size
           ),
-          egg_pack_quality (
-            grade_a,
-            grade_b,
-            grade_c,
-            cracked,
-            dirty,
-            sample_size
+          residue_analysis (
+            pipped_not_hatched,
+            total_residue_count
           )
         `)
         .in('status', ['setting', 'incubating', 'hatching'])
@@ -331,7 +334,7 @@ export const useActiveBatchFlowData = () => {
       
       return data?.map(batch => {
         const fertility = batch.fertility_analysis?.[0];
-        const eggQuality = batch.egg_pack_quality?.[0];
+        const residue = batch.residue_analysis?.[0];
         
         // Use actual fertility data if available, otherwise estimate based on flock age and breed
         const estimatedFertility = !fertility ? (
@@ -341,8 +344,16 @@ export const useActiveBatchFlowData = () => {
         // Use actual hatch data if available, otherwise estimate
         const estimatedHatch = !fertility?.hatch_percent ? 85 : fertility.hatch_percent;
         
-        const qualityScore = eggQuality ? 
-          ((eggQuality.grade_a + eggQuality.grade_b) / eggQuality.sample_size) * 100 : 90;
+        // Calculate embryonic mortality data
+        const earlyDead = fertility?.early_dead || 0;
+        const lateDead = fertility?.late_dead || 0;
+        const pipped = residue?.pipped_not_hatched || 0;
+        
+        // Calculate mid dead as remaining dead embryos (estimated if no actual data)
+        const totalFertile = fertility?.sample_size || Math.round((batch.total_eggs_set * estimatedFertility) / 100);
+        const totalHatched = Math.round((totalFertile * estimatedHatch) / 100);
+        const totalDead = totalFertile - totalHatched;
+        const midDead = fertility ? Math.max(0, totalDead - earlyDead - lateDead - pipped) : Math.round(totalDead * 0.3);
         
         return {
           batchNumber: batch.batch_number,
@@ -353,13 +364,17 @@ export const useActiveBatchFlowData = () => {
           fertility: estimatedFertility || 80,
           hatch: estimatedHatch || 85,
           hof: fertility?.hof_percent || 80,
-          qualityScore,
           totalEggs: batch.total_eggs_set,
           status: batch.status,
           setDate: batch.set_date,
           isProjected: !fertility || !fertility.hatch_percent,
           hasActualFertility: !!fertility,
-          hasActualQuality: !!eggQuality
+          hasActualResidue: !!residue,
+          // Embryonic mortality data
+          earlyDead,
+          midDead,
+          lateDead,
+          pipped
         };
       }) || [];
     },
