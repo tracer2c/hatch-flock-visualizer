@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import EggPackDataEntry from "@/components/dashboard/EggPackDataEntry";
 
 
-interface BatchInfo {
+interface HouseInfo {
   id: string;
   batch_number: string;
   flock_name: string;
@@ -23,21 +23,21 @@ interface BatchInfo {
 }
 
 const EggPackEntryPage = () => {
-  const { batchId } = useParams<{ batchId: string }>();
+  const { houseId } = useParams<{ houseId: string }>();
   const navigate = useNavigate();
-  const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
+  const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [eggPackData, setEggPackData] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (batchId) {
-      loadBatchInfo();
+    if (houseId) {
+      loadHouseInfo();
       loadEggPackData();
     }
-  }, [batchId]);
+  }, [houseId]);
 
-  const loadBatchInfo = async () => {
-    if (!batchId) return;
+  const loadHouseInfo = async () => {
+    if (!houseId) return;
     
     const { data, error } = await supabase
       .from('batches')
@@ -46,17 +46,17 @@ const EggPackEntryPage = () => {
         flocks(flock_name, flock_number, house_number),
         machines(id, machine_number, machine_type, location)
       `)
-      .eq('id', batchId)
+      .eq('id', houseId)
       .single();
 
     if (error) {
       toast({
-        title: "Error loading batch",
+        title: "Error loading house",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      setBatchInfo({
+      setHouseInfo({
         id: data.id,
         batch_number: data.batch_number,
         flock_name: data.flocks?.flock_name || '',
@@ -72,12 +72,12 @@ const EggPackEntryPage = () => {
   };
 
   const loadEggPackData = async () => {
-    if (!batchId) return;
+    if (!houseId) return;
     
     const { data, error } = await supabase
       .from('egg_pack_quality')
       .select('*')
-      .eq('batch_id', batchId);
+      .eq('batch_id', houseId);
 
     if (error) {
       toast({
@@ -93,13 +93,13 @@ const EggPackEntryPage = () => {
   const handleEggPackDataUpdate = async (newData: any[]) => {
     const dataWithBatchId = newData.map(record => ({
       ...record,
-      batch_id: batchId
+      batch_id: houseId
     }));
     
     setEggPackData(dataWithBatchId);
     toast({
       title: "Egg Pack Data Updated",
-      description: "Data linked to current batch"
+      description: "Data linked to current house"
     });
   };
 
@@ -119,15 +119,15 @@ const EggPackEntryPage = () => {
     navigate('/data-entry');
   };
 
-  if (!batchInfo) {
+  if (!houseInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-7xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
               <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Batch Information</h3>
-              <p className="text-gray-600">Please wait while we load the batch details...</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading House Information</h3>
+              <p className="text-gray-600">Please wait while we load the house details...</p>
             </CardContent>
           </Card>
         </div>
@@ -163,24 +163,24 @@ const EggPackEntryPage = () => {
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-gray-900">
-                Batch {batchInfo.batch_number}
+                House {houseInfo.batch_number}
               </h2>
-              <Badge className={getStatusColor(batchInfo.status)}>
-                {batchInfo.status}
+              <Badge className={getStatusColor(houseInfo.status)}>
+                {houseInfo.status}
               </Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">Flock:</span> <span className="font-medium ml-1">{batchInfo.flock_number} - {batchInfo.flock_name}</span>
+                <span className="text-gray-600">Flock:</span> <span className="font-medium ml-1">{houseInfo.flock_number} - {houseInfo.flock_name}</span>
               </div>
               <div>
-                <span className="text-gray-600">Machine:</span> <span className="font-medium ml-1">{batchInfo.machine_number}</span>
+                <span className="text-gray-600">Machine:</span> <span className="font-medium ml-1">{houseInfo.machine_number}</span>
               </div>
               <div>
-                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{new Date(batchInfo.set_date).toLocaleDateString()}</span>
+                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{new Date(houseInfo.set_date).toLocaleDateString()}</span>
               </div>
               <div>
-                <span className="text-gray-600">Total Eggs:</span> <span className="font-medium ml-1">{batchInfo.total_eggs_set.toLocaleString()}</span>
+                <span className="text-gray-600">Total Eggs:</span> <span className="font-medium ml-1">{houseInfo.total_eggs_set.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -191,12 +191,12 @@ const EggPackEntryPage = () => {
           data={eggPackData} 
           onDataUpdate={handleEggPackDataUpdate}
           batchInfo={{
-            id: batchInfo.id,
-            batch_number: batchInfo.batch_number,
-            flock_name: batchInfo.flock_name,
-            flock_number: batchInfo.flock_number,
-            machine_number: batchInfo.machine_number,
-            house_number: batchInfo.house_number
+            id: houseInfo.id,
+            batch_number: houseInfo.batch_number,
+            flock_name: houseInfo.flock_name,
+            flock_number: houseInfo.flock_number,
+            machine_number: houseInfo.machine_number,
+            house_number: houseInfo.house_number
           }}
         />
       </div>

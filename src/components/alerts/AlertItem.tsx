@@ -77,7 +77,7 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
         </div>
         
         {alert.batches && (
-          <div>Batch: {alert.batches.batch_number}</div>
+          <div>House: {alert.batches.batch_number}</div>
         )}
         
         {alert.machines && (

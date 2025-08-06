@@ -7,7 +7,7 @@ import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-interface BatchInfo {
+interface HouseInfo {
   id: string;
   batch_number: string;
   flock_name: string;
@@ -21,12 +21,12 @@ interface BatchInfo {
 }
 
 interface DataTypeSelectionProps {
-  batchId: string;
+  houseId: string;
   onBack: () => void;
 }
 
-const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
-  const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
+const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
+  const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [dataCounts, setDataCounts] = useState({
     eggPack: 0,
     fertility: 0,
@@ -37,13 +37,13 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (batchId) {
-      loadBatchInfo();
+    if (houseId) {
+      loadHouseInfo();
       loadDataCounts();
     }
-  }, [batchId]);
+  }, [houseId]);
 
-  const loadBatchInfo = async () => {
+  const loadHouseInfo = async () => {
     const { data, error } = await supabase
       .from('batches')
       .select(`
@@ -51,17 +51,17 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
         flocks(flock_name, flock_number, house_number),
         machines(id, machine_number, machine_type, location)
       `)
-      .eq('id', batchId)
+      .eq('id', houseId)
       .single();
 
     if (error) {
       toast({
-        title: "Error loading batch",
+        title: "Error loading house",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      setBatchInfo({
+      setHouseInfo({
         id: data.id,
         batch_number: data.batch_number,
         flock_name: data.flocks?.flock_name || '',
@@ -78,10 +78,10 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
 
   const loadDataCounts = async () => {
     const [eggPackResult, fertilityResult, qaResult, residueResult] = await Promise.all([
-      supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', batchId),
-      supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId),
-      supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', batchId),
-      supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId)
+      supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', houseId),
+      supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId),
+      supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', houseId),
+      supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId)
     ]);
 
     setDataCounts({
@@ -112,7 +112,7 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
       icon: Package,
       color: 'from-blue-500 to-blue-600',
       count: dataCounts.eggPack,
-      route: `/data-entry/batch/${batchId}/egg-pack`
+      route: `/data-entry/house/${houseId}/egg-pack`
     },
     {
       id: 'fertility',
@@ -121,7 +121,7 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
       icon: Egg,
       color: 'from-green-500 to-green-600',
       count: dataCounts.fertility,
-      route: `/data-entry/batch/${batchId}/fertility`
+      route: `/data-entry/house/${houseId}/fertility`
     },
     {
       id: 'qa',
@@ -130,7 +130,7 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
       icon: Activity,
       color: 'from-purple-500 to-purple-600',
       count: dataCounts.qa,
-      route: `/data-entry/batch/${batchId}/qa`
+      route: `/data-entry/house/${houseId}/qa`
     },
     {
       id: 'residue',
@@ -139,17 +139,17 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
       icon: AlertTriangle,
       color: 'from-orange-500 to-orange-600',
       count: dataCounts.residue,
-      route: `/data-entry/batch/${batchId}/residue`
+      route: `/data-entry/house/${houseId}/residue`
     }
   ];
 
-  if (!batchInfo) {
+  if (!houseInfo) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
           <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Batch Information</h3>
-          <p className="text-gray-600">Please wait while we load the batch details...</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Loading House Information</h3>
+          <p className="text-gray-600">Please wait while we load the house details...</p>
         </CardContent>
       </Card>
     );
@@ -166,35 +166,35 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
             className="mb-4 flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Batch Selection
+            Back to House Selection
           </Button>
           
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-900">
-                Batch: {batchInfo.batch_number}
+                House: {houseInfo.batch_number}
               </h1>
-              <Badge className={getStatusColor(batchInfo.status)}>
-                {batchInfo.status}
+              <Badge className={getStatusColor(houseInfo.status)}>
+                {houseInfo.status}
               </Badge>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-600">Flock</p>
-                <p className="font-medium">{batchInfo.flock_number} - {batchInfo.flock_name}</p>
+                <p className="font-medium">{houseInfo.flock_number} - {houseInfo.flock_name}</p>
               </div>
               <div>
                 <p className="text-gray-600">Machine</p>
-                <p className="font-medium">{batchInfo.machine_number}</p>
+                <p className="font-medium">{houseInfo.machine_number}</p>
               </div>
               <div>
                 <p className="text-gray-600">Set Date</p>
-                <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
+                <p className="font-medium">{new Date(houseInfo.set_date).toLocaleDateString()}</p>
               </div>
               <div>
                 <p className="text-gray-600">Total Eggs</p>
-                <p className="font-medium">{batchInfo.total_eggs_set.toLocaleString()}</p>
+                <p className="font-medium">{houseInfo.total_eggs_set.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -203,7 +203,7 @@ const DataTypeSelection = ({ batchId, onBack }: DataTypeSelectionProps) => {
         {/* Data Type Selection */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Data Entry Type</h2>
-          <p className="text-gray-600 mb-6">Choose what type of data you want to enter for this batch</p>
+          <p className="text-gray-600 mb-6">Choose what type of data you want to enter for this house</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, ArrowRight, Activity, CheckCircle, Eye } from "lucide-react";
 import { useCompletedBatchMetrics, useActiveBatchFlowData } from '@/hooks/useHouseData';
 
-interface BatchFlowSankeyProps {
+interface HouseFlowSankeyProps {
   className?: string;
 }
 
-const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
+const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
   const [viewMode, setViewMode] = useState<'active' | 'completed' | 'all'>('active');
   
   const { data: completedBatches, isLoading: loadingCompleted } = useCompletedBatchMetrics();
@@ -23,7 +23,7 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Batch Flow Analysis
+            House Flow Analysis
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -124,12 +124,12 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Batch Flow Analysis
+              House Flow Analysis
             </CardTitle>
             <CardDescription>
-              {viewMode === 'active' && `Active batches flow analysis across ${flowData.batchCount} ongoing batches`}
-              {viewMode === 'completed' && `Completed batches flow analysis across ${flowData.batchCount} finished batches`}
-              {viewMode === 'all' && `Combined flow analysis across ${flowData.batchCount} total batches`}
+              {viewMode === 'active' && `Active houses flow analysis across ${flowData.batchCount} ongoing houses`}
+              {viewMode === 'completed' && `Completed houses flow analysis across ${flowData.batchCount} finished houses`}
+              {viewMode === 'all' && `Combined flow analysis across ${flowData.batchCount} total houses`}
               {hasProjectedData && (
                 <span className="ml-2 text-amber-600 text-xs">
                   • Contains projected data
@@ -151,7 +151,7 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               className="flex items-center gap-2"
             >
               <Activity className="h-4 w-4" />
-              Active Batches
+              Active Houses
               {activeBatches && activeBatches.length > 0 && (
                 <span className="ml-1 bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs">
                   {activeBatches.length}
@@ -165,7 +165,7 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               className="flex items-center gap-2"
             >
               <CheckCircle className="h-4 w-4" />
-              Completed Batches
+              Completed Houses
               {completedBatches && completedBatches.length > 0 && (
                 <span className="ml-1 bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs">
                   {completedBatches.length}
@@ -179,7 +179,7 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
               className="flex items-center gap-2"
             >
               <Eye className="h-4 w-4" />
-              All Batches
+              All Houses
               <span className="ml-1 bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs">
                 {(activeBatches?.length || 0) + (completedBatches?.length || 0)}
               </span>
@@ -194,8 +194,8 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
                 Projected Data Notice
               </div>
               <p className="text-xs text-amber-700">
-                Some data is projected based on ongoing batches and industry standards. 
-                Actual results may vary as batches complete.
+                Some data is projected based on ongoing houses and industry standards. 
+                Actual results may vary as houses complete.
               </p>
             </div>
           )}
@@ -205,12 +205,12 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
             <div className="text-center py-12">
               <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                No {viewMode} batches found
+                No {viewMode} houses found
               </h3>
               <p className="text-sm text-muted-foreground">
-                {viewMode === 'active' && "Start some batches to see active flow analysis."}
-                {viewMode === 'completed' && "Complete some batches to see historical flow data."}
-                {viewMode === 'all' && "No batch data available yet."}
+                {viewMode === 'active' && "Start some houses to see active flow analysis."}
+                {viewMode === 'completed' && "Complete some houses to see historical flow data."}
+                {viewMode === 'all' && "No house data available yet."}
               </p>
             </div>
           )}
@@ -228,7 +228,7 @@ const BatchFlowSankey = ({ className }: BatchFlowSankeyProps) => {
                   This diagram shows the complete journey from eggs set to final output. 
                   Each stage represents a checkpoint in the incubation process, 
                   with percentages showing success rates at each transition.
-                  {hasProjectedData && " Orange indicators show projected data for ongoing batches."}
+                  {hasProjectedData && " Orange indicators show projected data for ongoing houses."}
                 </p>
               </div>
 

@@ -29,7 +29,7 @@ const AdvancedAnalytics = () => {
           </TabsTrigger>
           <TabsTrigger value="flow" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Batch Flow
+            House Flow
           </TabsTrigger>
           <TabsTrigger value="predictions" className="flex items-center gap-2">
             <Target className="h-4 w-4" />

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import QADataEntry from "@/components/dashboard/QADataEntry";
 
 
-interface BatchInfo {
+interface HouseInfo {
   id: string;
   batch_number: string;
   flock_name: string;
@@ -24,21 +24,21 @@ interface BatchInfo {
 }
 
 const QAEntryPage = () => {
-  const { batchId } = useParams<{ batchId: string }>();
+  const { houseId } = useParams<{ houseId: string }>();
   const navigate = useNavigate();
-  const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
+  const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [qaData, setQAData] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (batchId) {
-      loadBatchInfo();
+    if (houseId) {
+      loadHouseInfo();
       loadQAData();
     }
-  }, [batchId]);
+  }, [houseId]);
 
-  const loadBatchInfo = async () => {
-    if (!batchId) return;
+  const loadHouseInfo = async () => {
+    if (!houseId) return;
     
     const { data, error } = await supabase
       .from('batches')
@@ -47,17 +47,17 @@ const QAEntryPage = () => {
         flocks(flock_name, flock_number, house_number),
         machines(id, machine_number, machine_type, location)
       `)
-      .eq('id', batchId)
+      .eq('id', houseId)
       .single();
 
     if (error) {
       toast({
-        title: "Error loading batch",
+        title: "Error loading house",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      setBatchInfo({
+      setHouseInfo({
         id: data.id,
         batch_number: data.batch_number,
         flock_name: data.flocks?.flock_name || '',
@@ -74,12 +74,12 @@ const QAEntryPage = () => {
   };
 
   const loadQAData = async () => {
-    if (!batchId) return;
+    if (!houseId) return;
     
     const { data, error } = await supabase
       .from('qa_monitoring')
       .select('*')
-      .eq('batch_id', batchId);
+      .eq('batch_id', houseId);
 
     if (error) {
       toast({
@@ -95,13 +95,13 @@ const QAEntryPage = () => {
   const handleQADataUpdate = async (newData: any[]) => {
     const dataWithBatchId = newData.map(record => ({
       ...record,
-      batch_id: batchId
+      batch_id: houseId
     }));
     
     setQAData(dataWithBatchId);
     toast({
       title: "QA Data Updated",
-      description: "Data linked to current batch"
+      description: "Data linked to current house"
     });
   };
 
@@ -121,15 +121,15 @@ const QAEntryPage = () => {
     navigate('/data-entry');
   };
 
-  if (!batchInfo) {
+  if (!houseInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-7xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
               <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Batch Information</h3>
-              <p className="text-gray-600">Please wait while we load the batch details...</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading House Information</h3>
+              <p className="text-gray-600">Please wait while we load the house details...</p>
             </CardContent>
           </Card>
         </div>
@@ -154,19 +154,19 @@ const QAEntryPage = () => {
           
           {/* Breadcrumb */}
           <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; Batch {batchInfo.batch_number} &gt; Quality Assurance
+            Data Entry &gt; House {houseInfo.batch_number} &gt; Quality Assurance
           </div>
           
-          {/* Batch Context Header */}
+          {/* House Context Header */}
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
                   <Activity className="h-6 w-6 text-purple-600" />
-                  Quality Assurance - Batch {batchInfo.batch_number}
+                  Quality Assurance - House {houseInfo.batch_number}
                 </CardTitle>
-                <Badge className={getStatusColor(batchInfo.status)}>
-                  {batchInfo.status}
+                <Badge className={getStatusColor(houseInfo.status)}>
+                  {houseInfo.status}
                 </Badge>
               </div>
             </CardHeader>
@@ -174,19 +174,19 @@ const QAEntryPage = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Flock</p>
-                  <p className="font-medium">{batchInfo.flock_number} - {batchInfo.flock_name}</p>
+                  <p className="font-medium">{houseInfo.flock_number} - {houseInfo.flock_name}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Machine</p>
-                  <p className="font-medium">{batchInfo.machine_number}</p>
+                  <p className="font-medium">{houseInfo.machine_number}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Set Date</p>
-                  <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
+                  <p className="font-medium">{new Date(houseInfo.set_date).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Total Eggs</p>
-                  <p className="font-medium">{batchInfo.total_eggs_set.toLocaleString()}</p>
+                  <p className="font-medium">{houseInfo.total_eggs_set.toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -198,12 +198,12 @@ const QAEntryPage = () => {
           data={qaData} 
           onDataUpdate={handleQADataUpdate}
           batchInfo={{
-            id: batchInfo.id,
-            batch_number: batchInfo.batch_number,
-            flock_name: batchInfo.flock_name,
-            flock_number: batchInfo.flock_number,
-            machine_id: batchInfo.machine_id,
-            house_number: batchInfo.house_number
+            id: houseInfo.id,
+            batch_number: houseInfo.batch_number,
+            flock_name: houseInfo.flock_name,
+            flock_number: houseInfo.flock_number,
+            machine_id: houseInfo.machine_id,
+            house_number: houseInfo.house_number
           }}
         />
       </div>

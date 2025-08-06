@@ -38,22 +38,22 @@ const App = () => (
                 <DataEntryPage />
               </ProtectedRoute>
             } />
-            <Route path="/data-entry/batch/:batchId/egg-pack" element={
+            <Route path="/data-entry/house/:houseId/egg-pack" element={
               <ProtectedRoute>
                 <EggPackEntryPage />
               </ProtectedRoute>
             } />
-            <Route path="/data-entry/batch/:batchId/fertility" element={
+            <Route path="/data-entry/house/:houseId/fertility" element={
               <ProtectedRoute>
                 <FertilityEntryPage />
               </ProtectedRoute>
             } />
-            <Route path="/data-entry/batch/:batchId/qa" element={
+            <Route path="/data-entry/house/:houseId/qa" element={
               <ProtectedRoute>
                 <QAEntryPage />
               </ProtectedRoute>
             } />
-            <Route path="/data-entry/batch/:batchId/residue" element={
+            <Route path="/data-entry/house/:houseId/residue" element={
               <ProtectedRoute>
                 <ResidueEntryPage />
               </ProtectedRoute>
@@ -63,7 +63,7 @@ const App = () => (
                 <ChecklistPage />
               </ProtectedRoute>
             } />
-            <Route path="/checklist/batch/:batchId" element={
+            <Route path="/checklist/house/:houseId" element={
               <ProtectedRoute>
                 <ChecklistPage />
               </ProtectedRoute>

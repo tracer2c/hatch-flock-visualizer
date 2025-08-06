@@ -20,10 +20,10 @@ const DataEntryPage = () => {
   // If a house is selected, show the data type selection
   if (selectedHouseId) {
     return (
-      <DataTypeSelection 
-        batchId={selectedHouseId} 
-        onBack={handleBackToHouseSelection}
-      />
+        <DataTypeSelection 
+          houseId={selectedHouseId} 
+          onBack={handleBackToHouseSelection}
+        />
     );
   }
 

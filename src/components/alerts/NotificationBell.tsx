@@ -127,7 +127,7 @@ const NotificationBell = () => {
                                 </div>
                                 
                                 {alert.batches && (
-                                  <span>Batch: {alert.batches.batch_number}</span>
+                                  <span>House: {alert.batches.batch_number}</span>
                                 )}
                                 
                                 {alert.current_temperature && (
