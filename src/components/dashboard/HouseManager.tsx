@@ -26,7 +26,7 @@ interface Machine {
   location: string;
 }
 
-interface Batch {
+interface House {
   id: string;
   batch_number: string;
   flock_name: string;
@@ -38,15 +38,15 @@ interface Batch {
   status: string;
 }
 
-interface BatchManagerProps {
-  onBatchSelect: (batchId: string) => void;
-  selectedBatch: string | null;
+interface HouseManagerProps {
+  onHouseSelect: (houseId: string) => void;
+  selectedHouse: string | null;
 }
 
-const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
+const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [houses, setHouses] = useState<House[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     flockId: '',
@@ -59,7 +59,7 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
   useEffect(() => {
     loadFlocks();
     loadMachines();
-    loadBatches();
+    loadHouses();
   }, []);
 
   const loadFlocks = async () => {
@@ -97,7 +97,7 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
     }
   };
 
-  const loadBatches = async () => {
+  const loadHouses = async () => {
     const { data, error } = await supabase
       .from('batches')
       .select(`
@@ -109,12 +109,12 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
     
     if (error) {
       toast({
-        title: "Error loading batches",
+        title: "Error loading houses",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      const formattedBatches = data?.map(batch => ({
+      const formattedHouses = data?.map(batch => ({
         id: batch.id,
         batch_number: batch.batch_number,
         flock_name: batch.flocks?.flock_name || '',
@@ -125,7 +125,7 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
         total_eggs_set: batch.total_eggs_set,
         status: batch.status
       })) || [];
-      setBatches(formattedBatches);
+      setHouses(formattedHouses);
     }
   };
 
@@ -135,7 +135,7 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
     return date.toISOString().split('T')[0];
   };
 
-  const createBatch = async () => {
+  const createHouse = async () => {
     if (!formData.flockId || !formData.machineId || !formData.totalEggs) {
       toast({
         title: "Validation Error",
@@ -146,13 +146,27 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
     }
 
     const selectedFlock = flocks.find(f => f.id === formData.flockId);
-    const batchNumber = `${selectedFlock?.flock_number}-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+    
+    // Get the next sequential house number for this flock
+    const { data: nextNumber, error: numberError } = await supabase
+      .rpc('get_next_house_number', { flock_uuid: formData.flockId });
+    
+    if (numberError) {
+      toast({
+        title: "Error generating house number",
+        description: numberError.message,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const houseNumber = `${selectedFlock?.flock_name} #${nextNumber}`;
     const expectedHatchDate = calculateHatchDate(formData.setDate);
 
     const { data, error } = await supabase
       .from('batches')
       .insert({
-        batch_number: batchNumber,
+        batch_number: houseNumber,
         flock_id: formData.flockId,
         machine_id: formData.machineId,
         set_date: formData.setDate,
@@ -165,19 +179,19 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
 
     if (error) {
       toast({
-        title: "Error creating batch",
+        title: "Error creating house",
         description: error.message,
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Batch Created",
-        description: `Batch ${batchNumber} created successfully`
+        title: "House Created",
+        description: `House ${houseNumber} created successfully`
       });
       setShowCreateForm(false);
       setFormData({ flockId: '', machineId: '', setDate: new Date().toISOString().split('T')[0], totalEggs: '' });
-      loadBatches();
-      onBatchSelect(data.id);
+      loadHouses();
+      onHouseSelect(data.id);
     }
   };
 
@@ -195,19 +209,19 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Create New Batch */}
+      {/* Create New House */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              Batch Management
+              House Management
             </span>
             <Button 
               onClick={() => setShowCreateForm(!showCreateForm)}
               variant={showCreateForm ? "outline" : "default"}
             >
-              {showCreateForm ? "Cancel" : "New Batch"}
+              {showCreateForm ? "Cancel" : "New House"}
             </Button>
           </CardTitle>
         </CardHeader>
@@ -263,58 +277,58 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              <Button onClick={createBatch}>Create Batch</Button>
+              <Button onClick={createHouse}>Create House</Button>
               <Button variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
             </div>
           </CardContent>
         )}
       </Card>
 
-      {/* Existing Batches */}
+      {/* Existing Houses */}
       <Card>
         <CardHeader>
-          <CardTitle>Active Batches</CardTitle>
+          <CardTitle>Active Houses</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {batches.map((batch) => (
+            {houses.map((house) => (
               <div
-                key={batch.id}
+                key={house.id}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedBatch === batch.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  selectedHouse === house.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
                 }`}
-                onClick={() => onBatchSelect(batch.id)}
+                onClick={() => onHouseSelect(house.id)}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{batch.batch_number}</h3>
-                  <Badge className={getStatusColor(batch.status)}>
-                    {batch.status}
+                  <h3 className="font-medium">{house.batch_number}</h3>
+                  <Badge className={getStatusColor(house.status)}>
+                    {house.status}
                   </Badge>
                 </div>
                 <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Package2 className="h-4 w-4" />
-                    {batch.flock_number} - {batch.flock_name}
+                    {house.flock_number} - {house.flock_name}
                   </div>
                   <div className="flex items-center gap-2">
                     <Factory className="h-4 w-4" />
-                    {batch.machine_number}
+                    {house.machine_number}
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    Set: {new Date(batch.set_date).toLocaleDateString()}
+                    Set: {new Date(house.set_date).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
-                    {batch.total_eggs_set.toLocaleString()} eggs
+                    {house.total_eggs_set.toLocaleString()} eggs
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          {batches.length === 0 && (
+          {houses.length === 0 && (
             <div className="text-center py-8 text-gray-500">
-              No batches found. Create your first batch to get started.
+              No houses found. Create your first house to get started.
             </div>
           )}
         </CardContent>
@@ -323,4 +337,4 @@ const BatchManager = ({ onBatchSelect, selectedBatch }: BatchManagerProps) => {
   );
 };
 
-export default BatchManager;
+export default HouseManager;

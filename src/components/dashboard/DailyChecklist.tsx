@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useActiveBatches } from "@/hooks/useBatchData";
+import { useActiveBatches } from "@/hooks/useHouseData";
 import { useDailyChecklistItems, useChecklistCompletions, useCompleteChecklistItem, useBatchChecklistProgress } from "@/hooks/useSOPData";
 import { useAuth } from "@/hooks/useAuth";
 import { CheckCircle, Circle, Calendar, Clock, User, AlertTriangle, CheckSquare } from "lucide-react";

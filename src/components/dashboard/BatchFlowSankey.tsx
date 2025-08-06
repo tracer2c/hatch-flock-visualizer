@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, ArrowRight, Activity, CheckCircle, Eye } from "lucide-react";
-import { useCompletedBatchMetrics, useActiveBatchFlowData } from '@/hooks/useBatchData';
+import { useCompletedBatchMetrics, useActiveBatchFlowData } from '@/hooks/useHouseData';
 
 interface BatchFlowSankeyProps {
   className?: string;

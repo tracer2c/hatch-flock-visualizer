@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ScatterChart, Scatter } from 'recharts';
-import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
+import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AITooltip } from "@/components/ui/ai-tooltip";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";

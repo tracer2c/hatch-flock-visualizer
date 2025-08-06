@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, AlertTriangle, CheckCircle } from "lucide-react";
-import { useActiveBatches } from '@/hooks/useBatchData';
+import { useActiveBatches } from '@/hooks/useHouseData';
 import { format, differenceInDays, addDays } from 'date-fns';
 
 interface IncubationTimelineProps {
@@ -11,7 +11,7 @@ interface IncubationTimelineProps {
 }
 
 const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
-  const { data: activeBatches, isLoading } = useActiveBatches();
+  const { data: activeHouses, isLoading } = useActiveBatches();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -58,14 +58,14 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
     );
   }
 
-  const batchesWithProgress = activeBatches?.map(batch => {
-    const daysSinceSet = differenceInDays(new Date(), new Date(batch.set_date));
-    const expectedHatchDate = addDays(new Date(batch.set_date), 21);
+  const housesWithProgress = activeHouses?.map(house => {
+    const daysSinceSet = differenceInDays(new Date(), new Date(house.set_date));
+    const expectedHatchDate = addDays(new Date(house.set_date), 21);
     const criticalDays = getCriticalDays(daysSinceSet);
     const progressPercentage = getProgressPercentage(daysSinceSet);
     
     return {
-      ...batch,
+      ...house,
       daysSinceSet,
       expectedHatchDate,
       criticalDays,
@@ -75,7 +75,7 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
   }) || [];
 
   // Sort by days since set (earliest first)
-  batchesWithProgress.sort((a, b) => a.daysSinceSet - b.daysSinceSet);
+  housesWithProgress.sort((a, b) => a.daysSinceSet - b.daysSinceSet);
 
   return (
     <Card className={className}>
@@ -87,7 +87,7 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
               Incubation Timeline
             </CardTitle>
             <CardDescription>
-              Real-time progress tracking for all active batches
+              Real-time progress tracking for all active houses
             </CardDescription>
           </div>
           <ChartDownloadButton chartId="incubation-timeline" filename="incubation-timeline" />
@@ -117,18 +117,18 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
 
           {/* Timeline */}
           <div className="space-y-4">
-            {batchesWithProgress.map((batch, index) => (
-              <div key={batch.id} className="relative">
-                {/* Batch Header */}
+            {housesWithProgress.map((house, index) => (
+              <div key={house.id} className="relative">
+                {/* House Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <h3 className="font-semibold text-lg">
-                      Batch {batch.batch_number}
+                      {house.batch_number}
                     </h3>
-                    <Badge variant={getStatusVariant(batch.status)}>
-                      {batch.status}
+                    <Badge variant={getStatusVariant(house.status)}>
+                      {house.status}
                     </Badge>
-                    {batch.criticalDays.length > 0 && (
+                    {house.criticalDays.length > 0 && (
                       <Badge variant="destructive" className="flex items-center gap-1">
                         <AlertTriangle className="h-3 w-3" />
                         Critical Day
@@ -136,8 +136,8 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
                     )}
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
-                    <div>Day {batch.daysSinceSet} of 21</div>
-                    <div>{batch.daysRemaining} days remaining</div>
+                    <div>Day {house.daysSinceSet} of 21</div>
+                    <div>{house.daysRemaining} days remaining</div>
                   </div>
                 </div>
 
@@ -145,8 +145,8 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
                 <div className="relative h-8 bg-muted rounded-lg overflow-hidden">
                   {/* Progress fill */}
                   <div 
-                    className={`h-full transition-all duration-500 ${getStatusColor(batch.status)}`}
-                    style={{ width: `${batch.progressPercentage}%` }}
+                    className={`h-full transition-all duration-500 ${getStatusColor(house.status)}`}
+                    style={{ width: `${house.progressPercentage}%` }}
                   ></div>
                   
                   {/* Day markers */}
@@ -168,43 +168,43 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
                   {/* Current day indicator */}
                   <div
                     className="absolute top-0 bottom-0 w-1 bg-white shadow-md"
-                    style={{ left: `${batch.progressPercentage}%` }}
+                    style={{ left: `${house.progressPercentage}%` }}
                   >
                     <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium">
-                      Day {batch.daysSinceSet}
+                      Day {house.daysSinceSet}
                     </div>
                   </div>
                 </div>
 
-                {/* Batch Details */}
+                {/* House Details */}
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Flock:</span>
-                    <div className="font-medium">{batch.flocks?.flock_name}</div>
+                    <div className="font-medium">{house.flocks?.flock_name}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Machine:</span>
-                    <div className="font-medium">{batch.machines?.machine_number}</div>
+                    <div className="font-medium">{house.machines?.machine_number}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Set Date:</span>
-                    <div className="font-medium">{format(new Date(batch.set_date), 'MMM d, yyyy')}</div>
+                    <div className="font-medium">{format(new Date(house.set_date), 'MMM d, yyyy')}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Expected Hatch:</span>
-                    <div className="font-medium">{format(batch.expectedHatchDate, 'MMM d, yyyy')}</div>
+                    <div className="font-medium">{format(house.expectedHatchDate, 'MMM d, yyyy')}</div>
                   </div>
                 </div>
 
                 {/* Critical Days Alert */}
-                {batch.criticalDays.length > 0 && (
+                {house.criticalDays.length > 0 && (
                   <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-center gap-2 text-orange-800">
                       <AlertTriangle className="h-4 w-4" />
                       <span className="font-medium">Critical Day Alert</span>
                     </div>
                     <p className="text-sm text-orange-700 mt-1">
-                      Day {batch.daysSinceSet} is a critical milestone. Extra monitoring recommended.
+                      Day {house.daysSinceSet} is a critical milestone. Extra monitoring recommended.
                     </p>
                   </div>
                 )}
@@ -212,32 +212,32 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
             ))}
           </div>
 
-          {activeBatches?.length === 0 && (
+          {activeHouses?.length === 0 && (
             <div className="text-center py-12">
               <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground">No Active Batches</h3>
-              <p className="text-sm text-muted-foreground">All batches have been completed or no batches are currently in progress.</p>
+              <h3 className="text-lg font-medium text-muted-foreground">No Active Houses</h3>
+              <p className="text-sm text-muted-foreground">All houses have been completed or no houses are currently in progress.</p>
             </div>
           )}
 
           {/* Summary Stats */}
-          {activeBatches && activeBatches.length > 0 && (
+          {activeHouses && activeHouses.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t">
               <div className="text-center p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-primary">
-                  {batchesWithProgress.filter(b => b.criticalDays.length > 0).length}
+                  {housesWithProgress.filter(h => h.criticalDays.length > 0).length}
                 </div>
-                <div className="text-sm text-muted-foreground">Batches at Critical Days</div>
+                <div className="text-sm text-muted-foreground">Houses at Critical Days</div>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {batchesWithProgress.filter(b => b.status === 'hatching').length}
+                  {housesWithProgress.filter(h => h.status === 'hatching').length}
                 </div>
-                <div className="text-sm text-muted-foreground">Batches Hatching</div>
+                <div className="text-sm text-muted-foreground">Houses Hatching</div>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(batchesWithProgress.reduce((sum, b) => sum + b.progressPercentage, 0) / batchesWithProgress.length) || 0}%
+                  {Math.round(housesWithProgress.reduce((sum, h) => sum + h.progressPercentage, 0) / housesWithProgress.length) || 0}%
                 </div>
                 <div className="text-sm text-muted-foreground">Average Progress</div>
               </div>

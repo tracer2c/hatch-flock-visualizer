@@ -3,26 +3,26 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileInput } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import BatchManager from "@/components/dashboard/BatchManager";
+import HouseManager from "@/components/dashboard/HouseManager";
 import DataTypeSelection from "@/components/dashboard/DataTypeSelection";
 
 const DataEntryPage = () => {
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
 
-  const handleBatchSelect = (batchId: string) => {
-    setSelectedBatchId(batchId);
+  const handleHouseSelect = (houseId: string) => {
+    setSelectedHouseId(houseId);
   };
 
-  const handleBackToBatchSelection = () => {
-    setSelectedBatchId(null);
+  const handleBackToHouseSelection = () => {
+    setSelectedHouseId(null);
   };
 
-  // If a batch is selected, show the data type selection
-  if (selectedBatchId) {
+  // If a house is selected, show the data type selection
+  if (selectedHouseId) {
     return (
       <DataTypeSelection 
-        batchId={selectedBatchId} 
-        onBack={handleBackToBatchSelection}
+        batchId={selectedHouseId} 
+        onBack={handleBackToHouseSelection}
       />
     );
   }
@@ -43,11 +43,11 @@ const DataEntryPage = () => {
           </p>
         </div>
 
-        {/* Batch Management */}
+        {/* House Management */}
         <div className="space-y-6">
-          <BatchManager 
-            onBatchSelect={handleBatchSelect}
-            selectedBatch={selectedBatchId}
+          <HouseManager 
+            onHouseSelect={handleHouseSelect}
+            selectedHouse={selectedHouseId}
           />
         </div>
       </div>

@@ -8,7 +8,7 @@ import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
 import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import SystemFlowchart from "@/components/dashboard/SystemFlowchart";
 import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
-import { useBatchPerformanceMetrics } from "@/hooks/useBatchData";
+import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 
 const Index = () => {
   const { data: performanceMetrics } = useBatchPerformanceMetrics();

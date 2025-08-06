@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization, useOngoingBatchMetrics } from "@/hooks/useBatchData";
+import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization, useOngoingBatchMetrics } from "@/hooks/useHouseData";
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -18,7 +18,7 @@ const BatchOverviewDashboard = () => {
   }
 
   // Calculate key metrics - handle null values
-  const totalActiveBatches = activeBatches?.length || 0;
+  const totalActiveHouses = activeBatches?.length || 0;
   
   // Only calculate averages from batches with fertility data
   const fertilityData = performanceMetrics?.filter(batch => batch.fertility !== null) || [];
@@ -61,11 +61,11 @@ const BatchOverviewDashboard = () => {
             <TooltipTrigger asChild>
               <Card className="glass-card hover:scale-105 transition-transform duration-200 cursor-pointer">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Batches</CardTitle>
+                  <CardTitle className="text-sm font-medium">Active Houses</CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{totalActiveBatches}</div>
+                  <div className="text-2xl font-bold text-primary">{totalActiveHouses}</div>
                   <p className="text-xs text-muted-foreground">Currently in process</p>
                 </CardContent>
               </Card>
@@ -73,10 +73,10 @@ const BatchOverviewDashboard = () => {
             <TooltipContent asChild>
               <EnhancedTooltip 
                 chartType="batch-overview"
-                data={{ totalActiveBatches, activeBatches }}
-                title="Active Batches"
+                data={{ totalActiveHouses, activeBatches }}
+                title="Active Houses"
                 metrics={[
-                  { label: "Total Active", value: totalActiveBatches },
+                  { label: "Total Active", value: totalActiveHouses },
                   { label: "Status", value: "Currently processing" }
                 ]}
               />
@@ -153,49 +153,49 @@ const BatchOverviewDashboard = () => {
         </Card>
       </div>
 
-      {/* Active Batches Pipeline */}
+      {/* Active Houses Pipeline */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Active Batches Pipeline
+              Active Houses Pipeline
             </div>
             <ChartDownloadButton 
-              chartId="active-batches-pipeline" 
-              filename="active-batches-pipeline.png" 
+              chartId="active-houses-pipeline" 
+              filename="active-houses-pipeline.png" 
             />
           </CardTitle>
         </CardHeader>
-        <CardContent id="active-batches-pipeline">
+        <CardContent id="active-houses-pipeline">
           {activeBatches && activeBatches.length > 0 ? (
             <div className="space-y-4">
-              {activeBatches.map((batch) => (
-                <div key={batch.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card">
+              {activeBatches.map((house) => (
+                <div key={house.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card">
                   <div className="flex items-center gap-4">
                     <div>
-                      <div className="font-medium text-card-foreground">{batch.batch_number}</div>
+                      <div className="font-medium text-card-foreground">{house.batch_number}</div>
                       <div className="text-sm text-muted-foreground">
-                        {batch.flocks?.flock_name} (Flock {batch.flocks?.flock_number})
+                        {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
                       </div>
                     </div>
-                    <Badge className={getStatusColor(batch.status)}>
-                      {batch.status}
+                    <Badge className={getStatusColor(house.status)}>
+                      {house.status}
                     </Badge>
                   </div>
                   
                   <div className="text-right">
                     <div className="text-sm font-medium text-card-foreground">
-                      Day {getDaysFromSet(batch.set_date)} of 21
+                      Day {getDaysFromSet(house.set_date)} of 21
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {batch.machines?.machine_number} ({batch.machines?.machine_type})
+                      {house.machines?.machine_number} ({house.machines?.machine_type})
                     </div>
                   </div>
                   
                   <div className="w-32">
                     <Progress 
-                      value={(getDaysFromSet(batch.set_date) / 21) * 100} 
+                      value={(getDaysFromSet(house.set_date) / 21) * 100} 
                       className="h-2" 
                     />
                   </div>
@@ -204,7 +204,7 @@ const BatchOverviewDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No active batches found. Start a new batch from the Data Entry page.
+              No active houses found. Start a new house from the Data Entry page.
             </div>
           )}
         </CardContent>
