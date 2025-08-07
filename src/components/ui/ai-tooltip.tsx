@@ -45,7 +45,7 @@ export const AITooltip: React.FC<AITooltipProps> = ({
       <div className="border-t border-border pt-3" style={{ pointerEvents: 'auto' }}>
         <div className="flex items-center gap-2 mb-2">
           <Brain className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">AI Insight</span>
+          <span className="text-sm font-medium text-foreground">Insight</span>
         </div>
         
         {isLoading && (

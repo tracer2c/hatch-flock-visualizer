@@ -45,7 +45,7 @@ export const useChartInsights = (): UseChartInsightsReturn => {
       explanationCache.set(cacheKey, insight);
       setExplanation(insight);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get AI insight';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get insight';
       setError(errorMessage);
       console.error('Error getting chart insight:', err);
     } finally {
