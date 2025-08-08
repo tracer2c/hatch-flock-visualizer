@@ -41,13 +41,6 @@ const Navigation = () => {
       requiresAuth: true
     },
     {
-      path: '/report',
-      label: 'Project Report',
-      icon: FileText,
-      description: 'What changed (270h summary)',
-      requiresAuth: true
-    },
-    {
       path: '/management',
       label: 'Management',
       icon: Settings,
