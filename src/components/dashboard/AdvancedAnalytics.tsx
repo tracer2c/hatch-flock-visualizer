@@ -5,6 +5,7 @@ import HeatmapCalendar from "./HeatmapCalendar";
 import IncubationTimeline from "./IncubationTimeline";
 import BatchFlowSankey from "./BatchFlowSankey";
 import UnitWeeklyComparison from "./UnitWeeklyComparison";
+import PredictionsPanel from "./PredictionsPanel";
 
 const AdvancedAnalytics = () => {
   return (
@@ -59,14 +60,7 @@ const AdvancedAnalytics = () => {
         </TabsContent>
 
         <TabsContent value="predictions">
-          <div className="text-center py-12">
-            <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Predictive Analytics</h3>
-            <p className="text-sm text-muted-foreground">
-              Advanced prediction models coming soon. This will include hatch rate forecasting,
-              quality predictions, and optimal timing recommendations.
-            </p>
-          </div>
+          <PredictionsPanel />
         </TabsContent>
       </Tabs>
     </div>
