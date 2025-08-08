@@ -1,9 +1,10 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, TrendingUp, Target } from "lucide-react";
+import { Calendar, Clock, TrendingUp, Target, BarChart3 } from "lucide-react";
 import HeatmapCalendar from "./HeatmapCalendar";
 import IncubationTimeline from "./IncubationTimeline";
 import BatchFlowSankey from "./BatchFlowSankey";
+import UnitWeeklyComparison from "./UnitWeeklyComparison";
 
 const AdvancedAnalytics = () => {
   return (
@@ -18,7 +19,7 @@ const AdvancedAnalytics = () => {
       </div>
 
       <Tabs defaultValue="calendar" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Environmental Calendar
@@ -30,6 +31,10 @@ const AdvancedAnalytics = () => {
           <TabsTrigger value="flow" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             House Flow
+          </TabsTrigger>
+          <TabsTrigger value="unit-weekly" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Unit Weekly Comparison
           </TabsTrigger>
           <TabsTrigger value="predictions" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
@@ -47,6 +52,10 @@ const AdvancedAnalytics = () => {
 
         <TabsContent value="flow">
           <BatchFlowSankey />
+        </TabsContent>
+
+        <TabsContent value="unit-weekly">
+          <UnitWeeklyComparison />
         </TabsContent>
 
         <TabsContent value="predictions">
