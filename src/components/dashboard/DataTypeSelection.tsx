@@ -172,7 +172,7 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-900">
-                House: {houseInfo.batch_number}
+                {houseInfo.flock_name} #{houseInfo.house_number}
               </h1>
               <Badge className={getStatusColor(houseInfo.status)}>
                 {houseInfo.status}

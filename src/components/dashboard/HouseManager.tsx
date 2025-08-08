@@ -31,6 +31,7 @@ interface House {
   batch_number: string;
   flock_name: string;
   flock_number: number;
+  house_number: string;
   machine_number: string;
   set_date: string;
   expected_hatch_date: string;
@@ -102,7 +103,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       .from('batches')
       .select(`
         *,
-        flocks(flock_name, flock_number),
+        flocks(flock_name, flock_number, house_number),
         machines(machine_number)
       `)
       .order('set_date', { ascending: false });
@@ -119,6 +120,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         batch_number: batch.batch_number,
         flock_name: batch.flocks?.flock_name || '',
         flock_number: batch.flocks?.flock_number || 0,
+        house_number: batch.flocks?.house_number || '',
         machine_number: batch.machines?.machine_number || '',
         set_date: batch.set_date,
         expected_hatch_date: batch.expected_hatch_date,
@@ -300,7 +302,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                 onClick={() => onHouseSelect(house.id)}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{house.batch_number}</h3>
+                  <h3 className="font-medium">{house.flock_name} #{house.house_number}</h3>
                   <Badge className={getStatusColor(house.status)}>
                     {house.status}
                   </Badge>
