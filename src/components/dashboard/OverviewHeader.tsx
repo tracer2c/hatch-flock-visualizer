@@ -14,9 +14,10 @@ interface OverviewHeaderProps {
   onExport?: () => void;
   onStatusChange?: (status: string) => void;
   onMachineChange?: (machineId: string | "all") => void;
+  onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
-export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefresh, onExport, onStatusChange, onMachineChange }) => {
+export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefresh, onExport, onStatusChange, onMachineChange, onDateRangeChange }) => {
   const { toast } = useToast();
   const [dateRange, setDateRange] = React.useState<{ from?: Date; to?: Date }>({});
   const [status, setStatus] = React.useState<string>("all");
@@ -54,7 +55,11 @@ export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefr
               <Calendar
                 mode="range"
                 selected={dateRange as any}
-                onSelect={(range: any) => setDateRange(range)}
+                onSelect={(range: any) => {
+                  setDateRange(range);
+                  // notify parent
+                  (onDateRangeChange as any)?.(range);
+                }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />

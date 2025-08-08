@@ -11,6 +11,7 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { OverviewHeader } from "./OverviewHeader";
+import { useChartDownload } from "@/hooks/useChartDownload";
 
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
@@ -20,23 +21,64 @@ const BatchOverviewDashboard: React.FC = () => {
 
   const isLoading = activeBatchesLoading || performanceLoading || alertsLoading || machineLoading;
 
-  // Calculate key metrics - handle null values
-  const totalActiveHouses = activeBatches?.length || 0;
+  const { downloadChart } = useChartDownload();
 
-  // Only calculate averages from batches with fertility data
-  const fertilityData = performanceMetrics?.filter((batch) => batch.fertility !== null) || [];
+  // Filters state
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [machineFilter, setMachineFilter] = React.useState<string>("all");
+  const [dateRange, setDateRange] = React.useState<{ from?: Date; to?: Date }>({});
+
+  // Derived machines list for header
+  const machinesList = React.useMemo(
+    () => machineUtil?.map((m) => ({ id: String(m.id), name: m.machine_number })) ?? [],
+    [machineUtil]
+  );
+
+  // Helper to check date within range
+  const isWithinRange = (dateStr: string) => {
+    if (!dateStr) return true;
+    const d = new Date(dateStr);
+    const fromOk = dateRange.from ? d >= new Date(dateRange.from.setHours(0, 0, 0, 0)) : true;
+    const toOk = dateRange.to ? d <= new Date(dateRange.to.setHours(23, 59, 59, 999)) : true;
+    return fromOk && toOk;
+  };
+
+  // Apply filters to active batches
+  const filteredActiveBatches = React.useMemo(() => {
+    const list = activeBatches ?? [];
+    return list.filter((b: any) => {
+      const statusOk = statusFilter === "all" ? true : b.status === statusFilter;
+      const machineId = String(b.machine_id ?? b.machines?.id ?? "");
+      const machineOk = machineFilter === "all" ? true : machineId === machineFilter;
+      const dateOk = isWithinRange(b.set_date);
+      return statusOk && machineOk && dateOk;
+    });
+  }, [activeBatches, statusFilter, machineFilter, dateRange]);
+
+  // Optionally filter machines view when a specific machine is selected
+  const filteredMachineUtil = React.useMemo(() => {
+    if (!machineUtil) return [] as any[];
+    return machineFilter === "all"
+      ? machineUtil
+      : machineUtil.filter((m: any) => String(m.id) === machineFilter);
+  }, [machineUtil, machineFilter]);
+
+  // Calculate key metrics - handle null values
+  const totalActiveHouses = filteredActiveBatches.length;
+
+  const fertilityData = (performanceMetrics?.filter((b: any) => b?.fertility !== null && b?.fertility !== undefined) || []) as any[];
   const avgFertility = fertilityData.length > 0
-    ? fertilityData.reduce((sum, batch) => sum + batch.fertility, 0) / fertilityData.length
+    ? fertilityData.reduce((sum: number, b: any) => sum + b.fertility, 0) / fertilityData.length
     : 0;
 
-  const hatchData = performanceMetrics?.filter((batch) => batch.hatch !== null) || [];
+  const hatchData = (performanceMetrics?.filter((b: any) => b?.hatch !== null && b?.hatch !== undefined) || []) as any[];
   const avgHatch = hatchData.length > 0
-    ? hatchData.reduce((sum, batch) => sum + batch.hatch, 0) / hatchData.length
+    ? hatchData.reduce((sum: number, b: any) => sum + b.hatch, 0) / hatchData.length
     : 0;
 
   const totalAlerts = qaAlerts?.length || 0;
-  const avgMachineUtil = machineUtil?.length
-    ? machineUtil.reduce((sum, machine) => sum + machine.utilization, 0) / machineUtil.length
+  const avgMachineUtil = filteredMachineUtil?.length
+    ? filteredMachineUtil.reduce((sum: number, m: any) => sum + m.utilization, 0) / filteredMachineUtil.length
     : 0;
 
   const getStatusColor = (status: string) => {
@@ -115,83 +157,97 @@ const BatchOverviewDashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Sticky overview header */}
       <OverviewHeader
-        machines={machineUtil?.map((m) => ({ id: String(m.id), name: m.machine_number }))}
+        machines={machinesList}
+        onStatusChange={setStatusFilter}
+        onMachineChange={(m) => setMachineFilter(m)}
+        onDateRangeChange={(range) => setDateRange(range)}
+        onExport={() => {
+          const toDownload = [
+            { id: "overview-kpis", filename: "overview-kpis.png" },
+            { id: "active-houses-pipeline", filename: "active-houses-pipeline.png" },
+            { id: "machine-utilization-status", filename: "machine-utilization-status.png" },
+          ];
+          (async () => {
+            for (const item of toDownload) {
+              await downloadChart(item.id, item.filename);
+            }
+          })();
+        }}
       />
 
       <div className="grid grid-cols-12 gap-6">
         {/* Main content */}
         <section className="col-span-12 lg:col-span-8 space-y-6">
-          {/* Key Performance Indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <StatCard
-                      title="Active Houses"
-                      value={totalActiveHouses}
-                      icon={<Activity className="h-4 w-4 text-muted-foreground" />}
-                      trendLabel="Currently in process"
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent asChild>
-                  <EnhancedTooltip
-                    chartType="batch-overview"
-                    data={{ totalActiveHouses, activeBatches }}
+        {/* Key Performance Indicators */}
+        <div id="overview-kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <StatCard
                     title="Active Houses"
-                    metrics={[
-                      { label: "Total Active", value: totalActiveHouses },
-                      { label: "Status", value: "Currently processing" },
-                    ]}
+                    value={totalActiveHouses}
+                    icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+                    trendLabel="Currently in process"
                   />
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent asChild>
+                <EnhancedTooltip
+                  chartType="batch-overview"
+                  data={{ totalActiveHouses, activeBatches: filteredActiveBatches }}
+                  title="Active Houses"
+                  metrics={[
+                    { label: "Total Active", value: totalActiveHouses },
+                    { label: "Status", value: "Currently processing" },
+                  ]}
+                />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <StatCard
-                      title="Avg Fertility"
-                      value={`${avgFertility.toFixed(1)}%`}
-                      icon={<Package className="h-4 w-4 text-muted-foreground" />}
-                      trendDirection={avgFertility > 85 ? "up" : "down"}
-                      trendLabel={avgFertility > 85 ? "Above target" : "Below target"}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent asChild>
-                  <EnhancedTooltip
-                    chartType="batch-overview"
-                    data={{ avgFertility, fertilityData, target: 85 }}
-                    title="Average Fertility"
-                    metrics={[
-                      { label: "Current Average", value: `${avgFertility.toFixed(1)}%` },
-                      { label: "Target", value: "85%" },
-                      { label: "Sample Size", value: `${fertilityData.length} batches` },
-                    ]}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <StatCard
+                    title="Avg Fertility"
+                    value={`${avgFertility.toFixed(1)}%`}
+                    icon={<Package className="h-4 w-4 text-muted-foreground" />}
+                    trendDirection={avgFertility > 85 ? "up" : "down"}
+                    trendLabel={avgFertility > 85 ? "Above target" : "Below target"}
                   />
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent asChild>
+                <EnhancedTooltip
+                  chartType="batch-overview"
+                  data={{ avgFertility, target: 85 }}
+                  title="Average Fertility"
+                  metrics={[
+                    { label: "Current Average", value: `${avgFertility.toFixed(1)}%` },
+                    { label: "Target", value: "85%" },
+                  ]}
+                />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-            <StatCard
-              title="Avg Hatch Rate"
-              value={`${avgHatch.toFixed(1)}%`}
-              icon={<Package className="h-4 w-4 text-muted-foreground" />}
-              trendDirection={avgHatch > 80 ? "up" : "down"}
-              trendLabel={avgHatch > 80 ? "Above target" : "Below target"}
-            />
+          <StatCard
+            title="Avg Hatch Rate"
+            value={`${avgHatch.toFixed(1)}%`}
+            icon={<Package className="h-4 w-4 text-muted-foreground" />}
+            trendDirection={avgHatch > 80 ? "up" : "down"}
+            trendLabel={avgHatch > 80 ? "Above target" : "Below target"}
+          />
 
-            <StatCard
-              title="Machine Utilization"
-              value={`${avgMachineUtil.toFixed(0)}%`}
-              icon={<Thermometer className="h-4 w-4 text-muted-foreground" />}
-              trendLabel="Average usage"
-            />
-          </div>
+          <StatCard
+            title="Machine Utilization"
+            value={`${avgMachineUtil.toFixed(0)}%`}
+            icon={<Thermometer className="h-4 w-4 text-muted-foreground" />}
+            trendLabel="Average usage"
+          />
+        </div>
 
           {/* Active Houses Pipeline */}
           <Card>
@@ -205,9 +261,9 @@ const BatchOverviewDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent id="active-houses-pipeline">
-              {activeBatches && activeBatches.length > 0 ? (
+              {filteredActiveBatches && filteredActiveBatches.length > 0 ? (
                 <div className="space-y-4">
-                  {activeBatches.map((house) => (
+                  {filteredActiveBatches.map((house) => (
                     <div key={house.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card">
                       <div className="flex items-center gap-4">
                         <div>
@@ -277,7 +333,7 @@ const BatchOverviewDashboard: React.FC = () => {
             </CardHeader>
             <CardContent id="machine-utilization-status">
               <div className="grid grid-cols-1 gap-4">
-                {machineUtil?.map((machine) => (
+                {filteredMachineUtil?.map((machine) => (
                   <div key={machine.id} className="p-4 border border-border rounded-lg bg-card">
                     <div className="flex items-center justify-between mb-3">
                       <div className="font-medium text-card-foreground">{machine.machine_number}</div>
