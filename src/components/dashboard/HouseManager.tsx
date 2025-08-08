@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package2, Factory, Calendar, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -57,6 +59,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [houses, setHouses] = useState<House[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     flockId: '',
@@ -160,7 +163,11 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setUnits(data || []);
   };
 
-  const calculateHatchDate = (setDate: string) => {
+const toggleFilterUnit = (id: string, checked: boolean) => {
+  setSelectedUnitIds((prev) => (checked ? Array.from(new Set([...prev, id])) : prev.filter((u) => u !== id)));
+};
+
+const calculateHatchDate = (setDate: string) => {
     const date = new Date(setDate);
     date.setDate(date.getDate() + 21); // 21 days incubation period
     return date.toISOString().split('T')[0];
@@ -239,6 +246,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     }
   };
 
+  const filteredHouses = selectedUnitIds.length ? houses.filter((h) => h.unit_id && selectedUnitIds.includes(h.unit_id)) : houses;
+
   return (
     <div className="space-y-6">
       {/* Create New House */}
@@ -249,12 +258,41 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
               <Plus className="h-5 w-5" />
               House Management
             </span>
-            <Button 
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              variant={showCreateForm ? "outline" : "default"}
-            >
-              {showCreateForm ? "Cancel" : "New House"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    {`Filter Units${selectedUnitIds.length ? ` (${selectedUnitIds.length})` : ''}`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Show units</div>
+                    <div className="max-h-48 overflow-auto space-y-2">
+                      {units.map((u) => (
+                        <label key={u.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedUnitIds.includes(u.id)}
+                            onCheckedChange={(c) => toggleFilterUnit(u.id, Boolean(c))}
+                          />
+                          <span className="text-sm">{u.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedUnitIds([])}>Clear</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedUnitIds(units.map(u => u.id))}>All</Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button 
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                variant={showCreateForm ? "outline" : "default"}
+              >
+                {showCreateForm ? "Cancel" : "New House"}
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         {showCreateForm && (
@@ -338,7 +376,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {houses.map((house) => (
+            {filteredHouses.map((house) => (
               <div
                 key={house.id}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
@@ -364,6 +402,10 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     Set: {new Date(house.set_date).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {units.find(u => u.id === house.unit_id)?.name || 'Unassigned'}
                   </div>
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
