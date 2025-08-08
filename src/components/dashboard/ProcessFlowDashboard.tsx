@@ -36,9 +36,10 @@ const ProcessFlowDashboard = () => {
   // Data flow analysis - use meaningful data
   const flowData = meaningfulBatches.map(batch => ({
     batch: batch.batchNumber,
-    eggQuality: batch.qualityScore || 0,
-    fertility: batch.fertility || 0,
-    hatch: batch.hatch || 0,
+    hof: typeof batch.hof === 'number' ? batch.hof : 0,
+    hoi: typeof batch.hoi === 'number' ? batch.hoi : 0,
+    fertility: typeof batch.fertility === 'number' ? batch.fertility : 0,
+    hatch: typeof batch.hatch === 'number' ? batch.hatch : 0,
     flockAge: batch.age,
     status: batch.status,
     daysSinceSet: batch.daysSinceSet
@@ -78,37 +79,51 @@ const ProcessFlowDashboard = () => {
   // Process efficiency by breed - handle null values
   const breedData = meaningfulBatches.reduce((acc: any[], batch) => {
     const existing = acc.find(item => item.breed === batch.breed);
-    if (existing) {
-      if (batch.fertility) {
-        existing.fertility = existing.fertilityCount > 0 
-          ? (existing.fertility * existing.fertilityCount + batch.fertility) / (existing.fertilityCount + 1)
+
+    const applyUpdate = (item: any) => {
+      if (typeof batch.fertility === 'number') {
+        item.fertility = item.fertilityCount > 0
+          ? (item.fertility * item.fertilityCount + batch.fertility) / (item.fertilityCount + 1)
           : batch.fertility;
-        existing.fertilityCount += 1;
+        item.fertilityCount += 1;
       }
-      if (batch.hatch) {
-        existing.hatch = existing.hatchCount > 0 
-          ? (existing.hatch * existing.hatchCount + batch.hatch) / (existing.hatchCount + 1)
+      if (typeof batch.hatch === 'number') {
+        item.hatch = item.hatchCount > 0
+          ? (item.hatch * item.hatchCount + batch.hatch) / (item.hatchCount + 1)
           : batch.hatch;
-        existing.hatchCount += 1;
+        item.hatchCount += 1;
       }
-      if (batch.qualityScore) {
-        existing.quality = existing.qualityCount > 0 
-          ? (existing.quality * existing.qualityCount + batch.qualityScore) / (existing.qualityCount + 1)
-          : batch.qualityScore;
-        existing.qualityCount += 1;
+      if (typeof batch.hof === 'number') {
+        item.hof = item.hofCount > 0
+          ? (item.hof * item.hofCount + batch.hof) / (item.hofCount + 1)
+          : batch.hof;
+        item.hofCount += 1;
       }
-      existing.count += 1;
+      if (typeof batch.hoi === 'number') {
+        item.hoi = item.hoiCount > 0
+          ? (item.hoi * item.hoiCount + batch.hoi) / (item.hoiCount + 1)
+          : batch.hoi;
+        item.hoiCount += 1;
+      }
+      item.count += 1;
+    };
+
+    if (existing) {
+      applyUpdate(existing);
     } else {
-      acc.push({
+      const item = {
         breed: batch.breed,
-        fertility: batch.fertility || 0,
-        hatch: batch.hatch || 0,
-        quality: batch.qualityScore || 0,
-        fertilityCount: batch.fertility ? 1 : 0,
-        hatchCount: batch.hatch ? 1 : 0,
-        qualityCount: batch.qualityScore ? 1 : 0,
+        fertility: typeof batch.fertility === 'number' ? batch.fertility : 0,
+        hatch: typeof batch.hatch === 'number' ? batch.hatch : 0,
+        hof: typeof batch.hof === 'number' ? batch.hof : 0,
+        hoi: typeof batch.hoi === 'number' ? batch.hoi : 0,
+        fertilityCount: typeof batch.fertility === 'number' ? 1 : 0,
+        hatchCount: typeof batch.hatch === 'number' ? 1 : 0,
+        hofCount: typeof batch.hof === 'number' ? 1 : 0,
+        hoiCount: typeof batch.hoi === 'number' ? 1 : 0,
         count: 1
-      });
+      } as any;
+      acc.push(item);
     }
     return acc;
   }, []);
@@ -129,7 +144,7 @@ const ProcessFlowDashboard = () => {
             />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Tracking data flow from egg quality through to final hatch performance
+            Tracking HOF and HOI alongside fertility and hatch performance
           </p>
         </CardHeader>
         <CardContent id="process-flow-chart">
@@ -170,9 +185,10 @@ const ProcessFlowDashboard = () => {
                   return null;
                 }}
               />
-              <Area type="monotone" dataKey="eggQuality" stackId="1" stroke="hsl(220 70% 50%)" fill="hsl(220 70% 50%)" fillOpacity={0.6} name="Egg Quality %" />
-              <Area type="monotone" dataKey="fertility" stackId="2" stroke="hsl(142 76% 36%)" fill="hsl(142 76% 36%)" fillOpacity={0.6} name="Fertility %" />
-              <Area type="monotone" dataKey="hatch" stackId="3" stroke="hsl(48 96% 53%)" fill="hsl(48 96% 53%)" fillOpacity={0.6} name="Hatch %" />
+              <Area type="monotone" dataKey="hof" stackId="1" stroke="hsl(220 70% 50%)" fill="hsl(220 70% 50%)" fillOpacity={0.6} name="HOF %" />
+              <Area type="monotone" dataKey="hoi" stackId="2" stroke="hsl(280 70% 50%)" fill="hsl(280 70% 50%)" fillOpacity={0.6} name="HOI %" />
+              <Area type="monotone" dataKey="fertility" stackId="3" stroke="hsl(142 76% 36%)" fill="hsl(142 76% 36%)" fillOpacity={0.6} name="Fertility %" />
+              <Area type="monotone" dataKey="hatch" stackId="4" stroke="hsl(48 96% 53%)" fill="hsl(48 96% 53%)" fillOpacity={0.6} name="Hatch %" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -278,7 +294,8 @@ const ProcessFlowDashboard = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="quality" fill="hsl(220 70% 50%)" name="Egg Quality %" />
+              <Bar dataKey="hof" fill="hsl(220 70% 50%)" name="HOF %" />
+              <Bar dataKey="hoi" fill="hsl(280 70% 50%)" name="HOI %" />
               <Bar dataKey="fertility" fill="hsl(142 76% 36%)" name="Fertility %" />
               <Bar dataKey="hatch" fill="hsl(48 96% 53%)" name="Hatch %" />
             </BarChart>

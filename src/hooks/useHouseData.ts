@@ -74,6 +74,7 @@ export const useBatchPerformanceMetrics = () => {
             fertility_percent,
             hatch_percent,
             hof_percent,
+            hoi_percent,
             early_dead,
             late_dead,
             sample_size
@@ -124,6 +125,7 @@ export const useBatchPerformanceMetrics = () => {
           fertility: fertility?.fertility_percent || null,
           hatch: fertility?.hatch_percent || null,
           hof: fertility?.hof_percent || null,
+          hoi: fertility?.hoi_percent || null,
           earlyDead: fertility ? ((fertility.early_dead || 0) / (fertility.sample_size || 1)) * 100 : null,
           qualityScore,
           totalEggs: batch.total_eggs_set,
