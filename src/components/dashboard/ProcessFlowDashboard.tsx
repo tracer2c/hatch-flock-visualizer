@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ScatterChart, Scatter } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AITooltip } from "@/components/ui/ai-tooltip";
@@ -44,34 +44,6 @@ const ProcessFlowDashboard = () => {
     daysSinceSet: batch.daysSinceSet
   }));
 
-  // Correlation analysis - only include batches with meaningful quality scores (>10%) AND fertility data
-  const correlationData = meaningfulBatches
-    .filter(batch => 
-      batch.qualityScore !== null && 
-      batch.qualityScore > 10 && 
-      batch.fertility !== null && 
-      batch.fertility > 0
-    )
-    .map(batch => ({
-      x: batch.qualityScore,
-      y: batch.fertility,
-      name: batch.batchNumber,
-      flockAge: batch.age
-    }));
-
-  // Static demonstration data showing ideal correlation patterns
-  const staticCorrelationData = [
-    { x: 85, y: 88, name: "Demo Batch A", flockAge: 28, isStatic: true },
-    { x: 92, y: 85, name: "Demo Batch B", flockAge: 32, isStatic: true },
-    { x: 78, y: 82, name: "Demo Batch C", flockAge: 26, isStatic: true },
-    { x: 88, y: 90, name: "Demo Batch D", flockAge: 30, isStatic: true },
-    { x: 82, y: 87, name: "Demo Batch E", flockAge: 29, isStatic: true },
-    { x: 95, y: 92, name: "Demo Batch F", flockAge: 31, isStatic: true }
-  ];
-
-  // Show static data when we don't have meaningful correlation data
-  const hasRealCorrelationData = correlationData.length >= 3;
-  const displayCorrelationData = hasRealCorrelationData ? correlationData : staticCorrelationData;
 
   // Age vs Performance - handle null values properly
   const agePerformanceData = meaningfulBatches.reduce((acc: any[], batch) => {
@@ -206,134 +178,57 @@ const ProcessFlowDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Quality vs Fertility Correlation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div>Egg Quality vs Fertility Correlation</div>
-              <ChartDownloadButton 
-                chartId="correlation-chart" 
-                filename="egg-quality-fertility-correlation.png" 
-              />
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Relationship between pre-incubation quality and fertility rates
-            </p>
-          </CardHeader>
-          <CardContent id="correlation-chart">
-            {!hasRealCorrelationData && (
-              <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-dashed border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-700 dark:text-blue-300 text-center font-medium">
-                  📊 Sample data shown - Real correlation analysis will appear with quality data {'>'}10% and fertility data
-                </p>
-              </div>
-            )}
-            <ResponsiveContainer width="100%" height={300}>
-              <ScatterChart data={displayCorrelationData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="x" name="Egg Quality" unit="%" stroke="hsl(var(--muted-foreground))" />
-                <YAxis dataKey="y" name="Fertility" unit="%" stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  cursor={{ strokeDasharray: '3 3' }}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0]?.payload;
-                      return (
-                        <AITooltip 
-                          chartType="correlation" 
-                          data={data} 
-                          chartConfig={{ type: 'scatter' }}
-                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                        >
-                          <div>
-                            <p className="font-medium mb-2">
-                              {data?.name}
-                              {data?.isStatic && <span className="text-xs text-muted-foreground ml-2">(Sample)</span>}
-                            </p>
-                            <div className="space-y-1">
-                              <div className="flex justify-between">
-                                <span>Egg Quality:</span>
-                                <span className="font-medium">{data?.x}%</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Fertility:</span>
-                                <span className="font-medium">{data?.y}%</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Flock Age:</span>
-                                <span className="font-medium">{data?.flockAge}w</span>
-                              </div>
+      {/* Performance by Flock Age */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div>Performance by Flock Age</div>
+            <ChartDownloadButton 
+              chartId="age-performance-chart" 
+              filename="performance-by-flock-age.png" 
+            />
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            How flock age affects fertility and hatch rates
+          </p>
+        </CardHeader>
+        <CardContent id="age-performance-chart">
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={agePerformanceData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="age" name="Age" unit=" weeks" stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <AITooltip 
+                        chartType="age-performance" 
+                        data={{ age: label, metrics: payload }} 
+                        chartConfig={{ type: 'line' }}
+                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                      >
+                        <div>
+                          <p className="font-medium mb-2">Age: {label} weeks</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span style={{ color: entry.color }}>{entry.name}: </span>
+                              <span className="font-medium">{entry.value}%</span>
                             </div>
-                          </div>
-                        </AITooltip>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Scatter 
-                  name="Batches" 
-                  dataKey="y" 
-                  fill={hasRealCorrelationData ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
-                  opacity={hasRealCorrelationData ? 1 : 0.7}
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div>Performance by Flock Age</div>
-              <ChartDownloadButton 
-                chartId="age-performance-chart" 
-                filename="performance-by-flock-age.png" 
+                          ))}
+                        </div>
+                      </AITooltip>
+                    );
+                  }
+                  return null;
+                }}
               />
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              How flock age affects fertility and hatch rates
-            </p>
-          </CardHeader>
-          <CardContent id="age-performance-chart">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={agePerformanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="age" name="Age" unit=" weeks" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <AITooltip 
-                          chartType="age-performance" 
-                          data={{ age: label, metrics: payload }} 
-                          chartConfig={{ type: 'line' }}
-                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                        >
-                          <div>
-                            <p className="font-medium mb-2">Age: {label} weeks</p>
-                            {payload.map((entry, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <span style={{ color: entry.color }}>{entry.name}: </span>
-                                <span className="font-medium">{entry.value}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        </AITooltip>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
-                <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+              <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
+              <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Breed Performance Comparison */}
       <Card>
