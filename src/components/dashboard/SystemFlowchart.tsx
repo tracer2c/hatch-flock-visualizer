@@ -76,8 +76,8 @@ flowchart TD
     
     %% Advanced Analytics Data Flows
     BatchFlowSankey --> ActiveBatchData[📦 Active Batch Integration]
-    PredictionsPanel --> PredictEdge[⚡ predict-metrics (Edge Function)]
-    AIInsights --> ChartEdge[⚡ chart-insights (Edge Function)]
+    PredictionsPanel --> PredictEdge[⚡ predict-metrics Edge Function]
+    AIInsights --> ChartEdge[⚡ chart-insights Edge Function]
     EnvironmentalCalendar --> QAMonitoringData[🌡️ QA Monitoring Data]
     IncubationTimeline --> RealTimeTracking[⏱️ Real-time Batch Tracking]
     
@@ -128,7 +128,7 @@ flowchart TD
     Reports --> ProjectReport[📕 Project Report Screen]
     
     %% Milestones Timeline
-    subgraph Milestones 🗓️
+    subgraph Milestones
       M1[Setup & Auth • Weeks 1-2]
       M2[Data Models & Entry • Weeks 3-5]
       M3[Dashboards & Flow • Weeks 6-9]

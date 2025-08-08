@@ -9,10 +9,9 @@ const ProjectReport = () => {
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // SEO: title, description, canonical
-    document.title = "Hatchery Project Report – 270 Hours"; // < 60 chars
-    const desc =
-      "Detailed 270-hour progress: UI updates, analytics, HOI/HOF, alerts, AI, exports."; // < 160 chars
+    // SEO: title, description, canonical, structured data
+    document.title = "Hatchery Weekly Report Jun 9–Aug 5"; // < 60 chars
+    const desc = "Weekly progress report (June 9–August 5): features, updates, UI/UX, analytics, AI, exports."; // < 160 chars
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement("meta");
@@ -27,6 +26,21 @@ const ProjectReport = () => {
       document.head.appendChild(canonical);
     }
     canonical.setAttribute("href", window.location.href);
+
+    // Structured data (Article)
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: "Hatchery Weekly Report (June 9–August 5)",
+      datePublished: "2025-06-09",
+      dateModified: "2025-08-05",
+      author: { "@type": "Organization", name: "Hatchery Project" },
+      url: window.location.href,
+    } as const;
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.text = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
   }, []);
 
   const downloadPDF = async () => {
@@ -42,15 +56,14 @@ const ProjectReport = () => {
     const imgWidth = pageWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    let heightLeft = imgHeight;
+    let heightLeft = imgHeight - pageHeight;
     let position = 0;
 
     pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
-    heightLeft -= pageHeight;
 
     while (heightLeft > 0) {
       pdf.addPage();
-      position = -imgHeight + (pdf.internal.pageSize.getHeight() * (Math.ceil(imgHeight / pageHeight) - (heightLeft / pageHeight)));
+      position -= pageHeight;
       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
     }
@@ -62,8 +75,8 @@ const ProjectReport = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
       <div className="max-w-7xl mx-auto">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Hatchery Project Report (270 Hours)</h1>
-          <p className="text-muted-foreground">Comprehensive summary of features, UI changes, analytics, and deliverables</p>
+          <h1 className="text-3xl font-bold text-foreground">Hatchery Weekly Project Report (June 9 – August 5)</h1>
+          <p className="text-muted-foreground">Precise weekly breakdown of features, updates, UI/UX, analytics, and deliverables</p>
         </header>
 
         <Navigation />
@@ -159,6 +172,88 @@ const ProjectReport = () => {
                   <li>Weeks 19-22: Alerts and export tooling.</li>
                   <li>Weeks 23-27: Theming, color palette, UX polish, QA.</li>
                 </ol>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Progress (June 9 – August 5)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-sm text-muted-foreground">
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of June 9–15</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Hardened project setup, baseline SEO, and navigation skeleton with auth route wiring.</li>
+                      <li>Scaffolded Data Entry pages for QA, Residue, Fertility, and Egg Pack flows.</li>
+                      <li>Established HSL design tokens and semantic color usage across UI.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of June 16–22</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Built Overview Dashboard structure with initial KPIs and alert placeholders.</li>
+                      <li>Implemented role-aware Navigation items and improved active link styling.</li>
+                      <li>Set up Supabase wiring for future alerts and real-time sync.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of June 23–29</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Process Flow dashboards updated to HOI/HOF focus with age/breed hooks.</li>
+                      <li>Introduced colorful, accessible chart palettes aligned with theme tokens.</li>
+                      <li>Added comparison views groundwork for weekly and unit-based analysis.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of June 30–July 6</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Performance Charts and Comparison Analysis tabs expanded with radar/bar charts.</li>
+                      <li>Refined typography, spacing, and responsive behavior across pages.</li>
+                      <li>Initial report page created with multi-section Cards and PDF export hook exploration.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of July 7–13</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Advanced Analytics hub scaffolded: Heatmap Calendar, Incubation Timeline, Sankey, Weekly Comparison.</li>
+                      <li>Wired toast notifications and improved feedback on long-running actions.</li>
+                      <li>Stabilized table and tabs components for consistent UX.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of July 14–20</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Implemented Predictions Panel using predict-metrics Edge Function (OpenAI-backed).</li>
+                      <li>Created AI Chart Insights via chart-insights Edge Function to explain trends.</li>
+                      <li>Added System Flowchart with zoom, pan, and image export.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of July 21–27</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Alert Center connected to Supabase checks for temperature, humidity, and schedules.</li>
+                      <li>Improved Advanced Analytics layouts and integrated multi-unit metrics.</li>
+                      <li>Introduced one-click chart download via useChartDownload hook.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">Week of July 28–August 3</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Report page refined with structured sections and improved SEO metadata.</li>
+                      <li>Stabilized PDF export parameters for consistent multi-page output.</li>
+                      <li>Updated flowchart content to reflect new analytics and automation.</li>
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="font-semibold text-foreground">August 4–5</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Final content pass: weekly breakdown, deliverables, and demo script.</li>
+                      <li>Label sanitization in System Flow to prevent Mermaid parsing errors.</li>
+                      <li>Accessibility checks and polishing of navigation/contrast.</li>
+                    </ul>
+                  </section>
+                </div>
               </CardContent>
             </Card>
 
