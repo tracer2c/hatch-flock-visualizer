@@ -26,7 +26,7 @@ flowchart TD
     
     %% Data Entry Flow
     Tab1 --> DataEntry[📝 Data Entry Navigation]
-    DataEntry --> EggQuality[🥚 Egg Pack Quality Entry]
+    DataEntry --> HOFHOI[🥚 HOF / HOI Entry]
     DataEntry --> Fertility[🐣 Fertility Analysis Entry]
     DataEntry --> QA[🔍 QA Monitoring Entry]
     DataEntry --> Residue[🧪 Residue Analysis Entry]
@@ -44,9 +44,10 @@ flowchart TD
     Management --> MachineMgmt[🏭 Machine Management]
     Management --> DataCleanup[🧹 Data Cleanup]
     
-    %% Process Flow Analysis
+    %% Process Flow Analysis (Updated with HOI/HOF)
     Tab2 --> FlowAnalysis[🔄 Process Flow Analysis]
-    FlowAnalysis --> CorrelationCharts[📊 Quality vs Fertility Correlation]
+    FlowAnalysis --> HOICharts[📈 HOI Analysis]
+    FlowAnalysis --> HOFCharts[📈 HOF Analysis]
     FlowAnalysis --> AgePerformance[📈 Performance by Flock Age]
     FlowAnalysis --> BreedComparison[🐔 Performance by Breed]
     FlowAnalysis --> ProcessMetrics[📊 Complete Process Metrics]
@@ -56,23 +57,27 @@ flowchart TD
     PerformanceCharts --> TrendAnalysis[📈 Trend Analysis]
     PerformanceCharts --> KPIMetrics[🎯 KPI Metrics]
     PerformanceCharts --> HistoricalData[📅 Historical Performance]
+    PerformanceCharts --> MultiUnit[🏢 Multi-Unit Aggregation]
     
-    %% Comparison & Analysis
+    %% Comparison & Analysis (Colorful)
     Tab4 --> ComparisonAnalysis[📈 Comparison Analysis]
     ComparisonAnalysis --> BatchComparison[📦 Batch-to-Batch Comparison]
     ComparisonAnalysis --> BenchmarkAnalysis[🎯 Benchmark Analysis]
     ComparisonAnalysis --> TrendPrediction[🔮 Trend Prediction]
+    ComparisonAnalysis --> ColorPalette[🎨 Themed Chart Palette]
     
     %% Advanced Analytics
     Tab5 --> AdvancedAnalytics[🧠 Advanced Analytics Hub]
     AdvancedAnalytics --> EnvironmentalCalendar[📅 Environmental Calendar]
     AdvancedAnalytics --> IncubationTimeline[⏰ Incubation Timeline]
     AdvancedAnalytics --> BatchFlowSankey[📊 Batch Flow Analysis]
-    AdvancedAnalytics --> PredictiveAnalytics[🔮 Predictive Analytics]
+    AdvancedAnalytics --> PredictionsPanel[🔮 Predictions Panel]
+    AdvancedAnalytics --> AIInsights[🤖 AI Chart Insights]
     
     %% Advanced Analytics Data Flows
     BatchFlowSankey --> ActiveBatchData[📦 Active Batch Integration]
-    BatchFlowSankey --> ProjectedMetrics[📈 Projected Metrics]
+    PredictionsPanel --> PredictEdge[⚡ predict-metrics (Edge Function)]
+    AIInsights --> ChartEdge[⚡ chart-insights (Edge Function)]
     EnvironmentalCalendar --> QAMonitoringData[🌡️ QA Monitoring Data]
     IncubationTimeline --> RealTimeTracking[⏱️ Real-time Batch Tracking]
     
@@ -85,7 +90,7 @@ flowchart TD
     
     %% Data Processing Engine
     DataEngine[(🔄 Data Processing Engine)]
-    EggQuality --> DataEngine
+    HOFHOI --> DataEngine
     Fertility --> DataEngine
     QA --> DataEngine
     Residue --> DataEngine
@@ -98,7 +103,7 @@ flowchart TD
     %% Advanced Analytics Engine
     DataEngine --> AdvancedEngine[🧠 Advanced Analytics Engine]
     AdvancedEngine --> Tab5
-    AdvancedEngine --> ProjectedMetrics
+    AdvancedEngine --> ProjectedMetrics[📈 Projected Metrics]
     AdvancedEngine --> ActiveBatchData
     
     %% Database Integration
@@ -108,6 +113,7 @@ flowchart TD
     Database --> Machines[🏭 Machines Table]
     Database --> QualityData[📊 Quality Data Tables]
     Database --> Alerts[🚨 Alerts Table]
+    Database --> EdgeLogs[📝 Edge Function Logs]
     
     %% Real-time Monitoring
     Database --> RealTimeSync[⚡ Real-time Sync]
@@ -119,6 +125,19 @@ flowchart TD
     Reports --> PDFExport[📄 PDF Reports]
     Reports --> ExcelExport[📊 Excel Export]
     Reports --> DataVisualization[📊 Data Visualization]
+    Reports --> ProjectReport[📕 Project Report Screen]
+    
+    %% Milestones Timeline
+    subgraph Milestones 🗓️
+      M1[Setup & Auth • Weeks 1-2]
+      M2[Data Models & Entry • Weeks 3-5]
+      M3[Dashboards & Flow • Weeks 6-9]
+      M4[HOI/HOF + Analysis • Weeks 10-13]
+      M5[Advanced Analytics + AI • Weeks 14-18]
+      M6[Alerts & Exports • Weeks 19-22]
+      M7[Polish, Colors, UX • Weeks 23-27]
+    end
+    Start --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7 --> Dashboard
     
     %% Styling
     classDef primary fill:#3b82f6,stroke:#1e40af,stroke-width:2px,color:#fff
@@ -128,11 +147,11 @@ flowchart TD
     classDef storage fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
     
     class Dashboard,Tab1,Tab2,Tab3,Tab4,Tab5 primary
-    class DataEntry,EggQuality,Fertility,QA,Residue secondary
+    class DataEntry,HOFHOI,Fertility,QA,Residue secondary
     class Management,BatchMgmt,SOPMgmt,FlockMgmt,MachineMgmt accent
-    class DataEngine,Analytics,AlertSystem,AdvancedEngine data
-    class Database,Batches,Flocks,Machines,QualityData,Alerts storage
-    class AdvancedAnalytics,EnvironmentalCalendar,IncubationTimeline,BatchFlowSankey,PredictiveAnalytics primary
+    class DataEngine,Analytics,AlertSystem,AdvancedEngine,PredictionsPanel,AIInsights data
+    class Database,Batches,Flocks,Machines,QualityData,Alerts,EdgeLogs storage
+    class AdvancedAnalytics,EnvironmentalCalendar,IncubationTimeline,BatchFlowSankey,PredictiveAnalytics,HOICharts,HOFCharts primary
   `;
 
   useEffect(() => {

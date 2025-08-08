@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileInput, BarChart3, ArrowLeft, Settings, CheckSquare, LogOut, User } from "lucide-react";
+import { FileInput, BarChart3, ArrowLeft, Settings, CheckSquare, LogOut, User, FileText } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -38,6 +38,13 @@ const Navigation = () => {
       label: 'Daily Checklist',
       icon: CheckSquare,
       description: 'Track daily tasks',
+      requiresAuth: true
+    },
+    {
+      path: '/report',
+      label: 'Project Report',
+      icon: FileText,
+      description: 'What changed (270h summary)',
       requiresAuth: true
     },
     {
