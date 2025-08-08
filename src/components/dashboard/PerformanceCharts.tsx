@@ -167,12 +167,6 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                       {batch.flockName} - Day {batch.currentDay || batch.daysSinceSet}
                     </div>
                     <div className="flex items-center gap-2 text-sm mb-2">
-                      {batch.hasEggQuality && (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3 text-green-600" />
-                          Egg Quality
-                        </div>
-                      )}
                       {batch.hasQAData && (
                         <div className="flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-green-600" />
