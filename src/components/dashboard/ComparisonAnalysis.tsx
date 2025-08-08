@@ -10,6 +10,13 @@ interface ComparisonAnalysisProps {
 }
 
 
+const formatFlockLabel = (item: any) => {
+  const name = item.flockName || 'Unknown';
+  const numPart = item.flockNumber !== undefined && item.flockNumber !== null ? ` #${item.flockNumber}` : '';
+  const farmPart = item.houseNumber !== undefined && item.houseNumber !== null ? ` (${item.houseNumber})` : ' (N/A)';
+  return `${name}${numPart}${farmPart}`;
+};
+
 const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [comparisonMetric, setComparisonMetric] = useState("fertility");
@@ -66,7 +73,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
 
   // Prepare radar chart data for selected items
   const radarData = selectedData.map(item => ({
-    name: `Batch ${item.batchNumber} (${item.flockName})`,
+    name: formatFlockLabel(item),
     fertility: item.fertility || 0,
     hatch: item.hatch || 0,
     qualityScore: item.qualityScore || 0,
@@ -81,10 +88,10 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Select Batches to Compare
+            Select Flocks to Compare
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Choose up to 5 batches for detailed performance comparison. Click on batches to select or deselect them.
+            Choose up to 5 flocks for detailed performance comparison. Click on flocks to select or deselect them.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -103,7 +110,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                       onClick={() => handleItemSelect(batchNumber)}
                     >
                       <Check className="h-3 w-3 mr-1" />
-                      Batch {item?.batchNumber} ({item?.flockName})
+                      {formatFlockLabel(item)}
                       <span className="ml-2 text-xs">×</span>
                     </Badge>
                   );
@@ -115,7 +122,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
           {/* Batch Selection Grid */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">
-              Available Batches ({displayData.length})
+              Available Flocks ({displayData.length})
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-80 overflow-y-auto">
               {displayData.map(item => {
@@ -136,7 +143,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                   >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="font-semibold text-sm">Batch {item.batchNumber}</div>
+                        <div className="font-semibold text-sm">{formatFlockLabel(item)}</div>
                         {isSelected && <Check className="h-4 w-4 text-primary" />}
                       </div>
                       
@@ -176,7 +183,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
           
           {selectedItems.length >= 5 && (
             <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-              Maximum of 5 batches selected. Remove some to select others.
+              Maximum of 5 flocks selected. Remove some to select others.
             </div>
           )}
         </CardContent>
@@ -215,7 +222,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                 <div key={stat.breed} className="p-4 border rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium text-lg">{stat.breed}</h4>
-                    <Badge>{stat.count} batches</Badge>
+                    <Badge>{stat.count} flocks</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>Fertility: <span className="font-medium">{stat.avgFertility.toFixed(1)}%</span></div>
@@ -261,7 +268,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Batch</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Flock</th>
                         <th className="text-center p-3 text-sm font-medium text-muted-foreground">Fertility</th>
                         <th className="text-center p-3 text-sm font-medium text-muted-foreground">Hatch</th>
                         <th className="text-center p-3 text-sm font-medium text-muted-foreground">Quality</th>
@@ -272,10 +279,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                       {selectedData.map(item => (
                         <tr key={item.batchNumber} className="border-b hover:bg-muted/50">
                           <td className="p-3">
-                            <div>
-                              <div className="font-medium text-sm">Batch {item.batchNumber}</div>
-                              <div className="text-xs text-muted-foreground">{item.flockName}</div>
-                            </div>
+                            <div className="font-medium text-sm">{formatFlockLabel(item)}</div>
                           </td>
                           <td className="p-3 text-center text-sm">
                             {item.fertility ? `${item.fertility.toFixed(1)}%` : 'Pending'}

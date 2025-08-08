@@ -69,7 +69,7 @@ export const useBatchPerformanceMetrics = () => {
           status,
           total_eggs_set,
           set_date,
-          flocks (flock_number, flock_name, age_weeks, breed),
+           flocks (flock_number, flock_name, age_weeks, breed, house_number),
           fertility_analysis (
             fertility_percent,
             hatch_percent,
@@ -120,6 +120,7 @@ export const useBatchPerformanceMetrics = () => {
           flockNumber: batch.flocks?.flock_number || 0,
           age: batch.flocks?.age_weeks || 0,
           breed: batch.flocks?.breed || 'unknown',
+          houseNumber: batch.flocks?.house_number ?? null,
           fertility: fertility?.fertility_percent || null,
           hatch: fertility?.hatch_percent || null,
           hof: fertility?.hof_percent || null,

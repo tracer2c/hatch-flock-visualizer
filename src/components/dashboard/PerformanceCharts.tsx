@@ -51,6 +51,13 @@ const performanceDemoSteps = [
   }
 ];
 
+const formatFlockLabel = (item: any) => {
+  const name = item.flockName || 'Unknown';
+  const numPart = item.flockNumber !== undefined && item.flockNumber !== null ? ` #${item.flockNumber}` : '';
+  const farmPart = item.houseNumber !== undefined && item.houseNumber !== null ? ` (${item.houseNumber})` : ' (N/A)';
+  return `${name}${numPart}${farmPart}`;
+};
+
 const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
   const [sortBy, setSortBy] = useState("fertility");
   const [chartType, setChartType] = useState("bar");
@@ -74,6 +81,8 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
     
     return bValue - aValue;
   });
+
+  const labelMap = new Map(sortedData.map((item) => [item.batchNumber, formatFlockLabel(item)]));
 
   // Top and bottom performers (only completed batches with fertility data)
   const completedBatches = data.filter(batch => batch.hasFertilityData && batch.fertility !== null);
@@ -139,7 +148,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Ongoing Batches Progress
+              Ongoing Flocks Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -149,7 +158,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                 .map(batch => (
                   <div key={batch.batchNumber} className="p-4 border rounded-lg bg-card">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="font-medium">Batch {batch.batchNumber}</div>
+                      <div className="font-medium">{formatFlockLabel(batch)}</div>
                       <Badge variant={batch.status === 'hatching' ? 'default' : 'secondary'}>
                         {batch.status}
                       </Badge>
@@ -211,6 +220,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                   textAnchor="end"
                   height={100}
                   interval={0}
+                  tickFormatter={(val) => labelMap.get(val) || val}
                 />
                 <YAxis />
                 <Tooltip 
@@ -224,7 +234,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                           className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
                         >
                           <div>
-                            <p className="font-medium mb-2">Batch {label}</p>
+                            <p className="font-medium mb-2">{labelMap.get(label) || `#${label}`}</p>
                             {payload.map((entry, index) => (
                               <div key={index} className="flex justify-between items-center">
                                 <span style={{ color: entry.color }}>{String(entry.name).charAt(0).toUpperCase() + String(entry.name).slice(1)}: </span>
@@ -252,6 +262,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                   textAnchor="end"
                   height={100}
                   interval={0}
+                  tickFormatter={(val) => labelMap.get(val) || val}
                 />
                 <YAxis />
                 <Tooltip 
@@ -265,7 +276,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                           className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
                         >
                           <div>
-                            <p className="font-medium mb-2">Batch {label}</p>
+                            <p className="font-medium mb-2">{labelMap.get(label) || `#${label}`}</p>
                             {payload.map((entry, index) => (
                               <div key={index} className="flex justify-between items-center">
                                 <span style={{ color: entry.color }}>{String(entry.name).charAt(0).toUpperCase() + String(entry.name).slice(1)}: </span>
@@ -318,7 +329,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
                         className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
                       >
                         <div>
-                          <p className="font-medium mb-2">Batch {data?.batchNumber}</p>
+                          <p className="font-medium mb-2">{formatFlockLabel(data || {})}</p>
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span>Age:</span>
@@ -357,7 +368,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
               {topPerformers.map((item, index) => (
                 <div key={item.batchNumber} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div>
-                    <div className="font-medium">Batch {item.batchNumber}</div>
+                    <div className="font-medium">{formatFlockLabel(item)}</div>
                     <div className="text-sm text-gray-600">{item.flockName} - {item.breed}</div>
                   </div>
                   <div className="text-right">
@@ -379,7 +390,7 @@ const PerformanceCharts = ({ data }: PerformanceChartsProps) => {
               {bottomPerformers.map((item, index) => (
                 <div key={item.batchNumber} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
-                    <div className="font-medium">Batch {item.batchNumber}</div>
+                    <div className="font-medium">{formatFlockLabel(item)}</div>
                     <div className="text-sm text-gray-600">{item.flockName} - {item.breed}</div>
                   </div>
                   <div className="text-right">
