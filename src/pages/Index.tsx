@@ -9,9 +9,33 @@ import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import SystemFlowchart from "@/components/dashboard/SystemFlowchart";
 import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
+import { useEffect } from "react";
 
 const Index = () => {
   const { data: performanceMetrics } = useBatchPerformanceMetrics();
+
+  useEffect(() => {
+    document.title = "Hatchery Performance Dashboard | Live Overview";
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute(
+        "content",
+        "Live overview of hatchery performance metrics, QA alerts, and machine utilization."
+      );
+    } else {
+      const m = document.createElement("meta");
+      m.name = "description";
+      m.content = "Live overview of hatchery performance metrics, QA alerts, and machine utilization.";
+      document.head.appendChild(m);
+    }
+    const existingCanonical = document.querySelector('link[rel="canonical"]');
+    if (!existingCanonical) {
+      const link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      link.setAttribute("href", window.location.href);
+      document.head.appendChild(link);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
