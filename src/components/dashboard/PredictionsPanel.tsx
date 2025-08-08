@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUnitHistory, MetricKey, WeeklyDataPoint } from "@/hooks/useUnitHistory";
 import { usePredictions } from "@/hooks/usePredictions";
 import { startOfISOWeek, formatISO, addWeeks } from "date-fns";
-import { Brain, CalendarDays, LineChart, Settings2 } from "lucide-react";
+import { Calculator, CalendarDays, LineChart, Settings2 } from "lucide-react";
 
 interface UnitItem {
   id: string;
@@ -184,11 +184,11 @@ const PredictionsPanel: React.FC = () => {
               </div>
 
               <Button onClick={handleGenerate} disabled={historyLoading || predicting} className="w-full">
-                <Brain className="h-4 w-4 mr-2" />
-                {predicting ? "Generating..." : "Generate predictions"}
+                <Calculator className="h-4 w-4 mr-2" />
+                {predicting ? "Calculating..." : "Run forecast"}
               </Button>
               <div className="text-xs text-muted-foreground">
-                Uses AI to forecast selected metrics based on your last 12 weeks.
+                Calculates forecasts from your last 12 weeks of data.
               </div>
             </div>
           </CardContent>
@@ -209,7 +209,7 @@ const PredictionsPanel: React.FC = () => {
               <div className="space-y-6">
                 {insights && insights.length > 0 && (
                   <div>
-                    <h3 className="text-base font-semibold text-foreground mb-2">AI Insights</h3>
+                    <h3 className="text-base font-semibold text-foreground mb-2">Insights</h3>
                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                       {insights.map((i, idx) => (
                         <li key={idx}>{i}</li>
