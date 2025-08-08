@@ -17,14 +17,15 @@ interface FertilityRecord {
   fertile_eggs: number;
   early_dead: number;
   late_dead: number;
+  cull_chicks: number;
   fertility_percent: number;
   hatch_percent: number;
   hof_percent: number;
-  hoi_percent?: number;
-  if_dev_percent?: number;
+  hoi_percent?: number | null;
+  if_dev_percent?: number | null;
   analysis_date: string;
-  technician_name?: string;
-  notes?: string;
+  technician_name?: string | null;
+  notes?: string | null;
 }
 
 interface BatchInfo {
@@ -43,17 +44,15 @@ interface FertilityDataEntryProps {
 const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntryProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    sampleSize: '648',
-    infertileEggs: '',
-    earlyDead: '',
-    lateDead: '',
-    hatchPercent: '',
-    hoiPercent: '',
-    ifDevPercent: '',
-    technicianName: '',
-    notes: ''
-  });
+const [formData, setFormData] = useState({
+  sampleSize: '648',
+  infertileEggs: '',
+  earlyDead: '',
+  lateDead: '',
+  cullChicks: '',
+  technicianName: '',
+  notes: ''
+});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,48 +82,56 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     }
   };
 
-  const calculateValues = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, hatchPercent: number) => {
-    const fertileEggs = sampleSize - infertile;
-    const fertilityPercent = (fertileEggs / sampleSize) * 100;
-    const hofPercent = (hatchPercent / fertilityPercent) * 100;
-    
-    return {
-      fertileEggs,
-      fertilityPercent: Number(fertilityPercent.toFixed(2)),
-      hofPercent: Number(hofPercent.toFixed(2))
-    };
+const calculateValues = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, cullChicks: number) => {
+  const fertileEggs = Math.max(0, sampleSize - infertile);
+  const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - lateDead - cullChicks);
+  const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
+  const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
+  const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
+  const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
+  const ifDevPercent = hoiPercent - hofPercent; // delta due to culls
+  
+  return {
+    fertileEggs,
+    fertilityPercent: Number(fertilityPercent.toFixed(2)),
+    hatchPercent: Number(hatchPercent.toFixed(2)),
+    hofPercent: Number(hofPercent.toFixed(2)),
+    hoiPercent: Number(hoiPercent.toFixed(2)),
+    ifDevPercent: Number(ifDevPercent.toFixed(2)),
   };
+};
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validateForm = () => {
-    const sampleSize = Number(formData.sampleSize);
-    const infertile = Number(formData.infertileEggs);
-    const earlyDead = Number(formData.earlyDead);
-    const lateDead = Number(formData.lateDead);
-    
-    if (infertile + earlyDead + lateDead > sampleSize) {
-      toast({
-        title: "Validation Error",
-        description: "Infertile + Dead eggs cannot exceed sample size",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    if (!formData.sampleSize || !formData.infertileEggs || !formData.hatchPercent) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    return true;
-  };
+const validateForm = () => {
+  const sampleSize = Number(formData.sampleSize || 0);
+  const infertile = Number(formData.infertileEggs || 0);
+  const earlyDead = Number(formData.earlyDead || 0);
+  const lateDead = Number(formData.lateDead || 0);
+  const cullChicks = Number(formData.cullChicks || 0);
+
+  if (!formData.sampleSize || !formData.infertileEggs) {
+    toast({
+      title: "Validation Error",
+      description: "Please fill in Sample Size and Infertile Eggs",
+      variant: "destructive"
+    });
+    return false;
+  }
+
+  if (infertile + earlyDead + lateDead + cullChicks > sampleSize) {
+    toast({
+      title: "Validation Error",
+      description: "Sum of infertile + early/late dead + cull chicks cannot exceed sample size",
+      variant: "destructive"
+    });
+    return false;
+  }
+  
+  return true;
+};
 
   const handleSubmit = async () => {
     if (!validateForm() || loading) return;
@@ -132,13 +139,13 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     setLoading(true);
     
     try {
-      const sampleSize = Number(formData.sampleSize);
-      const infertile = Number(formData.infertileEggs);
-      const earlyDead = Number(formData.earlyDead);
-      const lateDead = Number(formData.lateDead);
-      const hatchPercent = Number(formData.hatchPercent);
+      const sampleSize = Number(formData.sampleSize || 0);
+      const infertile = Number(formData.infertileEggs || 0);
+      const earlyDead = Number(formData.earlyDead || 0);
+      const lateDead = Number(formData.lateDead || 0);
+      const cullChicks = Number(formData.cullChicks || 0);
       
-      const calculated = calculateValues(sampleSize, infertile, earlyDead, lateDead, hatchPercent);
+      const calculated = calculateValues(sampleSize, infertile, earlyDead, lateDead, cullChicks);
       
       const recordData = {
         batch_id: batchInfo.id,
@@ -147,10 +154,12 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         fertile_eggs: calculated.fertileEggs,
         early_dead: earlyDead,
         late_dead: lateDead,
-        hatch_percent: hatchPercent,
+        cull_chicks: cullChicks,
+        fertility_percent: calculated.fertilityPercent,
+        hatch_percent: calculated.hatchPercent,
         hof_percent: calculated.hofPercent,
-        hoi_percent: formData.hoiPercent ? Number(formData.hoiPercent) : null,
-        if_dev_percent: formData.ifDevPercent ? Number(formData.ifDevPercent) : null,
+        hoi_percent: null, // To be auto-calculated once formula is confirmed
+        if_dev_percent: null, // To be auto-calculated once formula is confirmed
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
@@ -252,18 +261,16 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   };
 
   const handleEdit = (record: FertilityRecord) => {
-    setEditingId(record.id);
-    setFormData({
-      sampleSize: record.sample_size.toString(),
-      infertileEggs: record.infertile_eggs.toString(),
-      earlyDead: record.early_dead.toString(),
-      lateDead: record.late_dead.toString(),
-      hatchPercent: record.hatch_percent.toString(),
-      hoiPercent: record.hoi_percent?.toString() || '',
-      ifDevPercent: record.if_dev_percent?.toString() || '',
-      technicianName: record.technician_name || '',
-      notes: record.notes || ''
-    });
+  setEditingId(record.id);
+  setFormData({
+    sampleSize: record.sample_size.toString(),
+    infertileEggs: record.infertile_eggs.toString(),
+    earlyDead: record.early_dead.toString(),
+    lateDead: record.late_dead.toString(),
+    cullChicks: (record.cull_chicks ?? 0).toString(),
+    technicianName: record.technician_name || '',
+    notes: record.notes || ''
+  });
   };
 
   const handleDelete = async (id: string) => {
@@ -292,18 +299,16 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   };
 
   const handleCancel = () => {
-    setEditingId(null);
-    setFormData({
-      sampleSize: '648',
-      infertileEggs: '',
-      earlyDead: '',
-      lateDead: '',
-      hatchPercent: '',
-      hoiPercent: '',
-      ifDevPercent: '',
-      technicianName: '',
-      notes: ''
-    });
+  setEditingId(null);
+  setFormData({
+    sampleSize: '648',
+    infertileEggs: '',
+    earlyDead: '',
+    lateDead: '',
+    cullChicks: '',
+    technicianName: '',
+    notes: ''
+  });
   };
 
   const calculateOverallAverages = () => {
@@ -379,36 +384,83 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hatchPercent">Hatch % *</Label>
+              <Label htmlFor="cullChicks">Cull Chicks</Label>
               <Input
-                id="hatchPercent"
+                id="cullChicks"
                 type="number"
-                step="0.01"
-                placeholder="e.g., 60.61"
-                value={formData.hatchPercent}
-                onChange={(e) => handleInputChange('hatchPercent', e.target.value)}
+                placeholder="e.g., 5"
+                value={formData.cullChicks}
+                onChange={(e) => handleInputChange('cullChicks', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hoiPercent">HOI %</Label>
+              <Label>Fertility % (auto)</Label>
               <Input
-                id="hoiPercent"
-                type="number"
-                step="0.01"
-                placeholder="e.g., 85.50"
-                value={formData.hoiPercent}
-                onChange={(e) => handleInputChange('hoiPercent', e.target.value)}
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  const ed = Number(formData.earlyDead || 0);
+                  const ld = Number(formData.lateDead || 0);
+                  const cc = Number(formData.cullChicks || 0);
+                  return calculateValues(s, inf, ed, ld, cc).fertilityPercent;
+                })()}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ifDevPercent">I/F dev. %</Label>
+              <Label>Hatch % (auto)</Label>
               <Input
-                id="ifDevPercent"
-                type="number"
-                step="0.01"
-                placeholder="e.g., 4.20"
-                value={formData.ifDevPercent}
-                onChange={(e) => handleInputChange('ifDevPercent', e.target.value)}
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  const ed = Number(formData.earlyDead || 0);
+                  const ld = Number(formData.lateDead || 0);
+                  const cc = Number(formData.cullChicks || 0);
+                  return calculateValues(s, inf, ed, ld, cc).hatchPercent;
+                })()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>HOF % (auto)</Label>
+              <Input
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  const ed = Number(formData.earlyDead || 0);
+                  const ld = Number(formData.lateDead || 0);
+                  const cc = Number(formData.cullChicks || 0);
+                  return calculateValues(s, inf, ed, ld, cc).hofPercent;
+                })()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>HOI % (auto)</Label>
+              <Input
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  const ed = Number(formData.earlyDead || 0);
+                  const ld = Number(formData.lateDead || 0);
+                  const cc = Number(formData.cullChicks || 0);
+                  return calculateValues(s, inf, ed, ld, cc).hoiPercent;
+                })()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>I/F dev. % (auto)</Label>
+              <Input
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  const ed = Number(formData.earlyDead || 0);
+                  const ld = Number(formData.lateDead || 0);
+                  const cc = Number(formData.cullChicks || 0);
+                  return calculateValues(s, inf, ed, ld, cc).ifDevPercent;
+                })()}
               />
             </div>
             <div className="space-y-2">
@@ -460,6 +512,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                   <TableHead>Infertile</TableHead>
                   <TableHead>Early Dead</TableHead>
                   <TableHead>Late Dead</TableHead>
+                  <TableHead>Cull Chicks</TableHead>
                   <TableHead>Fertility %</TableHead>
                   <TableHead>Hatch %</TableHead>
                   <TableHead>HOF %</TableHead>
@@ -479,6 +532,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                     <TableCell>{record.infertile_eggs}</TableCell>
                     <TableCell>{record.early_dead}</TableCell>
                     <TableCell>{record.late_dead}</TableCell>
+                    <TableCell>{record.cull_chicks ?? 0}</TableCell>
                     <TableCell>{record.fertility_percent}%</TableCell>
                     <TableCell>{record.hatch_percent}%</TableCell>
                     <TableCell>{record.hof_percent}%</TableCell>
@@ -512,6 +566,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                     <TableCell>OVERALL AVERAGES</TableCell>
                     <TableCell>{overallAverages.totalSampleSize}</TableCell>
                     <TableCell>{overallAverages.totalInfertile}</TableCell>
+                    <TableCell>-</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>{overallAverages.avgFertility}%</TableCell>
