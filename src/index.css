@@ -36,6 +36,13 @@
 
     --radius: 0.5rem;
 
+    /* Chart palette - vibrant, accessible HSL colors */
+    --chart-1: 217 91% 60%; /* blue */
+    --chart-2: 142 71% 45%; /* green */
+    --chart-3: 25 95% 53%;  /* orange */
+    --chart-4: 271 81% 56%; /* violet */
+    --chart-5: 0 84% 60%;   /* red */
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -89,6 +96,13 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Chart palette (dark) */
+    --chart-1: 217 91% 65%; /* blue */
+    --chart-2: 142 71% 55%; /* green */
+    --chart-3: 25 95% 60%;  /* orange */
+    --chart-4: 271 81% 65%; /* violet */
+    --chart-5: 0 84% 65%;   /* red */
 
     /* Glass effect tokens */
     --glass-bg: 255 255 255 / 0.05;

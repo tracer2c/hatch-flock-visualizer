@@ -210,9 +210,9 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                     String(name).replace('avg', 'Avg ')
                   ]}
                 />
-                <Bar dataKey="avgFertility" fill="#8884d8" name="avgFertility" />
-                <Bar dataKey="avgHatch" fill="#82ca9d" name="avgHatch" />
-                <Bar dataKey="avgQualityScore" fill="#ffc658" name="avgQualityScore" />
+                <Bar dataKey="avgFertility" fill="hsl(var(--chart-1))" name="avgFertility" radius={[4,4,0,0]} />
+                <Bar dataKey="avgHatch" fill="hsl(var(--chart-2))" name="avgHatch" radius={[4,4,0,0]} />
+                <Bar dataKey="avgQualityScore" fill="hsl(var(--chart-3))" name="avgQualityScore" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
 
@@ -253,9 +253,9 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                     <PolarGrid />
                     <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar name="Fertility" dataKey="fertility" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.1} />
-                    <Radar name="Hatch Rate" dataKey="hatch" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.1} />
-                    <Radar name="Quality Score" dataKey="qualityScore" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3))" fillOpacity={0.1} />
+                    <Radar name="Fertility" dataKey="fertility" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.25} />
+                    <Radar name="Hatch Rate" dataKey="hatch" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.25} />
+                    <Radar name="Quality Score" dataKey="qualityScore" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3))" fillOpacity={0.25} />
                     <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
