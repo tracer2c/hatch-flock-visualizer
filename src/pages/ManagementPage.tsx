@@ -5,7 +5,8 @@ import DataCleanup from "@/components/dashboard/DataCleanup";
 import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import SOPManager from "@/components/dashboard/SOPManager";
 import UserManager from "@/components/dashboard/UserManager";
-import { Settings, Clock, FileText, Users, Cog, Database, UserCheck } from "lucide-react";
+import UnitManager from "@/components/dashboard/UnitManager";
+import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const ManagementPage = () => {
@@ -27,6 +28,21 @@ const ManagementPage = () => {
 
         {/* Management Sections */}
         <Accordion type="single" collapsible className="space-y-4">
+          <AccordionItem value="unit-manager" className="bg-white rounded-lg shadow-sm border">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Home className="h-5 w-5 text-teal-600" />
+                <div className="text-left">
+                  <h3 className="font-semibold text-lg">Unit Manager</h3>
+                  <p className="text-gray-600 text-sm">Create and manage your operational units</p>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <UnitManager />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="batch-status" className="bg-white rounded-lg shadow-sm border">
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center gap-3">

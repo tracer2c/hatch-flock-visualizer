@@ -180,6 +180,7 @@ export type Database = {
           status: Database["public"]["Enums"]["batch_status"]
           temperature_avg: number | null
           total_eggs_set: number
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -197,6 +198,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["batch_status"]
           temperature_avg?: number | null
           total_eggs_set: number
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -214,6 +216,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["batch_status"]
           temperature_avg?: number | null
           total_eggs_set?: number
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -236,6 +239,13 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_unit_fk"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -518,6 +528,7 @@ export type Database = {
           id: string
           notes: string | null
           total_birds: number | null
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -532,6 +543,7 @@ export type Database = {
           id?: string
           notes?: string | null
           total_birds?: number | null
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -546,6 +558,7 @@ export type Database = {
           id?: string
           notes?: string | null
           total_birds?: number | null
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -554,6 +567,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flocks_unit_fk"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -823,6 +843,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      units: {
+        Row: {
+          code: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {

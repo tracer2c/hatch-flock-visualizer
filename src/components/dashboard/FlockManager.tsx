@@ -21,6 +21,7 @@ interface Flock {
   arrival_date: string;
   total_birds: number | null;
   notes: string | null;
+  unit_id?: string | null;
 }
 
 const FlockManager = () => {
@@ -44,13 +45,36 @@ const FlockManager = () => {
     breed: '',
     arrival_date: new Date().toISOString().split('T')[0],
     total_birds: '',
-    notes: ''
+    notes: '',
+    unitId: '',
   });
   const { toast } = useToast();
 
+  // Units
+  type Unit = { id: string; name: string };
+  const [units, setUnits] = useState<Unit[]>([]);
+
   useEffect(() => {
     loadFlocks();
+    loadUnits();
   }, []);
+
+  const loadUnits = async () => {
+    const { data, error } = await supabase
+      .from('units')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      toast({
+        title: "Error loading units",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+    setUnits(data || []);
+  };
 
   const loadFlocks = async () => {
     const { data, error } = await supabase
@@ -78,16 +102,17 @@ const FlockManager = () => {
       breed: '',
       arrival_date: new Date().toISOString().split('T')[0],
       total_birds: '',
-      notes: ''
+      notes: '',
+      unitId: '',
     });
     setEditingFlock(null);
   };
 
   const handleSubmit = async () => {
-    if (!formData.flock_number || !formData.flock_name || !formData.age_weeks || !formData.breed) {
+    if (!formData.flock_number || !formData.flock_name || !formData.age_weeks || !formData.breed || !formData.unitId) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (including Unit).",
         variant: "destructive"
       });
       return;
@@ -101,7 +126,8 @@ const FlockManager = () => {
       breed: formData.breed as 'broiler' | 'layer' | 'breeder',
       arrival_date: formData.arrival_date,
       total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
-      notes: formData.notes || null
+      notes: formData.notes || null,
+      unit_id: formData.unitId,
     };
 
     if (editingFlock) {
@@ -152,7 +178,8 @@ const FlockManager = () => {
       breed: flock.breed,
       arrival_date: flock.arrival_date,
       total_birds: flock.total_birds?.toString() || '',
-      notes: flock.notes || ''
+      notes: flock.notes || '',
+      unitId: flock.unit_id || '',
     });
     setShowDialog(true);
   };
@@ -181,34 +208,12 @@ const FlockManager = () => {
 
   const filteredFlocks = useMemo(() => {
     return flocks.filter(flock => {
-      // Flock number filter
-      if (filters.flockNumber && !flock.flock_number.toString().includes(filters.flockNumber)) {
-        return false;
-      }
-      
-      // Flock name filter
-      if (filters.flockName && !flock.flock_name.toLowerCase().includes(filters.flockName.toLowerCase())) {
-        return false;
-      }
-      
-      // House number filter
-      if (filters.houseNumber && filters.houseNumber !== "all" && flock.house_number !== filters.houseNumber) {
-        return false;
-      }
-      
-      // Age range filter
-      if (filters.minAge && flock.age_weeks < parseInt(filters.minAge)) {
-        return false;
-      }
-      if (filters.maxAge && flock.age_weeks > parseInt(filters.maxAge)) {
-        return false;
-      }
-      
-      // Breed filter
-      if (filters.breed.length > 0 && !filters.breed.includes(flock.breed)) {
-        return false;
-      }
-      
+      if ((filters as any).flockNumber && !flock.flock_number.toString().includes((filters as any).flockNumber)) return false;
+      if ((filters as any).flockName && !flock.flock_name.toLowerCase().includes((filters as any).flockName.toLowerCase())) return false;
+      if ((filters as any).houseNumber && (filters as any).houseNumber !== "all" && flock.house_number !== (filters as any).houseNumber) return false;
+      if ((filters as any).minAge && flock.age_weeks < parseInt((filters as any).minAge)) return false;
+      if ((filters as any).maxAge && flock.age_weeks > parseInt((filters as any).maxAge)) return false;
+      if ((filters as any).breed.length > 0 && !(filters as any).breed.includes(flock.breed)) return false;
       return true;
     });
   }, [flocks, filters]);
@@ -366,6 +371,27 @@ const FlockManager = () => {
                     placeholder="e.g., 25000"
                   />
                 </div>
+
+                {/* Unit selection */}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Unit *</Label>
+                  <Select
+                    value={formData.unitId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <Label>Notes</Label>
                   <Input
@@ -525,8 +551,9 @@ const FlockManager = () => {
             </div>
           </CollapsibleContent>
         </Collapsible>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFlocks.map((flock) => (
+          {flocks.length > 0 && filteredFlocks.map((flock) => (
             <div key={flock.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">

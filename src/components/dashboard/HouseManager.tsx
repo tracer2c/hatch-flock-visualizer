@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ interface Flock {
   flock_name: string;
   house_number: string;
   age_weeks: number;
+  unit_id?: string | null;
 }
 
 interface Machine {
@@ -37,6 +39,12 @@ interface House {
   expected_hatch_date: string;
   total_eggs_set: number;
   status: string;
+  unit_id?: string | null;
+}
+
+interface Unit {
+  id: string;
+  name: string;
 }
 
 interface HouseManagerProps {
@@ -48,10 +56,12 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [houses, setHouses] = useState<House[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
+    unitId: '',
     setDate: new Date().toISOString().split('T')[0],
     totalEggs: ''
   });
@@ -61,6 +71,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     loadFlocks();
     loadMachines();
     loadHouses();
+    loadUnits();
   }, []);
 
   const loadFlocks = async () => {
@@ -125,10 +136,28 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         set_date: batch.set_date,
         expected_hatch_date: batch.expected_hatch_date,
         total_eggs_set: batch.total_eggs_set,
-        status: batch.status
+        status: batch.status,
+        unit_id: batch.unit_id ?? null,
       })) || [];
       setHouses(formattedHouses);
     }
+  };
+
+  const loadUnits = async () => {
+    const { data, error } = await supabase
+      .from('units')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      toast({
+        title: "Error loading units",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    setUnits(data || []);
   };
 
   const calculateHatchDate = (setDate: string) => {
@@ -138,7 +167,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   };
 
   const createHouse = async () => {
-    if (!formData.flockId || !formData.machineId || !formData.totalEggs) {
+    if (!formData.flockId || !formData.machineId || !formData.totalEggs || !formData.unitId) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -171,6 +200,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         batch_number: houseNumber,
         flock_id: formData.flockId,
         machine_id: formData.machineId,
+        unit_id: formData.unitId,
         set_date: formData.setDate,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: parseInt(formData.totalEggs),
@@ -191,7 +221,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         description: `House ${houseNumber} created successfully`
       });
       setShowCreateForm(false);
-      setFormData({ flockId: '', machineId: '', setDate: new Date().toISOString().split('T')[0], totalEggs: '' });
+      setFormData({ flockId: '', machineId: '', unitId: '', setDate: new Date().toISOString().split('T')[0], totalEggs: '' });
       loadHouses();
       onHouseSelect(data.id);
     }
@@ -230,6 +260,21 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         {showCreateForm && (
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Select Unit *</Label>
+                <Select value={formData.unitId} onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Select Flock *</Label>
                 <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
