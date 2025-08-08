@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface FertilityRecord {
   id: string;
@@ -157,9 +158,8 @@ const validateForm = () => {
         cull_chicks: cullChicks,
         fertility_percent: calculated.fertilityPercent,
         hatch_percent: calculated.hatchPercent,
-        hof_percent: calculated.hofPercent,
-        hoi_percent: null, // To be auto-calculated once formula is confirmed
-        if_dev_percent: null, // To be auto-calculated once formula is confirmed
+        hoi_percent: calculated.hoiPercent,
+        if_dev_percent: calculated.ifDevPercent,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
@@ -394,7 +394,17 @@ const validateForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Fertility % (auto)</Label>
+              <Label className="flex items-center gap-1">
+                Fertility % (auto)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Fertile eggs ÷ sample size × 100
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
                 disabled
                 value={(() => {
@@ -408,7 +418,17 @@ const validateForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Hatch % (auto)</Label>
+              <Label className="flex items-center gap-1">
+                Hatch % (HOS)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Hatch of Set = hatched chicks ÷ sample size × 100
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
                 disabled
                 value={(() => {
@@ -422,7 +442,17 @@ const validateForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>HOF % (auto)</Label>
+              <Label className="flex items-center gap-1">
+                HOF %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Hatch of Fertile = hatched chicks ÷ fertile eggs × 100
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
                 disabled
                 value={(() => {
@@ -436,7 +466,17 @@ const validateForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>HOI % (auto)</Label>
+              <Label className="flex items-center gap-1">
+                HOI %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Hatch incl. culls = (hatched chicks + culls) ÷ fertile eggs × 100
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
                 disabled
                 value={(() => {
@@ -450,7 +490,17 @@ const validateForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>I/F dev. % (auto)</Label>
+              <Label className="flex items-center gap-1">
+                I/F dev. %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Difference (HOI − HOF), impact due to culls
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
                 disabled
                 value={(() => {
@@ -533,11 +583,35 @@ const validateForm = () => {
                     <TableCell>{record.early_dead}</TableCell>
                     <TableCell>{record.late_dead}</TableCell>
                     <TableCell>{record.cull_chicks ?? 0}</TableCell>
-                    <TableCell>{record.fertility_percent}%</TableCell>
-                    <TableCell>{record.hatch_percent}%</TableCell>
-                    <TableCell>{record.hof_percent}%</TableCell>
-                    <TableCell>{record.hoi_percent ? `${record.hoi_percent}%` : '-'}</TableCell>
-                    <TableCell>{record.if_dev_percent ? `${record.if_dev_percent}%` : '-'}</TableCell>
+                    <TableCell>{Number(record.fertility_percent ?? 0).toFixed(2)}%</TableCell>
+                    <TableCell>{Number(record.hatch_percent ?? 0).toFixed(2)}%</TableCell>
+                    <TableCell>{Number(record.hof_percent ?? 0).toFixed(2)}%</TableCell>
+                    <TableCell>{(() => {
+                      if (record.hoi_percent != null) return `${Number(record.hoi_percent).toFixed(2)}%`;
+                      const s = record.sample_size || 0;
+                      const inf = record.infertile_eggs || 0;
+                      const ed = record.early_dead || 0;
+                      const ld = record.late_dead || 0;
+                      const cc = record.cull_chicks || 0;
+                      const fertile = Math.max(0, s - inf);
+                      const hatched = Math.max(0, s - inf - ed - ld - cc);
+                      const hoi = fertile > 0 ? ((hatched + cc) / fertile) * 100 : 0;
+                      return `${hoi.toFixed(2)}%`;
+                    })()}</TableCell>
+                    <TableCell>{(() => {
+                      if (record.if_dev_percent != null) return `${Number(record.if_dev_percent).toFixed(2)}%`;
+                      const s = record.sample_size || 0;
+                      const inf = record.infertile_eggs || 0;
+                      const ed = record.early_dead || 0;
+                      const ld = record.late_dead || 0;
+                      const cc = record.cull_chicks || 0;
+                      const fertile = Math.max(0, s - inf);
+                      const hatched = Math.max(0, s - inf - ed - ld - cc);
+                      const hof = fertile > 0 ? (hatched / fertile) * 100 : 0;
+                      const hoi = fertile > 0 ? ((hatched + cc) / fertile) * 100 : 0;
+                      const ifdev = hoi - hof;
+                      return `${ifdev.toFixed(2)}%`;
+                    })()}</TableCell>
                     <TableCell>{record.technician_name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">

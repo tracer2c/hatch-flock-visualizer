@@ -152,7 +152,7 @@ const FertilityEntryPage = () => {
           
           {/* Breadcrumb */}
           <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; House {houseInfo.batch_number} &gt; Fertility Analysis
+            Data Entry &gt; {houseInfo.flock_name} # {houseInfo.house_number} &gt; Fertility Analysis
           </div>
           
           {/* House Context Header */}
@@ -161,7 +161,7 @@ const FertilityEntryPage = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
                   <Egg className="h-6 w-6 text-green-600" />
-                  Fertility Analysis - House {houseInfo.batch_number}
+                  Fertility Analysis - {houseInfo.flock_name} # {houseInfo.house_number}
                 </CardTitle>
                 <Badge className={getStatusColor(houseInfo.status)}>
                   {houseInfo.status}
@@ -171,8 +171,8 @@ const FertilityEntryPage = () => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600">Flock</p>
-                  <p className="font-medium">{houseInfo.flock_number} - {houseInfo.flock_name}</p>
+                  <p className="text-gray-600">Flock & House</p>
+                  <p className="font-medium">{houseInfo.flock_name} # {houseInfo.house_number}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Machine</p>
