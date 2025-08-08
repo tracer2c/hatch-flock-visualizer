@@ -67,7 +67,7 @@ const BatchOverviewDashboard: React.FC = () => {
   const totalActiveHouses = filteredActiveBatches.length;
 
   const fertilityData = (performanceMetrics?.filter((b: any) => b?.fertility !== null && b?.fertility !== undefined) || []) as any[];
-  const avgFertility = fertilityData.length > 0
+  const avgFert = fertilityData.length > 0
     ? fertilityData.reduce((sum: number, b: any) => sum + b.fertility, 0) / fertilityData.length
     : 0;
 
@@ -192,7 +192,7 @@ const BatchOverviewDashboard: React.FC = () => {
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent asChild>
+              <TooltipContent>
                 <EnhancedTooltip
                   chartType="batch-overview"
                   data={{ totalActiveHouses, activeBatches: filteredActiveBatches }}
@@ -212,20 +212,20 @@ const BatchOverviewDashboard: React.FC = () => {
                 <div>
                   <StatCard
                     title="Avg Fertility"
-                    value={`${avgFertility.toFixed(1)}%`}
+                    value={`${avgFert.toFixed(1)}%`}
                     icon={<Package className="h-4 w-4 text-muted-foreground" />}
-                    trendDirection={avgFertility > 85 ? "up" : "down"}
-                    trendLabel={avgFertility > 85 ? "Above target" : "Below target"}
+                    trendDirection={avgFert > 85 ? "up" : "down"}
+                    trendLabel={avgFert > 85 ? "Above target" : "Below target"}
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent asChild>
+              <TooltipContent>
                 <EnhancedTooltip
                   chartType="batch-overview"
-                  data={{ avgFertility, target: 85 }}
+                  data={{ avgFert, target: 85 }}
                   title="Average Fertility"
                   metrics={[
-                    { label: "Current Average", value: `${avgFertility.toFixed(1)}%` },
+                    { label: "Current Average", value: `${avgFert.toFixed(1)}%` },
                     { label: "Target", value: "85%" },
                   ]}
                 />
