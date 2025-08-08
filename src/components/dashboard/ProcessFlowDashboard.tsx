@@ -290,11 +290,11 @@ const ProcessFlowDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Best Quality Batch</CardTitle>
+            <CardTitle className="text-sm font-medium">Highest Hatch Rate</CardTitle>
           </CardHeader>
           <CardContent>
             {(() => {
-              const withData = meaningfulBatches.filter(batch => batch.qualityScore || batch.fertility);
+              const withData = meaningfulBatches.filter(batch => typeof batch.hatch === 'number');
               if (withData.length === 0) {
                 return (
                   <div>
@@ -303,23 +303,12 @@ const ProcessFlowDashboard = () => {
                   </div>
                 );
               }
-              
-              const best = withData.reduce((prev, current) => {
-                const prevScore = prev.fertility || prev.qualityScore || 0;
-                const currentScore = current.fertility || current.qualityScore || 0;
-                return prevScore > currentScore ? prev : current;
-              });
-              
+              const best = withData.reduce((prev, current) => ((prev.hatch || 0) > (current.hatch || 0) ? prev : current));
               return (
                 <div>
                   <div className="text-2xl font-bold text-primary">{best.batchNumber}</div>
                   <div className="text-sm text-muted-foreground">
-                    {best.fertility 
-                      ? `${best.fertility.toFixed(1)}% fertility` 
-                      : best.qualityScore 
-                        ? `${best.qualityScore.toFixed(1)}% quality`
-                        : 'No metrics'
-                    } • {best.flockName}
+                    {`${Number(best.hatch).toFixed(1)}% hatch`} • {best.flockName}
                   </div>
                 </div>
               );
