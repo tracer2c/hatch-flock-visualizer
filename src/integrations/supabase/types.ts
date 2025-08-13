@@ -168,8 +168,10 @@ export type Database = {
         Row: {
           actual_hatch_date: string | null
           batch_number: string
+          chicks_hatched: number
           company_id: string
           created_at: string
+          eggs_injected: number
           expected_hatch_date: string
           flock_id: string
           humidity_avg: number | null
@@ -186,8 +188,10 @@ export type Database = {
         Insert: {
           actual_hatch_date?: string | null
           batch_number: string
+          chicks_hatched?: number
           company_id?: string
           created_at?: string
+          eggs_injected?: number
           expected_hatch_date: string
           flock_id: string
           humidity_avg?: number | null
@@ -204,8 +208,10 @@ export type Database = {
         Update: {
           actual_hatch_date?: string | null
           batch_number?: string
+          chicks_hatched?: number
           company_id?: string
           created_at?: string
+          eggs_injected?: number
           expected_hatch_date?: string
           flock_id?: string
           humidity_avg?: number | null

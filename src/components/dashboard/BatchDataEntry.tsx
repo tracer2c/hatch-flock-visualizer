@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +9,7 @@ import EggPackDataEntry from "./EggPackDataEntry";
 import FertilityDataEntry from "./FertilityDataEntry";
 import QADataEntry from "./QADataEntry";
 import ResidueDataEntry from "./ResidueDataEntry";
+import HOIEntry from "./HOIEntry";
 
 interface BatchInfo {
   id: string;
@@ -23,6 +23,8 @@ interface BatchInfo {
   expected_hatch_date: string;
   total_eggs_set: number;
   status: string;
+  eggs_injected: number;
+  chicks_hatched: number;
 }
 
 interface BatchDataEntryProps {
@@ -73,7 +75,9 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
-        status: data.status
+        status: data.status,
+        eggs_injected: data.eggs_injected ?? 0,
+        chicks_hatched: data.chicks_hatched ?? 0,
       });
     }
   };
@@ -170,6 +174,10 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
     );
   }
 
+  const hoiPct = batchInfo.eggs_injected > 0
+    ? Number(((batchInfo.chicks_hatched / batchInfo.eggs_injected) * 100).toFixed(2))
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Batch Info Header */}
@@ -200,7 +208,36 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
               <p className="text-sm text-gray-600">Total Eggs</p>
               <p className="font-medium">{batchInfo.total_eggs_set.toLocaleString()}</p>
             </div>
+            <div>
+              <p className="text-sm text-gray-600">Eggs Injected</p>
+              <p className="font-medium">{(batchInfo.eggs_injected ?? 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Chicks Hatched</p>
+              <p className="font-medium">{(batchInfo.chicks_hatched ?? 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">HOI %</p>
+              <p className="font-medium">{hoiPct == null ? "-" : `${hoiPct}%`}</p>
+            </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Embrex / HOI Entry */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Embrex / HOI</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <HOIEntry
+            batchId={batchInfo.id}
+            eggsInjected={batchInfo.eggs_injected ?? 0}
+            chicksHatched={batchInfo.chicks_hatched ?? 0}
+            onUpdated={({ eggs_injected, chicks_hatched }) => {
+              setBatchInfo((prev) => prev ? { ...prev, eggs_injected, chicks_hatched } as BatchInfo : prev);
+            }}
+          />
         </CardContent>
       </Card>
 
