@@ -467,7 +467,7 @@ const validateForm = () => {
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
-                HOI %
+                Incl. culls (fertile) %
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 opacity-70" />
@@ -497,7 +497,7 @@ const validateForm = () => {
                     <Info className="h-4 w-4 opacity-70" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    Difference (HOI − HOF), impact due to culls
+                    Difference (incl. culls − HOF), impact due to culls
                   </TooltipContent>
                 </Tooltip>
               </Label>
@@ -566,7 +566,7 @@ const validateForm = () => {
                   <TableHead>Fertility %</TableHead>
                   <TableHead>Hatch %</TableHead>
                   <TableHead>HOF %</TableHead>
-                  <TableHead>HOI %</TableHead>
+                  <TableHead>Incl. culls (fertile) %</TableHead>
                   <TableHead>I/F dev. %</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Actions</TableHead>

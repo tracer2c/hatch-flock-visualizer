@@ -19,6 +19,8 @@ interface HouseInfo {
   set_date: string;
   expected_hatch_date: string;
   total_eggs_set: number;
+  eggs_injected: number;
+  chicks_hatched: number;
   status: string;
 }
 
@@ -66,6 +68,8 @@ const FertilityEntryPage = () => {
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
+        eggs_injected: data.eggs_injected ?? 0,
+        chicks_hatched: data.chicks_hatched ?? 0,
         status: data.status
       });
     }
@@ -169,7 +173,7 @@ const FertilityEntryPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Flock & House</p>
                   <p className="font-medium">{houseInfo.flock_name} # {houseInfo.house_number}</p>
@@ -185,6 +189,22 @@ const FertilityEntryPage = () => {
                 <div>
                   <p className="text-gray-600">Total Eggs</p>
                   <p className="font-medium">{houseInfo.total_eggs_set.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Eggs Injected</p>
+                  <p className="font-medium">{houseInfo.eggs_injected.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Chicks Hatched</p>
+                  <p className="font-medium">{houseInfo.chicks_hatched.toLocaleString()}</p>
+                </div>
+                <div className="col-span-2 md:col-span-6">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div className="md:col-start-5">
+                      <p className="text-gray-600">HOI % (Hatched / Injected)</p>
+                      <p className="font-medium">{houseInfo.eggs_injected > 0 ? `${((houseInfo.chicks_hatched / houseInfo.eggs_injected) * 100).toFixed(2)}%` : '-'}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

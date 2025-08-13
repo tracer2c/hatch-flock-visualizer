@@ -68,6 +68,8 @@ export const useBatchPerformanceMetrics = () => {
           batch_number,
           status,
           total_eggs_set,
+          eggs_injected,
+          chicks_hatched,
           set_date,
            flocks (flock_number, flock_name, age_weeks, breed, house_number),
           fertility_analysis (
@@ -125,7 +127,7 @@ export const useBatchPerformanceMetrics = () => {
           fertility: fertility?.fertility_percent || null,
           hatch: fertility?.hatch_percent || null,
           hof: fertility?.hof_percent || null,
-          hoi: fertility?.hoi_percent || null,
+          hoi: batch.eggs_injected > 0 ? (batch.chicks_hatched / batch.eggs_injected) * 100 : null,
           earlyDead: fertility ? ((fertility.early_dead || 0) / (fertility.sample_size || 1)) * 100 : null,
           qualityScore,
           totalEggs: batch.total_eggs_set,
