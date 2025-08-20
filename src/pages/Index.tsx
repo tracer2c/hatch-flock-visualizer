@@ -10,10 +10,12 @@ import SystemFlowchart from "@/components/dashboard/SystemFlowchart";
 import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const { data: performanceMetrics } = useBatchPerformanceMetrics();
-
+  const { user, loading } = useAuth();
   useEffect(() => {
     document.title = "Hatchery Performance Dashboard | Live Overview";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -36,6 +38,10 @@ const Index = () => {
       document.head.appendChild(link);
     }
   }, []);
+  // Redirect unauthenticated users to /auth
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
