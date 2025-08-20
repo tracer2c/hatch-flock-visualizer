@@ -275,8 +275,8 @@ async function executeTool(toolName: string, parameters: any) {
         }
 
         const dateRangeBatchesFormatted = dateRangeBatches || [];
-        const analytics = calculateBatchAnalytics(dateRangeBatchesFormatted);
-        const formattedBatches = dateRangeBatchesFormatted.slice(0, 10).map(formatBatchForDisplay);
+        const analytics2 = calculateBatchAnalytics(dateRangeBatchesFormatted);
+        const formattedBatches2 = dateRangeBatchesFormatted.slice(0, 10).map(formatBatchForDisplay);
 
         return {
           type: 'batches_overview',
@@ -284,8 +284,8 @@ async function executeTool(toolName: string, parameters: any) {
           count: dateRangeBatchesFormatted.length,
           date_range: `${startDate.toISOString().split('T')[0]} to ${new Date().toISOString().split('T')[0]}`,
           batches: dateRangeBatchesFormatted,
-          analytics: analytics,
-          formatted_batches: formattedBatches,
+          analytics: analytics2,
+          formatted_batches: formattedBatches2,
           params: { days_back: daysBack, date_field: dateField }
         };
 
