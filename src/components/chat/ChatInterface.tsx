@@ -5,6 +5,7 @@ import { Send, Mic, User, MessageCircle, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
+import { MessageFormatter } from './MessageFormatter';
 
 interface Message {
   id: string;
@@ -190,19 +191,19 @@ export const ChatInterface = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 text-center py-4 px-6 border-b">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-2">
-            <MessageCircle className="h-6 w-6 text-primary" />
+      <div className="flex-shrink-0 text-center py-3 px-6 border-b">
+        <div className="max-w-6xl mx-auto">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-1">
+            <MessageCircle className="h-5 w-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Hatchery Assistant</h1>
-          <p className="text-base text-muted-foreground">Your intelligent hatchery data companion</p>
+          <h1 className="text-xl font-bold text-foreground mb-1">Hatchery Assistant</h1>
+          <p className="text-sm text-muted-foreground">Your intelligent hatchery data companion</p>
         </div>
       </div>
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto px-6 py-8">
           {messages.length === 0 ? (
             <div className="text-center space-y-8">
               <div className="space-y-4">
@@ -249,18 +250,25 @@ export const ChatInterface = () => {
                     )}
                   </div>
                   
-                  <div className={`flex-1 space-y-3 max-w-3xl ${
-                    message.role === 'user' ? 'text-right' : ''
-                  }`}>
-                    <div className={`inline-block p-6 rounded-2xl ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 border'
-                    }`}>
-                      <p className="text-base leading-relaxed whitespace-pre-wrap">
-                        {message.content}
-                      </p>
-                    </div>
+                   <div className={`flex-1 space-y-3 max-w-4xl ${
+                     message.role === 'user' ? 'text-right' : ''
+                   }`}>
+                     <div className={`inline-block p-6 rounded-2xl ${
+                       message.role === 'user'
+                         ? 'bg-primary text-primary-foreground'
+                         : 'bg-muted/50 border'
+                     }`}>
+                       {message.role === 'user' ? (
+                         <p className="text-base leading-relaxed whitespace-pre-wrap">
+                           {message.content}
+                         </p>
+                       ) : (
+                         <MessageFormatter 
+                           content={message.content}
+                           className="text-base"
+                         />
+                       )}
+                     </div>
                     
                     {/* Render structured batch data */}
                     {message.payload?.type === 'batches_overview' && (
@@ -321,7 +329,7 @@ export const ChatInterface = () => {
 
       {/* Fixed Input Bar */}
       <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur">
-        <div className="max-w-4xl mx-auto p-6">
+        <div className="max-w-6xl mx-auto p-6">
           <form onSubmit={handleSubmit}>
             <div className="flex gap-4 items-end">
               <div className="flex-1 relative">
