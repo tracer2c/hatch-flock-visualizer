@@ -174,21 +174,27 @@ export const useAuth = () => {
   };
 
   const createDefaultAdmin = async () => {
+    // Skip if we've already attempted and failed
+    const hasTriedCreation = localStorage.getItem('admin_creation_attempted');
+    if (hasTriedCreation) {
+      return { error: null };
+    }
+
     try {
-      // Check if admin already exists to prevent noisy logs
+      // Check if any users exist
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('email', 'admin@example.com')
         .limit(1);
         
       if (profiles && profiles.length > 0) {
-        // Admin already exists, skip creation
+        // Users already exist, skip creation
         return { error: null };
       }
       
+      // Use a proper email format for local development
       const { error } = await supabase.auth.signUp({
-        email: 'admin@example.com',
+        email: 'admin@hatchery.local',
         password: 'admin123',
         options: {
           data: {
@@ -198,14 +204,20 @@ export const useAuth = () => {
         }
       });
       
-      if (error && !error.message.includes('already been registered')) {
-        throw error;
+      if (error) {
+        // Mark that we've attempted creation to avoid repeated failures
+        localStorage.setItem('admin_creation_attempted', 'true');
+        if (!error.message.includes('already been registered') && !error.message.includes('invalid')) {
+          throw error;
+        }
       }
       
       return { error: null };
     } catch (error: any) {
-      // Quietly log admin creation errors to reduce noise
-      if (!error.message?.includes('already been registered')) {
+      // Mark attempt and prevent future attempts
+      localStorage.setItem('admin_creation_attempted', 'true');
+      // Only log truly unexpected errors
+      if (!error.message?.includes('already been registered') && !error.message?.includes('invalid')) {
         console.error('Error creating default admin:', error);
       }
       return { error };

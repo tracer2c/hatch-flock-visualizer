@@ -274,16 +274,16 @@ async function executeTool(toolName: string, parameters: any) {
           };
         }
 
-        const batches = dateRangeBatches || [];
-        const analytics = calculateBatchAnalytics(batches);
-        const formattedBatches = batches.slice(0, 10).map(formatBatchForDisplay);
+        const dateRangeBatchesFormatted = dateRangeBatches || [];
+        const analytics = calculateBatchAnalytics(dateRangeBatchesFormatted);
+        const formattedBatches = dateRangeBatchesFormatted.slice(0, 10).map(formatBatchForDisplay);
 
         return {
           type: 'batches_overview',
-          message: `Found ${batches.length} batches from the past ${daysBack} days`,
-          count: batches.length,
+          message: `Found ${dateRangeBatchesFormatted.length} batches from the past ${daysBack} days`,
+          count: dateRangeBatchesFormatted.length,
           date_range: `${startDate.toISOString().split('T')[0]} to ${new Date().toISOString().split('T')[0]}`,
-          batches: batches,
+          batches: dateRangeBatchesFormatted,
           analytics: analytics,
           formatted_batches: formattedBatches,
           params: { days_back: daysBack, date_field: dateField }
