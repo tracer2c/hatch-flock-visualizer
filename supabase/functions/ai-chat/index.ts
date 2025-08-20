@@ -493,18 +493,32 @@ When users ask for comparisons, trends, or analytics, automatically generate app
 - Scatter plots for correlations (age vs performance, temperature vs hatch rate)
 - Area charts for cumulative trends
 
+CRITICAL: FORCE VISUALIZATION RESPONSES
+You MUST detect visualization keywords and return structured analytics responses. When users ask for:
+- "compare" or "comparison" → Generate bar charts comparing the requested metrics
+- "trend" or "over time" → Generate line charts showing temporal patterns
+- "breakdown" or "distribution" → Generate pie charts showing proportions
+- "analyze" or "analysis" → Generate comprehensive analytics with multiple chart types
+- "show me" + data → Generate appropriate visualizations based on data type
+
+AUTOMATIC CHART GENERATION RULES:
+1. For batch comparisons → Bar charts by status, house, or performance metrics
+2. For fertility data → Line charts for trends, bar charts for house comparisons
+3. For machine status → Pie charts for utilization, bar charts for performance
+4. For performance analysis → Multiple charts (bar, line, radar) with insights
+
 RESPONSE FORMAT FOR ANALYTICS:
-When generating analytics responses, structure them as:
+Always return JSON structured as:
 {
   "type": "analytics",
-  "title": "Analysis Title",
-  "summary": "Brief explanation of the analysis",
+  "title": "Dynamic Analysis Title",
+  "summary": "Brief data-driven explanation",
   "charts": [
     {
       "type": "bar|line|pie|radar|scatter|area",
       "title": "Chart Title",
-      "description": "What this chart shows",
-      "data": [...],
+      "description": "What this chart reveals",
+      "data": [...real data from tools...],
       "config": {
         "xKey": "x-axis field",
         "bars": [{"key": "field", "name": "Display Name", "color": "hsl(var(--chart-1))"}],
@@ -512,20 +526,20 @@ When generating analytics responses, structure them as:
         "valueKey": "value field for pie charts",
         "nameKey": "name field for pie charts"
       },
-      "insights": "Key insights from this chart"
+      "insights": "Data-driven insights from this visualization"
     }
   ],
   "metrics": [
     {
       "label": "Metric Name",
-      "value": "123.4%",
-      "change": 5.2,
+      "value": "actual calculated value",
+      "change": actual_change_value,
       "trend": "up|down|stable",
       "status": "good|warning|critical"
     }
   ],
-  "insights": ["Key insight 1", "Key insight 2"],
-  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "insights": ["Real insight 1", "Real insight 2"],
+  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],
   "actions": [{"label": "Download Data", "type": "download", "data": {...}}]
 }
 
@@ -536,12 +550,16 @@ SUPERHUMAN CAPABILITIES:
 - Identify anomalies and outliers
 - Cross-reference multiple data sources for comprehensive insights
 
-TRIGGER PHRASES for analytics responses:
-- "compare", "comparison", "vs", "versus"
-- "trend", "trends", "over time", "performance"
-- "show me", "analyze", "analysis"
-- "chart", "graph", "visualize"
-- "breakdown", "distribution", "summary"
+TRIGGER PHRASES for MANDATORY analytics responses:
+- "compare", "comparison", "vs", "versus", "between"
+- "trend", "trends", "over time", "performance", "pattern"
+- "show me", "analyze", "analysis", "data", "report"
+- "chart", "graph", "visualize", "plot"
+- "breakdown", "distribution", "summary", "overview"
+- "pie", "bar", "line"
+- "fertility", "hatch", "batch", "house", "machine"
+
+MANDATORY: If user message contains ANY of these phrases, you MUST return structured analytics with charts.
 
 Current date: ${new Date().toISOString().split('T')[0]}`
       },
@@ -716,6 +734,36 @@ Current date: ${new Date().toISOString().split('T')[0]}`
         }
       }
 
+      // Force chart generation for visualization requests
+      if (shouldGenerateCharts(message, toolResults)) {
+        const chartResponse = generateChartsFromData(message, toolResults);
+        if (chartResponse) {
+          return new Response(JSON.stringify({
+            response: chartResponse,
+            timestamp: new Date().toISOString(),
+            source: 'enhanced'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      // Try to parse AI response as JSON first
+      try {
+        const parsedResponse = JSON.parse(finalText);
+        if (parsedResponse.type === 'analytics' || parsedResponse.type === 'chart') {
+          return new Response(JSON.stringify({
+            response: parsedResponse,
+            timestamp: new Date().toISOString(),
+            source: 'openai'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (e) {
+        // Not JSON, continue with text response
+      }
+
       // Check if we have structured data from batch tools
       const structuredData = extractStructuredDataFromTools(toolResults);
       
@@ -748,6 +796,282 @@ Current date: ${new Date().toISOString().split('T')[0]}`
     });
   }
 });
+
+// Helper function to detect if charts should be generated
+function shouldGenerateCharts(message: string, toolResults: any[]): boolean {
+  const visualKeywords = [
+    'compare', 'comparison', 'vs', 'versus', 'between',
+    'chart', 'graph', 'plot', 'visualize', 'pie', 'bar', 'line',
+    'trend', 'trends', 'over time', 'pattern',
+    'breakdown', 'distribution', 'analyze', 'analysis',
+    'show me', 'fertility', 'hatch', 'performance'
+  ];
+  
+  const msgLower = message.toLowerCase();
+  const hasVisualKeyword = visualKeywords.some(keyword => msgLower.includes(keyword));
+  const hasData = toolResults.length > 0;
+  
+  return hasVisualKeyword && hasData;
+}
+
+// Helper function to generate charts from tool data
+function generateChartsFromData(message: string, toolResults: any[]) {
+  const msgLower = message.toLowerCase();
+  
+  for (const toolResult of toolResults) {
+    try {
+      const data = JSON.parse(toolResult.content);
+      
+      // Handle fertility data
+      if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].fertility_percent !== undefined) {
+        return generateFertilityCharts(msgLower, data.data);
+      }
+      
+      // Handle batch overview data
+      if (data.type === 'batches_overview' && data.batches) {
+        return generateBatchCharts(msgLower, data);
+      }
+      
+      // Handle machine data
+      if (data.machines && Array.isArray(data.machines)) {
+        return generateMachineCharts(msgLower, data.machines);
+      }
+      
+    } catch (error) {
+      console.error('Error generating charts from data:', error);
+    }
+  }
+  
+  return null;
+}
+
+// Generate fertility-specific charts
+function generateFertilityCharts(message: string, fertilityData: any[]) {
+  const charts = [];
+  
+  if (message.includes('house') || message.includes('compare')) {
+    // Group by house/batch for comparison
+    const houseData = fertilityData.slice(0, 10).map(item => ({
+      name: item.batches?.batch_number || `Batch ${item.id.slice(0, 8)}`,
+      fertility: item.fertility_percent || 0,
+      hatch: item.hatch_percent || 0,
+      hof: item.hof_percent || 0
+    }));
+    
+    charts.push({
+      type: 'bar',
+      title: 'Fertility Rates Comparison',
+      description: 'Comparison of fertility and hatch rates across batches',
+      data: houseData,
+      config: {
+        xKey: 'name',
+        bars: [
+          { key: 'fertility', name: 'Fertility %', color: 'hsl(var(--chart-1))' },
+          { key: 'hatch', name: 'Hatch %', color: 'hsl(var(--chart-2))' },
+          { key: 'hof', name: 'HOF %', color: 'hsl(var(--chart-3))' }
+        ]
+      },
+      insights: `Showing fertility performance across ${houseData.length} batches`
+    });
+  }
+  
+  if (message.includes('pie') || message.includes('breakdown')) {
+    // Performance categorization
+    const excellent = fertilityData.filter(f => f.fertility_percent >= 90).length;
+    const good = fertilityData.filter(f => f.fertility_percent >= 80 && f.fertility_percent < 90).length;
+    const average = fertilityData.filter(f => f.fertility_percent >= 70 && f.fertility_percent < 80).length;
+    const poor = fertilityData.filter(f => f.fertility_percent < 70).length;
+    
+    charts.push({
+      type: 'pie',
+      title: 'Fertility Performance Distribution',
+      description: 'Distribution of batches by fertility performance category',
+      data: [
+        { name: 'Excellent (90%+)', value: excellent, fill: 'hsl(var(--chart-1))' },
+        { name: 'Good (80-89%)', value: good, fill: 'hsl(var(--chart-2))' },
+        { name: 'Average (70-79%)', value: average, fill: 'hsl(var(--chart-3))' },
+        { name: 'Poor (<70%)', value: poor, fill: 'hsl(var(--chart-4))' }
+      ],
+      config: {
+        valueKey: 'value',
+        nameKey: 'name'
+      },
+      insights: `${excellent} batches achieving excellent fertility rates`
+    });
+  }
+  
+  const avgFertility = fertilityData.reduce((sum, f) => sum + (f.fertility_percent || 0), 0) / fertilityData.length;
+  const avgHatch = fertilityData.reduce((sum, f) => sum + (f.hatch_percent || 0), 0) / fertilityData.length;
+  
+  return {
+    type: 'analytics',
+    title: 'Fertility Analysis Dashboard',
+    summary: `Analysis of ${fertilityData.length} fertility records showing average fertility rate of ${avgFertility.toFixed(1)}%`,
+    charts,
+    metrics: [
+      {
+        label: 'Average Fertility',
+        value: `${avgFertility.toFixed(1)}%`,
+        trend: avgFertility >= 85 ? 'up' : avgFertility >= 75 ? 'stable' : 'down',
+        status: avgFertility >= 85 ? 'good' : avgFertility >= 75 ? 'warning' : 'critical'
+      },
+      {
+        label: 'Average Hatch Rate',
+        value: `${avgHatch.toFixed(1)}%`,
+        trend: avgHatch >= 80 ? 'up' : avgHatch >= 70 ? 'stable' : 'down',
+        status: avgHatch >= 80 ? 'good' : avgHatch >= 70 ? 'warning' : 'critical'
+      }
+    ],
+    insights: [
+      `Analyzed ${fertilityData.length} batches for fertility performance`,
+      `Average fertility rate: ${avgFertility.toFixed(1)}%`,
+      avgFertility >= 85 ? 'Fertility rates are performing well' : 'Room for improvement in fertility rates'
+    ],
+    recommendations: [
+      avgFertility < 80 ? 'Investigate factors affecting fertility in underperforming batches' : 'Maintain current breeding protocols',
+      'Monitor trends monthly to identify seasonal patterns',
+      'Focus on batches with fertility rates below 75%'
+    ]
+  };
+}
+
+// Generate batch-specific charts
+function generateBatchCharts(message: string, data: any) {
+  const charts = [];
+  const analytics = data.analytics;
+  
+  // Status breakdown pie chart
+  const statusData = Object.entries(analytics.by_status).map(([status, count]) => ({
+    name: status.charAt(0).toUpperCase() + status.slice(1),
+    value: count as number,
+    fill: status === 'completed' ? 'hsl(var(--chart-1))' : 
+          status === 'incubating' ? 'hsl(var(--chart-2))' : 
+          status === 'planned' ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-4))'
+  }));
+  
+  charts.push({
+    type: 'pie',
+    title: 'Batch Status Distribution',
+    description: 'Current distribution of batches by status',
+    data: statusData,
+    config: {
+      valueKey: 'value',
+      nameKey: 'name'
+    },
+    insights: `${analytics.totals.count} total batches across different stages`
+  });
+  
+  // Performance comparison if we have batch details
+  if (data.batches && data.batches.length > 5) {
+    const perfData = data.batches.slice(0, 10).map((batch: any) => {
+      const hatchRate = batch.total_eggs_set > 0 ? (batch.chicks_hatched / batch.total_eggs_set) * 100 : 0;
+      return {
+        name: batch.batch_number,
+        hatchRate: Math.round(hatchRate),
+        eggsSet: batch.total_eggs_set,
+        chicksHatched: batch.chicks_hatched
+      };
+    }).filter((item: any) => item.hatchRate > 0);
+    
+    if (perfData.length > 0) {
+      charts.push({
+        type: 'bar',
+        title: 'Batch Performance Comparison',
+        description: 'Hatch rates across recent batches',
+        data: perfData,
+        config: {
+          xKey: 'name',
+          bars: [
+            { key: 'hatchRate', name: 'Hatch Rate %', color: 'hsl(var(--chart-2))' }
+          ]
+        },
+        insights: `Performance comparison across ${perfData.length} completed batches`
+      });
+    }
+  }
+  
+  return {
+    type: 'analytics',
+    title: 'Batch Performance Dashboard',
+    summary: `Comprehensive analysis of ${analytics.totals.count} batches with ${analytics.totals.avg_hatch_rate}% average hatch rate`,
+    charts,
+    metrics: [
+      {
+        label: 'Total Batches',
+        value: analytics.totals.count.toString(),
+        trend: 'stable',
+        status: 'good'
+      },
+      {
+        label: 'Average Hatch Rate',
+        value: `${analytics.totals.avg_hatch_rate}%`,
+        trend: analytics.totals.avg_hatch_rate >= 80 ? 'up' : 'down',
+        status: analytics.totals.avg_hatch_rate >= 80 ? 'good' : 'warning'
+      },
+      {
+        label: 'Upcoming Hatches',
+        value: analytics.upcoming_count.toString(),
+        trend: 'stable',
+        status: analytics.overdue_count > 0 ? 'warning' : 'good'
+      }
+    ],
+    insights: [
+      `${analytics.totals.count} batches currently managed`,
+      `${analytics.upcoming_count} batches expected to hatch within 7 days`,
+      analytics.overdue_count > 0 ? `${analytics.overdue_count} batches are overdue` : 'All batches on schedule'
+    ],
+    recommendations: [
+      analytics.overdue_count > 0 ? 'Review overdue batches immediately' : 'Maintain current schedules',
+      analytics.totals.avg_hatch_rate < 80 ? 'Investigate factors affecting hatch rates' : 'Excellent hatch rate performance',
+      'Monitor upcoming hatches for proper preparation'
+    ]
+  };
+}
+
+// Generate machine-specific charts
+function generateMachineCharts(message: string, machines: any[]) {
+  const utilizationData = machines.map(machine => ({
+    name: machine.machine_number,
+    utilization: parseFloat(machine.utilization || '0'),
+    capacity: machine.capacity,
+    current: machine.current_batch_count
+  }));
+  
+  return {
+    type: 'analytics',
+    title: 'Machine Utilization Analysis',
+    summary: `Analysis of ${machines.length} machines and their current utilization`,
+    charts: [{
+      type: 'bar',
+      title: 'Machine Utilization Rates',
+      description: 'Current utilization percentage by machine',
+      data: utilizationData,
+      config: {
+        xKey: 'name',
+        bars: [
+          { key: 'utilization', name: 'Utilization %', color: 'hsl(var(--chart-1))' }
+        ]
+      },
+      insights: `Monitoring ${machines.length} machines for optimal utilization`
+    }],
+    metrics: [
+      {
+        label: 'Total Machines',
+        value: machines.length.toString(),
+        trend: 'stable',
+        status: 'good'
+      }
+    ],
+    insights: [
+      `${machines.length} machines currently monitored`,
+      'Utilization rates help optimize capacity planning'
+    ],
+    recommendations: [
+      'Balance load across machines for optimal efficiency',
+      'Schedule maintenance during low utilization periods'
+    ]
+  };
+}
 
 // Helper function to extract structured data from tool results
 function extractStructuredDataFromTools(toolResults: any[]) {
