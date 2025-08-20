@@ -17,6 +17,7 @@ import AuthPage from "./pages/AuthPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import InitializeApp from "./components/InitializeApp";
 import ProjectReport from "./pages/ProjectReport";
+import ChatPage from "./pages/ChatPage";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,11 @@ const App = () => (
             <Route path="/report" element={
               <ProtectedRoute>
                 <ProjectReport />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <ChatPage />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

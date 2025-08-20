@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileInput, BarChart3, ArrowLeft, Settings, CheckSquare, LogOut, User, FileText } from "lucide-react";
+import { FileInput, BarChart3, ArrowLeft, Settings, CheckSquare, LogOut, User, FileText, MessageSquare } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -47,6 +47,13 @@ const Navigation = () => {
       description: 'Manage flocks & machines',
       requiresAuth: true,
       requiredRole: 'company_admin' as const
+    },
+    {
+      path: '/chat',
+      label: 'AI Assistant',
+      icon: MessageSquare,
+      description: 'Chat with AI for insights',
+      requiresAuth: true
     }
   ];
 
