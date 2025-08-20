@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Send, Mic, MicOff, Bot, User } from 'lucide-react';
+import { Send, Mic, User, MessageCircle, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
@@ -179,88 +176,91 @@ export const ChatInterface = () => {
     }
   };
 
+  const suggestedPrompts = [
+    "Show me today's batch overview",
+    "What are the key performance indicators?", 
+    "Generate a weekly report",
+    "Check batch completion status"
+  ];
+
+  const handleSuggestedPrompt = (prompt: string) => {
+    sendMessage(prompt);
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] w-full max-w-5xl mx-auto bg-background">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 bg-card border border-border rounded-t-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Bot className="h-5 w-5 text-primary" />
+      <div className="flex-shrink-0 text-center py-8 px-6 border-b">
+        <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+            <MessageCircle className="h-8 w-8 text-primary" />
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
-            <p className="text-sm text-muted-foreground">
-              Your intelligent hatchery operations companion
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Hatchery Assistant</h1>
+          <p className="text-lg text-muted-foreground">Your intelligent hatchery data companion</p>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 bg-card border-x border-border overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-6 space-y-6">
-            {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/5 mb-4">
-                  <Bot className="h-8 w-8 text-primary/60" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  Welcome to your AI Assistant
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                  Ask me anything about your hatchery operations. I can help with batch tracking, 
-                  fertility analysis, and operational insights.
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {messages.length === 0 ? (
+            <div className="text-center space-y-8">
+              <div className="space-y-4">
+                <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  I can help you analyze your hatchery data, generate reports, and provide insights about your operations.
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <button
-                    onClick={() => sendMessage("Show me batch overview")}
-                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
-                  >
-                    Show batch overview
-                  </button>
-                  <button
-                    onClick={() => sendMessage("What batches are overdue?")}
-                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
-                  >
-                    Check overdue batches
-                  </button>
-                  <button
-                    onClick={() => sendMessage("Show fertility rates")}
-                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
-                  >
-                    Fertility analysis
-                  </button>
+              </div>
+              
+              <div className="grid gap-4 max-w-2xl mx-auto">
+                <p className="text-base font-medium text-muted-foreground">Popular questions:</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {suggestedPrompts.map((prompt, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      onClick={() => handleSuggestedPrompt(prompt)}
+                      className="text-left h-auto p-5 text-base hover:bg-accent/50 border-2"
+                    >
+                      {prompt}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            )}
-            
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.role === 'assistant' && (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                )}
-                
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {messages.map((message) => (
                 <div
-                  className={`max-w-[85%] ${
-                    message.role === 'user'
-                      ? 'order-first'
-                      : ''
+                  key={message.id}
+                  className={`flex gap-4 ${
+                    message.role === 'user' ? 'flex-row-reverse' : ''
                   }`}
                 >
-                  <div
-                    className={`rounded-2xl px-4 py-3 ${
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="h-5 w-5" />
+                    ) : (
+                      <MessageCircle className="h-5 w-5" />
+                    )}
+                  </div>
+                  
+                  <div className={`flex-1 space-y-3 max-w-3xl ${
+                    message.role === 'user' ? 'text-right' : ''
+                  }`}>
+                    <div className={`inline-block p-6 rounded-2xl ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto'
-                        : 'bg-muted/50 border border-border'
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 border'
+                    }`}>
+                      <p className="text-base leading-relaxed whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
                     
                     {/* Render structured batch data */}
                     {message.payload?.type === 'batches_overview' && (
@@ -274,90 +274,87 @@ export const ChatInterface = () => {
                     )}
                     
                     {message.actions && message.actions.length > 0 && !message.payload && (
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="flex gap-3 mt-4">
                         {message.actions.map((action, index) => (
                           <Button
                             key={index}
-                            variant="secondary"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleActionClick(action, message)}
-                            className="text-xs"
+                            className="text-sm"
                           >
+                            {action.type === 'download_csv' && <Download className="h-4 w-4 mr-2" />}
                             {action.name}
                           </Button>
                         ))}
                       </div>
                     )}
-                  </div>
-                  
-                  <p className="text-xs text-muted-foreground mt-1 px-2">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                
-                {message.role === 'user' && (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary flex-shrink-0">
-                    <User className="h-4 w-4 text-secondary-foreground" />
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex gap-4 justify-start">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-                <div className="bg-muted/50 border border-border rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Thinking...</span>
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              ))}
+              
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="inline-block p-6 rounded-2xl bg-muted/50 border">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse" />
+                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse delay-100" />
+                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse delay-200" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div ref={messagesEndRef} />
-        </ScrollArea>
+        </div>
       </div>
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 bg-card border border-border rounded-b-xl p-4 shadow-sm">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <div className="flex-1 relative">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your hatchery operations..."
-              disabled={isLoading}
-              className="pr-20 h-11 border-border bg-background focus:ring-2 focus:ring-primary/20"
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={startListening}
-                disabled={isLoading}
-                className={`h-7 w-7 p-0 ${isListening ? 'bg-destructive text-destructive-foreground' : 'hover:bg-muted'}`}
+      {/* Fixed Input Bar */}
+      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur">
+        <div className="max-w-4xl mx-auto p-6">
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 relative">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask me anything about your hatchery data..."
+                  className="min-h-[56px] text-base px-4 py-4 pr-14 rounded-xl border-2 focus:border-primary"
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={startListening}
+                  disabled={isLoading}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 ${
+                    isListening ? 'text-red-500' : ''
+                  }`}
+                >
+                  <Mic className="h-5 w-5" />
+                </Button>
+              </div>
+              <Button 
+                type="submit" 
+                disabled={isLoading || !input.trim()}
+                className="h-14 px-8 rounded-xl text-base"
               >
-                {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                <Send className="h-5 w-5" />
               </Button>
             </div>
-          </div>
-          <Button 
-            type="submit" 
-            disabled={isLoading || !input.trim()}
-            className="h-11 px-4"
-            size="default"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
