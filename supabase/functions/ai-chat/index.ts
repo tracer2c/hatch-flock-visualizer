@@ -638,6 +638,18 @@ Current date: ${new Date().toISOString().split('T')[0]}`
         });
       }
 
+      // Phase 4: Apply smart defaults for common query patterns
+      const smartDefaultResponse = applySmartDefaults(message, toolResults);
+      if (smartDefaultResponse) {
+        return new Response(JSON.stringify({
+          response: smartDefaultResponse,
+          timestamp: new Date().toISOString(),
+          source: 'smart_default'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       // Get final response with tool results
       const finalMessages = [
         ...messages,
@@ -796,6 +808,91 @@ Current date: ${new Date().toISOString().split('T')[0]}`
     });
   }
 });
+
+// Phase 4: Smart defaults for common query patterns
+function applySmartDefaults(message: string, toolResults: any[]) {
+  const msgLower = message.toLowerCase();
+  
+  // Smart default 1: Batch overview requests always get dashboard
+  if ((msgLower.includes('batch') && (msgLower.includes('overview') || msgLower.includes('summary') || msgLower.includes('status'))) ||
+      msgLower.includes('dashboard') || msgLower.includes('recent')) {
+    
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if (data.type === 'batches_overview') {
+          return generateBatchCharts(msgLower, data);
+        }
+      } catch (e) {}
+    }
+  }
+  
+  // Smart default 2: Fertility requests always get comparison charts
+  if (msgLower.includes('fertility') || msgLower.includes('hatch')) {
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if (data.data && Array.isArray(data.data) && data.data[0]?.fertility_percent !== undefined) {
+          return generateFertilityCharts(msgLower + ' compare', data.data); // Force comparison
+        }
+      } catch (e) {}
+    }
+  }
+  
+  // Smart default 3: Machine requests always get utilization charts
+  if (msgLower.includes('machine') || msgLower.includes('equipment') || msgLower.includes('capacity')) {
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if (data.machines && Array.isArray(data.machines)) {
+          return generateMachineCharts(msgLower, data.machines);
+        }
+      } catch (e) {}
+    }
+  }
+  
+  // Smart default 4: Performance/analysis requests get comprehensive charts
+  if (msgLower.includes('performance') || msgLower.includes('analysis') || msgLower.includes('analytics')) {
+    // Try to find any data and create charts
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if (data.type === 'batches_overview') {
+          return generateBatchCharts(msgLower, data);
+        }
+        if (data.data && Array.isArray(data.data)) {
+          return generateFertilityCharts(msgLower + ' compare breakdown', data.data);
+        }
+      } catch (e) {}
+    }
+  }
+  
+  // Smart default 5: Any data request with multiple records gets visualization
+  if (toolResults.length > 0) {
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if ((data.batches && data.batches.length > 3) || 
+            (data.data && data.data.length > 3) ||
+            (data.machines && data.machines.length > 1)) {
+          
+          // Auto-detect data type and generate appropriate visualization
+          if (data.type === 'batches_overview') {
+            return generateBatchCharts('overview pie bar', data);
+          }
+          if (data.data && data.data[0]?.fertility_percent !== undefined) {
+            return generateFertilityCharts('compare breakdown', data.data);
+          }
+          if (data.machines) {
+            return generateMachineCharts('utilization', data.machines);
+          }
+        }
+      } catch (e) {}
+    }
+  }
+  
+  return null;
+}
 
 // Helper function to detect if charts should be generated
 function shouldGenerateCharts(message: string, toolResults: any[]): boolean {
