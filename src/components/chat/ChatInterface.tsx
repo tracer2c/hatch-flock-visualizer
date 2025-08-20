@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Mic, User, MessageCircle, Download } from 'lucide-react';
+import { Send, Mic, User, MessageCircle, Download, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
 import { MessageFormatter } from './MessageFormatter';
 import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
+import { Link } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -206,13 +207,31 @@ export const ChatInterface = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 text-center py-3 px-6 border-b">
-        <div className="max-w-6xl mx-auto">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-1">
-            <MessageCircle className="h-5 w-5 text-primary" />
+      <div className="flex-shrink-0 border-b bg-background">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="font-medium">Dashboard</span>
+              </Link>
+              
+              <div className="h-6 w-px bg-border" />
+              
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground">Smart Analytics</h1>
+                  <p className="text-sm text-muted-foreground">AI-powered insights & reports</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-foreground mb-1">Hatchery Assistant</h1>
-          <p className="text-sm text-muted-foreground">Your intelligent hatchery data companion</p>
         </div>
       </div>
 
@@ -220,23 +239,23 @@ export const ChatInterface = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
           {messages.length === 0 ? (
-            <div className="text-center space-y-8">
-              <div className="space-y-4">
+            <div className="space-y-8">
+              <div className="space-y-4 text-center">
                 <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                   I can help you analyze your hatchery data, generate reports, and provide insights about your operations.
                 </p>
               </div>
               
-              <div className="grid gap-4 max-w-2xl mx-auto">
-                <p className="text-base font-medium text-muted-foreground">Popular questions:</p>
+              <div className="max-w-4xl mx-auto">
+                <p className="text-base font-medium text-muted-foreground mb-6 text-center">Popular questions:</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {suggestedPrompts.map((prompt, index) => (
                     <Button
                       key={index}
                       variant="outline"
                       onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-left h-auto p-5 text-base hover:bg-accent/50 border-2"
+                      className="text-left h-auto p-4 text-base hover:bg-accent/50 border-2 justify-start"
                     >
                       {prompt}
                     </Button>
@@ -265,18 +284,18 @@ export const ChatInterface = () => {
                     )}
                   </div>
                   
-                   <div className={`flex-1 space-y-3 max-w-4xl ${
-                     message.role === 'user' ? 'text-right' : ''
-                   }`}>
-                     <div className={`inline-block p-6 rounded-2xl ${
-                       message.role === 'user'
-                         ? 'bg-primary text-primary-foreground'
-                         : 'bg-muted/50 border'
-                     }`}>
-                       {message.role === 'user' ? (
-                         <p className="text-base leading-relaxed whitespace-pre-wrap">
-                           {message.content}
-                         </p>
+                  <div className={`flex-1 space-y-3 max-w-4xl ${
+                    message.role === 'user' ? 'text-right' : ''
+                  }`}>
+                    <div className={`inline-block p-6 rounded-2xl ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 border'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <p className="text-base leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                        </p>
                         ) : message.type === 'analytics' ? (
                           <AnalyticsMessage data={message.content} />
                         ) : message.type === 'chart' ? (

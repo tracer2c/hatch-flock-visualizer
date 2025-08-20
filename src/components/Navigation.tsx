@@ -50,9 +50,9 @@ const Navigation = () => {
     },
     {
       path: '/chat',
-      label: 'AI Assistant',
+      label: 'Smart Analytics',
       icon: MessageSquare,
-      description: 'Chat with AI for insights',
+      description: 'AI-powered insights & reports',
       requiresAuth: true
     }
   ];
