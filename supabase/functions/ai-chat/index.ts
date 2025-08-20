@@ -13,6 +13,70 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Helper function to calculate batch analytics
+function calculateBatchAnalytics(batches: any[]) {
+  const now = new Date();
+  const totals = {
+    count: batches.length,
+    total_eggs_set: batches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0),
+    total_chicks_hatched: batches.reduce((sum, b) => sum + (b.chicks_hatched || 0), 0),
+    avg_hatch_rate: 0
+  };
+
+  if (totals.total_eggs_set > 0) {
+    totals.avg_hatch_rate = Math.round((totals.total_chicks_hatched / totals.total_eggs_set) * 100);
+  }
+
+  const by_status = batches.reduce((acc, batch) => {
+    acc[batch.status] = (acc[batch.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const upcoming = batches.filter(b => {
+    if (!b.expected_hatch_date || b.status === 'completed') return false;
+    const hatchDate = new Date(b.expected_hatch_date);
+    const daysToHatch = Math.ceil((hatchDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysToHatch <= 7 && daysToHatch >= 0;
+  }).length;
+
+  const overdue = batches.filter(b => {
+    if (!b.expected_hatch_date || b.status === 'completed') return false;
+    const hatchDate = new Date(b.expected_hatch_date);
+    return hatchDate < now;
+  }).length;
+
+  return { totals, by_status, upcoming_count: upcoming, overdue_count: overdue };
+}
+
+// Helper function to format batch data for display
+function formatBatchForDisplay(batch: any) {
+  const now = new Date();
+  const setDate = new Date(batch.set_date);
+  const expectedHatch = batch.expected_hatch_date ? new Date(batch.expected_hatch_date) : null;
+  
+  const days_since_set = Math.floor((now.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+  const days_to_hatch = expectedHatch ? Math.ceil((expectedHatch.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  
+  const hatch_rate = batch.total_eggs_set > 0 ? Math.round((batch.chicks_hatched / batch.total_eggs_set) * 100) : 0;
+
+  return {
+    id: batch.id,
+    batch_number: batch.batch_number,
+    set_date: batch.set_date,
+    expected_hatch_date: batch.expected_hatch_date,
+    days_since_set,
+    days_to_hatch,
+    status: batch.status,
+    machine_number: batch.machines?.machine_number || 'N/A',
+    machine_type: batch.machines?.machine_type || 'N/A',
+    flock_name: batch.flocks?.flock_name || 'N/A',
+    breed: batch.flocks?.breed || 'N/A',
+    total_eggs_set: batch.total_eggs_set,
+    chicks_hatched: batch.chicks_hatched,
+    hatch_rate
+  };
+}
+
 // Database query tools
 const tools = [
   {
@@ -168,13 +232,17 @@ async function executeTool(toolName: string, parameters: any) {
           return { message: "No batches found", count: 0, batches: [] };
         }
 
+        const batches = allBatchData || [];
+        const analytics = calculateBatchAnalytics(batches);
+        const formattedBatches = batches.slice(0, 10).map(formatBatchForDisplay);
+
         return {
-          message: `Found ${allBatchData.length} batches`,
-          count: allBatchData.length,
-          batches: allBatchData.map(batch => ({
-            ...batch,
-            days_since_set: batch.set_date ? Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24)) : null
-          }))
+          type: 'batches_overview',
+          message: `Found ${batches.length} batches`,
+          count: batches.length,
+          batches: batches,
+          analytics: analytics,
+          formatted_batches: formattedBatches
         };
 
       case "get_batches_by_date_range":
@@ -206,14 +274,19 @@ async function executeTool(toolName: string, parameters: any) {
           };
         }
 
+        const batches = dateRangeBatches || [];
+        const analytics = calculateBatchAnalytics(batches);
+        const formattedBatches = batches.slice(0, 10).map(formatBatchForDisplay);
+
         return {
-          message: `Found ${dateRangeBatches.length} batches from the past ${daysBack} days`,
-          count: dateRangeBatches.length,
+          type: 'batches_overview',
+          message: `Found ${batches.length} batches from the past ${daysBack} days`,
+          count: batches.length,
           date_range: `${startDate.toISOString().split('T')[0]} to ${new Date().toISOString().split('T')[0]}`,
-          batches: dateRangeBatches.map(batch => ({
-            ...batch,
-            days_since_set: batch.set_date ? Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24)) : null
-          }))
+          batches: batches,
+          analytics: analytics,
+          formatted_batches: formattedBatches,
+          params: { days_back: daysBack, date_field: dateField }
         };
 
       case "get_batch_info":
@@ -540,50 +613,24 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       }
 
       if (!finalOk || !finalText) {
-        // Improved fallback logic to provide meaningful responses from tool data
-        console.log('OpenAI unavailable, generating fallback response from tool results');
+        // Enhanced fallback logic with structured data support
+        console.log('OpenAI unavailable, generating enhanced fallback response from tool results');
         
-        let fallbackResponse = "I found some information for you:\n\n";
+        const fallbackData = generateEnhancedFallbackResponse(toolResults);
         
-        for (const toolResult of toolResults) {
-          try {
-            const data = JSON.parse(toolResult.content);
-            
-            if (data.message) {
-              fallbackResponse += `• ${data.message}\n`;
-            } else if (data.count !== undefined) {
-              fallbackResponse += `• Found ${data.count} records\n`;
-            } else if (data.batches && Array.isArray(data.batches)) {
-              fallbackResponse += `• ${data.batches.length} batches found\n`;
-              if (data.batches.length > 0) {
-                fallbackResponse += `  - Latest: ${data.batches[0].batch_number || data.batches[0].id}\n`;
-              }
-            } else if (data.error) {
-              fallbackResponse += `• ${data.error}\n`;
-            } else if (typeof data === 'object' && data !== null) {
-              const keys = Object.keys(data);
-              if (keys.length > 0) {
-                fallbackResponse += `• Retrieved data with ${keys.length} properties\n`;
-              }
-            }
-          } catch (parseError) {
-            console.error('Error parsing tool result for fallback:', parseError);
-            fallbackResponse += `• Retrieved some data (could not parse details)\n`;
-          }
-        }
-        
-        if (toolResults.length === 0) {
-          fallbackResponse = "I'm experiencing technical difficulties connecting to OpenAI, but your request was received. Please try again in a moment.";
-        } else {
-          fallbackResponse += "\nNote: I'm experiencing issues with my AI processing, so this is a basic summary of your data.";
-        }
-        
-        finalText = fallbackResponse;
+        return new Response(JSON.stringify(fallbackData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
+      // Check if we have structured data from batch tools
+      const structuredData = extractStructuredDataFromTools(toolResults);
+      
       return new Response(JSON.stringify({
         response: finalText,
-        actions: []
+        timestamp: new Date().toISOString(),
+        source: 'openai',
+        ...structuredData
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -608,3 +655,117 @@ Current date: ${new Date().toISOString().split('T')[0]}`
     });
   }
 });
+
+// Helper function to extract structured data from tool results
+function extractStructuredDataFromTools(toolResults: any[]) {
+  for (const toolResult of toolResults) {
+    try {
+      const data = JSON.parse(toolResult.content);
+      if (data.type === 'batches_overview') {
+        return {
+          actions: [
+            { name: "Show full list", type: "show_more" },
+            { name: "Download CSV", type: "download_csv" }
+          ],
+          payload: {
+            type: "batches_overview",
+            params: data.params || {},
+            summary: data.analytics,
+            items: data.formatted_batches
+          }
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing tool result:', error);
+    }
+  }
+  return {};
+}
+
+// Helper function to generate enhanced fallback responses when OpenAI is unavailable
+function generateEnhancedFallbackResponse(toolResults: any[]) {
+  if (toolResults.length === 0) {
+    return {
+      response: "I'm currently unable to access the latest data. Please try again in a moment.",
+      timestamp: new Date().toISOString(),
+      source: 'fallback'
+    };
+  }
+
+  // Check for structured batch data first
+  for (const toolResult of toolResults) {
+    try {
+      const data = JSON.parse(toolResult.content);
+      if (data.type === 'batches_overview') {
+        const analytics = data.analytics;
+        let response = `📊 **Batch Overview** (${data.date_range || 'All time'})\n\n`;
+        
+        response += `**Summary:** ${analytics.totals.count} total batches\n`;
+        response += `**Eggs Set:** ${analytics.totals.total_eggs_set.toLocaleString()}\n`;
+        response += `**Chicks Hatched:** ${analytics.totals.total_chicks_hatched.toLocaleString()}\n`;
+        response += `**Average Hatch Rate:** ${analytics.totals.avg_hatch_rate}%\n\n`;
+        
+        if (analytics.upcoming_count > 0) {
+          response += `⏰ **${analytics.upcoming_count}** batches expected to hatch within 7 days\n`;
+        }
+        if (analytics.overdue_count > 0) {
+          response += `🔴 **${analytics.overdue_count}** batches are overdue\n`;
+        }
+        
+        response += `\n**Status Breakdown:**\n`;
+        Object.entries(analytics.by_status).forEach(([status, count]) => {
+          response += `• ${status}: ${count}\n`;
+        });
+
+        return {
+          response: response,
+          actions: [
+            { name: "Show full list", type: "show_more" },
+            { name: "Download CSV", type: "download_csv" }
+          ],
+          payload: {
+            type: "batches_overview",
+            params: data.params || {},
+            summary: analytics,
+            items: data.formatted_batches
+          },
+          timestamp: new Date().toISOString(),
+          source: 'fallback'
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing tool result in fallback:', error);
+    }
+  }
+
+  // Fallback for other types of data
+  let response = "Here's what I found from your hatchery data:\n\n";
+
+  for (const toolResult of toolResults) {
+    try {
+      const data = JSON.parse(toolResult.content);
+      
+      if (data.message) {
+        response += `• ${data.message}\n`;
+      } else if (data.count !== undefined) {
+        response += `• Found ${data.count} records\n`;
+      } else if (data.batches && Array.isArray(data.batches)) {
+        response += `• ${data.batches.length} batches found\n`;
+        if (data.batches.length > 0) {
+          response += `  - Latest: ${data.batches[0].batch_number || data.batches[0].id}\n`;
+        }
+      } else if (data.error) {
+        response += `• ${data.error}\n`;
+      }
+    } catch (parseError) {
+      console.error('Error parsing tool result for fallback:', parseError);
+      response += `• Retrieved some data (could not parse details)\n`;
+    }
+  }
+
+  return {
+    response: response.trim() || "Data retrieved successfully, but no specific details available.",
+    timestamp: new Date().toISOString(),
+    source: 'fallback'
+  };
+}

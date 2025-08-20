@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Mic, MicOff, Bot, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { BatchOverviewDisplay } from './BatchOverviewDisplay';
 
 interface Message {
   id: string;
@@ -14,6 +15,7 @@ interface Message {
   content: string;
   timestamp: Date;
   actions?: any[];
+  payload?: any;
 }
 
 export const ChatInterface = () => {
@@ -76,7 +78,8 @@ export const ChatInterface = () => {
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
-        actions: data.actions
+        actions: data.actions,
+        payload: data.payload
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -114,6 +117,51 @@ export const ChatInterface = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
+  };
+
+  const downloadCSV = (payload: any) => {
+    if (!payload?.items) return;
+    
+    const headers = [
+      'Batch Number', 'Set Date', 'Expected Hatch Date', 'Days Since Set', 
+      'Days to Hatch', 'Status', 'Machine Number', 'Machine Type', 
+      'Flock Name', 'Breed', 'Total Eggs Set', 'Chicks Hatched', 'Hatch Rate %'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...payload.items.map((item: any) => [
+        item.batch_number,
+        item.set_date,
+        item.expected_hatch_date || '',
+        item.days_since_set,
+        item.days_to_hatch || '',
+        item.status,
+        item.machine_number,
+        item.machine_type,
+        item.flock_name,
+        item.breed,
+        item.total_eggs_set,
+        item.chicks_hatched,
+        item.hatch_rate
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `batches_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleActionClick = (action: any, message: Message) => {
+    if (action.type === 'download_csv' && message.payload) {
+      downloadCSV(message.payload);
+    } else if (action.type === 'show_more') {
+      sendMessage("Show me all batches with full details");
+    }
   };
 
   const startListening = async () => {
@@ -174,20 +222,26 @@ export const ChatInterface = () => {
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
-                {message.actions && message.actions.length > 0 && (
+                
+                {/* Render structured batch data */}
+                {message.payload?.type === 'batches_overview' && (
+                  <div className="mt-4">
+                    <BatchOverviewDisplay 
+                      payload={message.payload}
+                      onShowMore={() => handleActionClick({ type: 'show_more' }, message)}
+                      onDownloadCSV={() => handleActionClick({ type: 'download_csv' }, message)}
+                    />
+                  </div>
+                )}
+                
+                {message.actions && message.actions.length > 0 && !message.payload && (
                   <div className="mt-2 space-y-2">
                     {message.actions.map((action, index) => (
                       <Button
                         key={index}
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          // Handle action execution
-                          toast({
-                            title: "Action",
-                            description: `Executing: ${action.name}`
-                          });
-                        }}
+                        onClick={() => handleActionClick(action, message)}
                       >
                         {action.name}
                       </Button>
