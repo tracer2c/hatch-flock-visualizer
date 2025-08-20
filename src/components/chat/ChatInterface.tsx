@@ -190,13 +190,13 @@ export const ChatInterface = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 text-center py-8 px-6 border-b">
+      <div className="flex-shrink-0 text-center py-4 px-6 border-b">
         <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <MessageCircle className="h-8 w-8 text-primary" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-2">
+            <MessageCircle className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Hatchery Assistant</h1>
-          <p className="text-lg text-muted-foreground">Your intelligent hatchery data companion</p>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Hatchery Assistant</h1>
+          <p className="text-base text-muted-foreground">Your intelligent hatchery data companion</p>
         </div>
       </div>
 
