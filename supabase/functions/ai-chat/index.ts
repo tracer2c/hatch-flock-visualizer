@@ -155,6 +155,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Add healthcheck endpoint for debugging
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    if (url.pathname.includes('/health')) {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        openai_configured: !!openaiApiKey,
+        timestamp: new Date().toISOString()
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+  }
+
   try {
     const { message, history } = await req.json();
 

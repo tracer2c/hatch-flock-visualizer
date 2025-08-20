@@ -54,7 +54,22 @@ export const ChatInterface = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Function invoke error:', error);
+        throw error;
+      }
+
+      if (data?.error) {
+        // Show user-friendly error from the edge function
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response || "I'm having trouble connecting. Please try again in a moment.",
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return;
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -65,11 +80,30 @@ export const ChatInterface = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error);
+      
+      // More specific error handling
+      let errorDescription = "Failed to get response. Please try again.";
+      
+      if (error.message?.includes('NetworkError') || error.message?.includes('fetch')) {
+        errorDescription = "Network connection error. Please check your internet connection.";
+      } else if (error.message?.includes('unauthorized')) {
+        errorDescription = "Authentication error. Please refresh the page.";
+      }
+      
+      // Show error as AI message for better UX
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant', 
+        content: "I'm experiencing technical difficulties. Please try your question again.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
       toast({
-        title: "Error",
-        description: "Failed to get response",
+        title: "Connection Error",
+        description: errorDescription,
         variant: "destructive"
       });
     } finally {

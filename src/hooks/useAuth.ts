@@ -175,6 +175,18 @@ export const useAuth = () => {
 
   const createDefaultAdmin = async () => {
     try {
+      // Check if admin already exists to prevent noisy logs
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', 'admin@example.com')
+        .limit(1);
+        
+      if (profiles && profiles.length > 0) {
+        // Admin already exists, skip creation
+        return { error: null };
+      }
+      
       const { error } = await supabase.auth.signUp({
         email: 'admin@example.com',
         password: 'admin123',
@@ -192,7 +204,10 @@ export const useAuth = () => {
       
       return { error: null };
     } catch (error: any) {
-      console.error('Error creating default admin:', error);
+      // Quietly log admin creation errors to reduce noise
+      if (!error.message?.includes('already been registered')) {
+        console.error('Error creating default admin:', error);
+      }
       return { error };
     }
   };
