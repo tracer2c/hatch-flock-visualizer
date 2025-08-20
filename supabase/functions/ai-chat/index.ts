@@ -164,10 +164,21 @@ serve(async (req) => {
 
     console.log('Processing message:', message);
 
+    // Validate OpenAI API Key
     if (!openaiApiKey) {
       console.error('Missing OPENAI_API_KEY secret in Edge Function environment');
       return new Response(JSON.stringify({
-        error: 'OPENAI_API_KEY not configured',
+        error: 'OPENAI_API_KEY not configured. Please add your OpenAI API key in the Supabase secrets.',
+        response: "I need an OpenAI API key to function. Please configure it in your Supabase project settings."
+      }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Validate API key format
+    if (!openaiApiKey.startsWith('sk-') || openaiApiKey.length < 20) {
+      console.error('Invalid OPENAI_API_KEY format');
+      return new Response(JSON.stringify({
+        error: 'Invalid OpenAI API key format',
+        response: "The OpenAI API key appears to be invalid. Please check that it's properly configured."
       }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
