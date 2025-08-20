@@ -6,14 +6,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
 import { MessageFormatter } from './MessageFormatter';
+import { AnalyticsMessage } from './AnalyticsMessage';
+import { ChartMessage } from './ChartMessage';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
+  content: string | any;
   timestamp: Date;
   actions?: any[];
   payload?: any;
+  type?: 'text' | 'analytics' | 'chart';
 }
 
 export const ChatInterface = () => {
@@ -48,36 +51,44 @@ export const ChatInterface = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { 
+        body: {
           message: text,
-          history: messages.slice(-10) // Send last 10 messages for context
+          history: messages.slice(-10).map(msg => ({
+            role: msg.role,
+            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+          }))
         }
       });
 
       if (error) {
-        console.error('Function invoke error:', error);
         throw error;
       }
 
-      if (data?.error) {
-        // Show user-friendly error from the edge function
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: data.response || "I'm having trouble connecting. Please try again in a moment.",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
-        return;
+      const response = data?.response || data?.message || 'Sorry, I could not process your request.';
+      const responseActions = data?.actions || [];
+      const responsePayload = data?.payload || null;
+
+      // Determine message type and content
+      let messageType: 'text' | 'analytics' | 'chart' = 'text';
+      let messageContent = response;
+
+      // Check if response is analytics data
+      if (typeof response === 'object' && response.type === 'analytics') {
+        messageType = 'analytics';
+        messageContent = response;
+      } else if (typeof response === 'object' && response.type === 'chart') {
+        messageType = 'chart';
+        messageContent = response;
       }
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now() + '-assistant',
         role: 'assistant',
-        content: data.response,
+        content: messageContent,
         timestamp: new Date(),
-        actions: data.actions,
-        payload: data.payload
+        actions: responseActions,
+        payload: responsePayload,
+        type: messageType
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -178,10 +189,14 @@ export const ChatInterface = () => {
   };
 
   const suggestedPrompts = [
-    "Show me today's batch overview",
-    "What are the key performance indicators?", 
-    "Generate a weekly report",
-    "Check batch completion status"
+    "Show me today's batch overview with charts",
+    "Compare fertility rates between houses",
+    "Generate performance trends for the last month",
+    "Show machine utilization analytics",
+    "Create a fertility vs hatch rate comparison",
+    "Display batch status breakdown",
+    "Analyze recent performance patterns",
+    "Compare current vs historical data"
   ];
 
   const handleSuggestedPrompt = (prompt: string) => {
@@ -262,12 +277,24 @@ export const ChatInterface = () => {
                          <p className="text-base leading-relaxed whitespace-pre-wrap">
                            {message.content}
                          </p>
-                       ) : (
-                         <MessageFormatter 
-                           content={message.content}
-                           className="text-base"
-                         />
-                       )}
+                        ) : message.type === 'analytics' ? (
+                          <AnalyticsMessage data={message.content} />
+                        ) : message.type === 'chart' ? (
+                          <ChartMessage
+                            type={message.content.type}
+                            title={message.content.title}
+                            description={message.content.description}
+                            data={message.content.data}
+                            config={message.content.config}
+                            insights={message.content.insights}
+                            chartId={`message-chart-${message.id}`}
+                          />
+                        ) : (
+                          <MessageFormatter 
+                            content={message.content}
+                            className="text-base"
+                          />
+                        )}
                      </div>
                     
                     {/* Render structured batch data */}

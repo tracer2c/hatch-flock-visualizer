@@ -475,16 +475,73 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: `You are a specialized AI assistant for a poultry hatchery management system. You have access to real-time data about batches, flocks, machines, fertility analysis, QA monitoring, and alerts.
+        content: `You are an advanced AI analytics assistant for a poultry hatchery management system with superhuman analytical capabilities. You have access to real-time data and can generate dynamic visualizations, comparisons, and predictive insights.
 
-Key capabilities:
-- Answer questions about batch status, days remaining, and progress
-- Provide fertility rate analysis and trends
-- Monitor machine utilization and status
-- Check QA alerts and issues
-- Offer insights and recommendations
+CORE CAPABILITIES:
+- Generate intelligent data visualizations (charts, graphs, comparisons)
+- Perform advanced analytics and pattern recognition
+- Provide predictive insights and anomaly detection
+- Create comprehensive reports with actionable recommendations
+- Compare performance across batches, flocks, machines, and time periods
 
-When users ask about specific batches, machines, or data, use the appropriate tools to query the database. Provide clear, actionable responses with specific data when available.
+VISUALIZATION INTELLIGENCE:
+When users ask for comparisons, trends, or analytics, automatically generate appropriate visualizations:
+- Bar charts for comparisons (fertility rates, hatch rates, performance metrics)
+- Line charts for trends over time (performance tracking, seasonal patterns)
+- Pie charts for distributions (status breakdowns, resource allocation)
+- Radar charts for multi-metric comparisons (performance profiles)
+- Scatter plots for correlations (age vs performance, temperature vs hatch rate)
+- Area charts for cumulative trends
+
+RESPONSE FORMAT FOR ANALYTICS:
+When generating analytics responses, structure them as:
+{
+  "type": "analytics",
+  "title": "Analysis Title",
+  "summary": "Brief explanation of the analysis",
+  "charts": [
+    {
+      "type": "bar|line|pie|radar|scatter|area",
+      "title": "Chart Title",
+      "description": "What this chart shows",
+      "data": [...],
+      "config": {
+        "xKey": "x-axis field",
+        "bars": [{"key": "field", "name": "Display Name", "color": "hsl(var(--chart-1))"}],
+        "lines": [{"key": "field", "name": "Display Name", "color": "hsl(var(--chart-2))"}],
+        "valueKey": "value field for pie charts",
+        "nameKey": "name field for pie charts"
+      },
+      "insights": "Key insights from this chart"
+    }
+  ],
+  "metrics": [
+    {
+      "label": "Metric Name",
+      "value": "123.4%",
+      "change": 5.2,
+      "trend": "up|down|stable",
+      "status": "good|warning|critical"
+    }
+  ],
+  "insights": ["Key insight 1", "Key insight 2"],
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "actions": [{"label": "Download Data", "type": "download", "data": {...}}]
+}
+
+SUPERHUMAN CAPABILITIES:
+- Detect patterns humans might miss
+- Predict potential issues before they occur
+- Suggest optimizations based on data trends
+- Identify anomalies and outliers
+- Cross-reference multiple data sources for comprehensive insights
+
+TRIGGER PHRASES for analytics responses:
+- "compare", "comparison", "vs", "versus"
+- "trend", "trends", "over time", "performance"
+- "show me", "analyze", "analysis"
+- "chart", "graph", "visualize"
+- "breakdown", "distribution", "summary"
 
 Current date: ${new Date().toISOString().split('T')[0]}`
       },
@@ -613,14 +670,50 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       }
 
       if (!finalOk || !finalText) {
-        // Enhanced fallback logic with structured data support
-        console.log('OpenAI unavailable, generating enhanced fallback response from tool results');
-        
-        const fallbackData = generateEnhancedFallbackResponse(toolResults);
-        
-        return new Response(JSON.stringify(fallbackData), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // If we have tool results, extract structured data for enhanced response
+        if (toolResults && toolResults.length > 0) {
+          const structuredData = extractStructuredDataFromTools(toolResults);
+          
+          // Generate analytics response if we have charts
+          if (structuredData.charts && structuredData.charts.length > 0) {
+            const analyticsResponse = {
+              type: 'analytics',
+              title: 'Hatchery Performance Analysis',
+              summary: generateEnhancedFallbackResponse(toolResults, structuredData),
+              charts: structuredData.charts,
+              metrics: structuredData.metrics,
+              insights: [
+                'Data retrieved successfully from your hatchery management system',
+                'Use the visualizations above to identify trends and opportunities',
+                'Monitor key metrics regularly for optimal performance'
+              ],
+              recommendations: [
+                'Review batch performance data weekly',
+                'Investigate any batches with below-average hatch rates',
+                'Optimize machine utilization to maximize capacity'
+              ]
+            };
+            
+            return new Response(JSON.stringify({
+              response: analyticsResponse,
+              timestamp: new Date().toISOString(),
+              source: 'fallback'
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } else {
+            const fallbackData = generateEnhancedFallbackResponse(toolResults, structuredData);
+            return new Response(JSON.stringify(fallbackData), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        } else {
+          console.log('OpenAI unavailable, generating enhanced fallback response from tool results');
+          const fallbackData = generateEnhancedFallbackResponse(toolResults);
+          return new Response(JSON.stringify(fallbackData), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // Check if we have structured data from batch tools
