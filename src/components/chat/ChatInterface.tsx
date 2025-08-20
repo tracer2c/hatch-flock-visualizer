@@ -180,126 +180,185 @@ export const ChatInterface = () => {
   };
 
   return (
-    <Card className="flex flex-col h-[600px] w-full max-w-4xl mx-auto">
-      <div className="p-4 border-b">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          Hatchery AI Assistant
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Ask questions about your batches, flocks, and operations
-        </p>
+    <div className="flex flex-col h-[calc(100vh-8rem)] w-full max-w-5xl mx-auto bg-background">
+      {/* Header */}
+      <div className="flex-shrink-0 bg-card border border-border rounded-t-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <Bot className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
+            <p className="text-sm text-muted-foreground">
+              Your intelligent hatchery operations companion
+            </p>
+          </div>
+        </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">
-              <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Welcome! Ask me anything about your hatchery operations.</p>
-              <p className="text-sm mt-2">Try: "How many days left for batch 1?" or "Show me fertility rates"</p>
-            </div>
-          )}
-          
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {message.role === 'assistant' && (
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
-                    <Bot className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              
+      {/* Messages Area */}
+      <div className="flex-1 bg-card border-x border-border overflow-hidden">
+        <ScrollArea className="h-full">
+          <div className="p-6 space-y-6">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/5 mb-4">
+                  <Bot className="h-8 w-8 text-primary/60" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Welcome to your AI Assistant
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Ask me anything about your hatchery operations. I can help with batch tracking, 
+                  fertility analysis, and operational insights.
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <button
+                    onClick={() => sendMessage("Show me batch overview")}
+                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
+                  >
+                    Show batch overview
+                  </button>
+                  <button
+                    onClick={() => sendMessage("What batches are overdue?")}
+                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
+                  >
+                    Check overdue batches
+                  </button>
+                  <button
+                    onClick={() => sendMessage("Show fertility rates")}
+                    className="px-3 py-1.5 text-xs bg-primary/5 hover:bg-primary/10 text-primary rounded-full transition-colors"
+                  >
+                    Fertility analysis
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {messages.map((message) => (
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground ml-auto'
-                    : 'bg-muted'
-                }`}
+                key={message.id}
+                className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                
-                {/* Render structured batch data */}
-                {message.payload?.type === 'batches_overview' && (
-                  <div className="mt-4">
-                    <BatchOverviewDisplay 
-                      payload={message.payload}
-                      onShowMore={() => handleActionClick({ type: 'show_more' }, message)}
-                      onDownloadCSV={() => handleActionClick({ type: 'download_csv' }, message)}
-                    />
+                {message.role === 'assistant' && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
                   </div>
                 )}
                 
-                {message.actions && message.actions.length > 0 && !message.payload && (
-                  <div className="mt-2 space-y-2">
-                    {message.actions.map((action, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleActionClick(action, message)}
-                      >
-                        {action.name}
-                      </Button>
-                    ))}
+                <div
+                  className={`max-w-[85%] ${
+                    message.role === 'user'
+                      ? 'order-first'
+                      : ''
+                  }`}
+                >
+                  <div
+                    className={`rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-muted/50 border border-border'
+                    }`}
+                  >
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    
+                    {/* Render structured batch data */}
+                    {message.payload?.type === 'batches_overview' && (
+                      <div className="mt-4">
+                        <BatchOverviewDisplay 
+                          payload={message.payload}
+                          onShowMore={() => handleActionClick({ type: 'show_more' }, message)}
+                          onDownloadCSV={() => handleActionClick({ type: 'download_csv' }, message)}
+                        />
+                      </div>
+                    )}
+                    
+                    {message.actions && message.actions.length > 0 && !message.payload && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {message.actions.map((action, index) => (
+                          <Button
+                            key={index}
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleActionClick(action, message)}
+                            className="text-xs"
+                          >
+                            {action.name}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-1 px-2">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                
+                {message.role === 'user' && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary flex-shrink-0">
+                    <User className="h-4 w-4 text-secondary-foreground" />
                   </div>
                 )}
               </div>
-              
-              {message.role === 'user' && (
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>
-                  <Bot className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-muted rounded-lg p-3">
-                <Loader2 className="h-4 w-4 animate-spin" />
+            ))}
+            
+            {isLoading && (
+              <div className="flex gap-4 justify-start">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div className="bg-muted/50 border border-border rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Thinking...</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-        <div ref={messagesEndRef} />
-      </ScrollArea>
+            )}
+          </div>
+          <div ref={messagesEndRef} />
+        </ScrollArea>
+      </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your hatchery operations..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={startListening}
-            disabled={isLoading}
-            className={isListening ? 'bg-red-500 text-white' : ''}
+      {/* Input Area */}
+      <div className="flex-shrink-0 bg-card border border-border rounded-b-xl p-4 shadow-sm">
+        <form onSubmit={handleSubmit} className="flex gap-3">
+          <div className="flex-1 relative">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about your hatchery operations..."
+              disabled={isLoading}
+              className="pr-20 h-11 border-border bg-background focus:ring-2 focus:ring-primary/20"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={startListening}
+                disabled={isLoading}
+                className={`h-7 w-7 p-0 ${isListening ? 'bg-destructive text-destructive-foreground' : 'hover:bg-muted'}`}
+              >
+                {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+          </div>
+          <Button 
+            type="submit" 
+            disabled={isLoading || !input.trim()}
+            className="h-11 px-4"
+            size="default"
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
-          <Button type="submit" disabled={isLoading || !input.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </form>
-    </Card>
+        </form>
+      </div>
+    </div>
   );
 };
