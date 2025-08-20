@@ -102,6 +102,20 @@ const BatchOverviewDashboard: React.FC = () => {
     return Math.floor((now.getTime() - set.getTime()) / (1000 * 60 * 60 * 24));
   };
 
+  const getProgressDisplay = (setDate: string) => {
+    const daysFromSet = getDaysFromSet(setDate);
+    const isOverdue = daysFromSet > 21;
+    const displayDays = Math.min(daysFromSet, 21);
+    const overdueDays = isOverdue ? daysFromSet - 21 : 0;
+    
+    return {
+      text: isOverdue ? `Day 21+ (${overdueDays} days overdue)` : `Day ${daysFromSet} of 21`,
+      progress: Math.min((daysFromSet / 21) * 100, 100),
+      isOverdue,
+      daysFromSet
+    };
+  };
+
   // Skeleton state for enterprise-level polish
   if (isLoading) {
     return (
@@ -272,16 +286,26 @@ const BatchOverviewDashboard: React.FC = () => {
                             {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
                           </div>
                         </div>
-                        <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
+                          {getProgressDisplay(house.set_date).isOverdue && (
+                            <Badge variant="destructive" className="text-xs">OVERDUE</Badge>
+                          )}
+                        </div>
                       </div>
 
                       <div className="text-right">
-                        <div className="text-sm font-medium text-card-foreground">Day {getDaysFromSet(house.set_date)} of 21</div>
+                        <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? 'text-destructive' : 'text-card-foreground'}`}>
+                          {getProgressDisplay(house.set_date).text}
+                        </div>
                         <div className="text-sm text-muted-foreground">{house.machines?.machine_number} ({house.machines?.machine_type})</div>
                       </div>
 
                       <div className="w-32">
-                        <Progress value={(getDaysFromSet(house.set_date) / 21) * 100} className="h-2" />
+                        <Progress 
+                          value={getProgressDisplay(house.set_date).progress} 
+                          className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? '[&>div]:bg-destructive' : ''}`} 
+                        />
                       </div>
                     </div>
                   ))}
