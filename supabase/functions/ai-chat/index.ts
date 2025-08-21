@@ -628,8 +628,8 @@ async function executeTool(toolName: string, parameters: any) {
         const isResidue = metric === 'residue_percent';
         const table = isResidue ? 'residue_analysis' : 'fertility_analysis';
         const cols = isResidue
-          ? 'id, batch_id, analysis_date, residue_percent'
-          : 'id, batch_id, analysis_date, fertility_percent, hatch_percent, hof_percent';
+          ? 'id, batch_id, analysis_date, residue_percent, total_residue_count'
+          : 'id, batch_id, analysis_date, sample_size, fertility_percent, hatch_percent, hof_percent';
 
         let q = supabase.from(table).select(cols);
         if (typeof daysBack === 'number' && daysBack > 0) {
@@ -689,33 +689,57 @@ async function executeTool(toolName: string, parameters: any) {
         }
 
         if (!groupBy) {
-          // Return raw with labels to let the planner decide visualization
-          const enriched = rows.map((r: any) => ({
-            batch_id: r.batch_id,
-            analysis_date: r.analysis_date,
-            label_house: labelFor(r.batch_id, 'house'),
-            label_unit: labelFor(r.batch_id, 'unit'),
-            label_batch: labelFor(r.batch_id, 'batch'),
-            value: Number(r[metric] ?? 0)
-          }));
+          // Return raw with labels; clean values and include weights for potential weighting upstream
+          const enriched = rows
+            .map((r: any) => {
+              const raw = Number(r[metric]);
+              const value = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : null;
+              if (value === null) return null;
+              const weight = isResidue
+                ? Number(r.total_residue_count ?? 1)
+                : Number(r.sample_size ?? 1);
+              return {
+                batch_id: r.batch_id,
+                analysis_date: r.analysis_date,
+                label_house: labelFor(r.batch_id, 'house'),
+                label_unit: labelFor(r.batch_id, 'unit'),
+                label_batch: labelFor(r.batch_id, 'batch'),
+                value,
+                [metric]: value,
+                weight: Number.isFinite(weight) && weight > 0 ? weight : 1
+              };
+            })
+            .filter(Boolean);
+
           const validation = validateGroupedPercent(enriched, { groupKey: 'label_house', valueKeys: ['value'], minGroups: 1 });
           return { type: 'smart_retrieve', metric, grouped: null, validation, data: enriched };
         }
 
-        type Agg = { label: string; count: number; sum: number };
+        type Agg = { label: string; count: number; vsum: number; wsum: number };
         const aggregateBy = (mode: 'house'|'unit'|'batch') => {
           const groups: Record<string, Agg> = {};
           for (const r of rows) {
+            const raw = Number(r[metric]);
+            if (!Number.isFinite(raw)) continue;
+            const val = Math.max(0, Math.min(100, raw));
+            const w = isResidue ? Number(r.total_residue_count ?? 1) : Number(r.sample_size ?? 1);
+            const weight = Number.isFinite(w) && w > 0 ? w : 1;
             const label = labelFor(r.batch_id, mode);
-            if (!groups[label]) groups[label] = { label, count: 0, sum: 0 };
+            if (!groups[label]) groups[label] = { label, count: 0, vsum: 0, wsum: 0 };
             groups[label].count += 1;
-            groups[label].sum += Number(r[metric] ?? 0);
+            groups[label].vsum += val * weight;
+            groups[label].wsum += weight;
           }
-          let aggregated = Object.values(groups).map(g => ({
-            label: g.label,
-            [metric]: g.count ? g.sum / g.count : 0,
-            sample_count: g.count,
-          }));
+          let aggregated = Object.values(groups).map(g => {
+            const avg = g.wsum > 0 ? g.vsum / g.wsum : 0;
+            return {
+              label: g.label,
+              [metric]: avg,
+              value: avg,
+              sample_count: g.count,
+              weight_sum: g.wsum,
+            };
+          });
           if (housesFilter.length > 0 && mode !== 'batch') {
             const wants = housesFilter.map(normalizeLabel);
             aggregated = aggregated.filter(r => {
@@ -723,24 +747,26 @@ async function executeTool(toolName: string, parameters: any) {
               return wants.some(w => w && (lbl === w || lbl.includes(w)));
             });
           }
+          // Keep output deterministic
+          aggregated.sort((a, b) => a.label.localeCompare(b.label));
           return aggregated;
         };
 
         let aggregated = aggregateBy(groupBy);
-        let validation = validateGroupedPercent(aggregated, { groupKey: 'label', valueKeys: [metric], minGroups: 1 });
+        let validation = validateGroupedPercent(aggregated, { groupKey: 'label', valueKeys: [metric, 'value'], minGroups: 1 });
         let retries = 0;
 
         if (!validation.passed && groupBy === 'house') {
           const unknownCount = aggregated.filter(r => normalizeLabel(r.label) === 'unknown house').length;
           if (unknownCount > 0) {
             const alt = aggregateBy('unit');
-            const v2 = validateGroupedPercent(alt, { groupKey: 'label', valueKeys: [metric], minGroups: 1 });
+            const v2 = validateGroupedPercent(alt, { groupKey: 'label', valueKeys: [metric, 'value'], minGroups: 1 });
             if (v2.passed) { aggregated = alt; validation = v2; }
             retries += 1;
           }
         }
 
-        console.log('[smart_retrieve]', { metric, groupBy, rows: rows.length, groups: aggregated.length, retries, validation });
+        console.log('[smart_retrieve]', { metric, groupBy, rows: rows.length, groups: aggregated.length, retries, sample: aggregated.slice(0,5) });
         return { type: 'smart_retrieve', metric, grouped: groupBy, retries, validation, data: aggregated };
       }
 
