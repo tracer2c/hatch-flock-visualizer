@@ -118,10 +118,30 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, cla
     }
     
     if (typeof content !== 'string') {
-      // If content is an object, try to stringify it or extract text
-      if (typeof content === 'object') {
-        return <p className="text-muted-foreground">Complex content type not supported</p>;
+      // Handle array content (like suggestions)
+      if (Array.isArray(content)) {
+        return (
+          <ul className="list-disc list-inside space-y-1">
+            {content.map((item, index) => (
+              <li key={index} className="text-sm">
+                {String(item)}
+              </li>
+            ))}
+          </ul>
+        );
       }
+      
+      // Handle object content
+      if (typeof content === 'object' && content !== null) {
+        return (
+          <div className="text-sm font-mono bg-muted/50 p-3 rounded border">
+            <pre className="whitespace-pre-wrap text-xs">
+              {JSON.stringify(content, null, 2)}
+            </pre>
+          </div>
+        );
+      }
+      
       // Convert other types to string
       return formatMessage(String(content));
     }

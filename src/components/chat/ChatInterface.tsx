@@ -19,6 +19,7 @@ interface Message {
   payload?: any;
   type?: 'text' | 'analytics' | 'chart' | 'progress' | 'error';
   isProgress?: boolean;
+  suggestions?: string[];
 }
 
 export const ChatInterface = () => {
@@ -110,11 +111,11 @@ export const ChatInterface = () => {
       // Check if response indicates no data found or error
       if (data?.noDataFound || data?.error) {
         messageType = 'error';
-        messageContent = data?.suggestions || data?.response || 'No data found for your request.';
-      } else if (typeof response === 'object' && response.type === 'analytics') {
+        messageContent = data?.response || 'No data found for your request.';
+      } else if (typeof response === 'object' && response?.type === 'analytics') {
         messageType = 'analytics';
         messageContent = response;
-      } else if (typeof response === 'object' && response.type === 'chart') {
+      } else if (typeof response === 'object' && response?.type === 'chart') {
         messageType = 'chart';
         messageContent = response;
       }
@@ -122,11 +123,14 @@ export const ChatInterface = () => {
       const assistantMessage: Message = {
         id: Date.now() + '-assistant',
         role: 'assistant',
-        content: messageContent,
+        content: (messageType === 'analytics' || messageType === 'chart') && typeof messageContent === 'object' 
+          ? messageContent 
+          : typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent),
         timestamp: new Date(),
         actions: responseActions,
         payload: responsePayload,
-        type: messageType
+        type: messageType,
+        suggestions: (data?.noDataFound || data?.error) && Array.isArray(data?.suggestions) ? data.suggestions : undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -347,7 +351,7 @@ export const ChatInterface = () => {
                             <span className="text-sm">{message.content}</span>
                           </div>
                         ) : message.type === 'error' ? (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             <div className="flex items-center gap-2 text-amber-600">
                               <span className="text-lg">⚠️</span>
                               <span className="font-medium">No Data Found</span>
@@ -356,19 +360,45 @@ export const ChatInterface = () => {
                               content={message.content}
                               className="text-base"
                             />
+                            {message.suggestions && message.suggestions.length > 0 && (
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium text-muted-foreground">Try asking about:</p>
+                                <div className="grid gap-2">
+                                  {message.suggestions.map((suggestion, index) => (
+                                    <Button
+                                      key={index}
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => sendMessage(suggestion)}
+                                      className="justify-start text-left h-auto p-3 text-sm hover:bg-accent/50"
+                                    >
+                                      {suggestion}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : message.type === 'analytics' ? (
-                          <AnalyticsMessage data={message.content} />
+                          typeof message.content === 'object' ? (
+                            <AnalyticsMessage data={message.content} />
+                          ) : (
+                            <MessageFormatter content={message.content} className="text-base" />
+                          )
                         ) : message.type === 'chart' ? (
-                          <ChartMessage
-                            type={message.content.type}
-                            title={message.content.title}
-                            description={message.content.description}
-                            data={message.content.data}
-                            config={message.content.config}
-                            insights={message.content.insights}
-                            chartId={`message-chart-${message.id}`}
-                          />
+                          typeof message.content === 'object' && message.content && message.content.type ? (
+                            <ChartMessage
+                              type={message.content.type}
+                              title={message.content.title || 'Chart'}
+                              description={message.content.description || ''}
+                              data={message.content.data || []}
+                              config={message.content.config || {}}
+                              insights={message.content.insights || []}
+                              chartId={`message-chart-${message.id}`}
+                            />
+                          ) : (
+                            <MessageFormatter content={typeof message.content === 'string' ? message.content : JSON.stringify(message.content)} className="text-base" />
+                          )
                         ) : (
                           <MessageFormatter 
                             content={message.content}
