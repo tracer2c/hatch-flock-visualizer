@@ -47,6 +47,16 @@ export const ChartMessage: React.FC<ChartMessageProps> = ({
   chartId,
   className = ""
 }) => {
+  const percentKeys = [
+    ...(config?.bars?.map((b: any) => b.key) || []),
+    ...(config?.lines?.map((l: any) => l.key) || []),
+    ...(config?.areas?.map((a: any) => a.key) || []),
+    config?.yKey,
+  ].filter(Boolean);
+
+  const looksPercent = (k: string) => typeof k === 'string' && /percent|fertility|hatch|hof|residue/i.test(k);
+  const isPercentageChart = config?.yAxisFormat === 'percent' || (percentKeys.length > 0 && percentKeys.every(looksPercent));
+
   const renderChart = () => {
     const commonProps = {
       data,
@@ -63,9 +73,11 @@ export const ChartMessage: React.FC<ChartMessageProps> = ({
               tick={{ fill: 'hsl(var(--foreground))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
             />
-            <YAxis 
+            <YAxis
               tick={{ fill: 'hsl(var(--foreground))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={isPercentageChart ? [0, 100] : undefined}
+              tickFormatter={isPercentageChart ? (v) => `${v}%` : undefined}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
             {config.bars?.map((bar: any, index: number) => (
@@ -92,6 +104,8 @@ export const ChartMessage: React.FC<ChartMessageProps> = ({
             <YAxis 
               tick={{ fill: 'hsl(var(--foreground))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={isPercentageChart ? [0, 100] : undefined}
+              tickFormatter={isPercentageChart ? (v) => `${v}%` : undefined}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
             {config.lines?.map((line: any, index: number) => (
@@ -120,6 +134,8 @@ export const ChartMessage: React.FC<ChartMessageProps> = ({
             <YAxis 
               tick={{ fill: 'hsl(var(--foreground))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={isPercentageChart ? [0, 100] : undefined}
+              tickFormatter={isPercentageChart ? (v) => `${v}%` : undefined}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
             {config.areas?.map((area: any, index: number) => (
@@ -191,6 +207,8 @@ export const ChartMessage: React.FC<ChartMessageProps> = ({
               type="number"
               tick={{ fill: 'hsl(var(--foreground))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={isPercentageChart ? [0, 100] : undefined}
+              tickFormatter={isPercentageChart ? (v) => `${v}%` : undefined}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Scatter

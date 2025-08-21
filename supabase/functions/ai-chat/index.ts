@@ -145,18 +145,14 @@ const tools = [
     type: "function", 
     function: {
       name: "get_fertility_rates",
-      description: "Get fertility analysis data for batches",
+      description: "Get fertility analysis data for batches, with optional house-level aggregation",
       parameters: {
         type: "object",
         properties: {
-          batch_id: {
-            type: "string",
-            description: "Optional specific batch ID"
-          },
-          limit: {
-            type: "number",
-            description: "Number of records to return"
-          }
+          batch_id: { type: "string", description: "Optional specific batch ID" },
+          limit: { type: "number", description: "Number of records to return" },
+          days_back: { type: "number", description: "Only include analyses within the last N days" },
+          group_by_house: { type: "boolean", description: "If true, aggregate by house (unit) averages" }
         }
       }
     }
@@ -317,23 +313,93 @@ async function executeTool(toolName: string, parameters: any) {
         return { error: "Batch not found", search_term: parameters.batch_identifier };
 
       case "get_fertility_rates":
-        const { data: fertilityData } = await supabase
-          .from('fertility_analysis')
-          .select(`
-            *, 
-            batches(batch_number, set_date, status)
-          `)
-          .limit(parameters.limit || 10)
-          .order('analysis_date', { ascending: false });
+        {
+          const daysBack = parameters.days_back;
+          const groupByHouse = !!parameters.group_by_house;
 
-        if (!fertilityData || fertilityData.length === 0) {
-          return { message: "No fertility analysis data found", data: [] };
+          let q = supabase
+            .from('fertility_analysis')
+            .select('id, batch_id, analysis_date, fertility_percent, hatch_percent, hof_percent');
+
+          if (parameters.batch_id) {
+            q = q.eq('batch_id', parameters.batch_id);
+          }
+          if (daysBack && typeof daysBack === 'number') {
+            const start = new Date();
+            start.setDate(start.getDate() - daysBack);
+            q = q.gte('analysis_date', start.toISOString().split('T')[0]);
+          }
+
+          q = q.order('analysis_date', { ascending: false }).limit(parameters.limit || 100);
+
+          const { data: fert, error: fertError } = await q;
+          if (fertError) throw fertError;
+
+          if (!fert || fert.length === 0) {
+            return { message: "No fertility analysis data found", data: [] };
+          }
+
+          if (!groupByHouse) {
+            return {
+              message: `Found ${fert.length} fertility analysis records`,
+              data: fert
+            };
+          }
+
+          // Aggregate by house (unit)
+          const batchIds = Array.from(new Set(fert.map((f: any) => f.batch_id).filter(Boolean)));
+          let batchRows: any[] = [];
+          if (batchIds.length > 0) {
+            const { data: bData, error: bErr } = await supabase
+              .from('batches')
+              .select('id, unit_id')
+              .in('id', batchIds);
+            if (bErr) throw bErr;
+            batchRows = bData || [];
+          }
+          const unitIds = Array.from(new Set(batchRows.map(b => b.unit_id).filter(Boolean)));
+
+          const unitsMap: Record<string, { id: string; name: string | null; code: string | null }> = {};
+          if (unitIds.length > 0) {
+            const { data: uData, error: uErr } = await supabase
+              .from('units')
+              .select('id, name, code')
+              .in('id', unitIds);
+            if (uErr) throw uErr;
+            (uData || []).forEach(u => { unitsMap[u.id] = u; });
+          }
+
+          const batchToUnit: Record<string, string | null> = {};
+          batchRows.forEach(b => { batchToUnit[b.id] = b.unit_id; });
+
+          const groups: Record<string, { unit_id: string; unit_name: string; count: number; fertility_sum: number; hatch_sum: number; hof_sum: number }> = {};
+          fert.forEach((row: any) => {
+            const unitId = batchToUnit[row.batch_id] || 'unknown';
+            const unitName = unitsMap[unitId]?.name || (unitId === 'unknown' ? 'Unknown House' : unitId);
+            if (!groups[unitId]) {
+              groups[unitId] = { unit_id: unitId, unit_name: unitName, count: 0, fertility_sum: 0, hatch_sum: 0, hof_sum: 0 };
+            }
+            groups[unitId].count += 1;
+            groups[unitId].fertility_sum += Number(row.fertility_percent || 0);
+            groups[unitId].hatch_sum += Number(row.hatch_percent || 0);
+            groups[unitId].hof_sum += Number(row.hof_percent || 0);
+          });
+
+          const aggregated = Object.values(groups).map(g => ({
+            unit_id: g.unit_id,
+            unit_name: g.unit_name,
+            fertility_percent: g.count ? g.fertility_sum / g.count : 0,
+            hatch_percent: g.count ? g.hatch_sum / g.count : 0,
+            hof_percent: g.count ? g.hof_sum / g.count : 0,
+            sample_count: g.count,
+          }));
+
+          return {
+            message: `Aggregated fertility by house (${aggregated.length} houses)`         ,
+            grouped: 'house',
+            data: aggregated
+          };
         }
-
-        return {
-          message: `Found ${fertilityData.length} fertility analysis records`,
-          data: fertilityData
-        };
 
       case "get_machine_status":
         const { data: machineData } = await supabase
@@ -999,10 +1065,10 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
   const charts: any[] = [];
 
   const houseData = fertilityData.slice(0, 10).map(item => ({
-    name: item.batches?.batch_number || `Batch ${item.id?.slice?.(0, 8) || ''}`,
-    fertility: item.fertility_percent || 0,
-    hatch: item.hatch_percent || 0,
-    hof: item.hof_percent || 0
+    name: item.unit_name || item.batches?.batch_number || `Batch ${item.id?.slice?.(0, 8) || ''}`,
+    fertility: Number(item.fertility_percent || 0),
+    hatch: Number(item.hatch_percent || 0),
+    hof: Number(item.hof_percent || 0)
   }));
 
   const want = (t: string, ...keywords: string[]) => {
