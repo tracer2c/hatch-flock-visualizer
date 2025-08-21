@@ -259,6 +259,21 @@ const tools = [
       }
     }
   }
+,
+  {
+    type: "function",
+    function: {
+      name: "get_egg_status_breakdown",
+      description: "Return per-batch egg counts by status (fertile, infertile, contaminated). Use for 'eggs by status' or 'stacked bar by status' requests.",
+      parameters: {
+        type: "object",
+        properties: {
+          limit_batches: { type: "number", description: "How many most recent batches to include (default 10)" },
+          days_back: { type: "number", description: "Optional: Only include batches set in the last N days" }
+        }
+      }
+    }
+  }
 ];
 
 async function executeTool(toolName: string, parameters: any) {
@@ -770,6 +785,73 @@ async function executeTool(toolName: string, parameters: any) {
         return { type: 'smart_retrieve', metric, grouped: groupBy, retries, validation, data: aggregated };
       }
 
+      case "get_egg_status_breakdown": {
+        const limitBatches: number = parameters.limit_batches || 10;
+        const daysBack: number | undefined = parameters.days_back;
+
+        // Fetch recent batches
+        let bq = supabase
+          .from('batches')
+          .select('id, batch_number, set_date')
+          .order('set_date', { ascending: false })
+          .limit(limitBatches);
+        if (typeof daysBack === 'number' && daysBack > 0) {
+          const start = new Date();
+          start.setDate(start.getDate() - daysBack);
+          bq = bq.gte('set_date', start.toISOString().split('T')[0]);
+        }
+        const { data: batchesList, error: bqErr } = await bq;
+        if (bqErr) throw bqErr;
+        const batchIds = (batchesList || []).map(b => b.id);
+        if (batchIds.length === 0) {
+          return { type: 'egg_status_breakdown', message: 'No batches found', data: [] };
+        }
+
+        // Fetch analyses
+        const [{ data: fertRows }, { data: resRows }] = await Promise.all([
+          supabase.from('fertility_analysis').select('batch_id, analysis_date, fertile_eggs, infertile_eggs').in('batch_id', batchIds).order('analysis_date', { ascending: false }),
+          supabase.from('residue_analysis').select('batch_id, analysis_date, contaminated_eggs').in('batch_id', batchIds).order('analysis_date', { ascending: false }),
+        ]);
+
+        // Index latest per batch
+        const latestFert: Record<string, any> = {};
+        for (const r of fertRows || []) {
+          if (!latestFert[r.batch_id] || r.analysis_date > latestFert[r.batch_id].analysis_date) latestFert[r.batch_id] = r;
+        }
+        const latestRes: Record<string, any> = {};
+        for (const r of (resRows || [])) {
+          if (!latestRes[r.batch_id] || r.analysis_date > latestRes[r.batch_id].analysis_date) latestRes[r.batch_id] = r;
+        }
+
+        // Build dataset in same order as batches
+        const data = (batchesList || []).map(b => {
+          const f = latestFert[b.id] || {};
+          const r = latestRes[b.id] || {};
+          const fertile = Math.max(0, Number(f.fertile_eggs ?? 0));
+          const infertile = Math.max(0, Number(f.infertile_eggs ?? 0));
+          const contaminated = Math.max(0, Number(r.contaminated_eggs ?? 0));
+          return {
+            batch_id: b.id,
+            batch_number: b.batch_number,
+            fertile,
+            infertile,
+            contaminated,
+            total: fertile + infertile + contaminated,
+          };
+        });
+
+        // Filter out all-zero rows
+        const filtered = data.filter(d => (d.fertile + d.infertile + d.contaminated) > 0);
+
+        console.log('[get_egg_status_breakdown]', { count: filtered.length, sample: filtered.slice(0,3) });
+
+        return {
+          type: 'egg_status_breakdown',
+          message: `Egg status for ${filtered.length} recent batches`,
+          data: filtered,
+        };
+      }
+
       default:
         return { error: "Unknown tool", requested_tool: toolName };
     }
@@ -1182,6 +1264,19 @@ Current date: ${new Date().toISOString().split('T')[0]}`
 function applySmartDefaults(message: string, toolResults: any[]) {
   const msgLower = message.toLowerCase();
   
+  // Priority: egg status requests → only use egg status data, avoid unrelated fallbacks
+  if (msgLower.includes('egg status') || msgLower.includes('fertile') || msgLower.includes('infertile') || msgLower.includes('contaminated')) {
+    for (const toolResult of toolResults) {
+      try {
+        const data = JSON.parse(toolResult.content);
+        if (data.type === 'egg_status_breakdown' || (data.data && Array.isArray(data.data) && data.data[0]?.fertile !== undefined)) {
+          return generateEggStatusCharts(data.data);
+        }
+      } catch (e) {}
+    }
+    return null; // Don't fallback to batch/hatch charts
+  }
+  
   // Smart default 1: Batch overview requests always get dashboard
   if ((msgLower.includes('batch') && (msgLower.includes('overview') || msgLower.includes('summary') || msgLower.includes('status'))) ||
       msgLower.includes('dashboard') || msgLower.includes('recent')) {
@@ -1299,6 +1394,9 @@ function generateChartsFromDataWithIntent(message: string, toolResults: any[], p
   for (const toolResult of toolResults) {
     try {
       const data = JSON.parse(toolResult.content);
+      if (data.type === 'egg_status_breakdown' || (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0]?.fertile !== undefined && data.data[0]?.infertile !== undefined)) {
+        return generateEggStatusCharts(data.data, preferredType);
+      }
       if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].fertility_percent !== undefined) {
         return generateFertilityCharts(message, data.data, preferredType);
       }
@@ -1323,16 +1421,18 @@ function generateChartsFromData(message: string, toolResults: any[]) {
     try {
       const data = JSON.parse(toolResult.content);
       
+      // Handle egg status breakdown
+      if (data.type === 'egg_status_breakdown' || (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0]?.fertile !== undefined && data.data[0]?.infertile !== undefined)) {
+        return generateEggStatusCharts(data.data);
+      }
       // Handle fertility data
       if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].fertility_percent !== undefined) {
         return generateFertilityCharts(msgLower, data.data);
       }
-      
       // Handle batch overview data
       if (data.type === 'batches_overview' && data.batches) {
         return generateBatchCharts(msgLower, data);
       }
-      
       // Handle machine data
       if (data.machines && Array.isArray(data.machines)) {
         return generateMachineCharts(msgLower, data.machines);
@@ -1508,6 +1608,45 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
       'Monitor trends monthly to identify seasonal patterns',
       'Focus on batches with fertility rates below 75%'
     ]
+  };
+}
+
+// Generate egg status stacked bar charts
+function generateEggStatusCharts(data: any[], preferredType?: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
+  const chartData = data.map(d => ({
+    name: d.batch_number || d.batch || d.label || 'Batch',
+    fertile: Number(d.fertile || 0),
+    infertile: Number(d.infertile || 0),
+    contaminated: Number(d.contaminated || 0),
+  }));
+  const charts: any[] = [];
+  // Default to stacked bar
+  if (!preferredType || preferredType === 'bar') {
+    charts.push({
+      type: 'bar',
+      title: 'Eggs by Status per Batch',
+      description: 'Stacked bar of fertile, infertile, and contaminated eggs by batch',
+      data: chartData,
+      config: {
+        xKey: 'name',
+        stacked: true,
+        bars: [
+          { key: 'fertile', name: 'Fertile', color: 'hsl(var(--chart-1))' },
+          { key: 'infertile', name: 'Infertile', color: 'hsl(var(--chart-2))' },
+          { key: 'contaminated', name: 'Contaminated', color: 'hsl(var(--chart-3))' },
+        ],
+      },
+      insights: `Showing ${chartData.length} batches`
+    });
+  }
+  return {
+    type: 'analytics',
+    title: 'Egg Status Breakdown',
+    summary: `Egg counts by status across ${chartData.length} recent batches`,
+    charts,
+    metrics: [],
+    insights: [],
+    recommendations: []
   };
 }
 
