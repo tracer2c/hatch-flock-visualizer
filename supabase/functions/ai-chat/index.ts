@@ -613,6 +613,137 @@ async function executeTool(toolName: string, parameters: any) {
           recent_qa_checks: recentQA.data || []
         };
 
+      case "smart_retrieve": {
+        const metric: string = parameters.metric;
+        const daysBack: number | undefined = parameters.days_back;
+        const groupBy: 'house' | 'unit' | 'batch' | null = parameters.group_by || null;
+        const housesFilter: string[] = Array.isArray(parameters.houses) ? parameters.houses : [];
+        const limit: number = parameters.limit || 200;
+
+        const allowed = new Set(["fertility_percent","hatch_percent","hof_percent","residue_percent"]);
+        if (!allowed.has(metric)) {
+          return { error: `Unsupported metric: ${metric}`, allowed: Array.from(allowed) };
+        }
+
+        const isResidue = metric === 'residue_percent';
+        const table = isResidue ? 'residue_analysis' : 'fertility_analysis';
+        const cols = isResidue
+          ? 'id, batch_id, analysis_date, residue_percent'
+          : 'id, batch_id, analysis_date, fertility_percent, hatch_percent, hof_percent';
+
+        let q = supabase.from(table).select(cols);
+        if (typeof daysBack === 'number' && daysBack > 0) {
+          const start = new Date();
+          start.setDate(start.getDate() - daysBack);
+          q = q.gte('analysis_date', start.toISOString().split('T')[0]);
+        }
+        q = q.order('analysis_date', { ascending: false }).limit(limit);
+
+        const { data: rows, error: qErr } = await q as any;
+        if (qErr) throw qErr;
+        if (!rows || rows.length === 0) {
+          return { message: `No ${table} rows found in lookback`, metric, data: [] };
+        }
+
+        // Enrich with batch, unit, flock for labels
+        const batchIds = Array.from(new Set(rows.map((r: any) => r.batch_id).filter(Boolean)));
+        const { data: bData, error: bErr } = await supabase
+          .from('batches')
+          .select('id, unit_id, flock_id, batch_number')
+          .in('id', batchIds);
+        if (bErr) throw bErr;
+        const unitIds = Array.from(new Set((bData||[]).map(b => b.unit_id).filter(Boolean)));
+        const flockIds = Array.from(new Set((bData||[]).map(b => b.flock_id).filter(Boolean)));
+
+        const unitsMap: Record<string, { id: string; name: string | null; code: string | null }> = {};
+        if (unitIds.length > 0) {
+          const { data: uData, error: uErr } = await supabase
+            .from('units')
+            .select('id, name, code')
+            .in('id', unitIds);
+          if (uErr) throw uErr;
+          (uData||[]).forEach(u => { unitsMap[u.id] = u; });
+        }
+
+        const flocksMap: Record<string, { id: string; house_number: string | null; flock_name: string | null }> = {};
+        if (flockIds.length > 0) {
+          const { data: fData, error: fErr } = await supabase
+            .from('flocks')
+            .select('id, house_number, flock_name')
+            .in('id', flockIds);
+          if (fErr) throw fErr;
+          (fData||[]).forEach(f => { flocksMap[f.id] = f; });
+        }
+
+        const batchMap: Record<string, { unit_id: string | null; flock_id: string | null; batch_number: string | null }> = {};
+        (bData||[]).forEach(b => { batchMap[b.id] = { unit_id: b.unit_id, flock_id: b.flock_id, batch_number: b.batch_number }; });
+
+        function labelFor(batchId: string | null | undefined, mode: 'house'|'unit'|'batch'): string {
+          const meta = batchId ? batchMap[batchId] : undefined;
+          if (!meta) return mode === 'batch' ? (batchId ?? 'Unknown Batch') : (mode === 'house' ? 'Unknown House' : 'Unknown Unit');
+          if (mode === 'batch') return meta.batch_number || batchId || 'Unknown Batch';
+          const unit = meta.unit_id ? unitsMap[meta.unit_id] : undefined;
+          const flock = meta.flock_id ? flocksMap[meta.flock_id] : undefined;
+          if (mode === 'house') return flock?.house_number || unit?.name || unit?.code || 'Unknown House';
+          return unit?.name || unit?.code || 'Unknown Unit';
+        }
+
+        if (!groupBy) {
+          // Return raw with labels to let the planner decide visualization
+          const enriched = rows.map((r: any) => ({
+            batch_id: r.batch_id,
+            analysis_date: r.analysis_date,
+            label_house: labelFor(r.batch_id, 'house'),
+            label_unit: labelFor(r.batch_id, 'unit'),
+            label_batch: labelFor(r.batch_id, 'batch'),
+            value: Number(r[metric] ?? 0)
+          }));
+          const validation = validateGroupedPercent(enriched, { groupKey: 'label_house', valueKeys: ['value'], minGroups: 1 });
+          return { type: 'smart_retrieve', metric, grouped: null, validation, data: enriched };
+        }
+
+        type Agg = { label: string; count: number; sum: number };
+        const aggregateBy = (mode: 'house'|'unit'|'batch') => {
+          const groups: Record<string, Agg> = {};
+          for (const r of rows) {
+            const label = labelFor(r.batch_id, mode);
+            if (!groups[label]) groups[label] = { label, count: 0, sum: 0 };
+            groups[label].count += 1;
+            groups[label].sum += Number(r[metric] ?? 0);
+          }
+          let aggregated = Object.values(groups).map(g => ({
+            label: g.label,
+            [metric]: g.count ? g.sum / g.count : 0,
+            sample_count: g.count,
+          }));
+          if (housesFilter.length > 0 && mode !== 'batch') {
+            const wants = housesFilter.map(normalizeLabel);
+            aggregated = aggregated.filter(r => {
+              const lbl = normalizeLabel(r.label);
+              return wants.some(w => w && (lbl === w || lbl.includes(w)));
+            });
+          }
+          return aggregated;
+        };
+
+        let aggregated = aggregateBy(groupBy);
+        let validation = validateGroupedPercent(aggregated, { groupKey: 'label', valueKeys: [metric], minGroups: 1 });
+        let retries = 0;
+
+        if (!validation.passed && groupBy === 'house') {
+          const unknownCount = aggregated.filter(r => normalizeLabel(r.label) === 'unknown house').length;
+          if (unknownCount > 0) {
+            const alt = aggregateBy('unit');
+            const v2 = validateGroupedPercent(alt, { groupKey: 'label', valueKeys: [metric], minGroups: 1 });
+            if (v2.passed) { aggregated = alt; validation = v2; }
+            retries += 1;
+          }
+        }
+
+        console.log('[smart_retrieve]', { metric, groupBy, rows: rows.length, groups: aggregated.length, retries, validation });
+        return { type: 'smart_retrieve', metric, grouped: groupBy, retries, validation, data: aggregated };
+      }
+
       default:
         return { error: "Unknown tool", requested_tool: toolName };
     }
