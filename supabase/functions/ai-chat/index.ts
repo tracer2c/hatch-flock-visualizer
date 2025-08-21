@@ -550,7 +550,13 @@ async function executeTool(toolName: string, parameters: any) {
           .from('machines')
           .select(`
             *,
-            batches(id, batch_number, status, set_date)
+            batches(
+              id,
+              batch_number,
+              status,
+              set_date,
+              total_eggs_set
+            )
           `)
           .limit(10);
 
@@ -558,14 +564,30 @@ async function executeTool(toolName: string, parameters: any) {
           return { message: "No machines found", machines: [] };
         }
 
-        return {
-          message: `Found ${machineData.length} machines`,
-          machines: machineData.map(machine => ({
-            ...machine,
-            current_batch_count: machine.batches?.length || 0,
-            utilization: machine.capacity > 0 ? ((machine.batches?.length || 0) / machine.capacity * 100).toFixed(1) : '0'
-          }))
-        };
+        {
+          const activeStatuses = ['setting', 'incubating'];
+          const machines = machineData.map((machine: any) => {
+            const batches = Array.isArray(machine.batches) ? machine.batches : [];
+            const activeBatches = batches.filter((b: any) => activeStatuses.includes(b.status));
+            const currentLoad = activeBatches.reduce((sum: number, b: any) => sum + (Number(b.total_eggs_set) || 0), 0);
+            const capacity = Number(machine.capacity) || 0;
+            const utilization = capacity > 0 ? Math.round(((currentLoad / capacity) * 100) * 10) / 10 : 0;
+            const currentStatus = activeBatches.length > 0 ? 'active' : (machine.status || 'available');
+            return {
+              ...machine,
+              current_batch_count: activeBatches.length,
+              current_load: currentLoad,
+              current_status: currentStatus,
+              utilization
+            };
+          });
+
+          console.log('[get_machine_status]', { message: `Found ${machines.length} machines`, machines });
+          return {
+            message: `Found ${machines.length} machines`,
+            machines
+          };
+        }
 
       case "get_qa_alerts":
         const { data: alertData } = await supabase
