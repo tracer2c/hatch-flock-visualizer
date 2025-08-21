@@ -17,9 +17,6 @@ interface Message {
   timestamp: Date;
   actions?: any[];
   payload?: any;
-  type?: 'text' | 'analytics' | 'chart' | 'progress' | 'error';
-  isProgress?: boolean;
-  suggestions?: string[];
 }
 
 export const ChatInterface = () => {
@@ -27,7 +24,6 @@ export const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [currentProgress, setCurrentProgress] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -38,24 +34,6 @@ export const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const addProgressMessage = (text: string) => {
-    setCurrentProgress(text);
-    const progressMessage: Message = {
-      id: `progress-${Date.now()}`,
-      role: 'assistant',
-      content: text,
-      timestamp: new Date(),
-      type: 'progress',
-      isProgress: true
-    };
-    setMessages(prev => [...prev.filter(msg => !msg.isProgress), progressMessage]);
-  };
-
-  const clearProgressMessages = () => {
-    setCurrentProgress('');
-    setMessages(prev => prev.filter(msg => !msg.isProgress));
-  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -71,18 +49,7 @@ export const ChatInterface = () => {
     setInput('');
     setIsLoading(true);
 
-    // Add progress indicators
-    addProgressMessage("🔍 Analyzing your request...");
-
     try {
-      setTimeout(() => {
-        if (isLoading) addProgressMessage("📊 Retrieving data from database...");
-      }, 1000);
-
-      setTimeout(() => {
-        if (isLoading) addProgressMessage("🧠 Processing analytics...");
-      }, 2500);
-
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
           message: text,
@@ -97,71 +64,26 @@ export const ChatInterface = () => {
         throw error;
       }
 
-      // Clear progress messages
-      clearProgressMessages();
-
       const response = data?.response || data?.message || 'Sorry, I could not process your request.';
       const responseActions = data?.actions || [];
       const responsePayload = data?.payload || null;
 
-      // Determine message type and content
-      let messageType: 'text' | 'analytics' | 'chart' | 'error' = 'text';
-      let messageContent = response;
-
-      // Check if response indicates no data found or error
-      if (data?.noDataFound || data?.error) {
-        messageType = 'error';
-        messageContent = data?.response || 'No data found for your request.';
-      } else if (typeof response === 'object' && response?.type === 'analytics') {
-        messageType = 'analytics';
-        messageContent = response;
-      } else if (typeof response === 'object' && response?.type === 'chart') {
-        messageType = 'chart';
-        messageContent = response;
-      }
-
       const assistantMessage: Message = {
         id: Date.now() + '-assistant',
         role: 'assistant',
-        content: (messageType === 'analytics' || messageType === 'chart') && typeof messageContent === 'object' 
-          ? messageContent 
-          : typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent),
+        content: response,
         timestamp: new Date(),
         actions: responseActions,
-        payload: responsePayload,
-        type: messageType,
-        suggestions: (data?.noDataFound || data?.error) && Array.isArray(data?.suggestions) ? data.suggestions : undefined
+        payload: responsePayload
       };
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error('Chat error:', error);
       
-      // Clear progress messages
-      clearProgressMessages();
-      
-      // More specific error handling
-      let errorDescription = "Failed to get response. Please try again.";
-      
-      if (error.message?.includes('NetworkError') || error.message?.includes('fetch')) {
-        errorDescription = "Network connection error. Please check your internet connection.";
-      } else if (error.message?.includes('unauthorized')) {
-        errorDescription = "Authentication error. Please refresh the page.";
-      }
-      
-      // Show error as AI message for better UX
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant', 
-        content: "I'm experiencing technical difficulties. Please try your question again.",
-        timestamp: new Date(),
-        type: 'error'
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      
       toast({
-        title: "Connection Error",
-        description: errorDescription,
+        title: "Error",
+        description: "Failed to get response. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -341,70 +263,24 @@ export const ChatInterface = () => {
                         <p className="text-base leading-relaxed whitespace-pre-wrap">
                           {message.content}
                         </p>
-                        ) : message.type === 'progress' ? (
-                          <div className="flex items-center gap-3 text-muted-foreground">
-                            <div className="flex gap-1">
-                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse delay-100" />
-                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse delay-200" />
-                            </div>
-                            <span className="text-sm">{message.content}</span>
-                          </div>
-                        ) : message.type === 'error' ? (
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-amber-600">
-                              <span className="text-lg">⚠️</span>
-                              <span className="font-medium">No Data Found</span>
-                            </div>
-                            <MessageFormatter 
-                              content={message.content}
-                              className="text-base"
-                            />
-                            {message.suggestions && message.suggestions.length > 0 && (
-                              <div className="space-y-3">
-                                <p className="text-sm font-medium text-muted-foreground">Try asking about:</p>
-                                <div className="grid gap-2">
-                                  {message.suggestions.map((suggestion, index) => (
-                                    <Button
-                                      key={index}
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => sendMessage(suggestion)}
-                                      className="justify-start text-left h-auto p-3 text-sm hover:bg-accent/50"
-                                    >
-                                      {suggestion}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : message.type === 'analytics' ? (
-                          typeof message.content === 'object' ? (
-                            <AnalyticsMessage data={message.content} />
-                          ) : (
-                            <MessageFormatter content={message.content} className="text-base" />
-                          )
-                        ) : message.type === 'chart' ? (
-                          typeof message.content === 'object' && message.content && message.content.type ? (
-                            <ChartMessage
-                              type={message.content.type}
-                              title={message.content.title || 'Chart'}
-                              description={message.content.description || ''}
-                              data={message.content.data || []}
-                              config={message.content.config || {}}
-                              insights={message.content.insights || []}
-                              chartId={`message-chart-${message.id}`}
-                            />
-                          ) : (
-                            <MessageFormatter content={typeof message.content === 'string' ? message.content : JSON.stringify(message.content)} className="text-base" />
-                          )
-                        ) : (
-                          <MessageFormatter 
-                            content={message.content}
-                            className="text-base"
-                          />
-                        )}
+                      ) : typeof message.content === 'object' && message.content?.type === 'analytics' ? (
+                        <AnalyticsMessage data={message.content} />
+                      ) : typeof message.content === 'object' && message.content?.type === 'chart' ? (
+                        <ChartMessage
+                          type={message.content.type}
+                          title={message.content.title || 'Chart'}
+                          description={message.content.description || ''}
+                          data={message.content.data || []}
+                          config={message.content.config || {}}
+                          insights={message.content.insights || []}
+                          chartId={`message-chart-${message.id}`}
+                        />
+                      ) : (
+                        <MessageFormatter 
+                          content={message.content}
+                          className="text-base"
+                        />
+                      )}
                      </div>
                     
                     {/* Render structured batch data */}

@@ -1067,14 +1067,7 @@ Current date: ${new Date().toISOString().split('T')[0]}`
           JSON.parse(toolCall.function.arguments)
         );
         
-        // Enhanced tool result logging with data context
-        if (!toolResult || (Array.isArray(toolResult) && toolResult.length === 0)) {
-          console.log(`[${toolCall.function.name}] No data found with parameters:`, JSON.parse(toolCall.function.arguments));
-        } else if (toolResult.rows === 0 || toolResult.groups === 0) {
-          console.log(`[${toolCall.function.name}] Empty result set - no matching data for query`);
-        } else if (toolResult.sample && toolResult.sample.length > 0) {
-          console.log(`[${toolCall.function.name}] Found ${toolResult.sample.length} records, sample:`, toolResult.sample.slice(0, 2));
-        }
+        console.log(`[${toolCall.function.name}]`, toolResult);
         
         toolResults.push({
           tool_call_id: toolCall.id,
@@ -1098,38 +1091,13 @@ Current date: ${new Date().toISOString().split('T')[0]}`
         }
       });
 
-      // If no valid data found, provide enhanced feedback
+      // If no valid data found, return simple message
       if (!hasValidData) {
         console.log("No valid data found in any tool results");
         
-        // Extract mentioned houses/parameters for better feedback
-        const messageWords = message.toLowerCase().split(/\s+/);
-        const mentionedHouses = messageWords.filter(word => 
-          ['atlanta', 'auburn', 'sun'].some(house => word.includes(house))
-        );
-        
-        // Extract time periods mentioned
-        const mentionedTime = messageWords.filter(word => 
-          ['week', 'month', 'day', 'year', 'last', 'recent'].some(time => word.includes(time))
-        );
-
-        let specificFeedback = "";
-        if (mentionedHouses.length > 0) {
-          specificFeedback += `\n\n🏠 **Houses mentioned:** ${mentionedHouses.join(', ')}\nI couldn't find recent data for these specific houses.`;
-        }
-        if (mentionedTime.length > 0) {
-          specificFeedback += `\n\n📅 **Time period:** ${mentionedTime.join(' ')}\nNo data was found for this time range.`;
-        }
-
         return new Response(JSON.stringify({
-          response: `I searched thoroughly but couldn't find any data matching your request.${specificFeedback}\n\n**Let me help you find what's available:**\n\n🔍 **Try these queries:**\n• "What houses have data available?"\n• "Show me all available metrics for the last month"\n• "List recent batches with data"\n\n📊 **Alternative approaches:**\n• Expand your time range (try "last 3 months")\n• Ask for a general overview first\n• Check if the house names are spelled correctly\n\nWould you like me to show you what data is currently in the system?`,
-          type: 'text',
-          noDataFound: true,
-          suggestions: [
-            "What houses have data available?",
-            "Show me recent batches", 
-            "What metrics do we have data for?"
-          ]
+          response: "Here's what I found from your hatchery data:",
+          type: 'text'
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
