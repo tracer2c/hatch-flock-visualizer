@@ -638,6 +638,23 @@ Current date: ${new Date().toISOString().split('T')[0]}`
         });
       }
 
+      // Phase 3.5: Respect explicit chart type requests
+      const explicitType = getExplicitChartType(message);
+      console.log('Explicit chart type detected:', explicitType);
+      if (explicitType) {
+        const explicitResponse = generateChartsFromDataWithIntent(message, toolResults, explicitType);
+        if (explicitResponse) {
+          return new Response(JSON.stringify({
+            response: explicitResponse,
+            timestamp: new Date().toISOString(),
+            source: 'explicit_intent',
+            meta: { explicitType }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       // Phase 4: Apply smart defaults for common query patterns
       const smartDefaultResponse = applySmartDefaults(message, toolResults);
       if (smartDefaultResponse) {
@@ -911,6 +928,41 @@ function shouldGenerateCharts(message: string, toolResults: any[]): boolean {
   return hasVisualKeyword && hasData;
 }
 
+// Explicit chart type detection
+function getExplicitChartType(message: string): 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area' | null {
+  const m = message.toLowerCase();
+  // Guard against negations like "not pie"
+  const neg = (kw: string) => m.includes(`not ${kw}`) || m.includes(`no ${kw}`);
+  if ((m.includes('bar') || m.includes('column')) && !neg('bar')) return 'bar';
+  if (m.includes('line') && !neg('line')) return 'line';
+  if (m.includes('area') && !neg('area')) return 'area';
+  if ((m.includes('pie') || m.includes('donut') || m.includes('doughnut')) && !neg('pie')) return 'pie';
+  if ((m.includes('radar') || m.includes('spider')) && !neg('radar')) return 'radar';
+  if ((m.includes('scatter') || m.includes('xy')) && !neg('scatter')) return 'scatter';
+  return null;
+}
+
+function generateChartsFromDataWithIntent(message: string, toolResults: any[], preferredType: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
+  console.log('Generating charts with explicit intent:', preferredType);
+  for (const toolResult of toolResults) {
+    try {
+      const data = JSON.parse(toolResult.content);
+      if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].fertility_percent !== undefined) {
+        return generateFertilityCharts(message, data.data, preferredType);
+      }
+      if (data.type === 'batches_overview' && data.batches) {
+        return generateBatchCharts(message, data, preferredType);
+      }
+      if (data.machines && Array.isArray(data.machines)) {
+        return generateMachineCharts(message, data.machines, preferredType);
+      }
+    } catch (e) {
+      console.error('Error in generateChartsFromDataWithIntent:', e);
+    }
+  }
+  return null;
+}
+
 // Helper function to generate charts from tool data
 function generateChartsFromData(message: string, toolResults: any[]) {
   const msgLower = message.toLowerCase();
@@ -943,18 +995,24 @@ function generateChartsFromData(message: string, toolResults: any[]) {
 }
 
 // Generate fertility-specific charts
-function generateFertilityCharts(message: string, fertilityData: any[]) {
-  const charts = [];
-  
-  if (message.includes('house') || message.includes('compare')) {
-    // Group by house/batch for comparison
-    const houseData = fertilityData.slice(0, 10).map(item => ({
-      name: item.batches?.batch_number || `Batch ${item.id.slice(0, 8)}`,
-      fertility: item.fertility_percent || 0,
-      hatch: item.hatch_percent || 0,
-      hof: item.hof_percent || 0
-    }));
-    
+function generateFertilityCharts(message: string, fertilityData: any[], preferredType?: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
+  const charts: any[] = [];
+
+  const houseData = fertilityData.slice(0, 10).map(item => ({
+    name: item.batches?.batch_number || `Batch ${item.id?.slice?.(0, 8) || ''}`,
+    fertility: item.fertility_percent || 0,
+    hatch: item.hatch_percent || 0,
+    hof: item.hof_percent || 0
+  }));
+
+  const want = (t: string, ...keywords: string[]) => {
+    if (preferredType) return preferredType === t;
+    const m = message.toLowerCase();
+    return keywords.some(k => m.includes(k));
+  };
+
+  // BAR
+  if (want('bar', 'house', 'compare', 'bar')) {
     charts.push({
       type: 'bar',
       title: 'Fertility Rates Comparison',
@@ -971,14 +1029,14 @@ function generateFertilityCharts(message: string, fertilityData: any[]) {
       insights: `Showing fertility performance across ${houseData.length} batches`
     });
   }
-  
-  if (message.includes('pie') || message.includes('breakdown')) {
-    // Performance categorization
-    const excellent = fertilityData.filter(f => f.fertility_percent >= 90).length;
-    const good = fertilityData.filter(f => f.fertility_percent >= 80 && f.fertility_percent < 90).length;
-    const average = fertilityData.filter(f => f.fertility_percent >= 70 && f.fertility_percent < 80).length;
-    const poor = fertilityData.filter(f => f.fertility_percent < 70).length;
-    
+
+  // PIE
+  if (want('pie', 'pie', 'breakdown', 'distribution')) {
+    const excellent = fertilityData.filter(f => (f.fertility_percent || 0) >= 90).length;
+    const good = fertilityData.filter(f => (f.fertility_percent || 0) >= 80 && (f.fertility_percent || 0) < 90).length;
+    const average = fertilityData.filter(f => (f.fertility_percent || 0) >= 70 && (f.fertility_percent || 0) < 80).length;
+    const poor = fertilityData.filter(f => (f.fertility_percent || 0) < 70).length;
+
     charts.push({
       type: 'pie',
       title: 'Fertility Performance Distribution',
@@ -989,17 +1047,86 @@ function generateFertilityCharts(message: string, fertilityData: any[]) {
         { name: 'Average (70-79%)', value: average, fill: 'hsl(var(--chart-3))' },
         { name: 'Poor (<70%)', value: poor, fill: 'hsl(var(--chart-4))' }
       ],
-      config: {
-        valueKey: 'value',
-        nameKey: 'name'
-      },
+      config: { valueKey: 'value', nameKey: 'name' },
       insights: `${excellent} batches achieving excellent fertility rates`
     });
   }
-  
-  const avgFertility = fertilityData.reduce((sum, f) => sum + (f.fertility_percent || 0), 0) / fertilityData.length;
-  const avgHatch = fertilityData.reduce((sum, f) => sum + (f.hatch_percent || 0), 0) / fertilityData.length;
-  
+
+  // LINE
+  if (want('line', 'line', 'trend')) {
+    charts.push({
+      type: 'line',
+      title: 'Fertility and Hatch Trends by Batch',
+      description: 'Trend view of fertility, hatch, and HOF across batches',
+      data: houseData,
+      config: {
+        xKey: 'name',
+        lines: [
+          { key: 'fertility', name: 'Fertility %', color: 'hsl(var(--chart-1))' },
+          { key: 'hatch', name: 'Hatch %', color: 'hsl(var(--chart-2))' },
+          { key: 'hof', name: 'HOF %', color: 'hsl(var(--chart-3))' }
+        ]
+      }
+    });
+  }
+
+  // AREA
+  if (want('area', 'area')) {
+    charts.push({
+      type: 'area',
+      title: 'Fertility Area View',
+      description: 'Area visualization across batches',
+      data: houseData,
+      config: {
+        xKey: 'name',
+        areas: [
+          { key: 'fertility', name: 'Fertility %', color: 'hsl(var(--chart-1))' },
+          { key: 'hatch', name: 'Hatch %', color: 'hsl(var(--chart-2))' }
+        ]
+      }
+    });
+  }
+
+  // SCATTER
+  if (want('scatter', 'scatter', 'correlation', 'vs')) {
+    const scatter = fertilityData.map(f => ({
+      x: f.fertility_percent || 0,
+      y: f.hatch_percent || 0,
+      name: f.batches?.batch_number || 'Batch'
+    }));
+    charts.push({
+      type: 'scatter',
+      title: 'Fertility vs Hatch Correlation',
+      description: 'Correlation between fertility and hatch rates',
+      data: scatter,
+      config: { xKey: 'x', yKey: 'y', name: 'Fertility vs Hatch' }
+    });
+  }
+
+  // RADAR (averages)
+  if (want('radar', 'radar', 'spider')) {
+    const avg = {
+      fertility: fertilityData.reduce((s, f) => s + (f.fertility_percent || 0), 0) / fertilityData.length,
+      hatch: fertilityData.reduce((s, f) => s + (f.hatch_percent || 0), 0) / fertilityData.length,
+      hof: fertilityData.reduce((s, f) => s + (f.hof_percent || 0), 0) / fertilityData.length,
+    };
+    const radarData = [
+      { metric: 'Fertility', value: +avg.fertility.toFixed(1) },
+      { metric: 'Hatch', value: +avg.hatch.toFixed(1) },
+      { metric: 'HOF', value: +avg.hof.toFixed(1) },
+    ];
+    charts.push({
+      type: 'radar',
+      title: 'Average Performance Radar',
+      description: 'Averages across key metrics',
+      data: radarData,
+      config: { angleKey: 'metric', radars: [{ key: 'value', name: 'Average', color: 'hsl(var(--chart-1))' }] }
+    });
+  }
+
+  const avgFertility = fertilityData.reduce((sum, f) => sum + (f.fertility_percent || 0), 0) / Math.max(fertilityData.length, 1);
+  const avgHatch = fertilityData.reduce((sum, f) => sum + (f.hatch_percent || 0), 0) / Math.max(fertilityData.length, 1);
+
   return {
     type: 'analytics',
     title: 'Fertility Analysis Dashboard',
@@ -1033,34 +1160,36 @@ function generateFertilityCharts(message: string, fertilityData: any[]) {
 }
 
 // Generate batch-specific charts
-function generateBatchCharts(message: string, data: any) {
-  const charts = [];
+function generateBatchCharts(message: string, data: any, preferredType?: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
+  const charts: any[] = [];
   const analytics = data.analytics;
-  
-  // Status breakdown pie chart
-  const statusData = Object.entries(analytics.by_status).map(([status, count]) => ({
-    name: status.charAt(0).toUpperCase() + status.slice(1),
-    value: count as number,
-    fill: status === 'completed' ? 'hsl(var(--chart-1))' : 
-          status === 'incubating' ? 'hsl(var(--chart-2))' : 
-          status === 'planned' ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-4))'
-  }));
-  
-  charts.push({
-    type: 'pie',
-    title: 'Batch Status Distribution',
-    description: 'Current distribution of batches by status',
-    data: statusData,
-    config: {
-      valueKey: 'value',
-      nameKey: 'name'
-    },
-    insights: `${analytics.totals.count} total batches across different stages`
-  });
-  
-  // Performance comparison if we have batch details
-  if (data.batches && data.batches.length > 5) {
-    const perfData = data.batches.slice(0, 10).map((batch: any) => {
+
+  const want = (t: string) => !preferredType || preferredType === t;
+
+  // Status breakdown pie chart (only if requested or no explicit preference)
+  if (want('pie')) {
+    const statusData = Object.entries(analytics.by_status).map(([status, count]) => ({
+      name: (status as string).charAt(0).toUpperCase() + (status as string).slice(1),
+      value: count as number,
+      fill: status === 'completed' ? 'hsl(var(--chart-1))' : 
+            status === 'incubating' ? 'hsl(var(--chart-2))' : 
+            status === 'planned' ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-4))'
+    }));
+
+    charts.push({
+      type: 'pie',
+      title: 'Batch Status Distribution',
+      description: 'Current distribution of batches by status',
+      data: statusData,
+      config: { valueKey: 'value', nameKey: 'name' },
+      insights: `${analytics.totals.count} total batches across different stages`
+    });
+  }
+
+  // Build performance dataset
+  let perfData: any[] = [];
+  if (data.batches && data.batches.length > 1) {
+    perfData = data.batches.slice(0, 10).map((batch: any) => {
       const hatchRate = batch.total_eggs_set > 0 ? (batch.chicks_hatched / batch.total_eggs_set) * 100 : 0;
       return {
         name: batch.batch_number,
@@ -1068,49 +1197,64 @@ function generateBatchCharts(message: string, data: any) {
         eggsSet: batch.total_eggs_set,
         chicksHatched: batch.chicks_hatched
       };
-    }).filter((item: any) => item.hatchRate > 0);
-    
-    if (perfData.length > 0) {
-      charts.push({
-        type: 'bar',
-        title: 'Batch Performance Comparison',
-        description: 'Hatch rates across recent batches',
-        data: perfData,
-        config: {
-          xKey: 'name',
-          bars: [
-            { key: 'hatchRate', name: 'Hatch Rate %', color: 'hsl(var(--chart-2))' }
-          ]
-        },
-        insights: `Performance comparison across ${perfData.length} completed batches`
-      });
-    }
+    }).filter((item: any) => item.hatchRate >= 0);
   }
-  
+
+  // Bar (default performance comparison)
+  if (want('bar') && perfData.length > 0) {
+    charts.push({
+      type: 'bar',
+      title: 'Batch Performance Comparison',
+      description: 'Hatch rates across recent batches',
+      data: perfData,
+      config: { xKey: 'name', bars: [{ key: 'hatchRate', name: 'Hatch Rate %', color: 'hsl(var(--chart-2))' }] },
+      insights: `Performance comparison across ${perfData.length} recent batches`
+    });
+  }
+
+  // Line
+  if (preferredType === 'line' && perfData.length > 0) {
+    charts.push({
+      type: 'line',
+      title: 'Hatch Rate Trend by Batch',
+      description: 'Trend of hatch rate across batches',
+      data: perfData,
+      config: { xKey: 'name', lines: [{ key: 'hatchRate', name: 'Hatch Rate %', color: 'hsl(var(--chart-2))' }] }
+    });
+  }
+
+  // Scatter
+  if (preferredType === 'scatter' && perfData.length > 0) {
+    const scatter = perfData.map(p => ({ x: p.eggsSet || 0, y: p.chicksHatched || 0 }));
+    charts.push({
+      type: 'scatter',
+      title: 'Eggs Set vs Chicks Hatched',
+      description: 'Correlation between eggs set and chicks hatched',
+      data: scatter,
+      config: { xKey: 'x', yKey: 'y', name: 'Eggs vs Chicks' }
+    });
+  }
+
+  // Area
+  if (preferredType === 'area' && perfData.length > 0) {
+    charts.push({
+      type: 'area',
+      title: 'Hatch Rate Area View',
+      description: 'Area visualization of hatch rate',
+      data: perfData,
+      config: { xKey: 'name', areas: [{ key: 'hatchRate', name: 'Hatch Rate %', color: 'hsl(var(--chart-2))' }] }
+    });
+  }
+
   return {
     type: 'analytics',
     title: 'Batch Performance Dashboard',
     summary: `Comprehensive analysis of ${analytics.totals.count} batches with ${analytics.totals.avg_hatch_rate}% average hatch rate`,
     charts,
     metrics: [
-      {
-        label: 'Total Batches',
-        value: analytics.totals.count.toString(),
-        trend: 'stable',
-        status: 'good'
-      },
-      {
-        label: 'Average Hatch Rate',
-        value: `${analytics.totals.avg_hatch_rate}%`,
-        trend: analytics.totals.avg_hatch_rate >= 80 ? 'up' : 'down',
-        status: analytics.totals.avg_hatch_rate >= 80 ? 'good' : 'warning'
-      },
-      {
-        label: 'Upcoming Hatches',
-        value: analytics.upcoming_count.toString(),
-        trend: 'stable',
-        status: analytics.overdue_count > 0 ? 'warning' : 'good'
-      }
+      { label: 'Total Batches', value: analytics.totals.count.toString(), trend: 'stable', status: 'good' },
+      { label: 'Average Hatch Rate', value: `${analytics.totals.avg_hatch_rate}%`, trend: analytics.totals.avg_hatch_rate >= 80 ? 'up' : 'down', status: analytics.totals.avg_hatch_rate >= 80 ? 'good' : 'warning' },
+      { label: 'Upcoming Hatches', value: analytics.upcoming_count.toString(), trend: 'stable', status: analytics.overdue_count > 0 ? 'warning' : 'good' }
     ],
     insights: [
       `${analytics.totals.count} batches currently managed`,
@@ -1126,47 +1270,64 @@ function generateBatchCharts(message: string, data: any) {
 }
 
 // Generate machine-specific charts
-function generateMachineCharts(message: string, machines: any[]) {
+function generateMachineCharts(message: string, machines: any[], preferredType?: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
   const utilizationData = machines.map(machine => ({
     name: machine.machine_number,
     utilization: parseFloat(machine.utilization || '0'),
     capacity: machine.capacity,
     current: machine.current_batch_count
   }));
-  
-  return {
-    type: 'analytics',
-    title: 'Machine Utilization Analysis',
-    summary: `Analysis of ${machines.length} machines and their current utilization`,
-    charts: [{
+
+  const charts: any[] = [];
+
+  if (!preferredType || preferredType === 'bar') {
+    charts.push({
       type: 'bar',
       title: 'Machine Utilization Rates',
       description: 'Current utilization percentage by machine',
       data: utilizationData,
-      config: {
-        xKey: 'name',
-        bars: [
-          { key: 'utilization', name: 'Utilization %', color: 'hsl(var(--chart-1))' }
-        ]
-      },
+      config: { xKey: 'name', bars: [{ key: 'utilization', name: 'Utilization %', color: 'hsl(var(--chart-1))' }] },
       insights: `Monitoring ${machines.length} machines for optimal utilization`
-    }],
+    });
+  }
+
+  if (preferredType === 'line') {
+    charts.push({
+      type: 'line',
+      title: 'Machine Utilization Trend (by machine order)',
+      description: 'Visualization of utilization values across machines',
+      data: utilizationData,
+      config: { xKey: 'name', lines: [{ key: 'utilization', name: 'Utilization %', color: 'hsl(var(--chart-1))' }] }
+    });
+  }
+
+  if (preferredType === 'pie') {
+    const high = utilizationData.filter(u => u.utilization >= 80).length;
+    const mid = utilizationData.filter(u => u.utilization >= 50 && u.utilization < 80).length;
+    const low = utilizationData.filter(u => u.utilization < 50).length;
+    charts.push({
+      type: 'pie',
+      title: 'Utilization Distribution',
+      description: 'Machines grouped by utilization level',
+      data: [
+        { name: 'High (80%+)', value: high, fill: 'hsl(var(--chart-1))' },
+        { name: 'Medium (50-79%)', value: mid, fill: 'hsl(var(--chart-2))' },
+        { name: 'Low (<50%)', value: low, fill: 'hsl(var(--chart-3))' }
+      ],
+      config: { valueKey: 'value', nameKey: 'name' }
+    });
+  }
+
+  return {
+    type: 'analytics',
+    title: 'Machine Utilization Analysis',
+    summary: `Analysis of ${machines.length} machines and their current utilization`,
+    charts,
     metrics: [
-      {
-        label: 'Total Machines',
-        value: machines.length.toString(),
-        trend: 'stable',
-        status: 'good'
-      }
+      { label: 'Total Machines', value: machines.length.toString(), trend: 'stable', status: 'good' }
     ],
-    insights: [
-      `${machines.length} machines currently monitored`,
-      'Utilization rates help optimize capacity planning'
-    ],
-    recommendations: [
-      'Balance load across machines for optimal efficiency',
-      'Schedule maintenance during low utilization periods'
-    ]
+    insights: [ `${machines.length} machines currently monitored`, 'Utilization rates help optimize capacity planning' ],
+    recommendations: [ 'Balance load across machines for optimal efficiency', 'Schedule maintenance during low utilization periods' ]
   };
 }
 
