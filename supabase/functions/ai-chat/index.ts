@@ -77,7 +77,43 @@ function formatBatchForDisplay(batch: any) {
   };
 }
 
-// Database query tools
+// Retrieval helpers: schema awareness, validation, enrichment
+const DB_SCHEMA = {
+  tables: {
+    batches: ['id','batch_number','unit_id','flock_id','set_date','expected_hatch_date','status','total_eggs_set','chicks_hatched','company_id'],
+    fertility_analysis: ['id','batch_id','analysis_date','fertility_percent','hatch_percent','hof_percent'],
+    residue_analysis: ['id','batch_id','analysis_date','residue_percent'],
+    qa_monitoring: ['id','batch_id','check_date','temperature','humidity'],
+    units: ['id','name','code'],
+    flocks: ['id','flock_name','breed','house_number']
+  }
+} as const;
+
+function inPercentRange(n: any) {
+  const v = Number(n);
+  return Number.isFinite(v) && v >= 0 && v <= 100;
+}
+
+function validateGroupedPercent(
+  rows: any[],
+  opts: { groupKey: string; valueKeys: string[]; minGroups?: number }
+) {
+  const reasons: string[] = [];
+  const labels = rows.map(r => (r?.[opts.groupKey] ?? '').toString());
+  const empty = rows.length === 0;
+  if (empty) reasons.push('no_rows');
+  const uniqueCount = new Set(labels.filter(Boolean)).size;
+  if ((opts.minGroups ?? 1) > uniqueCount) reasons.push('insufficient_groups');
+  const valuesOk = rows.every(r => opts.valueKeys.every(k => inPercentRange(r?.[k])));
+  if (!valuesOk) reasons.push('out_of_range_values');
+  return { passed: reasons.length === 0, reasons };
+}
+
+function normalizeLabel(s: string | null | undefined) {
+  return (s ?? '').toString().trim().toLowerCase();
+}
+
+// ... Database query tools
 const tools = [
   {
     type: "function",
@@ -204,6 +240,24 @@ const tools = [
         }
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "smart_retrieve",
+      description: "Intelligent data retrieval: plans, validates, and retries to match intent (grouping, filters, ranges)",
+      parameters: {
+        type: "object",
+        properties: {
+          metric: { type: "string", description: "One of: fertility_percent | hatch_percent | hof_percent | residue_percent" },
+          days_back: { type: "number", description: "Lookback window in days" },
+          group_by: { type: "string", description: "Group by: house | unit | batch" },
+          houses: { type: "array", items: { type: "string" }, description: "Optional list of house/unit labels to include" },
+          limit: { type: "number", description: "Max underlying records to fetch (default 200)" }
+        },
+        required: ["metric"]
+      }
+    }
   }
 ];
 
@@ -315,7 +369,9 @@ async function executeTool(toolName: string, parameters: any) {
       case "get_fertility_rates":
         {
           const daysBack = parameters.days_back;
-          const groupByHouse = !!parameters.group_by_house;
+          const explicitGroup: string | null = parameters.group_by ?? null;
+          const groupBy = explicitGroup || (parameters.group_by_house ? 'house' : null);
+          const housesFilter: string[] = Array.isArray(parameters.houses) ? parameters.houses : [];
 
           let q = supabase
             .from('fertility_analysis')
@@ -330,7 +386,7 @@ async function executeTool(toolName: string, parameters: any) {
             q = q.gte('analysis_date', start.toISOString().split('T')[0]);
           }
 
-          q = q.order('analysis_date', { ascending: false }).limit(parameters.limit || 100);
+          q = q.order('analysis_date', { ascending: false }).limit(parameters.limit || 200);
 
           const { data: fert, error: fertError } = await q;
           if (fertError) throw fertError;
@@ -339,25 +395,26 @@ async function executeTool(toolName: string, parameters: any) {
             return { message: "No fertility analysis data found", data: [] };
           }
 
-          if (!groupByHouse) {
+          if (!groupBy) {
             return {
               message: `Found ${fert.length} fertility analysis records`,
               data: fert
             };
           }
 
-          // Aggregate by house (unit)
+          // Enrichment: fetch batches + labels
           const batchIds = Array.from(new Set(fert.map((f: any) => f.batch_id).filter(Boolean)));
           let batchRows: any[] = [];
           if (batchIds.length > 0) {
             const { data: bData, error: bErr } = await supabase
               .from('batches')
-              .select('id, unit_id')
+              .select('id, unit_id, flock_id, batch_number')
               .in('id', batchIds);
             if (bErr) throw bErr;
             batchRows = bData || [];
           }
           const unitIds = Array.from(new Set(batchRows.map(b => b.unit_id).filter(Boolean)));
+          const flockIds = Array.from(new Set(batchRows.map(b => b.flock_id).filter(Boolean)));
 
           const unitsMap: Record<string, { id: string; name: string | null; code: string | null }> = {};
           if (unitIds.length > 0) {
@@ -369,34 +426,106 @@ async function executeTool(toolName: string, parameters: any) {
             (uData || []).forEach(u => { unitsMap[u.id] = u; });
           }
 
-          const batchToUnit: Record<string, string | null> = {};
-          batchRows.forEach(b => { batchToUnit[b.id] = b.unit_id; });
+          const flocksMap: Record<string, { id: string; house_number: string | null; flock_name: string | null }> = {};
+          if (flockIds.length > 0) {
+            const { data: fData, error: fErr } = await supabase
+              .from('flocks')
+              .select('id, house_number, flock_name')
+              .in('id', flockIds);
+            if (fErr) throw fErr;
+            (fData || []).forEach(f => { flocksMap[f.id] = f; });
+          }
 
-          const groups: Record<string, { unit_id: string; unit_name: string; count: number; fertility_sum: number; hatch_sum: number; hof_sum: number }> = {};
-          fert.forEach((row: any) => {
-            const unitId = batchToUnit[row.batch_id] || 'unknown';
-            const unitName = unitsMap[unitId]?.name || (unitId === 'unknown' ? 'Unknown House' : unitId);
-            if (!groups[unitId]) {
-              groups[unitId] = { unit_id: unitId, unit_name: unitName, count: 0, fertility_sum: 0, hatch_sum: 0, hof_sum: 0 };
+          const batchMap: Record<string, { unit_id: string | null; flock_id: string | null; batch_number: string | null }> = {};
+          batchRows.forEach(b => { batchMap[b.id] = { unit_id: b.unit_id, flock_id: b.flock_id, batch_number: b.batch_number }; });
+
+          function labelFor(batchId: string | null | undefined, mode: 'house'|'unit'|'batch'): string {
+            const meta = batchId ? batchMap[batchId] : undefined;
+            if (!meta) return mode === 'batch' ? (batchId ?? 'Unknown Batch') : (mode === 'house' ? 'Unknown House' : 'Unknown Unit');
+            if (mode === 'batch') return meta.batch_number || batchId || 'Unknown Batch';
+            const unit = meta.unit_id ? unitsMap[meta.unit_id] : undefined;
+            const flock = meta.flock_id ? flocksMap[meta.flock_id] : undefined;
+            if (mode === 'house') {
+              return flock?.house_number || unit?.name || unit?.code || 'Unknown House';
             }
-            groups[unitId].count += 1;
-            groups[unitId].fertility_sum += Number(row.fertility_percent || 0);
-            groups[unitId].hatch_sum += Number(row.hatch_percent || 0);
-            groups[unitId].hof_sum += Number(row.hof_percent || 0);
-          });
+            // unit
+            return unit?.name || unit?.code || 'Unknown Unit';
+          }
 
-          const aggregated = Object.values(groups).map(g => ({
-            unit_id: g.unit_id,
-            unit_name: g.unit_name,
+          type Agg = { label: string; count: number; fertility_sum: number; hatch_sum: number; hof_sum: number };
+          const groups: Record<string, Agg> = {};
+          for (const row of fert) {
+            const label = labelFor(row.batch_id, groupBy as any);
+            if (!groups[label]) groups[label] = { label, count: 0, fertility_sum: 0, hatch_sum: 0, hof_sum: 0 };
+            groups[label].count += 1;
+            groups[label].fertility_sum += Number(row.fertility_percent || 0);
+            groups[label].hatch_sum += Number(row.hatch_percent || 0);
+            groups[label].hof_sum += Number(row.hof_percent || 0);
+          }
+
+          let aggregated = Object.values(groups).map(g => ({
+            label: g.label,
             fertility_percent: g.count ? g.fertility_sum / g.count : 0,
             hatch_percent: g.count ? g.hatch_sum / g.count : 0,
             hof_percent: g.count ? g.hof_sum / g.count : 0,
             sample_count: g.count,
           }));
 
+          // Optional filter by houses/units list
+          if (housesFilter.length > 0) {
+            const wants = housesFilter.map(normalizeLabel);
+            aggregated = aggregated.filter(r => {
+              const lbl = normalizeLabel(r.label);
+              return wants.some(w => w && (lbl === w || lbl.includes(w)));
+            });
+          }
+
+          // Validate and attempt a single enrichment retry if many Unknown labels for house
+          const initialValidation = validateGroupedPercent(aggregated, { groupKey: 'label', valueKeys: ['fertility_percent','hatch_percent','hof_percent'], minGroups: 1 });
+          let retries = 0;
+          if (!initialValidation.passed && groupBy === 'house') {
+            const unknownCount = aggregated.filter(r => normalizeLabel(r.label) === 'unknown house').length;
+            if (unknownCount > 0) {
+              // Retry using unit name as house label fallback
+              const groups2: Record<string, Agg> = {};
+              for (const row of fert) {
+                const label = labelFor(row.batch_id, 'unit');
+                const finalLabel = label || 'Unknown House';
+                if (!groups2[finalLabel]) groups2[finalLabel] = { label: finalLabel, count: 0, fertility_sum: 0, hatch_sum: 0, hof_sum: 0 };
+                groups2[finalLabel].count += 1;
+                groups2[finalLabel].fertility_sum += Number(row.fertility_percent || 0);
+                groups2[finalLabel].hatch_sum += Number(row.hatch_percent || 0);
+                groups2[finalLabel].hof_sum += Number(row.hof_percent || 0);
+              }
+              let aggregated2 = Object.values(groups2).map(g => ({
+                label: g.label,
+                fertility_percent: g.count ? g.fertility_sum / g.count : 0,
+                hatch_percent: g.count ? g.hatch_sum / g.count : 0,
+                hof_percent: g.count ? g.hof_sum / g.count : 0,
+                sample_count: g.count,
+              }));
+              if (housesFilter.length > 0) {
+                const wants = housesFilter.map(normalizeLabel);
+                aggregated2 = aggregated2.filter(r => {
+                  const lbl = normalizeLabel(r.label);
+                  return wants.some(w => w && (lbl === w || lbl.includes(w)));
+                });
+              }
+              const v2 = validateGroupedPercent(aggregated2, { groupKey: 'label', valueKeys: ['fertility_percent','hatch_percent','hof_percent'], minGroups: 1 });
+              if (v2.passed) {
+                aggregated = aggregated2;
+              }
+              retries += 1;
+            }
+          }
+
+          console.log('[get_fertility_rates] groupBy=', groupBy, 'rows=', aggregated.length, 'validation=', initialValidation);
+
           return {
-            message: `Aggregated fertility by house (${aggregated.length} houses)`         ,
-            grouped: 'house',
+            message: `Aggregated fertility by ${groupBy} (${aggregated.length} groups)`,
+            grouped: groupBy,
+            validation: initialValidation,
+            retries,
             data: aggregated
           };
         }
