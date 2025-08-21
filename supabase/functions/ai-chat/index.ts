@@ -1079,26 +1079,36 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       // Check if we have meaningful data after all tool executions
       const hasValidData = toolResults.some(result => {
         try {
-          const data = JSON.parse(result.content);
-          return data && (
-            (Array.isArray(data) && data.length > 0) ||
-            (data.rows && data.rows > 0) ||
-            (data.groups && data.groups > 0) ||
-            (data.sample && data.sample.length > 0)
-          );
+          const parsed = JSON.parse(result.content);
+          if (!parsed) return false;
+
+          // Direct array result
+          if (Array.isArray(parsed) && parsed.length > 0) return true;
+
+          // Known counters at top-level
+          if ((parsed.rows && parsed.rows > 0) || (parsed.groups && parsed.groups > 0)) return true;
+
+          // Known arrays at top-level
+          if (parsed.sample && Array.isArray(parsed.sample) && parsed.sample.length > 0) return true;
+
+          // Any top-level array with items
+          if (Object.values(parsed).some((v: any) => Array.isArray(v) && v.length > 0)) return true;
+
+          // Nested `data` container (common for tool payloads)
+          if (parsed.data) {
+            if (Array.isArray(parsed.data) && parsed.data.length > 0) return true;
+            if (typeof parsed.data === 'object' && Object.values(parsed.data).some((v: any) => Array.isArray(v) && v.length > 0)) return true;
+          }
+
+          return false;
         } catch {
           return false;
         }
       });
 
-      // If no valid data found, return simple message
+      // If no valid data found, continue to explicit chart detection and smart defaults
       if (!hasValidData) {
         console.log("No valid data found in any tool results");
-        
-        return new Response(JSON.stringify({
-          response: "Here's what I found from your hatchery data:",
-          type: 'text'
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       // Phase 3.5: Respect explicit chart type requests
