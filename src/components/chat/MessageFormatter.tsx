@@ -1,13 +1,19 @@
 import React from 'react';
 
 interface MessageFormatterProps {
-  content: string;
+  content: string | any;
   className?: string;
 }
 
 export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, className = "" }) => {
   // Parse and format the message content
   const formatMessage = (text: string) => {
+    // Ensure text is a string and handle edge cases
+    if (!text || typeof text !== 'string') {
+      console.warn('MessageFormatter received non-string content:', text);
+      return <p className="text-muted-foreground">Invalid message content</p>;
+    }
+    
     // Split by double newlines to identify paragraphs/sections
     const sections = text.split('\n\n');
     
@@ -105,9 +111,27 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, cla
     });
   };
   
+  // Ensure content is a string before processing
+  const processContent = () => {
+    if (!content) {
+      return <p className="text-muted-foreground">No content</p>;
+    }
+    
+    if (typeof content !== 'string') {
+      // If content is an object, try to stringify it or extract text
+      if (typeof content === 'object') {
+        return <p className="text-muted-foreground">Complex content type not supported</p>;
+      }
+      // Convert other types to string
+      return formatMessage(String(content));
+    }
+    
+    return formatMessage(content);
+  };
+  
   return (
     <div className={`prose prose-slate max-w-none ${className}`}>
-      {formatMessage(content)}
+      {processContent()}
     </div>
   );
 };
