@@ -17,7 +17,8 @@ interface Message {
   timestamp: Date;
   actions?: any[];
   payload?: any;
-  type?: 'text' | 'analytics' | 'chart';
+  type?: 'text' | 'analytics' | 'chart' | 'progress' | 'error';
+  isProgress?: boolean;
 }
 
 export const ChatInterface = () => {
@@ -25,6 +26,7 @@ export const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [currentProgress, setCurrentProgress] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -35,6 +37,24 @@ export const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const addProgressMessage = (text: string) => {
+    setCurrentProgress(text);
+    const progressMessage: Message = {
+      id: `progress-${Date.now()}`,
+      role: 'assistant',
+      content: text,
+      timestamp: new Date(),
+      type: 'progress',
+      isProgress: true
+    };
+    setMessages(prev => [...prev.filter(msg => !msg.isProgress), progressMessage]);
+  };
+
+  const clearProgressMessages = () => {
+    setCurrentProgress('');
+    setMessages(prev => prev.filter(msg => !msg.isProgress));
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -50,7 +70,18 @@ export const ChatInterface = () => {
     setInput('');
     setIsLoading(true);
 
+    // Add progress indicators
+    addProgressMessage("🔍 Analyzing your request...");
+
     try {
+      setTimeout(() => {
+        if (isLoading) addProgressMessage("📊 Retrieving data from database...");
+      }, 1000);
+
+      setTimeout(() => {
+        if (isLoading) addProgressMessage("🧠 Processing analytics...");
+      }, 2500);
+
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
           message: text,
@@ -65,16 +96,22 @@ export const ChatInterface = () => {
         throw error;
       }
 
+      // Clear progress messages
+      clearProgressMessages();
+
       const response = data?.response || data?.message || 'Sorry, I could not process your request.';
       const responseActions = data?.actions || [];
       const responsePayload = data?.payload || null;
 
       // Determine message type and content
-      let messageType: 'text' | 'analytics' | 'chart' = 'text';
+      let messageType: 'text' | 'analytics' | 'chart' | 'error' = 'text';
       let messageContent = response;
 
-      // Check if response is analytics data
-      if (typeof response === 'object' && response.type === 'analytics') {
+      // Check if response indicates no data found or error
+      if (data?.noDataFound || data?.error) {
+        messageType = 'error';
+        messageContent = data?.suggestions || data?.response || 'No data found for your request.';
+      } else if (typeof response === 'object' && response.type === 'analytics') {
         messageType = 'analytics';
         messageContent = response;
       } else if (typeof response === 'object' && response.type === 'chart') {
@@ -96,6 +133,9 @@ export const ChatInterface = () => {
     } catch (error: any) {
       console.error('Chat error:', error);
       
+      // Clear progress messages
+      clearProgressMessages();
+      
       // More specific error handling
       let errorDescription = "Failed to get response. Please try again.";
       
@@ -110,7 +150,8 @@ export const ChatInterface = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant', 
         content: "I'm experiencing technical difficulties. Please try your question again.",
-        timestamp: new Date()
+        timestamp: new Date(),
+        type: 'error'
       };
       setMessages(prev => [...prev, errorMessage]);
       
@@ -296,6 +337,26 @@ export const ChatInterface = () => {
                         <p className="text-base leading-relaxed whitespace-pre-wrap">
                           {message.content}
                         </p>
+                        ) : message.type === 'progress' ? (
+                          <div className="flex items-center gap-3 text-muted-foreground">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse delay-100" />
+                              <div className="w-2 h-2 rounded-full bg-primary animate-pulse delay-200" />
+                            </div>
+                            <span className="text-sm">{message.content}</span>
+                          </div>
+                        ) : message.type === 'error' ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-amber-600">
+                              <span className="text-lg">⚠️</span>
+                              <span className="font-medium">No Data Found</span>
+                            </div>
+                            <MessageFormatter 
+                              content={message.content}
+                              className="text-base"
+                            />
+                          </div>
                         ) : message.type === 'analytics' ? (
                           <AnalyticsMessage data={message.content} />
                         ) : message.type === 'chart' ? (

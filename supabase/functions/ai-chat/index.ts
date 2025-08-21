@@ -1060,16 +1060,77 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       const toolResults = [];
       
       for (const toolCall of assistantMessage.tool_calls) {
+        console.log(`Executing tool: ${toolCall.function.name}`, toolCall.function.arguments);
+        
         const toolResult = await executeTool(
           toolCall.function.name,
           JSON.parse(toolCall.function.arguments)
         );
+        
+        // Enhanced tool result logging with data context
+        if (!toolResult || (Array.isArray(toolResult) && toolResult.length === 0)) {
+          console.log(`[${toolCall.function.name}] No data found with parameters:`, JSON.parse(toolCall.function.arguments));
+        } else if (toolResult.rows === 0 || toolResult.groups === 0) {
+          console.log(`[${toolCall.function.name}] Empty result set - no matching data for query`);
+        } else if (toolResult.sample && toolResult.sample.length > 0) {
+          console.log(`[${toolCall.function.name}] Found ${toolResult.sample.length} records, sample:`, toolResult.sample.slice(0, 2));
+        }
         
         toolResults.push({
           tool_call_id: toolCall.id,
           role: "tool",
           content: JSON.stringify(toolResult)
         });
+      }
+
+      // Check if we have meaningful data after all tool executions
+      const hasValidData = toolResults.some(result => {
+        try {
+          const data = JSON.parse(result.content);
+          return data && (
+            (Array.isArray(data) && data.length > 0) ||
+            (data.rows && data.rows > 0) ||
+            (data.groups && data.groups > 0) ||
+            (data.sample && data.sample.length > 0)
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      // If no valid data found, provide enhanced feedback
+      if (!hasValidData) {
+        console.log("No valid data found in any tool results");
+        
+        // Extract mentioned houses/parameters for better feedback
+        const messageWords = message.toLowerCase().split(/\s+/);
+        const mentionedHouses = messageWords.filter(word => 
+          ['atlanta', 'auburn', 'sun'].some(house => word.includes(house))
+        );
+        
+        // Extract time periods mentioned
+        const mentionedTime = messageWords.filter(word => 
+          ['week', 'month', 'day', 'year', 'last', 'recent'].some(time => word.includes(time))
+        );
+
+        let specificFeedback = "";
+        if (mentionedHouses.length > 0) {
+          specificFeedback += `\n\n🏠 **Houses mentioned:** ${mentionedHouses.join(', ')}\nI couldn't find recent data for these specific houses.`;
+        }
+        if (mentionedTime.length > 0) {
+          specificFeedback += `\n\n📅 **Time period:** ${mentionedTime.join(' ')}\nNo data was found for this time range.`;
+        }
+
+        return new Response(JSON.stringify({
+          response: `I searched thoroughly but couldn't find any data matching your request.${specificFeedback}\n\n**Let me help you find what's available:**\n\n🔍 **Try these queries:**\n• "What houses have data available?"\n• "Show me all available metrics for the last month"\n• "List recent batches with data"\n\n📊 **Alternative approaches:**\n• Expand your time range (try "last 3 months")\n• Ask for a general overview first\n• Check if the house names are spelled correctly\n\nWould you like me to show you what data is currently in the system?`,
+          type: 'text',
+          noDataFound: true,
+          suggestions: [
+            "What houses have data available?",
+            "Show me recent batches", 
+            "What metrics do we have data for?"
+          ]
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       // Phase 3.5: Respect explicit chart type requests
