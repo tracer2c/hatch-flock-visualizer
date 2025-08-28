@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import PerformancePage from "./pages/PerformancePage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import DataEntryPage from "./pages/DataEntryPage";
 import EggPackEntryPage from "./pages/EggPackEntryPage";
 import FertilityEntryPage from "./pages/FertilityEntryPage";
@@ -33,6 +35,16 @@ const App = () => (
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/performance" element={
+              <ProtectedRoute>
+                <PerformancePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <AnalyticsPage />
               </ProtectedRoute>
             } />
             <Route path="/data-entry" element={

@@ -1,25 +1,24 @@
-
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
-import OverviewOperations from "@/components/dashboard/OverviewOperations";
+import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
 
-const Index = () => {
+const AnalyticsPage = () => {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    document.title = "Dashboard Overview | Hatchery Pro";
+    document.title = "Advanced Analytics | Hatchery Dashboard";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Live overview of hatchery operations with KPIs, alerts, and system status."
+        "Advanced analytics with environmental calendar, predictions, and unit comparisons."
       );
     } else {
       const m = document.createElement("meta");
       m.name = "description";
-      m.content = "Live overview of hatchery operations with KPIs, alerts, and system status.";
+      m.content = "Advanced analytics with environmental calendar, predictions, and unit comparisons.";
       document.head.appendChild(m);
     }
   }, []);
@@ -33,11 +32,11 @@ const Index = () => {
       <Header />
       <main className="p-6">
         <div className="max-w-full mx-auto">
-          <OverviewOperations />
+          <AdvancedAnalytics />
         </div>
       </main>
     </div>
   );
 };
 
-export default Index;
+export default AnalyticsPage;

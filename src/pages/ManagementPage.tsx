@@ -1,4 +1,4 @@
-import Navigation from "@/components/Navigation";
+import Header from "@/components/Header";
 import FlockManager from "@/components/dashboard/FlockManager";
 import MachineManager from "@/components/dashboard/MachineManager";
 import DataCleanup from "@/components/dashboard/DataCleanup";
@@ -11,20 +11,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 const ManagementPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto">
-        <Navigation />
-        
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <Settings className="h-8 w-8" />
-            Management Center
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Manage your flocks, machines, and system data
-          </p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="p-6">
+        <div className="max-w-full mx-auto">
 
         {/* Management Sections */}
         <Accordion type="single" collapsible className="space-y-4">
@@ -133,7 +123,8 @@ const ManagementPage = () => {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

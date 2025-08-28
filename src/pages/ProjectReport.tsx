@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import Navigation from "@/components/Navigation";
+import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import html2canvas from "html2canvas";
@@ -72,16 +72,10 @@ const ProjectReport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Hatchery Weekly Project Report (June 9 – August 5)</h1>
-          <p className="text-muted-foreground">Precise weekly breakdown of features, updates, UI/UX, analytics, and deliverables</p>
-        </header>
-
-        <Navigation />
-
-        <main className="space-y-6">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="p-6">
+        <div className="max-w-full mx-auto space-y-6">
           <div className="flex justify-end">
             <Button variant="outline" onClick={downloadPDF}>Download Report as PDF</Button>
           </div>
@@ -273,8 +267,8 @@ const ProjectReport = () => {
               </CardContent>
             </Card>
           </section>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
