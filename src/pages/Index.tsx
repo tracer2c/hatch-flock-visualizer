@@ -1,12 +1,9 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, BarChart3, LineChart, Activity, Workflow, Brain } from "lucide-react";
+import { Activity, BarChart3, Brain } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import BatchOverviewDashboard from "@/components/dashboard/BatchOverviewDashboard";
-import ProcessFlowDashboard from "@/components/dashboard/ProcessFlowDashboard";
-import PerformanceCharts from "@/components/dashboard/PerformanceCharts";
-import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
-import SystemFlowchart from "@/components/dashboard/SystemFlowchart";
+import OverviewOperations from "@/components/dashboard/OverviewOperations";
+import PerformanceAnalytics from "@/components/dashboard/PerformanceAnalytics";
 import AdvancedAnalytics from "@/components/dashboard/AdvancedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { useEffect } from "react";
@@ -59,57 +56,33 @@ const Index = () => {
         {/* Navigation */}
         <Navigation />
 
-        {/* Main Dashboard Tabs */}
+        {/* Main Dashboard Tabs - Simplified to 3 Core Areas */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Live Overview
-            </TabsTrigger>
-            <TabsTrigger value="process" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Process Flow
+              Overview & Operations
             </TabsTrigger>
             <TabsTrigger value="performance" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Performance
-            </TabsTrigger>
-            <TabsTrigger value="comparison" className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" />
-              Analysis
+              Performance Analytics
             </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
-              Advanced Analytics
-            </TabsTrigger>
-            <TabsTrigger value="flowchart" className="flex items-center gap-2">
-              <Workflow className="h-4 w-4" />
-              System Flow
+              Advanced Insights
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
-            <BatchOverviewDashboard />
-          </TabsContent>
-
-          <TabsContent value="process">
-            <ProcessFlowDashboard />
+            <OverviewOperations />
           </TabsContent>
 
           <TabsContent value="performance">
-            <PerformanceCharts data={performanceMetrics || []} />
-          </TabsContent>
-
-          <TabsContent value="comparison">
-            <ComparisonAnalysis data={performanceMetrics || []} />
+            <PerformanceAnalytics />
           </TabsContent>
 
           <TabsContent value="advanced">
             <AdvancedAnalytics />
-          </TabsContent>
-
-          <TabsContent value="flowchart">
-            <SystemFlowchart />
           </TabsContent>
         </Tabs>
       </div>
