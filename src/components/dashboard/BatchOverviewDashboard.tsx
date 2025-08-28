@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { OverviewHeader } from "./OverviewHeader";
 import { useChartDownload } from "@/hooks/useChartDownload";
+import { useNavigate } from "react-router-dom";
 
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
@@ -22,6 +23,11 @@ const BatchOverviewDashboard: React.FC = () => {
   const isLoading = activeBatchesLoading || performanceLoading || alertsLoading || machineLoading;
 
   const { downloadChart } = useChartDownload();
+  const navigate = useNavigate();
+
+  const handleHouseClick = (houseId: string) => {
+    navigate(`/data-entry/house/${houseId}`);
+  };
 
   // Filters state
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -276,40 +282,44 @@ const BatchOverviewDashboard: React.FC = () => {
             </CardHeader>
             <CardContent id="active-houses-pipeline">
               {filteredActiveBatches && filteredActiveBatches.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredActiveBatches.map((house) => (
-                    <div key={house.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <div className="font-medium text-card-foreground">{house.batch_number}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
-                          {getProgressDisplay(house.set_date).isOverdue && (
-                            <Badge variant="destructive" className="text-xs">OVERDUE</Badge>
-                          )}
-                        </div>
-                      </div>
+                 <div className="space-y-4">
+                   {filteredActiveBatches.map((house) => (
+                     <div 
+                       key={house.id} 
+                       onClick={() => handleHouseClick(house.id)}
+                       className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors cursor-pointer group"
+                     >
+                       <div className="flex items-center gap-4">
+                         <div>
+                           <div className="font-medium text-card-foreground group-hover:text-accent-foreground">{house.batch_number}</div>
+                           <div className="text-sm text-muted-foreground">
+                             {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
+                           {getProgressDisplay(house.set_date).isOverdue && (
+                             <Badge variant="destructive" className="text-xs">OVERDUE</Badge>
+                           )}
+                         </div>
+                       </div>
 
-                      <div className="text-right">
-                        <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? 'text-destructive' : 'text-card-foreground'}`}>
-                          {getProgressDisplay(house.set_date).text}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{house.machines?.machine_number} ({house.machines?.machine_type})</div>
-                      </div>
+                       <div className="text-right">
+                         <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? 'text-destructive' : 'text-card-foreground'}`}>
+                           {getProgressDisplay(house.set_date).text}
+                         </div>
+                         <div className="text-sm text-muted-foreground">{house.machines?.machine_number} ({house.machines?.machine_type})</div>
+                       </div>
 
-                      <div className="w-32">
-                        <Progress 
-                          value={getProgressDisplay(house.set_date).progress} 
-                          className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? '[&>div]:bg-destructive' : ''}`} 
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                       <div className="w-32">
+                         <Progress 
+                           value={getProgressDisplay(house.set_date).progress} 
+                           className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? '[&>div]:bg-destructive' : ''}`} 
+                         />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">No active houses found. Start a new house from the Data Entry page.</div>
               )}

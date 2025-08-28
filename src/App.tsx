@@ -52,6 +52,11 @@ const App = () => (
                 <DataEntryPage />
               </ProtectedRoute>
             } />
+            <Route path="/data-entry/house/:houseId" element={
+              <ProtectedRoute>
+                <DataEntryPage />
+              </ProtectedRoute>
+            } />
             <Route path="/data-entry/house/:houseId/egg-pack" element={
               <ProtectedRoute>
                 <EggPackEntryPage />

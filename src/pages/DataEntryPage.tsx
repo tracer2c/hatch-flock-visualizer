@@ -1,11 +1,20 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Header from "@/components/Header";
 import HouseManager from "@/components/dashboard/HouseManager";
 import DataTypeSelection from "@/components/dashboard/DataTypeSelection";
 
 const DataEntryPage = () => {
+  const { houseId } = useParams<{ houseId?: string }>();
   const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
+
+  // Auto-select house if houseId is in URL
+  useEffect(() => {
+    if (houseId) {
+      setSelectedHouseId(houseId);
+    }
+  }, [houseId]);
 
   const handleHouseSelect = (houseId: string) => {
     setSelectedHouseId(houseId);
