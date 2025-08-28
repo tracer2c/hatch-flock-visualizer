@@ -100,19 +100,32 @@ export const useBatchPerformanceMetrics = () => {
 
       if (error) throw error;
       
+      // Debug: summarize raw data availability
+      try {
+        console.debug('[useBatchPerformanceMetrics] total batches:', data?.length || 0);
+        const summary = (data || []).map((b: any) => ({
+          batch: b.batch_number,
+          fert: Array.isArray(b.fertility_analysis) ? b.fertility_analysis.length : 0,
+          eggQ: Array.isArray(b.egg_pack_quality) ? b.egg_pack_quality.length : 0,
+          qa: Array.isArray(b.qa_monitoring) ? b.qa_monitoring.length : 0,
+        }));
+        console.debug('[useBatchPerformanceMetrics] data summary:', summary);
+      } catch (e) {
+        console.warn('[useBatchPerformanceMetrics] debug summary failed:', e);
+      }
+      
       // Calculate performance metrics for all batches
-      return data?.map(batch => {
+      const mapped = data?.map((batch: any) => {
         const fertility = batch.fertility_analysis?.[0];
         const eggQuality = batch.egg_pack_quality?.[0];
         const qaData = batch.qa_monitoring || [];
         
-        const qualityScore = eggQuality ? 
-          (((eggQuality.sample_size - eggQuality.grade_c - eggQuality.cracked - eggQuality.dirty) / eggQuality.sample_size) * 100) : null;
+        const qualityScore = eggQuality && eggQuality.sample_size
+          ? (((eggQuality.sample_size - (eggQuality.grade_c || 0) - (eggQuality.cracked || 0) - (eggQuality.dirty || 0)) / eggQuality.sample_size) * 100)
+          : null;
         
-        // Calculate days since set for ongoing batches
-        const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceSet = batch.set_date ? Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24)) : 0;
         
-        // Determine data availability
         const hasEggQuality = !!eggQuality;
         const hasFertilityData = !!fertility;
         const hasQAData = qaData.length > 0;
@@ -124,11 +137,11 @@ export const useBatchPerformanceMetrics = () => {
           age: batch.flocks?.age_weeks || 0,
           breed: batch.flocks?.breed || 'unknown',
           houseNumber: batch.flocks?.house_number ?? null,
-          fertility: fertility?.fertility_percent || null,
-          hatch: fertility?.hatch_percent || null,
-          hof: fertility?.hof_percent || null,
+          fertility: typeof fertility?.fertility_percent === 'number' ? fertility.fertility_percent : null,
+          hatch: typeof fertility?.hatch_percent === 'number' ? fertility.hatch_percent : null,
+          hof: typeof fertility?.hof_percent === 'number' ? fertility.hof_percent : null,
           hoi: batch.eggs_injected > 0 ? (batch.chicks_hatched / batch.eggs_injected) * 100 : null,
-          earlyDead: fertility ? ((fertility.early_dead || 0) / (fertility.sample_size || 1)) * 100 : null,
+          earlyDead: fertility && fertility.sample_size ? (((fertility.early_dead || 0) / fertility.sample_size) * 100) : null,
           qualityScore,
           totalEggs: batch.total_eggs_set,
           status: batch.status,
@@ -144,6 +157,21 @@ export const useBatchPerformanceMetrics = () => {
           currentDay: hasQAData ? qaData[qaData.length - 1]?.day_of_incubation : daysSinceSet
         };
       }) || [];
+
+      // Debug: counts of mapped flags
+      try {
+        const counts = (mapped as any[]).reduce((acc: any, b: any) => {
+          acc.hasFertility += b.hasFertilityData ? 1 : 0;
+          acc.hasEggQuality += b.hasEggQuality ? 1 : 0;
+          acc.hasQA += b.hasQAData ? 1 : 0;
+          return acc;
+        }, { hasFertility: 0, hasEggQuality: 0, hasQA: 0 });
+        console.debug('[useBatchPerformanceMetrics] mapped flag counts:', counts);
+      } catch (e) {
+        console.warn('[useBatchPerformanceMetrics] flag count failed:', e);
+      }
+
+      return mapped;
     },
   });
 };

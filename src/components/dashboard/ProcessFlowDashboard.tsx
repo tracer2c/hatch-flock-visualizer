@@ -24,17 +24,11 @@ const ProcessFlowDashboard = () => {
   const meaningfulBatches = performanceMetrics.filter(batch => 
     batch.hasEggQuality || batch.hasFertilityData || batch.hasQAData
   );
+  const batches = meaningfulBatches.length > 0 ? meaningfulBatches : performanceMetrics;
 
-  if (meaningfulBatches.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No batches with data found. Add some data entry to see process flow analysis.
-      </div>
-    );
-  }
 
   // Data flow analysis - use meaningful data
-  const flowData = meaningfulBatches.map(batch => ({
+  const flowData = batches.map(batch => ({
     batch: batch.batchNumber,
     hof: typeof batch.hof === 'number' ? batch.hof : 0,
     hoi: typeof batch.hoi === 'number' ? batch.hoi : 0,
@@ -47,7 +41,7 @@ const ProcessFlowDashboard = () => {
 
 
   // Age vs Performance - handle null values properly
-  const agePerformanceData = meaningfulBatches.reduce((acc: any[], batch) => {
+  const agePerformanceData = batches.reduce((acc: any[], batch) => {
     const existing = acc.find(item => item.age === batch.age);
     if (existing) {
       if (batch.fertility) {
@@ -77,7 +71,7 @@ const ProcessFlowDashboard = () => {
   }, []).sort((a, b) => a.age - b.age);
 
   // Process efficiency by breed - handle null values
-  const breedData = meaningfulBatches.reduce((acc: any[], batch) => {
+  const breedData = batches.reduce((acc: any[], batch) => {
     const existing = acc.find(item => item.breed === batch.breed);
 
     const applyUpdate = (item: any) => {
@@ -311,7 +305,7 @@ const ProcessFlowDashboard = () => {
           </CardHeader>
           <CardContent>
             {(() => {
-              const withData = meaningfulBatches.filter(batch => typeof batch.hatch === 'number');
+              const withData = batches.filter(batch => typeof batch.hatch === 'number');
               if (withData.length === 0) {
                 return (
                   <div>
@@ -339,10 +333,10 @@ const ProcessFlowDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {meaningfulBatches.reduce((sum, batch) => sum + batch.totalEggs, 0).toLocaleString()}
+              {batches.reduce((sum, batch) => sum + batch.totalEggs, 0).toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">
-              Across {meaningfulBatches.length} batches with data
+              Across {batches.length} batches with data
             </div>
           </CardContent>
         </Card>
@@ -353,10 +347,10 @@ const ProcessFlowDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {Math.round((meaningfulBatches.length / performanceMetrics.length) * 100)}%
+              {Math.round((batches.length / performanceMetrics.length) * 100)}%
             </div>
             <div className="text-sm text-muted-foreground">
-              {meaningfulBatches.length} of {performanceMetrics.length} batches have data
+              {batches.length} of {performanceMetrics.length} batches have data
             </div>
           </CardContent>
         </Card>
