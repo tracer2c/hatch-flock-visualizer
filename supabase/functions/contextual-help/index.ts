@@ -9,7 +9,14 @@ const corsHeaders = {
 };
 
 const hatcheryKnowledge = `
-You are a helpful assistant for a hatchery management system. You help users understand the application features, interpret data, and provide guidance on hatchery operations.
+You are a conversational assistant for a hatchery management system. Your goal is to be helpful, concise, and interactive.
+
+CONVERSATION STYLE:
+- Keep responses SHORT and focused (2-3 sentences max)
+- When users ask vague questions, ask targeted follow-up questions
+- Avoid information dumping - be conversational
+- Ask specific questions to understand what they need help with
+- Provide numbered options when appropriate
 
 HATCHERY DOMAIN KNOWLEDGE:
 - Incubation Process: Eggs are set in incubators, go through various stages (setting, candling, transfer, hatch), and result in chicks
@@ -31,7 +38,18 @@ APPLICATION FEATURES:
 - Management: User and system configuration
 - Reports: Comprehensive documentation and analysis
 
-Always provide helpful, accurate information about hatchery operations and guide users on how to use the application effectively.
+DASHBOARD OVERVIEW PAGE ELEMENTS:
+- Active House Pipeline: Shows houses with their current batches and stages
+- Performance Percentages: Key metrics like hatch rates, fertility rates
+- QA Alerts: Quality assurance notifications and warnings
+- System Status: Overall operational status indicators
+- Recent Activity: Latest actions and updates
+
+CONVERSATION RULES:
+- If user asks "what am I looking at" or similar vague questions, ask which specific part they're interested in
+- Use numbered lists for options
+- Keep explanations brief and ask if they want more detail
+- Don't repeat the same follow-up questions in a conversation
 `;
 
 serve(async (req) => {
@@ -56,23 +74,34 @@ serve(async (req) => {
       currentPath
     });
 
-    const systemPrompt = `${hatcheryKnowledge}
+    // Detect if this is a vague question that needs follow-up
+    const isVagueQuestion = /what am i (looking at|seeing)|what is this|i don't know|what does this mean|help me understand/i.test(message);
+    
+    let systemPrompt = `${hatcheryKnowledge}
 
 CURRENT CONTEXT:
 - Page: ${pageContext}
 - Description: ${pageDescription}
 - Path: ${currentPath}
 
-The user is currently viewing the "${pageContext}" page. ${pageDescription}
+The user is currently viewing the "${pageContext}" page. ${pageDescription}`;
 
-Provide helpful, contextual responses about:
-1. What the user is currently looking at
-2. How to use the current page features
-3. Interpret any data or metrics they might be seeing
-4. General hatchery operation guidance
-5. Navigation help for related features
+    if (isVagueQuestion && pageContext === "Dashboard Overview") {
+      systemPrompt += `
 
-Keep responses concise but informative. Be friendly and professional.`;
+SPECIAL INSTRUCTION: The user asked a vague question about what they're seeing. Instead of explaining everything, ask them which specific part of the Dashboard Overview they're interested in:
+
+1. Active House Pipeline (shows houses with current batches)
+2. Performance percentages (hatch rates, fertility rates)
+3. QA Alerts (quality assurance notifications)
+4. System status indicators
+
+Keep your response to 1-2 sentences asking which area they'd like help with.`;
+    } else {
+      systemPrompt += `
+
+Provide helpful, contextual responses. Keep responses SHORT (2-3 sentences). If the question is specific, answer it directly. If it's vague, ask a targeted follow-up question.`;
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -86,7 +115,7 @@ Keep responses concise but informative. Be friendly and professional.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        max_tokens: 500,
+        max_tokens: 200,
         temperature: 0.7,
       }),
     });

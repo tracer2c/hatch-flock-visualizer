@@ -105,8 +105,8 @@ const ContextualHelpBot: React.FC = () => {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <Card className={cn(
-        "w-80 transition-all duration-300 ease-in-out shadow-xl border-border/20",
-        isMinimized ? "h-12" : "h-96"
+        "w-[420px] transition-all duration-300 ease-in-out shadow-xl border-border/20",
+        isMinimized ? "h-12" : "h-[500px]"
       )}>
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2">
@@ -139,7 +139,7 @@ const ContextualHelpBot: React.FC = () => {
         </CardHeader>
 
         {!isMinimized && (
-          <CardContent className="p-0 flex flex-col h-80">
+          <CardContent className="p-0 flex flex-col h-[456px]">
             <ScrollArea className="flex-1 p-3">
               <div className="space-y-3">
                 {messages.map((message) => (
