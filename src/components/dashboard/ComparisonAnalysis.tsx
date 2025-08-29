@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { format } from "date-fns";
+import { useEffect } from "react";
+import { useHelpContext } from '@/contexts/HelpContext';
 
 interface ComparisonAnalysisProps {
   data: any[];
@@ -23,6 +25,7 @@ const formatFlockLabel = (item: any) => {
 const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("flocks");
+  const { updateContext } = useHelpContext();
 
   const handleItemSelect = (batchNumber: string) => {
     if (selectedItems.includes(batchNumber)) {
@@ -191,6 +194,42 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-12); // Last 12 months
   }, [data]);
+
+  // Update help context when tab or selection changes
+  useEffect(() => {
+    const visibleElements = [];
+    const currentMetrics: Record<string, any> = {};
+    
+    if (activeTab === "flocks") {
+      visibleElements.push("Flock Selection", "Flock Comparison Chart");
+      currentMetrics.selectedFlocks = selectedItems.length;
+      currentMetrics.maxSelectionReached = selectedItems.length >= 5;
+    } else if (activeTab === "houses") {
+      visibleElements.push("House Performance Chart", "House Statistics");
+      currentMetrics.totalHouses = houseComparison.length;
+    } else if (activeTab === "units") {
+      visibleElements.push("Unit Performance Chart", "Unit Statistics");
+      currentMetrics.totalUnits = unitComparison.length;
+    } else if (activeTab === "breeds") {
+      visibleElements.push("Breed Performance Chart", "Breed Statistics");
+      currentMetrics.totalBreeds = breedComparison.length;
+    } else if (activeTab === "trends") {
+      visibleElements.push("Monthly Trends Chart", "Performance Timeline");
+      currentMetrics.timeRange = "Last 12 months";
+    }
+
+    updateContext({
+      activePage: "Comparison Model",
+      activeTab: activeTab.charAt(0).toUpperCase() + activeTab.slice(1),
+      visibleElements,
+      currentMetrics,
+      selectedFilters: {
+        dataAvailable: data.length,
+        hasQualityData: data.some(d => d.qualityScore !== null),
+        hasFertilityData: data.some(d => d.fertility !== null)
+      }
+    });
+  }, [activeTab, selectedItems, data, houseComparison, unitComparison, breedComparison, updateContext]);
 
   // Prepare radar chart data for selected items
   const radarData = selectedData.map(item => ({

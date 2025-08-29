@@ -28,6 +28,7 @@ import HouseFlowPage from "./pages/HouseFlowPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
+import { HelpProvider } from "./contexts/HelpContext";
 import ContextualHelpBot from "./components/ContextualHelpBot";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
       <BrowserRouter>
         <InitializeApp>
           <ViewModeProvider>
+            <HelpProvider>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/*" element={
@@ -79,6 +81,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
             </Routes>
+            </HelpProvider>
           </ViewModeProvider>
         </InitializeApp>
       </BrowserRouter>

@@ -71,7 +71,8 @@ serve(async (req) => {
     console.log('Contextual help request:', {
       message,
       pageContext,
-      currentPath
+      currentPath,
+      uiContext
     });
 
     // Detect if this is a vague question that needs follow-up
@@ -83,24 +84,35 @@ CURRENT CONTEXT:
 - Page: ${pageContext}
 - Description: ${pageDescription}
 - Path: ${currentPath}
+${uiContext ? `
+- Active Tab: ${uiContext.activeTab || 'None'}
+- Visible Elements: ${uiContext.visibleElements?.join(', ') || 'None'}
+- Current Metrics: ${JSON.stringify(uiContext.currentMetrics || {})}
+- Selected Filters: ${JSON.stringify(uiContext.selectedFilters || {})}` : ''}
 
-The user is currently viewing the "${pageContext}" page. ${pageDescription}`;
+The user is currently viewing the "${pageContext}" page. ${pageDescription}${uiContext?.activeTab ? ` They are on the "${uiContext.activeTab}" tab.` : ''}`;
 
-    if (isVagueQuestion && pageContext === "Dashboard Overview") {
-      systemPrompt += `
+    if (isVagueQuestion && !uiContext?.activeTab) {
+      if (pageContext === "Dashboard Overview") {
+        systemPrompt += `
 
-SPECIAL INSTRUCTION: The user asked a vague question about what they're seeing. Instead of explaining everything, ask them which specific part of the Dashboard Overview they're interested in:
+SPECIAL INSTRUCTION: The user asked a vague question. Ask them which specific part they're interested in:
+1. Active House Pipeline 2. Performance percentages 3. QA Alerts 4. System status
 
-1. Active House Pipeline (shows houses with current batches)
-2. Performance percentages (hatch rates, fertility rates)
-3. QA Alerts (quality assurance notifications)
-4. System status indicators
+Keep response to 1 sentence.`;
+      } else if (pageContext === "Comparison Model") {
+        systemPrompt += `
 
-Keep your response to 1-2 sentences asking which area they'd like help with.`;
+SPECIAL INSTRUCTION: Ask which comparison type they want help with:
+1. Flocks 2. Houses 3. Units 4. Breeds 5. Trends
+
+Keep response to 1 sentence.`;
+      }
     } else {
       systemPrompt += `
 
-Provide helpful, contextual responses. Keep responses SHORT (2-3 sentences). If the question is specific, answer it directly. If it's vague, ask a targeted follow-up question.`;
+${uiContext?.activeTab ? `Focus on explaining the "${uiContext.activeTab}" tab they're viewing.` : ''} 
+Provide specific, helpful responses about what they're seeing. Keep responses SHORT (2-3 sentences max).`;
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

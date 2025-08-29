@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useContextualHelp } from '@/hooks/useContextualHelp';
+import { useHelpContext } from '@/contexts/HelpContext';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -29,6 +30,7 @@ const ContextualHelpBot: React.FC = () => {
   ]);
   
   const { sendMessage, isLoading, currentPageContext } = useContextualHelp();
+  const { contextData } = useHelpContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +62,7 @@ const ContextualHelpBot: React.FC = () => {
     setInput('');
 
     try {
-      const response = await sendMessage(input.trim());
+      const response = await sendMessage(input.trim(), contextData);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
