@@ -8,7 +8,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Home,
-  Workflow
+  
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,12 +29,6 @@ const navigationItems = [
     path: '/',
     label: 'Dashboard',
     icon: Home,
-    requiresAuth: true
-  },
-  {
-    path: '/process-flow',
-    label: 'Process Flow',
-    icon: Workflow,
     requiresAuth: true
   },
   {

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Activity, TrendingUp, Settings, Workflow } from "lucide-react";
-import BatchOverviewDashboard from "./BatchOverviewDashboard";
+import ProcessFlowDashboard from "./ProcessFlowDashboard";
+import ConsolidatedAnalytics from "./ConsolidatedAnalytics";
 import SystemFlowchart from "./SystemFlowchart";
 
 const OverviewOperations = () => {
@@ -44,8 +45,12 @@ const OverviewOperations = () => {
         </CardHeader>
       </Card>
 
-      {/* Main Overview Dashboard */}
-      <BatchOverviewDashboard />
+      {/* Main Content */}
+      {viewMode === 'simple' ? (
+        <ProcessFlowDashboard />
+      ) : (
+        <ConsolidatedAnalytics />
+      )}
 
       {/* Optional System Flowchart */}
       {showSystemFlow && (

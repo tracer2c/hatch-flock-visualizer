@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import PerformancePage from "./pages/PerformancePage";
-import ProcessFlowPage from "./pages/ProcessFlowPage";
+
 import AnalyticsPage from "./pages/AnalyticsPage";
 import DataEntryPage from "./pages/DataEntryPage";
 import EggPackEntryPage from "./pages/EggPackEntryPage";
@@ -47,7 +47,7 @@ const App = () => (
                         <Routes>
                           <Route path="/" element={<Index />} />
                           <Route path="/performance" element={<PerformancePage />} />
-                          <Route path="/process-flow" element={<ProcessFlowPage />} />
+                          
                           <Route path="/analytics" element={<AnalyticsPage />} />
                           <Route path="/data-entry" element={<DataEntryPage />} />
                           <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
