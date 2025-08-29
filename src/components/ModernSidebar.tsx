@@ -268,12 +268,12 @@ export function ModernSidebar() {
                                   <SidebarMenuSubButton asChild>
                                     <NavLink
                                       to={item.path}
-                                      className={cn(
-                                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
-                                        active
-                                          ? "bg-primary text-primary-foreground shadow-sm"
-                                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                                      )}
+                                       className={cn(
+                                         "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                         active
+                                           ? "bg-black text-white shadow-sm"
+                                           : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                                       )}
                                     >
                                       <Icon className="h-4 w-4 flex-shrink-0" />
                                       <span className="text-sm truncate">
