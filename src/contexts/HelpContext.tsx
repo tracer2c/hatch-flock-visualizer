@@ -40,7 +40,13 @@ export const HelpProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useHelpContext = () => {
   const context = useContext(HelpContext);
   if (context === undefined) {
-    throw new Error('useHelpContext must be used within a HelpProvider');
+    // Fallback to a no-op context to avoid crashes if provider isn't mounted yet
+    const defaultValue: HelpContextType = {
+      contextData: { activePage: 'Application' },
+      updateContext: () => {},
+      clearContext: () => {},
+    };
+    return defaultValue;
   }
   return context;
 };
