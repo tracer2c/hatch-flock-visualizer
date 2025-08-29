@@ -5,7 +5,7 @@ import { Send, Mic, User, MessageCircle, Download, ArrowLeft } from 'lucide-reac
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
-import { MessageFormatter } from './MessageFormatter';
+import { EnhancedMessageFormatter } from './EnhancedMessageFormatter';
 import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
 import { SummaryCard } from './SummaryCard';
@@ -178,6 +178,10 @@ export const ChatInterface = () => {
     sendMessage(prompt);
   };
 
+  const handleQuestionClick = (question: string) => {
+    sendMessage(question);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
@@ -219,7 +223,7 @@ export const ChatInterface = () => {
                       key={index}
                       variant="outline"
                       onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-left h-auto p-4 text-base hover:bg-accent/50 border-2 justify-start"
+                      className="text-left h-auto p-4 text-base hover:bg-accent/50 border-2 justify-start transition-all duration-200 hover:shadow-sm"
                     >
                       {prompt}
                     </Button>
@@ -280,8 +284,9 @@ export const ChatInterface = () => {
                           chartId={`message-chart-${message.id}`}
                         />
                       ) : (
-                        <MessageFormatter 
+                        <EnhancedMessageFormatter 
                           content={message.content}
+                          onQuestionClick={handleQuestionClick}
                           className="text-base"
                         />
                       )}

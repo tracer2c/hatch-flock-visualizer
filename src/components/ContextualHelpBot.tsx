@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useContextualHelp } from '@/hooks/useContextualHelp';
 import { useHelpContext } from '@/contexts/HelpContext';
+import { EnhancedMessageFormatter } from '@/components/chat/EnhancedMessageFormatter';
+import { ContextualSuggestions } from '@/components/chat/ContextualSuggestions';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -48,13 +50,14 @@ const ContextualHelpBot: React.FC = () => {
     }
   }, [isOpen, isMinimized]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (!textToSend || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: textToSend,
       timestamp: new Date(),
     };
 
@@ -64,7 +67,7 @@ const ContextualHelpBot: React.FC = () => {
     try {
       // Send last 4 messages as history for context
       const recentHistory = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
-      const response = await sendMessage(input.trim(), contextData, recentHistory);
+      const response = await sendMessage(textToSend, contextData, recentHistory);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -90,6 +93,10 @@ const ContextualHelpBot: React.FC = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleQuestionClick = (question: string) => {
+    handleSendMessage(question);
   };
 
   if (!isOpen) {
@@ -145,39 +152,60 @@ const ContextualHelpBot: React.FC = () => {
         {!isMinimized && (
           <CardContent className="p-0 flex flex-col h-[456px]">
             <ScrollArea className="flex-1 p-3">
-              <div className="space-y-3">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex",
-                      message.role === 'user' ? "justify-end" : "justify-start"
-                    )}
-                  >
+              {messages.length === 0 ? (
+                <div className="space-y-4">
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Hi! I can help explain features, data, and answer questions about what you're looking at.
+                    </p>
+                  </div>
+                  <ContextualSuggestions onSuggestionClick={handleQuestionClick} />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message) => (
                     <div
+                      key={message.id}
                       className={cn(
-                        "max-w-[80%] rounded-lg px-3 py-2 text-sm break-words",
-                        message.role === 'user'
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                        "flex flex-col gap-2",
+                        message.role === 'user' ? "items-end" : "items-start"
                       )}
                     >
-                      {message.content}
+                      <div
+                        className={cn(
+                          "max-w-[85%] rounded-lg px-4 py-3 text-sm break-words",
+                          message.role === 'user'
+                            ? "bg-primary text-primary-foreground rounded-br-sm"
+                            : "bg-muted/50 border rounded-bl-sm"
+                        )}
+                      >
+                        {message.role === 'user' ? (
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                        ) : (
+                          <EnhancedMessageFormatter
+                            content={message.content}
+                            onQuestionClick={handleQuestionClick}
+                          />
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground px-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
                     </div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-                      <div className="flex items-center gap-1">
-                        <div className="w-1 h-1 bg-current rounded-full animate-pulse"></div>
-                        <div className="w-1 h-1 bg-current rounded-full animate-pulse delay-100"></div>
-                        <div className="w-1 h-1 bg-current rounded-full animate-pulse delay-200"></div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted/50 border rounded-lg px-4 py-3 text-sm rounded-bl-sm">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse delay-100"></div>
+                          <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse delay-200"></div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </ScrollArea>
 
@@ -193,7 +221,7 @@ const ContextualHelpBot: React.FC = () => {
                   disabled={isLoading}
                 />
                 <Button
-                  onClick={handleSendMessage}
+                  onClick={() => handleSendMessage()}
                   disabled={!input.trim() || isLoading}
                   size="sm"
                   className="px-3"

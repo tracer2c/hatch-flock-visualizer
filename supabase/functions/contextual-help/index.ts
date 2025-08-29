@@ -16,7 +16,8 @@ CONVERSATION STYLE:
 - When users ask vague questions, ask targeted follow-up questions
 - Avoid information dumping - be conversational
 - Ask specific questions to understand what they need help with
-- Provide numbered options when appropriate
+- Provide numbered options when appropriate (these will become clickable buttons)
+- Format numbered lists as: "1. Option one 2. Option two 3. Option three"
 
 HATCHERY DOMAIN KNOWLEDGE:
 - Incubation Process: Eggs are set in incubators, go through various stages (setting, candling, transfer, hatch), and result in chicks
@@ -105,17 +106,17 @@ RESPONSE RULES:
       if (pageContext === "Dashboard Overview") {
         systemPrompt += `
 
-SPECIAL INSTRUCTION: Ask which specific part they're interested in:
-1. Active House Pipeline 2. Performance percentages 3. QA Alerts 4. System status
+SPECIAL INSTRUCTION: Ask which specific part they're interested in using this exact format:
+"What would you like to know about? 1. Active House Pipeline 2. Performance percentages 3. QA Alerts 4. System status"
 
-Keep response to 1 sentence.`;
+Keep response to 1 sentence plus numbered options.`;
       } else if (pageContext === "Comparison Model") {
         systemPrompt += `
 
-SPECIAL INSTRUCTION: Ask which comparison type they want help with:
-1. Flocks 2. Houses 3. Units 4. Breeds 5. Trends
+SPECIAL INSTRUCTION: Ask which comparison type they want help with using this exact format:
+"Which comparison would you like help with? 1. Flocks 2. Houses 3. Units 4. Breeds 5. Trends"
 
-Keep response to 1 sentence.`;
+Keep response to 1 sentence plus numbered options.`;
       }
     } else if (alreadyAskedWhichPart && isVagueQuestion) {
       systemPrompt += `
