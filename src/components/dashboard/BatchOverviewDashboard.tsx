@@ -142,6 +142,17 @@ const BatchOverviewDashboard: React.FC = () => {
       : machineUtil.filter((m: any) => String(m.id) === machineFilter);
   }, [machineUtil, machineFilter]);
 
+  // Calculate key metrics first - handle null values
+  const fertilityData = (performanceMetrics?.filter((b: any) => b?.fertility !== null && b?.fertility !== undefined) || []) as any[];
+  const avgFert = fertilityData.length > 0
+    ? fertilityData.reduce((sum: number, b: any) => sum + b.fertility, 0) / fertilityData.length
+    : 0;
+
+  const hatchData = (performanceMetrics?.filter((b: any) => b?.hatch !== null && b?.hatch !== undefined) || []) as any[];
+  const avgHatch = hatchData.length > 0
+    ? hatchData.reduce((sum: number, b: any) => sum + b.hatch, 0) / hatchData.length
+    : 0;
+
   // Update help context with dashboard metrics
   React.useEffect(() => {
     if (!isLoading && activeBatches && performanceMetrics) {
@@ -173,20 +184,10 @@ const BatchOverviewDashboard: React.FC = () => {
         }
       });
     }
-  }, [isLoading, activeBatches, performanceMetrics, qaAlerts, machineUtil, statusFilter, machineFilter, dateRange, showMachineUtil, updateContext, filteredActiveBatches]);
+  }, [isLoading, activeBatches, performanceMetrics, qaAlerts, machineUtil, statusFilter, machineFilter, dateRange, showMachineUtil, updateContext, filteredActiveBatches, avgFert, avgHatch]);
 
   // Calculate key metrics - handle null values
   const totalActiveHouses = filteredActiveBatches.length;
-
-  const fertilityData = (performanceMetrics?.filter((b: any) => b?.fertility !== null && b?.fertility !== undefined) || []) as any[];
-  const avgFert = fertilityData.length > 0
-    ? fertilityData.reduce((sum: number, b: any) => sum + b.fertility, 0) / fertilityData.length
-    : 0;
-
-  const hatchData = (performanceMetrics?.filter((b: any) => b?.hatch !== null && b?.hatch !== undefined) || []) as any[];
-  const avgHatch = hatchData.length > 0
-    ? hatchData.reduce((sum: number, b: any) => sum + b.hatch, 0) / hatchData.length
-    : 0;
 
   const totalAlerts = qaAlerts?.length || 0;
   const avgMachineUtil = filteredMachineUtil?.length
