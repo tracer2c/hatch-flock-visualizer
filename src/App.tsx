@@ -14,6 +14,7 @@ import EggPackEntryPage from "./pages/EggPackEntryPage";
 import FertilityEntryPage from "./pages/FertilityEntryPage";
 import QAEntryPage from "./pages/QAEntryPage";
 import ResidueEntryPage from "./pages/ResidueEntryPage";
+import ClearsInjectedEntryPage from "./pages/ClearsInjectedEntryPage";
 import ManagementPage from "./pages/ManagementPage";
 import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
@@ -66,6 +67,7 @@ const App = () => (
                             <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
                             <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
                             <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
+                            <Route path="/data-entry/house/:houseId/clears-injected" element={<ClearsInjectedEntryPage />} />
                             <Route path="/checklist" element={<ChecklistPage />} />
                             <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
                             <Route path="/management" element={<ManagementPage />} />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info } from "lucide-react";
+import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,7 +31,8 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
     eggPack: 0,
     fertility: 0,
     qa: 0,
-    residue: 0
+    residue: 0,
+    clearsInjected: 0
   });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -77,18 +78,24 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
   };
 
   const loadDataCounts = async () => {
-    const [eggPackResult, fertilityResult, qaResult, residueResult] = await Promise.all([
+    const [eggPackResult, fertilityResult, qaResult, residueResult, clearsInjectedResult] = await Promise.all([
       supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', houseId),
       supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId),
       supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', houseId),
-      supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId)
+      supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId),
+      supabase.from('batches').select('eggs_cleared, eggs_injected').eq('id', houseId).single()
     ]);
+
+    // For clears & injected, check if either value exists and is not null
+    const clearsInjectedCount = clearsInjectedResult.data && 
+      ((clearsInjectedResult.data as any).eggs_cleared !== null || (clearsInjectedResult.data as any).eggs_injected !== null) ? 1 : 0;
 
     setDataCounts({
       eggPack: eggPackResult.count || 0,
       fertility: fertilityResult.count || 0,
       qa: qaResult.count || 0,
-      residue: residueResult.count || 0
+      residue: residueResult.count || 0,
+      clearsInjected: clearsInjectedCount
     });
   };
 
@@ -140,6 +147,15 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
       color: 'from-orange-500 to-orange-600',
       count: dataCounts.residue,
       route: `/data-entry/house/${houseId}/residue`
+    },
+    {
+      id: 'clears-injected',
+      title: 'Clears & Injected',
+      description: 'Record the number of cleared and injected eggs',
+      icon: Syringe,
+      color: 'from-blue-500 to-blue-600',
+      count: dataCounts.clearsInjected,
+      route: `/data-entry/house/${houseId}/clears-injected`
     }
   ];
 
@@ -206,7 +222,7 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           <p className="text-gray-600 mb-6">Choose what type of data you want to enter for this house</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dataTypes.map((dataType) => {
             const IconComponent = dataType.icon;
             return (
