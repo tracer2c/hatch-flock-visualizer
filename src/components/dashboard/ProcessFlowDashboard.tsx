@@ -124,7 +124,7 @@ const ProcessFlowDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Process Flow Overview */}
+      {/* Main Process Flow Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -142,7 +142,7 @@ const ProcessFlowDashboard = () => {
           </p>
         </CardHeader>
         <CardContent id="process-flow-chart">
-          <ResponsiveContainer width="100%" height={400}>
+          <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={flowData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -150,10 +150,10 @@ const ProcessFlowDashboard = () => {
                 angle={-45}
                 textAnchor="end"
                 height={60}
-                fontSize={12}
+                fontSize={11}
                 stroke="hsl(var(--muted-foreground))"
               />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
               <Tooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
@@ -188,114 +188,117 @@ const ProcessFlowDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Performance by Flock Age */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div>Performance by Flock Age</div>
-            <ChartDownloadButton 
-              chartId="age-performance-chart" 
-              filename="performance-by-flock-age.png" 
-            />
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            How flock age affects fertility and hatch rates
-          </p>
-        </CardHeader>
-        <CardContent id="age-performance-chart">
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={agePerformanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="age" name="Age" unit=" weeks" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip 
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <AITooltip 
-                        chartType="age-performance" 
-                        data={{ age: label, metrics: payload }} 
-                        chartConfig={{ type: 'line' }}
-                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                      >
-                        <div>
-                          <p className="font-medium mb-2">Age: {label} weeks</p>
-                          {payload.map((entry, index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <span style={{ color: entry.color }}>{entry.name}: </span>
-                              <span className="font-medium">{entry.value}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </AITooltip>
-                    );
-                  }
-                  return null;
-                }}
+      {/* Side by Side Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Performance by Flock Age */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="text-lg">Performance by Flock Age</div>
+              <ChartDownloadButton 
+                chartId="age-performance-chart" 
+                filename="performance-by-flock-age.png" 
               />
-              <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
-              <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              How flock age affects fertility and hatch rates
+            </p>
+          </CardHeader>
+          <CardContent id="age-performance-chart">
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={agePerformanceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="age" name="Age" unit=" weeks" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <AITooltip 
+                          chartType="age-performance" 
+                          data={{ age: label, metrics: payload }} 
+                          chartConfig={{ type: 'line' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">Age: {label} weeks</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span style={{ color: entry.color }}>{entry.name}: </span>
+                                <span className="font-medium">{entry.value}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
+                <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* Breed Performance Comparison */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Performance by Breed Type
-            </div>
-            <ChartDownloadButton 
-              chartId="breed-performance-chart" 
-              filename="performance-by-breed-type.png" 
-            />
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Comparative analysis across different breed types
-          </p>
-        </CardHeader>
-        <CardContent id="breed-performance-chart">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={breedData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="breed" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip 
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <AITooltip 
-                        chartType="breed-performance" 
-                        data={{ breed: label, metrics: payload }} 
-                        chartConfig={{ type: 'bar' }}
-                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                      >
-                        <div>
-                          <p className="font-medium mb-2">{label}</p>
-                          {payload.map((entry, index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <span style={{ color: entry.color }}>{entry.name}: </span>
-                              <span className="font-medium">{entry.value}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </AITooltip>
-                    );
-                  }
-                  return null;
-                }}
+        {/* Breed Performance Comparison */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-lg">
+                <TrendingUp className="h-5 w-5" />
+                Performance by Breed Type
+              </div>
+              <ChartDownloadButton 
+                chartId="breed-performance-chart" 
+                filename="performance-by-breed-type.png" 
               />
-              <Bar dataKey="hof" fill="hsl(220 70% 50%)" name="HOF %" />
-              <Bar dataKey="hoi" fill="hsl(280 70% 50%)" name="HOI %" />
-              <Bar dataKey="fertility" fill="hsl(142 76% 36%)" name="Fertility %" />
-              <Bar dataKey="hatch" fill="hsl(48 96% 53%)" name="Hatch %" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Comparative analysis across different breed types
+            </p>
+          </CardHeader>
+          <CardContent id="breed-performance-chart">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={breedData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="breed" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <AITooltip 
+                          chartType="breed-performance" 
+                          data={{ breed: label, metrics: payload }} 
+                          chartConfig={{ type: 'bar' }}
+                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
+                        >
+                          <div>
+                            <p className="font-medium mb-2">{label}</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span style={{ color: entry.color }}>{entry.name}: </span>
+                                <span className="font-medium">{entry.value}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AITooltip>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="hof" fill="hsl(220 70% 50%)" name="HOF %" />
+                <Bar dataKey="hoi" fill="hsl(280 70% 50%)" name="HOI %" />
+                <Bar dataKey="fertility" fill="hsl(142 76% 36%)" name="Fertility %" />
+                <Bar dataKey="hatch" fill="hsl(48 96% 53%)" name="Hatch %" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Performance Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
