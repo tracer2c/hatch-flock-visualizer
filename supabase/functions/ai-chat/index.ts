@@ -1262,8 +1262,11 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       if (shouldGenerateCharts(message, toolResults)) {
         const chartResponse = generateChartsFromData(message, toolResults);
         if (chartResponse) {
+          // Generate summary for chart response
+          const summary = await generateSummary(chartResponse, toolResults);
           return new Response(JSON.stringify({
             response: chartResponse,
+            summary,
             timestamp: new Date().toISOString(),
             source: 'enhanced'
           }), {
@@ -1276,8 +1279,11 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       try {
         const parsedResponse = JSON.parse(finalText);
         if (parsedResponse.type === 'analytics' || parsedResponse.type === 'chart') {
+          // Generate summary for structured response
+          const summary = await generateSummary(parsedResponse, toolResults);
           return new Response(JSON.stringify({
             response: parsedResponse,
+            summary,
             timestamp: new Date().toISOString(),
             source: 'openai'
           }), {
@@ -1291,10 +1297,14 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       // Check if we have structured data from batch tools
       const structuredData = extractStructuredDataFromTools(toolResults);
       
+      // Generate summary for the response
+      const summary = await generateSummary(finalText, toolResults);
+      
       return new Response(JSON.stringify({
         response: finalText,
         timestamp: new Date().toISOString(),
         source: 'openai',
+        summary,
         ...structuredData
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1907,6 +1917,98 @@ function extractStructuredDataFromTools(toolResults: any[]) {
     }
   }
   return {};
+}
+
+// Function to generate NLP summary for responses
+async function generateSummary(responseContent: any, toolResults: any[]): Promise<{ overview: string; keyPoints: string[] } | null> {
+  if (!openaiApiKey) return null;
+
+  try {
+    // Extract key information from response and tool results
+    let dataContext = '';
+    if (toolResults && toolResults.length > 0) {
+      for (const toolResult of toolResults) {
+        try {
+          const data = JSON.parse(toolResult.content);
+          if (data.type === 'batches_overview') {
+            const analytics = data.analytics;
+            dataContext += `Found ${analytics.totals.count} batches with ${analytics.totals.avg_hatch_rate}% average hatch rate. `;
+            if (analytics.overdue_count > 0) {
+              dataContext += `${analytics.overdue_count} batches are overdue. `;
+            }
+            if (analytics.upcoming_count > 0) {
+              dataContext += `${analytics.upcoming_count} batches expected to hatch within 7 days. `;
+            }
+          } else if (data.data && Array.isArray(data.data) && data.data[0]?.fertility_percent !== undefined) {
+            const avgFertility = data.data.reduce((sum, item) => sum + (item.fertility_percent || 0), 0) / data.data.length;
+            dataContext += `Analyzed ${data.data.length} fertility records with average fertility rate of ${avgFertility.toFixed(1)}%. `;
+          } else if (data.message) {
+            dataContext += data.message + ' ';
+          }
+        } catch (e) {
+          // Skip invalid JSON
+        }
+      }
+    }
+
+    const summaryPrompt = `
+You are an expert hatchery data analyst. Based on the following response and data context, create a concise summary with key insights.
+
+Response Content: ${typeof responseContent === 'string' ? responseContent : JSON.stringify(responseContent)}
+Data Context: ${dataContext}
+
+Generate a JSON response with:
+1. "overview": A single sentence (max 25 words) summarizing the main finding or insight
+2. "keyPoints": An array of 2-4 key bullet points (each max 15 words) highlighting critical insights, trends, or actionable items
+
+Focus on:
+- Performance metrics and trends
+- Critical alerts or issues
+- Actionable recommendations
+- Comparative insights
+
+Keep it concise and actionable for hatchery operations.
+`;
+
+    const summaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini-2025-08-07',
+        messages: [
+          { role: 'system', content: 'You are a hatchery data analyst. Respond only with valid JSON.' },
+          { role: 'user', content: summaryPrompt }
+        ],
+        max_completion_tokens: 200
+      }),
+    });
+
+    if (summaryResponse.ok) {
+      const summaryData = await summaryResponse.json();
+      const summaryText = summaryData.choices?.[0]?.message?.content;
+      
+      if (summaryText) {
+        try {
+          const parsed = JSON.parse(summaryText);
+          if (parsed.overview && parsed.keyPoints && Array.isArray(parsed.keyPoints)) {
+            return {
+              overview: parsed.overview,
+              keyPoints: parsed.keyPoints.slice(0, 4) // Limit to 4 key points
+            };
+          }
+        } catch (e) {
+          console.error('Failed to parse summary JSON:', e);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error generating summary:', error);
+  }
+
+  return null;
 }
 
 // Helper function to generate enhanced fallback responses when OpenAI is unavailable

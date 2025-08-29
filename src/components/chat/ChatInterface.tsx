@@ -8,6 +8,7 @@ import { BatchOverviewDisplay } from './BatchOverviewDisplay';
 import { MessageFormatter } from './MessageFormatter';
 import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
+import { SummaryCard } from './SummaryCard';
 import { Link } from 'react-router-dom';
 
 interface Message {
@@ -17,6 +18,10 @@ interface Message {
   timestamp: Date;
   actions?: any[];
   payload?: any;
+  summary?: {
+    overview: string;
+    keyPoints: string[];
+  };
 }
 
 export const ChatInterface = () => {
@@ -67,6 +72,7 @@ export const ChatInterface = () => {
       const response = data?.response || data?.message || 'Sorry, I could not process your request.';
       const responseActions = data?.actions || [];
       const responsePayload = data?.payload || null;
+      const responseSummary = data?.summary || null;
 
       const assistantMessage: Message = {
         id: Date.now() + '-assistant',
@@ -74,7 +80,8 @@ export const ChatInterface = () => {
         content: response,
         timestamp: new Date(),
         actions: responseActions,
-        payload: responsePayload
+        payload: responsePayload,
+        summary: responseSummary
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -241,14 +248,21 @@ export const ChatInterface = () => {
                     )}
                   </div>
                   
-                  <div className={`flex-1 space-y-3 max-w-4xl ${
-                    message.role === 'user' ? 'text-right' : ''
-                  }`}>
-                    <div className={`inline-block p-6 rounded-2xl ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 border'
-                    }`}>
+                   <div className={`flex-1 space-y-3 max-w-4xl ${
+                     message.role === 'user' ? 'text-right' : ''
+                   }`}>
+                     {/* Summary Card for assistant messages */}
+                     {message.role === 'assistant' && message.summary && (
+                       <div className="mb-4">
+                         <SummaryCard summary={message.summary} />
+                       </div>
+                     )}
+
+                     <div className={`inline-block p-6 rounded-2xl ${
+                       message.role === 'user'
+                         ? 'bg-primary text-primary-foreground'
+                         : 'bg-muted/50 border'
+                     }`}>
                       {message.role === 'user' ? (
                         <p className="text-base leading-relaxed whitespace-pre-wrap">
                           {message.content}
