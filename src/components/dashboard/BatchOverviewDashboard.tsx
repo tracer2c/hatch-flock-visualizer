@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useHouseData";
-import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
@@ -103,6 +103,7 @@ const BatchOverviewDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [machineFilter, setMachineFilter] = React.useState<string>("all");
   const [dateRange, setDateRange] = React.useState<{ from?: Date; to?: Date }>({});
+  const [showMachineUtil, setShowMachineUtil] = React.useState<boolean>(false);
 
   // Derived machines list for header
   const machinesList = React.useMemo(
@@ -400,60 +401,106 @@ const BatchOverviewDashboard: React.FC = () => {
 
         {/* Insights rail */}
         <aside className="col-span-12 lg:col-span-4 space-y-6">
-          {/* QA Alerts */}
-          {qaAlerts && qaAlerts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  QA Alerts Requiring Attention
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {qaAlerts.slice(0, 5).map((alert) => (
-                    <div key={alert.id} className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                        <div>
-                          <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
-                          <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">{alert.check_date}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Machine Utilization */}
+          {/* QA Alerts / Machine Utilization Toggle */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <div>Machine Utilization Status</div>
-                <ChartDownloadButton chartId="machine-utilization-status" filename="machine-utilization-status.png" />
+                <div className="flex items-center gap-2">
+                  {showMachineUtil ? (
+                    <>
+                      <Activity className="h-5 w-5" />
+                      Machine Utilization Status
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      QA Alerts Requiring Attention
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`p-2 transition-colors ${showMachineUtil ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                          onClick={() => setShowMachineUtil(!showMachineUtil)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{showMachineUtil ? 'Switch to QA Alerts' : 'Switch to Machine Utilization'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {showMachineUtil && (
+                    <ChartDownloadButton chartId="machine-utilization-status" filename="machine-utilization-status.png" />
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent id="machine-utilization-status">
-              <div className="grid grid-cols-1 gap-4">
-                {filteredMachineUtil?.map((machine) => (
-                  <div key={machine.id} className="p-4 border border-border rounded-lg bg-card">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="font-medium text-card-foreground">{machine.machine_number}</div>
-                      <Badge variant={machine.currentStatus === "available" ? "secondary" : "default"}>{machine.currentStatus}</Badge>
+            <CardContent>
+              <div className="relative min-h-[200px]">
+                {/* Machine Utilization Content */}
+                <div className={`transition-all duration-300 ${showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
+                  {showMachineUtil && (
+                    <div className="grid grid-cols-1 gap-4" id="machine-utilization-status">
+                      {filteredMachineUtil?.map((machine) => (
+                        <div key={machine.id} className="p-4 border border-border rounded-lg bg-card">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="font-medium text-card-foreground">{machine.machine_number}</div>
+                            <Badge variant={machine.currentStatus === "available" ? "secondary" : "default"}>{machine.currentStatus}</Badge>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Utilization</span>
+                              <span className="text-card-foreground">{machine.utilization.toFixed(0)}%</span>
+                            </div>
+                            <Progress value={machine.utilization} className="h-2" />
+                            <div className="text-xs text-muted-foreground">{machine.currentLoad.toLocaleString()} / {machine.capacity.toLocaleString()} capacity</div>
+                          </div>
+                        </div>
+                      ))}
+                      {(!filteredMachineUtil || filteredMachineUtil.length === 0) && (
+                        <div className="text-center py-8 text-muted-foreground">No machine utilization data available.</div>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Utilization</span>
-                        <span className="text-card-foreground">{machine.utilization.toFixed(0)}%</span>
-                      </div>
-                      <Progress value={machine.utilization} className="h-2" />
-                      <div className="text-xs text-muted-foreground">{machine.currentLoad.toLocaleString()} / {machine.capacity.toLocaleString()} capacity</div>
+                  )}
+                </div>
+                
+                {/* QA Alerts Content */}
+                <div className={`transition-all duration-300 ${!showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
+                  {!showMachineUtil && (
+                    <div className="space-y-3">
+                      {qaAlerts && qaAlerts.length > 0 ? (
+                        qaAlerts.slice(0, 5).map((alert) => (
+                          <div key={alert.id} className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <div>
+                                <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
+                                <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{alert.check_date}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">No QA alerts at this time.</div>
+                      )}
+                      {qaAlerts && qaAlerts.length > 5 && (
+                        <div className="mt-4 text-center">
+                          <Button variant="outline" size="sm">
+                            View All {qaAlerts.length} Alerts
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
