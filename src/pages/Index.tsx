@@ -1,13 +1,8 @@
 
 import { useEffect } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/Header";
 import OverviewOperations from "@/components/dashboard/OverviewOperations";
 
 const Index = () => {
-  const { user, loading } = useAuth();
-
   useEffect(() => {
     document.title = "Dashboard Overview | Hatchery Pro";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -24,18 +19,9 @@ const Index = () => {
     }
   }, []);
 
-  if (!loading && !user) {
-    return <Navigate to="/auth" replace />;
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="p-6">
-        <div className="max-w-full mx-auto">
-          <OverviewOperations />
-        </div>
-      </main>
+    <div className="p-6">
+      <OverviewOperations />
     </div>
   );
 };

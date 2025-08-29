@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import Header from "@/components/Header";
 import HouseManager from "@/components/dashboard/HouseManager";
 import DataTypeSelection from "@/components/dashboard/DataTypeSelection";
 
@@ -27,31 +26,21 @@ const DataEntryPage = () => {
   // If a house is selected, show the data type selection
   if (selectedHouseId) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="p-6">
-          <div className="max-w-full mx-auto">
-            <DataTypeSelection 
-              houseId={selectedHouseId} 
-              onBack={handleBackToHouseSelection}
-            />
-          </div>
-        </main>
+      <div className="p-6">
+        <DataTypeSelection 
+          houseId={selectedHouseId} 
+          onBack={handleBackToHouseSelection}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="p-6">
-        <div className="max-w-full mx-auto">
-          <HouseManager 
-            onHouseSelect={handleHouseSelect}
-            selectedHouse={selectedHouseId}
-          />
-        </div>
-      </main>
+    <div className="p-6">
+      <HouseManager 
+        onHouseSelect={handleHouseSelect}
+        selectedHouse={selectedHouseId}
+      />
     </div>
   );
 };
