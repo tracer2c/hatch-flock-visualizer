@@ -24,25 +24,23 @@ export function TopBar() {
 
   return (
     <header className={cn(
-      "sticky top-0 z-40 w-full border-b border-border/50",
-      "bg-background/80 backdrop-blur-lg",
+      "sticky top-0 z-30 w-full border-b border-border/30",
+      "bg-background/90 backdrop-blur-md",
       "shadow-sm"
     )}>
-      <div className="flex h-14 items-center justify-between px-6">
-        {/* Left Side - Logo/Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-primary/70 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">H</span>
+      <div className="flex h-12 items-center justify-between pl-20 pr-6">
+        {/* Left Side - Brand */}
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-primary to-primary/70 flex items-center justify-center">
+            <span className="text-white font-bold text-xs">H</span>
           </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Hatchery Pro
-            </h1>
-          </div>
+          <h1 className="text-base font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Hatchery Pro
+          </h1>
         </div>
 
         {/* Right Side - Notifications & User */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Notification Bell */}
           <div className="relative">
             <NotificationBell />
@@ -52,17 +50,17 @@ export function TopBar() {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
+                 <Button 
                   variant="ghost" 
                   className={cn(
-                    "relative h-10 w-10 rounded-full",
+                    "relative h-9 w-9 rounded-full",
                     "hover:ring-2 hover:ring-primary/20 transition-all duration-200",
                     "hover:scale-105"
                   )}
                 >
-                  <Avatar className="h-9 w-9 ring-2 ring-background shadow-md">
+                  <Avatar className="h-8 w-8 ring-1 ring-border shadow-sm">
                     <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback className="bg-gradient-to-r from-primary/10 to-primary/20 text-primary font-semibold">
+                    <AvatarFallback className="bg-gradient-to-r from-primary/10 to-primary/20 text-primary font-medium text-xs">
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>

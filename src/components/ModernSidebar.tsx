@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
-  BarChart3, 
   FileInput, 
   CheckSquare, 
   Settings, 
   MessageSquare,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeft,
   Home
 } from "lucide-react";
 import {
@@ -15,7 +14,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -30,42 +28,32 @@ const navigationItems = [
     path: '/',
     label: 'Dashboard',
     icon: Home,
-    description: 'Overview & Analytics',
-    requiresAuth: true,
-    gradient: 'from-blue-500 to-blue-600'
+    requiresAuth: true
   },
   {
     path: '/data-entry',
     label: 'Data Entry',
     icon: FileInput,
-    description: 'Input Operations',
-    requiresAuth: true,
-    gradient: 'from-green-500 to-green-600'
+    requiresAuth: true
   },
   {
     path: '/checklist',
     label: 'Daily Tasks',
     icon: CheckSquare,
-    description: 'Track Progress',
-    requiresAuth: true,
-    gradient: 'from-orange-500 to-orange-600'
+    requiresAuth: true
   },
   {
     path: '/chat',
     label: 'Smart Analytics',
     icon: MessageSquare,
-    description: 'AI Insights',
-    requiresAuth: true,
-    gradient: 'from-purple-500 to-purple-600'
+    requiresAuth: true
   },
   {
     path: '/management',
     label: 'Management',
     icon: Settings,
-    description: 'System Config',
     requiresAuth: true,
-    requiredRole: 'company_admin' as const,
-    gradient: 'from-red-500 to-red-600'
+    requiredRole: 'company_admin' as const
   }
 ];
 
@@ -75,6 +63,18 @@ export function ModernSidebar() {
   const { user, hasRole } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
+
+  // Keyboard shortcut to toggle sidebar
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setOpen(!open);
+      }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [open, setOpen]);
 
   const visibleNavItems = navigationItems.filter(item => {
     if (!item.requiresAuth) return true;
@@ -91,150 +91,86 @@ export function ModernSidebar() {
   };
 
   return (
-    <Sidebar
-      side="left"
-      variant="sidebar"
-      collapsible="icon"
-      className={cn(
-        "border-r border-border/50 bg-gradient-to-b from-background to-muted/20",
-        "transition-all duration-300 ease-in-out",
-        collapsed ? "w-16" : "w-72"
-      )}
-    >
-      {/* Toggle Button */}
-      <div className="absolute -right-3 top-6 z-50">
-        <Button
-          variant="outline"
-          size="icon"
-          className={cn(
-            "h-6 w-6 rounded-full bg-background border-2 border-border",
-            "shadow-lg hover:shadow-xl transition-all duration-200",
-            "hover:scale-110"
-          )}
-          onClick={() => setOpen(!open)}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-3 w-3" />
-          ) : (
-            <ChevronLeft className="h-3 w-3" />
-          )}
-        </Button>
-      </div>
+    <>
+      {/* Floating Toggle Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className={cn(
+          "fixed top-4 left-4 z-50 h-10 w-10 rounded-lg bg-background/80 backdrop-blur-sm",
+          "border-2 border-border/50 shadow-lg hover:shadow-xl",
+          "transition-all duration-300 ease-out hover:scale-105",
+          "hover:bg-accent/50 hover:border-primary/30"
+        )}
+        onClick={() => setOpen(!open)}
+        title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
+      >
+        {collapsed ? (
+          <PanelLeft className="h-5 w-5 transition-transform duration-300" />
+        ) : (
+          <PanelLeftClose className="h-5 w-5 transition-transform duration-300" />
+        )}
+      </Button>
 
-      <SidebarContent className="p-4">
-        {/* Brand Section */}
-        <div className={cn(
-          "mb-8 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5",
-          "border border-primary/20 backdrop-blur-sm",
-          "transition-all duration-300"
-        )}>
-          {!collapsed ? (
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Hatchery Pro
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1">
-                Smart Operations
-              </p>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-primary/70 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
-              </div>
-            </div>
-          )}
-        </div>
+      <Sidebar
+        side="left"
+        variant="sidebar" 
+        collapsible="icon"
+        className={cn(
+          "border-r border-border/30 bg-background/95 backdrop-blur-sm",
+          "transition-all duration-300 ease-out",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
+        <SidebarContent className={cn("pt-16", collapsed ? "px-2" : "px-4")}>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className={cn(
-            "text-xs font-semibold text-muted-foreground uppercase tracking-wider",
-            collapsed && "sr-only"
-          )}>
-            Navigation
-          </SidebarGroupLabel>
-          
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
-              {visibleNavItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.path);
-                
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.path}
-                        className={cn(
-                          "group relative flex items-center gap-3 px-3 py-3 rounded-xl",
-                          "transition-all duration-300 ease-out",
-                          "hover:scale-[1.02] hover:shadow-lg",
-                          active
-                            ? cn(
-                                "bg-gradient-to-r text-white shadow-lg",
-                                `bg-gradient-to-r ${item.gradient}`,
-                                "shadow-primary/25"
-                              )
-                            : "hover:bg-accent/50 text-foreground/80 hover:text-foreground"
-                        )}
-                      >
-                        {/* Icon */}
-                        <div className={cn(
-                          "flex-shrink-0 w-5 h-5 flex items-center justify-center",
-                          active && "text-white"
-                        )}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-
-                        {/* Content */}
-                        {!collapsed && (
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">
-                              {item.label}
-                            </div>
-                            <div className={cn(
-                              "text-xs transition-colors",
-                              active 
-                                ? "text-white/80" 
-                                : "text-muted-foreground group-hover:text-foreground/60"
-                            )}>
-                              {item.description}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Active Indicator */}
-                        {active && (
-                          <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-full opacity-80" />
-                        )}
-
-                        {/* Glow Effect */}
-                        {active && (
-                          <div className={cn(
-                            "absolute inset-0 rounded-xl opacity-20 blur-xl",
-                            `bg-gradient-to-r ${item.gradient}`
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.path);
+                  
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.path}
+                          className={cn(
+                            "group relative flex items-center rounded-lg transition-all duration-200",
+                            collapsed ? "justify-center p-3" : "gap-3 px-3 py-2.5",
+                            active
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          )}
+                          title={collapsed ? item.label : undefined}
+                        >
+                          <Icon className={cn(
+                            "flex-shrink-0 transition-colors",
+                            collapsed ? "h-5 w-5" : "h-4 w-4"
                           )} />
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                          
+                          {!collapsed && (
+                            <span className="text-sm font-medium truncate">
+                              {item.label}
+                            </span>
+                          )}
 
-        {/* Footer */}
-        <div className="mt-auto pt-4">
-          {!collapsed && (
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-              <p className="text-xs text-muted-foreground text-center">
-                v2.0.1 • Modern UI
-              </p>
-            </div>
-          )}
-        </div>
-      </SidebarContent>
-    </Sidebar>
+                          {/* Active indicator for collapsed state */}
+                          {active && collapsed && (
+                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full" />
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+        </SidebarContent>
+      </Sidebar>
+    </>
   );
 }
