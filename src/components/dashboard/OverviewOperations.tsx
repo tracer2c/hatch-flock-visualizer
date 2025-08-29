@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Activity, TrendingUp, Settings, Workflow } from "lucide-react";
+import { Activity, TrendingUp, Settings } from "lucide-react";
 import BatchOverviewDashboard from "./BatchOverviewDashboard";
-import SystemFlowchart from "./SystemFlowchart";
 import { useViewMode } from "@/contexts/ViewModeContext";
 
 const OverviewOperations = () => {
-  const [showSystemFlow, setShowSystemFlow] = useState(false);
   const { viewMode, setViewMode } = useViewMode();
 
   return (
@@ -22,24 +20,14 @@ const OverviewOperations = () => {
               <Activity className="h-5 w-5" />
               <CardTitle>Overview & Operations Center</CardTitle>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Badge variant={viewMode === 'simple' ? 'default' : 'secondary'}>
-                  {viewMode === 'simple' ? 'Simple View' : 'Detailed View'}
-                </Badge>
-                <Switch
-                  checked={viewMode === 'detailed'}
-                  onCheckedChange={(checked) => setViewMode(checked ? 'detailed' : 'simple')}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Workflow className="h-4 w-4" />
-                <span className="text-sm">System Flow</span>
-                <Switch
-                  checked={showSystemFlow}
-                  onCheckedChange={setShowSystemFlow}
-                />
-              </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={viewMode === 'simple' ? 'default' : 'secondary'}>
+                {viewMode === 'simple' ? 'Simple View' : 'Detailed View'}
+              </Badge>
+              <Switch
+                checked={viewMode === 'detailed'}
+                onCheckedChange={(checked) => setViewMode(checked ? 'detailed' : 'simple')}
+              />
             </div>
           </div>
         </CardHeader>
@@ -47,17 +35,6 @@ const OverviewOperations = () => {
 
       {/* Main Overview Dashboard */}
       <BatchOverviewDashboard />
-
-      {/* Optional System Flowchart */}
-      {showSystemFlow && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            <h3 className="text-lg font-semibold">System Architecture & Data Flow</h3>
-          </div>
-          <SystemFlowchart />
-        </div>
-      )}
     </div>
   );
 };
