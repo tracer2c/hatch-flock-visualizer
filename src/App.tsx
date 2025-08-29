@@ -28,6 +28,7 @@ import HouseFlowPage from "./pages/HouseFlowPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
+import ContextualHelpBot from "./components/ContextualHelpBot";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
+                        <ContextualHelpBot />
                       </div>
                     </div>
                   </SidebarProvider>
