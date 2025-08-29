@@ -34,8 +34,7 @@ export const useComparisonData = (filters: ComparisonFilters) => {
           ),
           units (
             id,
-            name,
-            location
+            name
           ),
           fertility_analysis (
             fertility_percent,
@@ -130,7 +129,6 @@ export const useComparisonData = (filters: ComparisonFilters) => {
           breed: batch.flocks?.breed || 'Unknown',
           houseNumber: batch.flocks?.house_number || 'N/A',
           unitName: batch.units?.name || 'Unknown',
-          unitLocation: batch.units?.location || '',
           fertility: fertility?.fertility_percent,
           hatch: fertility?.hatch_percent,
           hof: fertility?.hof_percent,
