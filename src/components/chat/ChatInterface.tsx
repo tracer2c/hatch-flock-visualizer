@@ -69,7 +69,7 @@ export const ChatInterface = () => {
         throw error;
       }
 
-      const response = data?.response || data?.message || 'Sorry, I could not process your request.';
+      const response = data?.response || data?.message || (data?.error ? `Error: ${data.error}` : 'Sorry, I could not process your request.');
       const responseActions = data?.actions || [];
       const responsePayload = data?.payload || null;
       const responseSummary = data?.summary || null;

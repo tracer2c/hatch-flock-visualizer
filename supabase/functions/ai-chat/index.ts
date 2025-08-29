@@ -273,6 +273,21 @@ const tools = [
         }
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_house_temperatures",
+      description: "Get temperature data grouped by house/unit with latest readings or averages. Use for temperature by house queries, temperature charts, or temperature trends.",
+      parameters: {
+        type: "object",
+        properties: {
+          days_back: { type: "number", description: "Days to look back for temperature data (default 7)" },
+          aggregation: { type: "string", description: "Type of aggregation: 'latest' for most recent reading per house, 'average' for period average (default: latest)" },
+          limit: { type: "number", description: "Maximum number of houses to return (default 20)" }
+        }
+      }
+    }
   }
 ];
 
@@ -874,6 +889,114 @@ async function executeTool(toolName: string, parameters: any) {
         };
       }
 
+      case "get_house_temperatures":
+        const tempDaysBack = parameters.days_back || 7;
+        const tempAggregation = parameters.aggregation || 'latest';
+        const tempLimit = parameters.limit || 20;
+        
+        const tempStartDate = new Date();
+        tempStartDate.setDate(tempStartDate.getDate() - tempDaysBack);
+        
+        let tempQuery = supabase
+          .from('qa_monitoring')
+          .select(`
+            batch_id,
+            check_date,
+            temperature,
+            batches!inner(
+              id,
+              batch_number,
+              unit_id,
+              units(name, code),
+              flocks(house_number, flock_name)
+            )
+          `)
+          .gte('check_date', tempStartDate.toISOString().split('T')[0])
+          .not('temperature', 'is', null)
+          .order('check_date', { ascending: false });
+
+        const { data: tempData, error: tempError } = await tempQuery;
+        
+        if (tempError) {
+          console.error('Temperature query error:', tempError);
+          return { error: 'Failed to fetch temperature data', details: tempError.message };
+        }
+
+        if (!tempData || tempData.length === 0) {
+          return { 
+            type: "house_temperatures",
+            message: "No temperature data found for the specified period",
+            data: [],
+            chart_config: { type: "bar", x_key: "house_name", y_key: "temperature" }
+          };
+        }
+
+        // Group by house/unit and aggregate temperatures
+        const tempGroups: Record<string, { temperatures: number[], latest_date: string, house_name: string }> = {};
+        
+        for (const row of tempData) {
+          const batch = row.batches;
+          if (!batch) continue;
+          
+          // Determine house name from multiple sources
+          const houseName = batch.flocks?.house_number || 
+                           batch.flocks?.flock_name || 
+                           batch.units?.name || 
+                           batch.units?.code || 
+                           batch.batch_number || 
+                           'Unknown House';
+          
+          if (!tempGroups[houseName]) {
+            tempGroups[houseName] = { 
+              temperatures: [], 
+              latest_date: row.check_date,
+              house_name: houseName
+            };
+          }
+          
+          tempGroups[houseName].temperatures.push(Number(row.temperature));
+          if (row.check_date > tempGroups[houseName].latest_date) {
+            tempGroups[houseName].latest_date = row.check_date;
+          }
+        }
+
+        // Calculate final temperature values based on aggregation type
+        const houseTemperatures = Object.values(tempGroups)
+          .map(group => {
+            const temperature = tempAggregation === 'average' 
+              ? Math.round((group.temperatures.reduce((sum, temp) => sum + temp, 0) / group.temperatures.length) * 10) / 10
+              : group.temperatures[0]; // Latest reading
+            
+            return {
+              house_name: group.house_name,
+              temperature: temperature,
+              reading_count: group.temperatures.length,
+              latest_date: group.latest_date
+            };
+          })
+          .sort((a, b) => a.house_name.localeCompare(b.house_name))
+          .slice(0, tempLimit);
+
+        console.log('[get_house_temperatures]', { 
+          aggregation: tempAggregation, 
+          days_back: tempDaysBack, 
+          houses: houseTemperatures.length,
+          sample: houseTemperatures.slice(0, 3)
+        });
+
+        return {
+          type: "house_temperatures",
+          message: `Temperature data for ${houseTemperatures.length} houses (${tempAggregation} over ${tempDaysBack} days)`,
+          data: houseTemperatures,
+          chart_config: {
+            type: "bar",
+            title: `House Temperatures (${tempAggregation === 'latest' ? 'Latest Reading' : 'Average'})`,
+            x_key: "house_name",
+            y_key: "temperature",
+            y_label: "Temperature (°F)"
+          }
+        };
+
       default:
         return { error: "Unknown tool", requested_tool: toolName };
     }
@@ -956,6 +1079,8 @@ You MUST detect visualization keywords and return structured analytics responses
 - "breakdown" or "distribution" → Generate pie charts showing proportions
 - "analyze" or "analysis" → Generate comprehensive analytics with multiple chart types
 - "show me" + data → Generate appropriate visualizations based on data type
+- "temperature" or "temp" → Use get_house_temperatures tool and generate bar charts
+- "temperatures by house" or "house temperatures" → Generate bar charts of temperatures by house
 
 AUTOMATIC CHART GENERATION RULES:
 1. For batch comparisons → Bar charts by status, house, or performance metrics
