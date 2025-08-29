@@ -8,7 +8,10 @@ import {
   PanelLeftClose,
   PanelLeft,
   Home,
-  Workflow
+  Workflow,
+  ChevronDown,
+  TrendingUp,
+  BarChart3
 } from "lucide-react";
 import {
   Sidebar,
@@ -18,10 +21,15 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -64,10 +72,42 @@ const navigationItems = [
   }
 ];
 
+const advancedAnalyticsItems = [
+  {
+    path: '/performance',
+    label: 'Performance',
+    icon: TrendingUp,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
+  {
+    path: '/comparison-model',
+    label: 'Comparison Model',
+    icon: BarChart3,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
+  {
+    path: '/unit-comparison',
+    label: 'Unit Weekly Comparison',
+    icon: BarChart3,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
+  {
+    path: '/house-flow',
+    label: 'House Flow',
+    icon: Workflow,
+    requiresAuth: true,
+    requiredRole: undefined
+  }
+];
+
 export function ModernSidebar() {
   const { open, setOpen } = useSidebar();
   const collapsed = !open;
   const { user, hasRole } = useAuth();
+  const { viewMode } = useViewMode();
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -92,10 +132,21 @@ export function ModernSidebar() {
     return true;
   });
 
+  const visibleAdvancedItems = advancedAnalyticsItems.filter(item => {
+    if (!item.requiresAuth) return true;
+    if (!user) return false;
+    if (item.requiredRole) {
+      return hasRole(item.requiredRole);
+    }
+    return true;
+  });
+
   const isActive = (path: string) => {
     if (path === '/') return currentPath === '/';
     return currentPath.startsWith(path);
   };
+
+  const hasActiveAdvancedItem = visibleAdvancedItems.some(item => isActive(item.path));
 
   return (
     <>
@@ -172,6 +223,80 @@ export function ModernSidebar() {
                     </SidebarMenuItem>
                   );
                 })}
+
+                {/* Advanced Analytics Dropdown - Only in Detailed View */}
+                {viewMode === 'detailed' && (
+                  <SidebarMenuItem>
+                    <Collapsible
+                      defaultOpen={hasActiveAdvancedItem}
+                      className="group/collapsible"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          className={cn(
+                            "group relative flex items-center rounded-lg transition-all duration-200",
+                            collapsed ? "justify-center p-3" : "gap-3 px-3 py-2.5",
+                            hasActiveAdvancedItem
+                              ? "bg-accent text-foreground"
+                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          )}
+                          title={collapsed ? "Advanced Analytics" : undefined}
+                        >
+                          <TrendingUp className={cn(
+                            "flex-shrink-0 transition-colors",
+                            collapsed ? "h-5 w-5" : "h-4 w-4"
+                          )} />
+                          
+                          {!collapsed && (
+                            <>
+                              <span className="text-sm font-medium truncate">
+                                Advanced Analytics
+                              </span>
+                              <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                            </>
+                          )}
+
+                          {/* Active indicator for collapsed state */}
+                          {hasActiveAdvancedItem && collapsed && (
+                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full" />
+                          )}
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      
+                      {!collapsed && (
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {visibleAdvancedItems.map((item) => {
+                              const Icon = item.icon;
+                              const active = isActive(item.path);
+                              
+                              return (
+                                <SidebarMenuSubItem key={item.path}>
+                                  <SidebarMenuSubButton asChild>
+                                    <NavLink
+                                      to={item.path}
+                                      className={cn(
+                                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                        active
+                                          ? "bg-primary text-primary-foreground shadow-sm"
+                                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                                      )}
+                                    >
+                                      <Icon className="h-4 w-4 flex-shrink-0" />
+                                      <span className="text-sm truncate">
+                                        {item.label}
+                                      </span>
+                                    </NavLink>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      )}
+                    </Collapsible>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

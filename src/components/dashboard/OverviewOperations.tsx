@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, TrendingUp, Settings, Workflow } from "lucide-react";
 import BatchOverviewDashboard from "./BatchOverviewDashboard";
 import SystemFlowchart from "./SystemFlowchart";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 const OverviewOperations = () => {
   const [showSystemFlow, setShowSystemFlow] = useState(false);
-  const [viewMode, setViewMode] = useState<'simple' | 'detailed'>('simple');
+  const { viewMode, setViewMode } = useViewMode();
 
   return (
     <div className="space-y-6">

@@ -22,8 +22,12 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import InitializeApp from "./components/InitializeApp";
 import ProjectReport from "./pages/ProjectReport";
 import ChatPage from "./pages/ChatPage";
+import ComparisonModelPage from "./pages/ComparisonModelPage";
+import UnitComparisonPage from "./pages/UnitComparisonPage";
+import HouseFlowPage from "./pages/HouseFlowPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
+import { ViewModeProvider } from "./contexts/ViewModeContext";
 
 const queryClient = new QueryClient();
 
@@ -34,41 +38,46 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <InitializeApp>
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/*" element={
-              <ProtectedRoute>
-                <SidebarProvider defaultOpen={true}>
-                  <div className="flex min-h-screen w-full bg-background">
-                    <ModernSidebar />
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      <TopBar />
-                      <main className="flex-1 overflow-auto">
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/performance" element={<PerformancePage />} />
-                          <Route path="/process-flow" element={<ProcessFlowPage />} />
-                          <Route path="/analytics" element={<AnalyticsPage />} />
-                          <Route path="/data-entry" element={<DataEntryPage />} />
-                          <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
-                          <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
-                          <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
-                          <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
-                          <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
-                          <Route path="/checklist" element={<ChecklistPage />} />
-                          <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
-                          <Route path="/management" element={<ManagementPage />} />
-                          <Route path="/report" element={<ProjectReport />} />
-                          <Route path="/chat" element={<ChatPage />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
+          <ViewModeProvider>
+            <Routes>
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <SidebarProvider defaultOpen={true}>
+                    <div className="flex min-h-screen w-full bg-background">
+                      <ModernSidebar />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <TopBar />
+                        <main className="flex-1 overflow-auto">
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/performance" element={<PerformancePage />} />
+                            <Route path="/process-flow" element={<ProcessFlowPage />} />
+                            <Route path="/analytics" element={<AnalyticsPage />} />
+                            <Route path="/comparison-model" element={<ComparisonModelPage />} />
+                            <Route path="/unit-comparison" element={<UnitComparisonPage />} />
+                            <Route path="/house-flow" element={<HouseFlowPage />} />
+                            <Route path="/data-entry" element={<DataEntryPage />} />
+                            <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
+                            <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
+                            <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
+                            <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
+                            <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
+                            <Route path="/checklist" element={<ChecklistPage />} />
+                            <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
+                            <Route path="/management" element={<ManagementPage />} />
+                            <Route path="/report" element={<ProjectReport />} />
+                            <Route path="/chat" element={<ChatPage />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
                     </div>
-                  </div>
-                </SidebarProvider>
-              </ProtectedRoute>
-            } />
-          </Routes>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </ViewModeProvider>
         </InitializeApp>
       </BrowserRouter>
     </TooltipProvider>
