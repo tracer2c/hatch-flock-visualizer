@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ContextualHelpHook {
-  sendMessage: (message: string, uiContext?: any) => Promise<string>;
+  sendMessage: (message: string, uiContext?: any, history?: any[]) => Promise<string>;
   isLoading: boolean;
   currentPageContext: string;
 }
@@ -72,7 +72,7 @@ export const useContextualHelp = (): ContextualHelpHook => {
   const location = useLocation();
   const currentPageContext = getPageContext(location.pathname);
 
-  const sendMessage = async (message: string, uiContext?: any): Promise<string> => {
+  const sendMessage = async (message: string, uiContext?: any, history?: any[]): Promise<string> => {
     setIsLoading(true);
     
     try {
@@ -85,7 +85,8 @@ export const useContextualHelp = (): ContextualHelpHook => {
           pageContext,
           pageDescription,
           currentPath: location.pathname,
-          uiContext
+          uiContext,
+          history: history || []
         }
       });
 

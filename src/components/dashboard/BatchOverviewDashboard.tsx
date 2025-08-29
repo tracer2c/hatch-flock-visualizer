@@ -15,6 +15,7 @@ import { useChartDownload } from "@/hooks/useChartDownload";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useHelpContext } from "@/contexts/HelpContext";
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
   const { data: performanceMetrics, isLoading: performanceLoading } = useBatchPerformanceMetrics();
@@ -25,6 +26,7 @@ const BatchOverviewDashboard: React.FC = () => {
 
   const { downloadChart } = useChartDownload();
   const navigate = useNavigate();
+  const { updateContext } = useHelpContext();
 
   const handleHouseClick = (houseId: string) => {
     navigate(`/data-entry/house/${houseId}`);
@@ -139,6 +141,39 @@ const BatchOverviewDashboard: React.FC = () => {
       ? machineUtil
       : machineUtil.filter((m: any) => String(m.id) === machineFilter);
   }, [machineUtil, machineFilter]);
+
+  // Update help context with dashboard metrics
+  React.useEffect(() => {
+    if (!isLoading && activeBatches && performanceMetrics) {
+      const totalActiveHouses = filteredActiveBatches.length;
+      const avgFertility = avgFert || 0;
+      const avgHatchRate = avgHatch || 0;
+      const totalAlerts = qaAlerts?.length || 0;
+      const avgMachineUtil = machineUtil?.reduce((acc, m) => acc + (m.utilization || 0), 0) / (machineUtil?.length || 1);
+
+      updateContext({
+        activePage: "Dashboard Overview",
+        visibleElements: [
+          "Active Houses Pipeline",
+          "Performance Percentages", 
+          "QA Alerts",
+          showMachineUtil ? "Machine Utilization" : "System Status"
+        ],
+        currentMetrics: {
+          totalActiveHouses: Math.round(totalActiveHouses),
+          avgFertility: Math.round(avgFertility),
+          avgHatch: Math.round(avgHatchRate),
+          totalAlerts,
+          avgMachineUtil: Math.round(avgMachineUtil || 0)
+        },
+        selectedFilters: {
+          status: statusFilter,
+          machine: machineFilter,
+          dateRange: dateRange
+        }
+      });
+    }
+  }, [isLoading, activeBatches, performanceMetrics, qaAlerts, machineUtil, statusFilter, machineFilter, dateRange, showMachineUtil, updateContext, filteredActiveBatches]);
 
   // Calculate key metrics - handle null values
   const totalActiveHouses = filteredActiveBatches.length;

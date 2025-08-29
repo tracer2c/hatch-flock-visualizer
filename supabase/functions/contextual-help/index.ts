@@ -62,7 +62,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    const { message, pageContext, pageDescription, currentPath } = await req.json();
+    const { message, pageContext, pageDescription, currentPath, uiContext, history } = await req.json();
 
     if (!message) {
       throw new Error('Message is required');
@@ -72,11 +72,14 @@ serve(async (req) => {
       message,
       pageContext,
       currentPath,
-      uiContext
+      uiContext: uiContext || 'none'
     });
 
     // Detect if this is a vague question that needs follow-up
     const isVagueQuestion = /what am i (looking at|seeing)|what is this|i don't know|what does this mean|help me understand/i.test(message);
+    const hasRecentHistory = history && history.length > 0;
+    const lastMessage = hasRecentHistory ? history[history.length - 1] : null;
+    const alreadyAskedWhichPart = lastMessage && /which (part|specific|section)|interested in/i.test(lastMessage.content);
     
     let systemPrompt = `${hatcheryKnowledge}
 
@@ -90,13 +93,19 @@ ${uiContext ? `
 - Current Metrics: ${JSON.stringify(uiContext.currentMetrics || {})}
 - Selected Filters: ${JSON.stringify(uiContext.selectedFilters || {})}` : ''}
 
-The user is currently viewing the "${pageContext}" page. ${pageDescription}${uiContext?.activeTab ? ` They are on the "${uiContext.activeTab}" tab.` : ''}`;
+The user is currently viewing the "${pageContext}" page. ${pageDescription}${uiContext?.activeTab ? ` They are on the "${uiContext.activeTab}" tab.` : ''}
 
-    if (isVagueQuestion && !uiContext?.activeTab) {
+RESPONSE RULES:
+- Keep responses to 1-2 sentences maximum
+- If currentMetrics exist, start by mentioning the most relevant metric briefly
+- Ask at most 1 follow-up question using numbered options
+- If we already asked "which part" in recent history, answer directly instead of asking again`;
+
+    if (isVagueQuestion && !alreadyAskedWhichPart && !uiContext?.activeTab) {
       if (pageContext === "Dashboard Overview") {
         systemPrompt += `
 
-SPECIAL INSTRUCTION: The user asked a vague question. Ask them which specific part they're interested in:
+SPECIAL INSTRUCTION: Ask which specific part they're interested in:
 1. Active House Pipeline 2. Performance percentages 3. QA Alerts 4. System status
 
 Keep response to 1 sentence.`;
@@ -108,11 +117,15 @@ SPECIAL INSTRUCTION: Ask which comparison type they want help with:
 
 Keep response to 1 sentence.`;
       }
+    } else if (alreadyAskedWhichPart && isVagueQuestion) {
+      systemPrompt += `
+
+SPECIAL INSTRUCTION: We already asked which part they're interested in. Answer directly about the most visible/important element on the page. Don't ask again.`;
     } else {
       systemPrompt += `
 
 ${uiContext?.activeTab ? `Focus on explaining the "${uiContext.activeTab}" tab they're viewing.` : ''} 
-Provide specific, helpful responses about what they're seeing. Keep responses SHORT (2-3 sentences max).`;
+Provide specific, helpful responses about what they're seeing.`;
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

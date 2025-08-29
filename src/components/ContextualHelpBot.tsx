@@ -62,7 +62,9 @@ const ContextualHelpBot: React.FC = () => {
     setInput('');
 
     try {
-      const response = await sendMessage(input.trim(), contextData);
+      // Send last 4 messages as history for context
+      const recentHistory = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
+      const response = await sendMessage(input.trim(), contextData, recentHistory);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
