@@ -74,13 +74,6 @@ const navigationItems = [
 
 const advancedAnalyticsItems = [
   {
-    path: '/performance',
-    label: 'Performance',
-    icon: TrendingUp,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
     path: '/comparison-model',
     label: 'Comparison Model',
     icon: BarChart3,

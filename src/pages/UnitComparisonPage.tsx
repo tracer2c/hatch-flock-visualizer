@@ -21,21 +21,7 @@ const UnitComparisonPage = () => {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            <CardTitle>Unit Weekly Comparison</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Compare weekly performance metrics across different units and analyze trends over time.
-          </p>
-        </CardContent>
-      </Card>
-      
+    <div className="p-6">
       <UnitWeeklyComparison />
     </div>
   );

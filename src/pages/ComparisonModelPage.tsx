@@ -46,21 +46,7 @@ const ComparisonModelPage = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            <CardTitle>Comparison Model Analytics</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Advanced comparison tools for analyzing flock performance across houses, units, breeds, and time periods.
-          </p>
-        </CardContent>
-      </Card>
-      
-      <ComparisonFilters 
+      <ComparisonFilters
         filters={filters}
         onFiltersChange={setFilters}
         onApplyFilters={handleApplyFilters}

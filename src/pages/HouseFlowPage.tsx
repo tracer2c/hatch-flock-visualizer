@@ -21,21 +21,7 @@ const HouseFlowPage = () => {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            <CardTitle>House Flow Analysis</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Comprehensive flow analysis showing the progression of batches through different stages of the incubation process.
-          </p>
-        </CardContent>
-      </Card>
-      
+    <div className="p-6">
       <BatchFlowSankey />
     </div>
   );
