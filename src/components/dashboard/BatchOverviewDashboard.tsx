@@ -13,7 +13,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { OverviewHeader } from "./OverviewHeader";
 import { useChartDownload } from "@/hooks/useChartDownload";
 import { useNavigate } from "react-router-dom";
-
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
   const { data: performanceMetrics, isLoading: performanceLoading } = useBatchPerformanceMetrics();
@@ -27,6 +28,75 @@ const BatchOverviewDashboard: React.FC = () => {
 
   const handleHouseClick = (houseId: string) => {
     navigate(`/data-entry/house/${houseId}`);
+  };
+
+  const { toast } = useToast();
+
+  const handleDemoCleanup = async () => {
+    try {
+      toast({ title: "Running demo cleanup...", description: "Completing overdue houses and freeing machines." });
+      const batchNumbers = [
+        "6374-2025-5115",
+        "6371-2025-9896",
+        "6375-2025-4556",
+        "6367-2025-7089",
+      ];
+
+      const { data: batches, error } = await supabase
+        .from("batches")
+        .select("id, batch_number, machine_id, total_eggs_set, expected_hatch_date")
+        .in("batch_number", batchNumbers);
+
+      if (error) throw error;
+      if (!batches || batches.length === 0) {
+        toast({ title: "No matching batches found", description: "Nothing to clean up.", variant: "destructive" });
+        return;
+      }
+
+      // Prepare updates with realistic results
+      const rateByBatch: Record<string, number> = {
+        "6374-2025-5115": 0.89,
+        "6371-2025-9896": 0.9,
+        "6375-2025-4556": 0.88,
+        "6367-2025-7089": 0.87,
+      };
+
+      const batchUpdatePromises = batches.map((b) => {
+        const expected = new Date(String(b.expected_hatch_date));
+        expected.setDate(expected.getDate() + 1);
+        const actualDate = expected.toISOString().slice(0, 10);
+        const rate = rateByBatch[b.batch_number] ?? 0.88;
+        const eggs = Number(b.total_eggs_set) || 0;
+        const chicks = Math.max(0, Math.round(eggs * rate));
+        return supabase
+          .from("batches")
+          .update({ status: "completed", actual_hatch_date: actualDate, chicks_hatched: chicks })
+          .eq("id", b.id);
+      });
+
+      await Promise.all(batchUpdatePromises);
+
+      const machineIds = Array.from(
+        new Set((batches.map((b) => b.machine_id).filter(Boolean) as string[]))
+      );
+      if (machineIds.length) {
+        const { error: mErr } = await supabase
+          .from("machines")
+          .update({ status: "available" })
+          .in("id", machineIds);
+        if (mErr) throw mErr;
+      }
+
+      toast({
+        title: "Demo cleanup completed",
+        description: `${batches.length} batches completed and ${machineIds.length} machines freed.`,
+      });
+
+      // Refresh view
+      window.location.reload();
+    } catch (e: any) {
+      toast({ title: "Cleanup failed", description: e.message ?? String(e), variant: "destructive" });
+    }
   };
 
   // Filters state
@@ -193,6 +263,7 @@ const BatchOverviewDashboard: React.FC = () => {
             }
           })();
         }}
+        onDemoCleanup={handleDemoCleanup}
       />
 
       <div className="grid grid-cols-12 gap-6">
