@@ -15,10 +15,10 @@ interface OverviewHeaderProps {
   onStatusChange?: (status: string) => void;
   onMachineChange?: (machineId: string | "all") => void;
   onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
-  onDemoCleanup?: () => void;
+  
 }
 
-export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefresh, onExport, onStatusChange, onMachineChange, onDateRangeChange, onDemoCleanup }) => {
+export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefresh, onExport, onStatusChange, onMachineChange, onDateRangeChange }) => {
   const { toast } = useToast();
   const [dateRange, setDateRange] = React.useState<{ from?: Date; to?: Date }>({});
   const [status, setStatus] = React.useState<string>("all");
@@ -105,9 +105,6 @@ export const OverviewHeader: React.FC<OverviewHeaderProps> = ({ machines, onRefr
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => onDemoCleanup?.()}>
-            Demo Cleanup
-          </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" /> Refresh
           </Button>

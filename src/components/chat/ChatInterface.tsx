@@ -178,16 +178,6 @@ export const ChatInterface = () => {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link
-                to="/"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="font-medium">Dashboard</span>
-              </Link>
-              
-              <div className="h-6 w-px bg-border" />
-              
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
                   <MessageCircle className="h-5 w-5 text-primary" />

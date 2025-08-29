@@ -263,7 +263,7 @@ const BatchOverviewDashboard: React.FC = () => {
             }
           })();
         }}
-        onDemoCleanup={handleDemoCleanup}
+        
       />
 
       <div className="grid grid-cols-12 gap-6">
