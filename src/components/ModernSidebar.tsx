@@ -169,6 +169,19 @@ export function ModernSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
 
+          {/* Version Footer */}
+          <div className="mt-auto pt-4">
+            {!collapsed ? (
+              <div className="px-3 py-2 text-center">
+                <span className="text-xs text-muted-foreground">v1.1</span>
+              </div>
+            ) : (
+              <div className="px-2 py-2 text-center">
+                <span className="text-xs text-muted-foreground">1.1</span>
+              </div>
+            )}
+          </div>
+
         </SidebarContent>
       </Sidebar>
     </>

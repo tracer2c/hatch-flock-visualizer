@@ -10,10 +10,12 @@ import {
 import { LogOut, User } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
+import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 export function TopBar() {
   const { user, profile, signOut } = useAuth();
+  const { open: sidebarOpen } = useSidebar();
 
   const getUserInitials = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -28,12 +30,12 @@ export function TopBar() {
       "bg-background/90 backdrop-blur-md",
       "shadow-sm"
     )}>
-      <div className="flex h-12 items-center justify-between pl-20 pr-6">
+      <div className={cn(
+        "flex h-12 items-center justify-between pr-6 transition-all duration-300",
+        sidebarOpen ? "pl-20" : "pl-6"
+      )}>
         {/* Left Side - Brand */}
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-primary to-primary/70 flex items-center justify-center">
-            <span className="text-white font-bold text-xs">H</span>
-          </div>
+        <div className="flex items-center">
           <h1 className="text-base font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Hatchery Pro
           </h1>
