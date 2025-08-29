@@ -52,6 +52,12 @@ const navigationItems = [
     requiresAuth: true
   },
   {
+    path: '/embrex-data-sheet',
+    label: 'Embrex Data Sheet',
+    icon: BarChart3,
+    requiresAuth: true
+  },
+  {
     path: '/checklist',
     label: 'Daily Tasks',
     icon: CheckSquare,

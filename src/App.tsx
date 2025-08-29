@@ -26,6 +26,7 @@ import ChatPage from "./pages/ChatPage";
 import ComparisonModelPage from "./pages/ComparisonModelPage";
 import UnitComparisonPage from "./pages/UnitComparisonPage";
 import HouseFlowPage from "./pages/HouseFlowPage";
+import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -58,6 +59,7 @@ const App = () => (
                             <Route path="/performance" element={<PerformancePage />} />
                             <Route path="/process-flow" element={<ProcessFlowPage />} />
                             <Route path="/analytics" element={<AnalyticsPage />} />
+                            <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/unit-comparison" element={<UnitComparisonPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
