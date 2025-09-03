@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Save, X, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 interface ResidueRecord {
   id: string;
@@ -527,6 +528,22 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Image Upload Section */}
+          <div className="mt-6">
+            <Label>Residue Analysis Images</Label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload images documenting the residue analysis results
+            </p>
+            <ImageUpload
+              recordType="residue_analysis"
+              recordId={editingId || 'new'}
+              maxFiles={5}
+              onImageUploaded={(imageUrl, imageId) => {
+                console.log('Image uploaded:', { imageUrl, imageId });
+              }}
+            />
           </div>
 
           <div className="flex gap-2 mt-4">
