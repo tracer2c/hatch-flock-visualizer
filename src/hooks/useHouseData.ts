@@ -433,13 +433,17 @@ export const useMachineUtilization = () => {
 
       return machines?.map(machine => {
         const activeBatch = activeBatches?.find(b => b.machine_id === machine.id);
-        const utilization = activeBatch 
+        const actualUtilization = activeBatch 
           ? (activeBatch.total_eggs_set / machine.capacity) * 100
           : 0;
+        const utilization = Math.min(actualUtilization, 100);
+        const isOverCapacity = actualUtilization > 100;
 
         return {
           ...machine,
           utilization,
+          actualUtilization,
+          isOverCapacity,
           currentStatus: activeBatch?.status || 'available',
           currentLoad: activeBatch?.total_eggs_set || 0
         };

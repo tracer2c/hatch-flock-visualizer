@@ -171,6 +171,7 @@ export type Database = {
           chicks_hatched: number
           company_id: string
           created_at: string
+          eggs_cleared: number | null
           eggs_injected: number
           expected_hatch_date: string
           flock_id: string
@@ -191,6 +192,7 @@ export type Database = {
           chicks_hatched?: number
           company_id?: string
           created_at?: string
+          eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date: string
           flock_id: string
@@ -211,6 +213,7 @@ export type Database = {
           chicks_hatched?: number
           company_id?: string
           created_at?: string
+          eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date?: string
           flock_id?: string
@@ -684,6 +687,12 @@ export type Database = {
       }
       qa_monitoring: {
         Row: {
+          angle_bottom_left: number | null
+          angle_bottom_right: number | null
+          angle_mid_left: number | null
+          angle_mid_right: number | null
+          angle_top_left: number | null
+          angle_top_right: number | null
           batch_id: string
           candling_results: string | null
           check_date: string
@@ -701,6 +710,12 @@ export type Database = {
           ventilation_rate: number | null
         }
         Insert: {
+          angle_bottom_left?: number | null
+          angle_bottom_right?: number | null
+          angle_mid_left?: number | null
+          angle_mid_right?: number | null
+          angle_top_left?: number | null
+          angle_top_right?: number | null
           batch_id: string
           candling_results?: string | null
           check_date?: string
@@ -718,6 +733,12 @@ export type Database = {
           ventilation_rate?: number | null
         }
         Update: {
+          angle_bottom_left?: number | null
+          angle_bottom_right?: number | null
+          angle_mid_left?: number | null
+          angle_mid_right?: number | null
+          angle_top_left?: number | null
+          angle_top_right?: number | null
           batch_id?: string
           candling_results?: string | null
           check_date?: string
@@ -756,6 +777,7 @@ export type Database = {
           microscopy_results: string | null
           notes: string | null
           pathology_findings: string | null
+          pip_number: number
           pipped_not_hatched: number
           residue_percent: number | null
           total_residue_count: number
@@ -772,6 +794,7 @@ export type Database = {
           microscopy_results?: string | null
           notes?: string | null
           pathology_findings?: string | null
+          pip_number?: number
           pipped_not_hatched?: number
           residue_percent?: number | null
           total_residue_count: number
@@ -788,6 +811,7 @@ export type Database = {
           microscopy_results?: string | null
           notes?: string | null
           pathology_findings?: string | null
+          pip_number?: number
           pipped_not_hatched?: number
           residue_percent?: number | null
           total_residue_count?: number

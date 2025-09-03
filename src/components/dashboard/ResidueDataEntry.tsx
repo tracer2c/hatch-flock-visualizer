@@ -45,6 +45,7 @@ interface ResidueRecord {
   malpositionedPercent: number;
   upsideDown: number;
   upsideDownPercent: number;
+  pipNumber: number;
   totalEggs: number;
 }
 
@@ -84,7 +85,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     brain: '',
     dryEgg: '',
     malpositioned: '',
-    upsideDown: ''
+    upsideDown: '',
+    pipNumber: ''
   });
   const { toast } = useToast();
 
@@ -176,6 +178,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       malpositionedPercent: calculatePercentage(Number(formData.malpositioned) || 0),
       upsideDown: Number(formData.upsideDown) || 0,
       upsideDownPercent: calculatePercentage(Number(formData.upsideDown) || 0),
+      pipNumber: Number(formData.pipNumber) || 0,
       totalEggs: TOTAL_EGGS
     };
 
@@ -219,7 +222,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       brain: record.brain.toString(),
       dryEgg: record.dryEgg.toString(),
       malpositioned: record.malpositioned.toString(),
-      upsideDown: record.upsideDown.toString()
+      upsideDown: record.upsideDown.toString(),
+      pipNumber: record.pipNumber.toString()
     });
   };
 
@@ -254,7 +258,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       brain: '',
       dryEgg: '',
       malpositioned: '',
-      upsideDown: ''
+      upsideDown: '',
+      pipNumber: ''
     });
   };
 
@@ -332,7 +337,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="earlyDeath">Early Death (1-7 days)</Label>
+              <Label htmlFor="earlyDeath">Early Dead (1-7 days)</Label>
               <Input
                 id="earlyDeath"
                 type="number"
@@ -364,7 +369,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="midDeath">Mid Death (7-14 days)</Label>
+              <Label htmlFor="midDeath">Mid Dead (7-14 days)</Label>
               <Input
                 id="midDeath"
                 type="number"
@@ -491,6 +496,18 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 onChange={(e) => handleInputChange('upsideDown', e.target.value)}
               />
             </div>
+            
+            {/* PIP Number */}
+            <div className="space-y-2">
+              <Label htmlFor="pipNumber">PIP Number</Label>
+              <Input
+                id="pipNumber"
+                type="number"
+                placeholder="e.g., 15"
+                value={formData.pipNumber}
+                onChange={(e) => handleInputChange('pipNumber', e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Validation Display */}
@@ -542,8 +559,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                   <TableHead>House #</TableHead>
                   <TableHead>Infertile</TableHead>
                   <TableHead>Chicks</TableHead>
-                  <TableHead>Early Death</TableHead>
-                  <TableHead>Mid Death</TableHead>
+                  <TableHead>Early Dead</TableHead>
+                  <TableHead>Mid Dead</TableHead>
                   <TableHead>Late Death</TableHead>
                   <TableHead>Contamination</TableHead>
                   <TableHead>Mold</TableHead>

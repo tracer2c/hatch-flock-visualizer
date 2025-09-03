@@ -130,8 +130,12 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
 
   const [setterAngles, setSetterAngles] = useState({
     setterNumber: currentMachine?.machine_number || '',
-    leftAngle: '',
-    rightAngle: '',
+    topLeft: '',
+    midLeft: '',
+    bottomLeft: '',
+    topRight: '',
+    midRight: '',
+    bottomRight: '',
     checkDate: new Date().toISOString().split('T')[0]
   });
 
@@ -344,16 +348,26 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddSetterAngle = () => {
-    const leftAngle = parseFloat(setterAngles.leftAngle);
-    const rightAngle = parseFloat(setterAngles.rightAngle);
-    const isBalanced = Math.abs(leftAngle - rightAngle) <= 5 && leftAngle >= 35 && leftAngle <= 45 && rightAngle >= 35 && rightAngle <= 45;
+    const angles = {
+      topLeft: parseFloat(setterAngles.topLeft) || 0,
+      midLeft: parseFloat(setterAngles.midLeft) || 0,
+      bottomLeft: parseFloat(setterAngles.bottomLeft) || 0,
+      topRight: parseFloat(setterAngles.topRight) || 0,
+      midRight: parseFloat(setterAngles.midRight) || 0,
+      bottomRight: parseFloat(setterAngles.bottomRight) || 0
+    };
+    
+    const leftAvg = (angles.topLeft + angles.midLeft + angles.bottomLeft) / 3;
+    const rightAvg = (angles.topRight + angles.midRight + angles.bottomRight) / 3;
+    const isBalanced = Math.abs(leftAvg - rightAvg) <= 5 && leftAvg >= 35 && leftAvg <= 45 && rightAvg >= 35 && rightAvg <= 45;
     
     const newEntry = {
       id: Date.now(),
       type: 'setter_angle',
       setterNumber: setterAngles.setterNumber,
-      leftAngle: leftAngle,
-      rightAngle: rightAngle,
+      angles: angles,
+      leftAverage: leftAvg,
+      rightAverage: rightAvg,
       isBalanced: isBalanced,
       checkDate: setterAngles.checkDate,
       timestamp: new Date().toISOString()
@@ -364,8 +378,12 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     
     setSetterAngles({
       setterNumber: currentMachine?.machine_number || '',
-      leftAngle: '',
-      rightAngle: '',
+      topLeft: '',
+      midLeft: '',
+      bottomLeft: '',
+      topRight: '',
+      midRight: '',
+      bottomRight: '',
       checkDate: new Date().toISOString().split('T')[0]
     });
 
@@ -956,27 +974,81 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         </p>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="left-angle">Left Angle (°)</Label>
-                      <Input
-                        id="left-angle"
-                        type="number"
-                        step="0.1"
-                        value={setterAngles.leftAngle}
-                        onChange={(e) => setSetterAngles({...setterAngles, leftAngle: e.target.value})}
-                        placeholder="43.0"
-                      />
+                    <div className="col-span-2">
+                      <h4 className="font-medium mb-3">Left Side Angles (°)</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="top-left">Top Left</Label>
+                          <Input
+                            id="top-left"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.topLeft}
+                            onChange={(e) => setSetterAngles({...setterAngles, topLeft: e.target.value})}
+                            placeholder="42.0"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="mid-left">Mid Left</Label>
+                          <Input
+                            id="mid-left"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.midLeft}
+                            onChange={(e) => setSetterAngles({...setterAngles, midLeft: e.target.value})}
+                            placeholder="43.0"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="bottom-left">Bottom Left</Label>
+                          <Input
+                            id="bottom-left"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.bottomLeft}
+                            onChange={(e) => setSetterAngles({...setterAngles, bottomLeft: e.target.value})}
+                            placeholder="41.0"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="right-angle">Right Angle (°)</Label>
-                      <Input
-                        id="right-angle"
-                        type="number"
-                        step="0.1"
-                        value={setterAngles.rightAngle}
-                        onChange={(e) => setSetterAngles({...setterAngles, rightAngle: e.target.value})}
-                        placeholder="32.4"
-                      />
+                    <div className="col-span-2">
+                      <h4 className="font-medium mb-3">Right Side Angles (°)</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="top-right">Top Right</Label>
+                          <Input
+                            id="top-right"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.topRight}
+                            onChange={(e) => setSetterAngles({...setterAngles, topRight: e.target.value})}
+                            placeholder="40.0"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="mid-right">Mid Right</Label>
+                          <Input
+                            id="mid-right"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.midRight}
+                            onChange={(e) => setSetterAngles({...setterAngles, midRight: e.target.value})}
+                            placeholder="39.0"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="bottom-right">Bottom Right</Label>
+                          <Input
+                            id="bottom-right"
+                            type="number"
+                            step="0.1"
+                            value={setterAngles.bottomRight}
+                            onChange={(e) => setSetterAngles({...setterAngles, bottomRight: e.target.value})}
+                            placeholder="38.0"
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="angle-date">Check Date</Label>

@@ -342,8 +342,6 @@ const BatchOverviewDashboard: React.FC = () => {
                     title="Avg Fertility"
                     value={`${avgFert.toFixed(1)}%`}
                     icon={<Package className="h-4 w-4 text-muted-foreground" />}
-                    trendDirection={avgFert > 85 ? "up" : "down"}
-                    trendLabel={avgFert > 85 ? "Above target" : "Below target"}
                   />
                 </div>
               </TooltipTrigger>
@@ -365,8 +363,6 @@ const BatchOverviewDashboard: React.FC = () => {
             title="Avg Hatch Rate"
             value={`${avgHatch.toFixed(1)}%`}
             icon={<Package className="h-4 w-4 text-muted-foreground" />}
-            trendDirection={avgHatch > 80 ? "up" : "down"}
-            trendLabel={avgHatch > 80 ? "Above target" : "Below target"}
           />
 
           <StatCard
