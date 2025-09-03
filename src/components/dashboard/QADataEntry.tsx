@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1202,6 +1202,43 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                       />
                     </div>
                   </div>
+                  
+                  {/* Real-time calculation display */}
+                  {useMemo(() => {
+                    const day1 = parseFloat(moistureLoss.day1Weight);
+                    const day18 = parseFloat(moistureLoss.day18Weight);
+                    if (day1 && day18) {
+                      const calculatedLoss = ((day1 - day18) / day1 * 100);
+                      const isOptimal = calculatedLoss >= 10 && calculatedLoss <= 12;
+                      const isAcceptable = calculatedLoss >= 8 && calculatedLoss <= 14;
+                      
+                      return (
+                        <div className={`p-3 rounded-lg border-2 ${
+                          isOptimal ? 'bg-green-50 border-green-200' :
+                          isAcceptable ? 'bg-yellow-50 border-yellow-200' :
+                          'bg-red-50 border-red-200'
+                        }`}>
+                          <div className="text-sm font-medium mb-1">
+                            Calculated Moisture Loss: <span className={`text-lg ${
+                              isOptimal ? 'text-green-700' :
+                              isAcceptable ? 'text-yellow-700' :
+                              'text-red-700'
+                            }`}>{calculatedLoss.toFixed(2)}%</span>
+                          </div>
+                          <div className={`text-xs ${
+                            isOptimal ? 'text-green-600' :
+                            isAcceptable ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {isOptimal ? 'Optimal range (10-12%)' :
+                             isAcceptable ? 'Acceptable range (8-14%)' :
+                             'Outside acceptable range'}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }, [moistureLoss.day1Weight, moistureLoss.day18Weight])}
                   
                   <Button onClick={handleAddMoistureLoss} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />

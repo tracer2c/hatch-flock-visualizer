@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AITooltip } from "@/components/ui/ai-tooltip";
@@ -179,6 +179,7 @@ const ProcessFlowDashboard = () => {
                   return null;
                 }}
               />
+              <Legend />
               <Area type="monotone" dataKey="hof" stackId="1" stroke="hsl(220 70% 50%)" fill="hsl(220 70% 50%)" fillOpacity={0.6} name="HOF %" />
               <Area type="monotone" dataKey="hoi" stackId="2" stroke="hsl(280 70% 50%)" fill="hsl(280 70% 50%)" fillOpacity={0.6} name="HOI %" />
               <Area type="monotone" dataKey="fertility" stackId="3" stroke="hsl(142 76% 36%)" fill="hsl(142 76% 36%)" fillOpacity={0.6} name="Fertility %" />
@@ -235,6 +236,7 @@ const ProcessFlowDashboard = () => {
                     return null;
                   }}
                 />
+                <Legend />
                 <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
                 <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
               </LineChart>
@@ -248,15 +250,15 @@ const ProcessFlowDashboard = () => {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-lg">
                 <TrendingUp className="h-5 w-5" />
-                Performance by Breed Type
+                Performance by Farms
               </div>
               <ChartDownloadButton 
                 chartId="breed-performance-chart" 
-                filename="performance-by-breed-type.png" 
+                filename="performance-by-farms.png" 
               />
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Comparative analysis across different breed types
+              Comparative analysis across different farms
             </p>
           </CardHeader>
           <CardContent id="breed-performance-chart">
@@ -290,6 +292,7 @@ const ProcessFlowDashboard = () => {
                     return null;
                   }}
                 />
+                <Legend />
                 <Bar dataKey="hof" fill="hsl(220 70% 50%)" name="HOF %" />
                 <Bar dataKey="hoi" fill="hsl(280 70% 50%)" name="HOI %" />
                 <Bar dataKey="fertility" fill="hsl(142 76% 36%)" name="Fertility %" />
