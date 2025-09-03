@@ -337,6 +337,51 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_targets: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          entity_id: string | null
+          id: string
+          is_active: boolean
+          metric_name: string
+          target_type: string
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          metric_name: string
+          target_type: string
+          target_value: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          metric_name?: string
+          target_type?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_checklist_items: {
         Row: {
           applicable_days: number[]
@@ -390,6 +435,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      data_entry_images: {
+        Row: {
+          company_id: string
+          description: string | null
+          id: string
+          image_url: string
+          record_id: string
+          record_type: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          record_id: string
+          record_type: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          record_id?: string
+          record_type?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
       }
       egg_pack_quality: {
         Row: {
@@ -820,6 +898,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "residue_analysis_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      residue_analysis_schedule: {
+        Row: {
+          batch_id: string
+          company_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          due_date: string
+          id: string
+          notes: string | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          company_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "residue_analysis_schedule_batch_id_fkey"
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
