@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users } from "lucide-react";
+import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { EmbrexTimeline } from "@/components/dashboard/EmbrexTimeline";
 
 interface EmbrexData {
   batch_id: string;
@@ -30,7 +31,7 @@ const EmbrexDataSheetPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedHouses, setSelectedHouses] = useState<string[]>([]);
-  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'compare'>('all');
+  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'compare' | 'timeline'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -223,10 +224,20 @@ const EmbrexDataSheetPage = () => {
             Comprehensive overview of all flock data including clears and injected statistics
           </p>
         </div>
-        <Button onClick={exportToCSV} className="gap-2">
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setComparisonMode('timeline')} 
+            className="gap-2"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Timeline
+          </Button>
+          <Button onClick={exportToCSV} className="gap-2">
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Validation Summary */}
@@ -259,7 +270,7 @@ const EmbrexDataSheetPage = () => {
       )}
 
       <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             All Data
@@ -271,6 +282,10 @@ const EmbrexDataSheetPage = () => {
           <TabsTrigger value="compare" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Compare
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Timeline
           </TabsTrigger>
         </TabsList>
 
@@ -492,6 +507,10 @@ const EmbrexDataSheetPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="space-y-4">
+          <EmbrexTimeline />
         </TabsContent>
       </Tabs>
     </div>
