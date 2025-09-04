@@ -1422,8 +1422,15 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       // Check if we have structured data from batch tools
       const structuredData = extractStructuredDataFromTools(toolResults);
       
+      // Check if this should be an executive summary
+      const isExecutiveRequest = message.toLowerCase().includes('executive') || 
+                                message.toLowerCase().includes('operational report') ||
+                                message.toLowerCase().includes('management dashboard') ||
+                                message.toLowerCase().includes('kpi') ||
+                                message.toLowerCase().includes('performance overview');
+      
       // Generate summary for the response
-      const summary = await generateSummary(finalText, toolResults);
+      const summary = await generateSummary(finalText, toolResults, isExecutiveRequest);
       
       return new Response(JSON.stringify({
         response: finalText,
@@ -2045,12 +2052,23 @@ function extractStructuredDataFromTools(toolResults: any[]) {
 }
 
 // Function to generate NLP summary for responses
-async function generateSummary(responseContent: any, toolResults: any[]): Promise<{ overview: string; keyPoints: string[] } | null> {
+async function generateSummary(responseContent: any, toolResults: any[], isExecutive = false): Promise<{ overview: string; keyPoints: string[]; isExecutive?: boolean } | null> {
   if (!openaiApiKey) return null;
 
   try {
+    // Detect if this should be an executive summary
+    const responseText = typeof responseContent === 'string' ? responseContent : JSON.stringify(responseContent);
+    const shouldBeExecutive = isExecutive || 
+      responseText.toLowerCase().includes('executive') || 
+      responseText.toLowerCase().includes('operational report') ||
+      responseText.toLowerCase().includes('management dashboard') ||
+      responseText.toLowerCase().includes('kpi') ||
+      responseText.toLowerCase().includes('performance overview');
+
     // Extract key information from response and tool results
     let dataContext = '';
+    let executiveMetrics = '';
+    
     if (toolResults && toolResults.length > 0) {
       for (const toolResult of toolResults) {
         try {
@@ -2058,6 +2076,16 @@ async function generateSummary(responseContent: any, toolResults: any[]): Promis
           if (data.type === 'batches_overview') {
             const analytics = data.analytics;
             dataContext += `Found ${analytics.totals.count} batches with ${analytics.totals.avg_hatch_rate}% average hatch rate. `;
+            
+            // Executive metrics focus on performance thresholds
+            if (shouldBeExecutive) {
+              const lowPerformance = analytics.totals.avg_hatch_rate < 80;
+              const criticalIssues = analytics.overdue_count > 0;
+              executiveMetrics += `Performance Status: ${lowPerformance ? 'Below Target' : 'On Track'}. `;
+              executiveMetrics += `Critical Issues: ${criticalIssues ? analytics.overdue_count + ' overdue batches' : 'None'}. `;
+              executiveMetrics += `Production Volume: ${analytics.totals.total_eggs_set.toLocaleString()} eggs set. `;
+            }
+            
             if (analytics.overdue_count > 0) {
               dataContext += `${analytics.overdue_count} batches are overdue. `;
             }
@@ -2067,6 +2095,11 @@ async function generateSummary(responseContent: any, toolResults: any[]): Promis
           } else if (data.data && Array.isArray(data.data) && data.data[0]?.fertility_percent !== undefined) {
             const avgFertility = data.data.reduce((sum, item) => sum + (item.fertility_percent || 0), 0) / data.data.length;
             dataContext += `Analyzed ${data.data.length} fertility records with average fertility rate of ${avgFertility.toFixed(1)}%. `;
+            
+            if (shouldBeExecutive) {
+              const fertilityBelowTarget = avgFertility < 85;
+              executiveMetrics += `Fertility Performance: ${fertilityBelowTarget ? 'Below 85% target' : 'Meeting targets'}. `;
+            }
           } else if (data.message) {
             dataContext += data.message + ' ';
           }
@@ -2076,10 +2109,30 @@ async function generateSummary(responseContent: any, toolResults: any[]): Promis
       }
     }
 
-    const summaryPrompt = `
+    const summaryPrompt = shouldBeExecutive ? `
+You are a senior hatchery operations consultant preparing an executive summary. Based on the following data, create a strategic overview for senior management.
+
+Response Content: ${responseText}
+Data Context: ${dataContext}
+Executive Metrics: ${executiveMetrics}
+
+Generate a JSON response with:
+1. "overview": A strategic summary (max 35 words) highlighting overall operational status and key business implications
+2. "keyPoints": An array of 3-5 executive-level insights focusing on:
+   - Performance vs targets/benchmarks
+   - Critical operational risks or opportunities  
+   - Resource utilization and efficiency metrics
+   - Strategic recommendations requiring management attention
+   - Financial or operational impact
+
+Each key point should be actionable and relevant for executive decision-making (max 20 words each).
+Include "isExecutive": true in the response.
+
+Focus on strategic insights, not operational details.
+` : `
 You are an expert hatchery data analyst. Based on the following response and data context, create a concise summary with key insights.
 
-Response Content: ${typeof responseContent === 'string' ? responseContent : JSON.stringify(responseContent)}
+Response Content: ${responseText}
 Data Context: ${dataContext}
 
 Generate a JSON response with:
@@ -2121,7 +2174,8 @@ Keep it concise and actionable for hatchery operations.
           if (parsed.overview && parsed.keyPoints && Array.isArray(parsed.keyPoints)) {
             return {
               overview: parsed.overview,
-              keyPoints: parsed.keyPoints.slice(0, 4) // Limit to 4 key points
+              keyPoints: parsed.keyPoints.slice(0, parsed.isExecutive ? 5 : 4), // Executive summaries can have 5 points
+              isExecutive: parsed.isExecutive || false
             };
           }
         } catch (e) {
