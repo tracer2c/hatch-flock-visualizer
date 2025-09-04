@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Mic, User, MessageCircle, Download, ArrowLeft } from 'lucide-react';
+import { Send, Mic, User, MessageCircle, Download, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
@@ -21,6 +21,7 @@ interface Message {
   summary?: {
     overview: string;
     keyPoints: string[];
+    isExecutive?: boolean;
   };
 }
 
@@ -29,6 +30,7 @@ export const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [openaiConfigured, setOpenaiConfigured] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -39,6 +41,23 @@ export const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Check OpenAI configuration on mount
+  useEffect(() => {
+    const checkOpenAIConfig = async () => {
+      try {
+        const { data } = await supabase.functions.invoke('ai-chat', {
+          body: { message: '__health_check__' }
+        });
+        console.log('[ChatInterface] Health check response:', data);
+        setOpenaiConfigured(data?.openai_configured === true);
+      } catch (error) {
+        console.error('[ChatInterface] Health check failed:', error);
+        setOpenaiConfigured(false);
+      }
+    };
+    checkOpenAIConfig();
+  }, []);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -69,7 +88,24 @@ export const ChatInterface = () => {
         throw error;
       }
 
-      const response = data?.response || data?.message || (data?.error ? `Error: ${data.error}` : 'Sorry, I could not process your request.');
+      // Log the raw response for debugging
+      console.log('[ChatInterface] Raw AI response:', data);
+      
+      // Handle empty response with summary/payload fallback
+      let response = data?.response || data?.message || '';
+      if (!response && (data?.summary || data?.payload)) {
+        if (data?.summary?.isExecutive) {
+          response = 'Executive summary generated based on current operational data.';
+        } else if (data?.summary) {
+          response = 'Analysis complete. See summary below for key insights.';
+        } else if (data?.payload) {
+          response = 'Data retrieved successfully. See details below.';
+        }
+      }
+      if (!response) {
+        response = data?.error ? `Error: ${data.error}` : 'Sorry, I could not process your request.';
+      }
+      
       const responseActions = data?.actions || [];
       const responsePayload = data?.payload || null;
       const responseSummary = data?.summary || null;
@@ -206,6 +242,19 @@ export const ChatInterface = () => {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
+          {/* OpenAI Configuration Warning */}
+          {openaiConfigured === false && (
+            <div className="mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
+              <div className="flex items-center gap-2 text-warning-foreground">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <p className="font-medium">OpenAI Configuration Required</p>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                OpenAI API key is not configured. Some AI features may not work properly. Please configure your API key in the project settings.
+              </p>
+            </div>
+          )}
+          
           {messages.length === 0 ? (
             <div className="space-y-8">
               <div className="space-y-4 text-center">

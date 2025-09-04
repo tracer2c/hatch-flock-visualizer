@@ -1026,6 +1026,17 @@ serve(async (req) => {
   try {
     const { message, history } = await req.json();
 
+    // Health check endpoint
+    if (message === '__health_check__') {
+      return new Response(JSON.stringify({
+        status: 'ok',
+        openai_configured: !!openaiApiKey,
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!message) {
       throw new Error('Message is required');
     }
@@ -1369,14 +1380,24 @@ Current date: ${new Date().toISOString().split('T')[0]}`
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           } else {
-            const fallbackData = generateEnhancedFallbackResponse(toolResults, structuredData);
+            const isExecutiveRequest = message.toLowerCase().includes('executive') || 
+                                      message.toLowerCase().includes('operational report') ||
+                                      message.toLowerCase().includes('management dashboard') ||
+                                      message.toLowerCase().includes('kpi') ||
+                                      message.toLowerCase().includes('performance overview');
+            const fallbackData = generateEnhancedFallbackResponse(toolResults, structuredData, isExecutiveRequest);
             return new Response(JSON.stringify(fallbackData), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
         } else {
           console.log('OpenAI unavailable, generating enhanced fallback response from tool results');
-          const fallbackData = generateEnhancedFallbackResponse(toolResults);
+          const isExecutiveRequest = message.toLowerCase().includes('executive') || 
+                                    message.toLowerCase().includes('operational report') ||
+                                    message.toLowerCase().includes('management dashboard') ||
+                                    message.toLowerCase().includes('kpi') ||
+                                    message.toLowerCase().includes('performance overview');
+          const fallbackData = generateEnhancedFallbackResponse(toolResults, structuredData, isExecutiveRequest);
           return new Response(JSON.stringify(fallbackData), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -2191,7 +2212,7 @@ Keep it concise and actionable for hatchery operations.
 }
 
 // Helper function to generate enhanced fallback responses when OpenAI is unavailable
-function generateEnhancedFallbackResponse(toolResults: any[]) {
+function generateEnhancedFallbackResponse(toolResults: any[], structuredData?: any, isExecutive: boolean = false) {
   if (toolResults.length === 0) {
     return {
       response: "I'm currently unable to access the latest data. Please try again in a moment.",
@@ -2225,8 +2246,8 @@ function generateEnhancedFallbackResponse(toolResults: any[]) {
           response += `• ${status}: ${count}\n`;
         });
 
-        return {
-          response: response,
+        const fallbackResponse = {
+          response: response || (isExecutive ? "Executive summary ready based on current operational data." : "Data retrieved successfully."),
           actions: [
             { name: "Show full list", type: "show_more" },
             { name: "Download CSV", type: "download_csv" }
@@ -2240,6 +2261,21 @@ function generateEnhancedFallbackResponse(toolResults: any[]) {
           timestamp: new Date().toISOString(),
           source: 'fallback'
         };
+
+        // Add executive summary if requested
+        if (isExecutive) {
+          fallbackResponse.summary = {
+            overview: `Current operations show ${analytics.totals.count} active batches with ${analytics.totals.total_eggs_set.toLocaleString()} eggs set and an average hatch rate of ${analytics.totals.avg_hatch_rate}%.`,
+            keyPoints: [
+              `${analytics.upcoming_count} batches expected to hatch within 7 days`,
+              analytics.overdue_count > 0 ? `${analytics.overdue_count} batches are overdue for hatching` : "All batches are on schedule",
+              `Status distribution: ${Object.entries(analytics.by_status).map(([status, count]) => `${count} ${status}`).join(', ')}`
+            ],
+            isExecutive: true
+          };
+        }
+
+        return fallbackResponse;
       }
     } catch (error) {
       console.error('Error parsing tool result in fallback:', error);
@@ -2271,9 +2307,24 @@ function generateEnhancedFallbackResponse(toolResults: any[]) {
     }
   }
 
-  return {
-    response: response.trim() || "Data retrieved successfully, but no specific details available.",
+  const fallbackResponse = {
+    response: response.trim() || (isExecutive ? "Executive summary ready based on available data." : "Data retrieved successfully, but no specific details available."),
     timestamp: new Date().toISOString(),
     source: 'fallback'
   };
+
+  // Add a basic executive summary if requested
+  if (isExecutive && response.trim()) {
+    fallbackResponse.summary = {
+      overview: "Summary of recent hatchery operations based on available data.",
+      keyPoints: [
+        "Data has been retrieved from multiple operational systems",
+        "Review the details below for specific insights",
+        "Contact your system administrator for more detailed reporting"
+      ],
+      isExecutive: true
+    };
+  }
+
+  return fallbackResponse;
 }
