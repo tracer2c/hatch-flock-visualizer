@@ -113,29 +113,45 @@ const validateForm = () => {
   const lateDead = Number(formData.lateDead || 0);
   const cullChicks = Number(formData.cullChicks || 0);
 
-  if (!formData.sampleSize || !formData.infertileEggs) {
-    toast({
-      title: "Validation Error",
-      description: "Please fill in Sample Size and Infertile Eggs",
-      variant: "destructive"
-    });
-    return false;
+  if (!formData.sampleSize || sampleSize <= 0) {
+    return { isValid: false, error: "Sample Size is required and must be greater than 0" };
   }
 
-  if (infertile + earlyDead + lateDead + cullChicks > sampleSize) {
-    toast({
-      title: "Validation Error",
-      description: "Sum of infertile + early/late dead + cull chicks cannot exceed sample size",
-      variant: "destructive"
-    });
-    return false;
+  if (!formData.infertileEggs || infertile < 0) {
+    return { isValid: false, error: "Infertile Eggs is required and cannot be negative" };
+  }
+
+  if (earlyDead < 0 || lateDead < 0 || cullChicks < 0) {
+    return { isValid: false, error: "Early Dead, Late Dead, and Cull Chicks cannot be negative" };
+  }
+
+  const total = infertile + earlyDead + lateDead + cullChicks;
+  if (total > sampleSize) {
+    return { 
+      isValid: false, 
+      error: `Total count (${total}) cannot exceed sample size (${sampleSize}). Current: Infertile(${infertile}) + Early Dead(${earlyDead}) + Late Dead(${lateDead}) + Cull Chicks(${cullChicks}) = ${total}` 
+    };
   }
   
-  return true;
+  return { isValid: true, error: "" };
+};
+
+const isFormValid = () => {
+  return validateForm().isValid;
 };
 
   const handleSubmit = async () => {
-    if (!validateForm() || loading) return;
+    const validation = validateForm();
+    if (!validation.isValid || loading) {
+      if (!validation.isValid) {
+        toast({
+          title: "Validation Error",
+          description: validation.error,
+          variant: "destructive"
+        });
+      }
+      return;
+    }
     
     setLoading(true);
     
@@ -158,6 +174,7 @@ const validateForm = () => {
         cull_chicks: cullChicks,
         fertility_percent: calculated.fertilityPercent,
         hatch_percent: calculated.hatchPercent,
+        hof_percent: calculated.hofPercent,
         hoi_percent: calculated.hoiPercent,
         if_dev_percent: calculated.ifDevPercent,
         analysis_date: new Date().toISOString().split('T')[0],
@@ -203,11 +220,12 @@ const validateForm = () => {
       await checkBatchStatus();
       
       handleCancel();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving fertility data:', error);
+      const errorMessage = error?.message || error?.details || "Failed to save fertility analysis data";
       toast({
         title: "Error saving record",
-        description: "Failed to save fertility analysis data",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -348,6 +366,7 @@ const validateForm = () => {
               <Input
                 id="sampleSize"
                 type="number"
+                min="1"
                 placeholder="e.g., 648"
                 value={formData.sampleSize}
                 onChange={(e) => handleInputChange('sampleSize', e.target.value)}
@@ -358,6 +377,7 @@ const validateForm = () => {
               <Input
                 id="infertileEggs"
                 type="number"
+                min="0"
                 placeholder="e.g., 210"
                 value={formData.infertileEggs}
                 onChange={(e) => handleInputChange('infertileEggs', e.target.value)}
@@ -368,6 +388,7 @@ const validateForm = () => {
               <Input
                 id="earlyDead"
                 type="number"
+                min="0"
                 placeholder="e.g., 25"
                 value={formData.earlyDead}
                 onChange={(e) => handleInputChange('earlyDead', e.target.value)}
@@ -378,6 +399,7 @@ const validateForm = () => {
               <Input
                 id="lateDead"
                 type="number"
+                min="0"
                 placeholder="e.g., 20"
                 value={formData.lateDead}
                 onChange={(e) => handleInputChange('lateDead', e.target.value)}
@@ -388,6 +410,7 @@ const validateForm = () => {
               <Input
                 id="cullChicks"
                 type="number"
+                min="0"
                 placeholder="e.g., 5"
                 value={formData.cullChicks}
                 onChange={(e) => handleInputChange('cullChicks', e.target.value)}
@@ -532,8 +555,19 @@ const validateForm = () => {
               />
             </div>
           </div>
+          {/* Validation Summary */}
+          {!isFormValid() && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-4">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-800 font-medium">Validation Summary:</span>
+              </div>
+              <p className="text-sm text-yellow-700 mt-1">{validateForm().error}</p>
+            </div>
+          )}
+          
           <div className="flex gap-2 mt-4">
-            <Button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2">
+            <Button onClick={handleSubmit} disabled={loading || !isFormValid()} className="flex items-center gap-2">
               <Save className="h-4 w-4" />
               {loading ? 'Saving...' : (editingId ? 'Update Record' : 'Add Record')}
             </Button>
@@ -585,7 +619,18 @@ const validateForm = () => {
                     <TableCell>{record.cull_chicks ?? 0}</TableCell>
                     <TableCell>{Number(record.fertility_percent ?? 0).toFixed(2)}%</TableCell>
                     <TableCell>{Number(record.hatch_percent ?? 0).toFixed(2)}%</TableCell>
-                    <TableCell>{Number(record.hof_percent ?? 0).toFixed(2)}%</TableCell>
+                    <TableCell>{(() => {
+                      if (record.hof_percent != null) return `${Number(record.hof_percent).toFixed(2)}%`;
+                      const s = record.sample_size || 0;
+                      const inf = record.infertile_eggs || 0;
+                      const ed = record.early_dead || 0;
+                      const ld = record.late_dead || 0;
+                      const cc = record.cull_chicks || 0;
+                      const fertile = Math.max(0, s - inf);
+                      const hatched = Math.max(0, s - inf - ed - ld - cc);
+                      const hof = fertile > 0 ? (hatched / fertile) * 100 : 0;
+                      return `${hof.toFixed(2)}%`;
+                    })()}</TableCell>
                     <TableCell>{(() => {
                       if (record.hoi_percent != null) return `${Number(record.hoi_percent).toFixed(2)}%`;
                       const s = record.sample_size || 0;
