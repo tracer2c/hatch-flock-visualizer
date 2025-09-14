@@ -59,10 +59,29 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
   };
 
   const handleViewDetails = () => {
+    const alertContext = {
+      alertId: alert.id,
+      alertType: alert.alert_type,
+      severity: alert.severity,
+      message: alert.message,
+      batchDay: alert.batch_day,
+      currentTemperature: alert.current_temperature,
+      currentHumidity: alert.current_humidity
+    };
+
     if (alert.batch_id) {
-      navigate(`/qa-entry/${alert.batch_id}`);
+      // Navigate to house detail page with alert context
+      navigate(`/house-detail/${alert.batch_id}`, { 
+        state: { alertContext } 
+      });
     } else if (alert.machine_id) {
-      navigate(`/data-entry`); // Navigate to data entry page where machines are managed
+      // Navigate to machine detail page with alert context
+      navigate(`/machine-detail/${alert.machine_id}`, { 
+        state: { alertContext } 
+      });
+    } else {
+      // Fallback to data entry page
+      navigate(`/data-entry`);
     }
   };
 
