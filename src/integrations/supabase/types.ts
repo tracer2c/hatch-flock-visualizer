@@ -1145,6 +1145,12 @@ export type Database = {
         | "critical_day"
         | "machine_maintenance"
         | "checklist_incomplete"
+        | "co2_level"
+        | "ventilation_rate"
+        | "turning_frequency"
+        | "mortality_spike"
+        | "hatch_approaching"
+        | "batch_status_change"
       batch_status:
         | "planned"
         | "setting"
@@ -1294,6 +1300,12 @@ export const Constants = {
         "critical_day",
         "machine_maintenance",
         "checklist_incomplete",
+        "co2_level",
+        "ventilation_rate",
+        "turning_frequency",
+        "mortality_spike",
+        "hatch_approaching",
+        "batch_status_change",
       ],
       batch_status: [
         "planned",
