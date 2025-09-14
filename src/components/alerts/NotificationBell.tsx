@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,6 +9,7 @@ import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/u
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: alerts, isLoading } = useActiveAlerts();
   const checkAlerts = useCheckAlerts();
   const acknowledgeAlert = useAcknowledgeAlert();
@@ -46,6 +48,30 @@ const NotificationBell = () => {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  const handleAlertClick = (alert: any) => {
+    if (!alert.batch_id) return;
+    
+    setIsOpen(false);
+    
+    switch (alert.alert_type) {
+      case 'temperature':
+      case 'humidity':
+        navigate(`/data-entry/house/${alert.batch_id}/qa`);
+        break;
+      case 'checklist_incomplete':
+        navigate(`/checklist/house/${alert.batch_id}`);
+        break;
+      case 'machine_maintenance':
+        if (alert.machine_id) {
+          navigate(`/machine-detail/${alert.machine_id}`);
+        }
+        break;
+      default:
+        navigate(`/house-detail/${alert.batch_id}`);
+        break;
+    }
   };
 
   return (
@@ -104,7 +130,11 @@ const NotificationBell = () => {
                 ) : alerts && alerts.length > 0 ? (
                   <div className="divide-y divide-border">
                     {alerts.slice(0, 10).map((alert) => (
-                    <div key={alert.id} className={`p-3 hover:bg-muted/50 ${getSeverityColor(alert.severity)}`}>
+                    <div 
+                      key={alert.id} 
+                      className={`p-3 hover:bg-muted/50 cursor-pointer ${getSeverityColor(alert.severity)}`}
+                      onClick={() => handleAlertClick(alert)}
+                    >
                       <div className="flex items-start gap-3">
                         <div className="mt-1">
                           {getAlertIcon(alert.alert_type)}
