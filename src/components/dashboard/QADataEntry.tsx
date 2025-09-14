@@ -1263,7 +1263,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium capitalize">
-                      {entry.type.replace('_', ' ')} Record
+                      {entry.type ? entry.type.replace('_', ' ') : 'Unknown'} Record
                     </div>
                     <div className="text-sm text-gray-600">
                       {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate} | 
