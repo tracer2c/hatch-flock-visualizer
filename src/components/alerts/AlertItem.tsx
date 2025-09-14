@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/useAlerts";
-import { Info, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock, Eye } from "lucide-react";
+import { Info, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock, Eye, Wind, RotateCcw, Skull, TrendingUp, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface AlertItemProps {
@@ -21,6 +21,13 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
       case 'humidity': return <Droplets className="h-4 w-4" />;
       case 'critical_day': return <Calendar className="h-4 w-4" />;
       case 'machine_maintenance': return <Wrench className="h-4 w-4" />;
+      case 'co2_level': return <Wind className="h-4 w-4" />;
+      case 'ventilation_rate': return <Wind className="h-4 w-4" />;
+      case 'turning_frequency': return <RotateCcw className="h-4 w-4" />;
+      case 'mortality_spike': return <Skull className="h-4 w-4" />;
+      case 'hatch_approaching': return <Clock className="h-4 w-4" />;
+      case 'batch_status_change': return <TrendingUp className="h-4 w-4" />;
+      case 'checklist_incomplete': return <AlertTriangle className="h-4 w-4" />;
       default: return <Info className="h-4 w-4" />;
     }
   };
@@ -66,7 +73,11 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
       message: alert.message,
       batchDay: alert.batch_day,
       currentTemperature: alert.current_temperature,
-      currentHumidity: alert.current_humidity
+      currentHumidity: alert.current_humidity,
+      co2Level: alert.co2_level,
+      ventilationRate: alert.ventilation_rate,
+      turningFrequency: alert.turning_frequency,
+      mortalityCount: alert.mortality_count
     };
 
     if (alert.batch_id) {
@@ -124,6 +135,22 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
         
         {alert.current_humidity && (
           <div>{alert.current_humidity}%</div>
+        )}
+
+        {alert.co2_level && (
+          <div>{alert.co2_level} ppm CO2</div>
+        )}
+
+        {alert.ventilation_rate && (
+          <div>{alert.ventilation_rate} CFM</div>
+        )}
+
+        {alert.turning_frequency && (
+          <div>{alert.turning_frequency}/day turns</div>
+        )}
+
+        {alert.mortality_count && (
+          <div>{alert.mortality_count} deaths</div>
         )}
       </div>
 

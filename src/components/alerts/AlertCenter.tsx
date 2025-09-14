@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveAlerts, useCheckAlerts } from "@/hooks/useAlerts";
-import { AlertTriangle, Bell, RefreshCw, Thermometer, Droplets, Calendar, Wrench } from "lucide-react";
+import { AlertTriangle, Bell, RefreshCw, Thermometer, Droplets, Calendar, Wrench, Wind, RotateCcw, Skull, Clock, TrendingUp } from "lucide-react";
 import AlertItem from "./AlertItem";
 
 const AlertCenter = () => {
@@ -17,6 +17,13 @@ const AlertCenter = () => {
       case 'humidity': return <Droplets className="h-4 w-4" />;
       case 'critical_day': return <Calendar className="h-4 w-4" />;
       case 'machine_maintenance': return <Wrench className="h-4 w-4" />;
+      case 'co2_level': return <Wind className="h-4 w-4" />;
+      case 'ventilation_rate': return <Wind className="h-4 w-4" />;
+      case 'turning_frequency': return <RotateCcw className="h-4 w-4" />;
+      case 'mortality_spike': return <Skull className="h-4 w-4" />;
+      case 'hatch_approaching': return <Clock className="h-4 w-4" />;
+      case 'batch_status_change': return <TrendingUp className="h-4 w-4" />;
+      case 'checklist_incomplete': return <AlertTriangle className="h-4 w-4" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };
