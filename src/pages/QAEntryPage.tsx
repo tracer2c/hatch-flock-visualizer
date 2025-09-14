@@ -88,7 +88,22 @@ const QAEntryPage = () => {
         variant: "destructive"
       });
     } else {
-      setQAData(data || []);
+      // Convert database records to the format expected by QADataEntry component
+      const convertedData = (data || []).map(record => ({
+        id: record.id,
+        type: 'rectal_temperature', // Default type for database records
+        location: 'hatcher', // Default location
+        temperature: record.temperature,
+        humidity: record.humidity,
+        isWithinRange: record.temperature >= 99 && record.temperature <= 101,
+        checkTime: record.check_time,
+        checkDate: record.check_date,
+        dayOfIncubation: record.day_of_incubation,
+        inspectorName: record.inspector_name,
+        notes: record.notes,
+        timestamp: record.created_at
+      }));
+      setQAData(convertedData);
     }
   };
 
@@ -99,9 +114,56 @@ const QAEntryPage = () => {
     }));
     
     setQAData(dataWithBatchId);
+    
+    // Save relevant QA monitoring data to database for alert system
+    const qaMonitoringRecords = [];
+    
+    // Find the latest added record (the one with the highest ID/timestamp)
+    const latestRecord = newData.length > 0 ? newData[newData.length - 1] : null;
+    
+    if (latestRecord && latestRecord.type === 'rectal_temperature') {
+      // Calculate day of incubation
+      const dayOfIncubation = houseInfo ? 
+        Math.floor((new Date(latestRecord.checkDate).getTime() - new Date(houseInfo.set_date).getTime()) / (1000 * 60 * 60 * 24)) + 1 : 1;
+      
+      qaMonitoringRecords.push({
+        batch_id: houseId,
+        check_date: latestRecord.checkDate,
+        check_time: latestRecord.checkTime || '12:00:00',
+        day_of_incubation: dayOfIncubation,
+        temperature: latestRecord.temperature,
+        humidity: 60, // Default value for rectal temp entries
+        inspector_name: 'QA Inspector',
+        notes: `Rectal temperature reading at ${latestRecord.location}`
+      });
+    }
+    
+    // Insert into qa_monitoring table if we have records
+    if (qaMonitoringRecords.length > 0) {
+      const { error } = await supabase
+        .from('qa_monitoring')
+        .insert(qaMonitoringRecords);
+      
+      if (error) {
+        console.error('Error saving QA monitoring data:', error);
+      } else {
+        // Trigger alert checking after saving data
+        try {
+          const { data: alertResult, error: alertError } = await supabase.functions.invoke('check-alerts');
+          if (alertError) {
+            console.error('Error checking alerts:', alertError);
+          } else {
+            console.log('Alert check completed:', alertResult);
+          }
+        } catch (err) {
+          console.error('Failed to trigger alert check:', err);
+        }
+      }
+    }
+    
     toast({
       title: "QA Data Updated",
-      description: "Data linked to current house"
+      description: "Data saved and alerts checked"
     });
   };
 
