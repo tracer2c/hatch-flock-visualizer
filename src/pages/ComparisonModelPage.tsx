@@ -4,10 +4,11 @@ import ComparisonAnalysis from "@/components/dashboard/ComparisonAnalysis";
 import ComparisonFilters from "@/components/dashboard/ComparisonFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Loader2 } from "lucide-react";
-import { useComparisonData, type ComparisonFilters as FilterType } from "@/hooks/useComparisonData";
+import { useComparisonData, useUnitsData, type ComparisonFilters as FilterType } from "@/hooks/useComparisonData";
 import { toast } from "sonner";
 
 const ComparisonModelPage = () => {
+  const { data: unitsData } = useUnitsData();
   const [filters, setFilters] = useState<FilterType>({
     dateRange: { from: subDays(new Date(), 90), to: new Date() },
     unitIds: [],
@@ -15,6 +16,16 @@ const ComparisonModelPage = () => {
     batchStatus: ["completed"],
     limit: 100,
   });
+
+  // Initialize with all unit IDs when units data is loaded
+  useEffect(() => {
+    if (unitsData && unitsData.length > 0 && filters.unitIds.length === 0) {
+      setFilters(prev => ({
+        ...prev,
+        unitIds: unitsData.map(unit => unit.id)
+      }));
+    }
+  }, [unitsData, filters.unitIds.length]);
 
   const { data: comparisonData, isLoading, error } = useComparisonData(filters);
 

@@ -121,6 +121,11 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
           selectedUnitNames.add(batch.unitName);
         }
       });
+    } else {
+      // If no specific units selected, show all available units
+      data.forEach(batch => {
+        selectedUnitNames.add(batch.unitName);
+      });
     }
 
     // Create result array starting with units that have data
