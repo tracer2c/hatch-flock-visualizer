@@ -1,27 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
+import { CollapsibleTimelineControls } from "./CollapsibleTimelineControls";
+import { Badge } from "@/components/ui/badge";
 import { 
-  RotateCcw, 
-  CalendarIcon, 
-  Search, 
-  ChevronDown, 
   Upload, 
   Download, 
   FileSpreadsheet,
   TrendingUp,
   BarChart3,
   Activity,
-  X,
-  GitCompare
+  Grid3X3,
+  GitCompare,
+  RotateCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -39,7 +32,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend
+  Legend,
+  Cell
 } from 'recharts';
 import { 
   downloadCSVTemplate, 
@@ -76,15 +70,13 @@ const FLOCK_COLORS = [
 ];
 
 export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProps) => {
-  const [viewType, setViewType] = useState<'bar' | 'line' | 'area'>('area');
+  const [viewType, setViewType] = useState<'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples'>('area');
   const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
   const [metric, setMetric] = useState<string>('totalEggs');
   const [timeScale, setTimeScale] = useState<string>('months');
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
   const [flockSearch, setFlockSearch] = useState("");
-  const [showFlockDropdown, setShowFlockDropdown] = useState(false);
-  const [isComparisonMode, setIsComparisonMode] = useState(false);
   
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
   const [importedData, setImportedData] = useState<EmbrexCSVData[]>([]);
@@ -113,21 +105,33 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       if (error) throw error;
 
-      const options: FlockOption[] = data?.map((flock: any, index: number) => ({
+      const options: FlockOption[] = data?.map((flock, index) => ({
         id: flock.id,
         name: flock.flock_name,
         number: flock.flock_number,
-        color: FLOCK_COLORS[index % FLOCK_COLORS.length],
+        color: FLOCK_COLORS[index % FLOCK_COLORS.length]
       })) || [];
 
       setFlockOptions(options);
     } catch (error) {
       console.error('Error loading flock options:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load flock options",
+        variant: "destructive",
+      });
     }
   };
 
   const loadTimelineData = async () => {
+    if (selectedFlocks.length === 0) {
+      setTimelineData([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+
     try {
       let query = supabase
         .from('batches')
@@ -144,29 +148,22 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             flock_number
           )
         `)
-        .order('set_date', { ascending: true });
+        .in('flocks.id', selectedFlocks);
 
-      // Apply flock filter for comparison mode
-      if (selectedFlocks.length > 0) {
-        query = query.in('flocks.id', selectedFlocks);
-      }
-
-      // Apply date range filter
       if (fromDate) {
-        query = query.gte('set_date', fromDate.toISOString().split('T')[0]);
+        query = query.gte('set_date', fromDate.toISOString());
       }
       if (toDate) {
-        query = query.lte('set_date', toDate.toISOString().split('T')[0]);
+        query = query.lte('set_date', toDate.toISOString());
       }
 
-      const { data, error } = await query;
-
+      const { data: batchData, error } = await query;
       if (error) throw error;
 
-      // Process database data
       const processedData = new Map<string, any>();
 
-      data?.forEach((batch: any) => {
+      // Process batch data
+      batchData?.forEach((batch: any) => {
         const date = new Date(batch.set_date);
         let period = '';
         
@@ -189,11 +186,10 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         }
 
         const periodData = processedData.get(period);
-        const flockOption = flockOptions.find(f => f.id === batch.flocks.id);
         const flockKey = `${batch.flocks.flock_name}_${metric}`;
 
         if (metric === 'totalEggs') {
-          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.total_eggs_set || 0);
+          periodData[flockKey] = (periodData[flockKey] || 0) + batch.total_eggs_set;
         } else if (metric === 'eggsCleared') {
           periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_cleared || 0);
         } else if (metric === 'eggsInjected') {
@@ -300,14 +296,15 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     }
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     try {
-      exportTimelineToCSV(timelineData, 'embrex-timeline-export');
+      await exportTimelineToCSV(timelineData, `enhanced-embrex-timeline-${new Date().toISOString().split('T')[0]}`);
       toast({
         title: "Export Successful",
         description: "Timeline data exported to CSV",
       });
     } catch (error) {
+      console.error('Error exporting data:', error);
       toast({
         title: "Export Failed",
         description: "Failed to export timeline data",
@@ -324,26 +321,6 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     setToDate(undefined);
     setFlockSearch("");
     setImportedData([]);
-    setIsComparisonMode(false);
-  };
-
-  const filteredFlockOptions = flockOptions.filter(flock =>
-    flock.name.toLowerCase().includes(flockSearch.toLowerCase()) ||
-    flock.number.toString().includes(flockSearch)
-  );
-
-  const toggleFlockSelection = (flockId: string) => {
-    if (selectedFlocks.includes(flockId)) {
-      setSelectedFlocks(selectedFlocks.filter(id => id !== flockId));
-    } else {
-      setSelectedFlocks([...selectedFlocks, flockId]);
-    }
-    setIsComparisonMode(true);
-  };
-
-  const clearFlockSelection = () => {
-    setSelectedFlocks([]);
-    setIsComparisonMode(false);
   };
 
   const getFlockDataKeys = () => {
@@ -357,7 +334,100 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     return keys;
   };
 
-  const renderChart = () => {
+  const renderHeatmapChart = () => {
+    const dataKeys = getFlockDataKeys();
+    if (dataKeys.length === 0 || timelineData.length === 0) return null;
+
+    // Transform data for heatmap
+    const heatmapData = timelineData.map(item => {
+      const newItem: any = { period: item.period };
+      dataKeys.forEach((key, index) => {
+        const value = item[key] as number || 0;
+        const max = Math.max(...timelineData.map(d => (d[key] as number) || 0));
+        newItem[key] = value;
+        newItem[`${key}_intensity`] = max > 0 ? value / max : 0;
+      });
+      return newItem;
+    });
+
+    return (
+      <div className="space-y-4">
+        {dataKeys.map((key, index) => {
+          const flockName = key.replace(`_${metric}`, '');
+          return (
+            <div key={key} className="space-y-2">
+              <h4 className="text-sm font-medium">{flockName}</h4>
+              <div className="grid grid-cols-12 gap-1">
+                {heatmapData.map((item, i) => {
+                  const intensity = item[`${key}_intensity`];
+                  return (
+                    <div
+                      key={i}
+                      className="aspect-square rounded text-xs flex items-center justify-center text-white font-medium"
+                      style={{
+                        backgroundColor: `hsl(${FLOCK_COLORS[index % FLOCK_COLORS.length].match(/\d+/)?.[0] || 200}, 70%, ${20 + intensity * 50}%)`,
+                      }}
+                      title={`${item.period}: ${item[key]}`}
+                    >
+                      {item[key] || 0}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderSmallMultiplesChart = () => {
+    const dataKeys = getFlockDataKeys();
+    if (dataKeys.length === 0) return null;
+
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {dataKeys.map((key, index) => {
+          const flockName = key.replace(`_${metric}`, '');
+          return (
+            <Card key={key} className="p-4">
+              <h4 className="text-sm font-medium mb-2">{flockName}</h4>
+              <ResponsiveContainer width="100%" height={150}>
+                <LineChart data={timelineData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="period" 
+                    fontSize={10}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis 
+                    fontSize={10}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey={key} 
+                    stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderStandardChart = () => {
     if (loading) {
       return (
         <div className="h-80 flex items-center justify-center">
@@ -414,34 +484,19 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       return null;
     };
 
-    const commonProps = {
-      data: timelineData,
-      margin: { top: 20, right: 30, left: 20, bottom: 5 }
-    };
-
     return (
       <ResponsiveContainer width="100%" height={400}>
-        {viewType === 'bar' ? (
-          <BarChart {...commonProps}>
-            <defs>
-              {dataKeys.map((key, index) => (
-                <linearGradient key={key} id={`gradient${index}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.2}/>
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+        {viewType === 'bar' || viewType === 'stacked' ? (
+          <BarChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
             <XAxis 
               dataKey="period" 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <Tooltip content={customTooltip} />
             <Legend />
@@ -449,25 +504,23 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <Bar 
                 key={key}
                 dataKey={key} 
-                fill={`url(#gradient${index})`}
+                fill={FLOCK_COLORS[index % FLOCK_COLORS.length]}
                 name={key.replace(`_${metric}`, '')}
-                radius={[2, 2, 0, 0]}
+                stackId={viewType === 'stacked' ? 'stack' : undefined}
               />
             ))}
           </BarChart>
         ) : viewType === 'line' ? (
-          <LineChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+          <LineChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
             <XAxis 
               dataKey="period" 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <Tooltip content={customTooltip} />
             <Legend />
@@ -478,33 +531,30 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 dataKey={key} 
                 stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
                 strokeWidth={3}
-                dot={{ fill: FLOCK_COLORS[index % FLOCK_COLORS.length], strokeWidth: 2, r: 5 }}
-                activeDot={{ r: 7, stroke: FLOCK_COLORS[index % FLOCK_COLORS.length], strokeWidth: 2 }}
+                dot={{ r: 4 }}
                 name={key.replace(`_${metric}`, '')}
               />
             ))}
           </LineChart>
         ) : (
-          <AreaChart {...commonProps}>
+          <AreaChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <defs>
               {dataKeys.map((key, index) => (
                 <linearGradient key={key} id={`areaGradient${index}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.05}/>
+                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.1}/>
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
             <XAxis 
               dataKey="period" 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={11}
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              fontSize={12}
+              stroke="hsl(var(--muted-foreground))"
             />
             <Tooltip content={customTooltip} />
             <Legend />
@@ -525,6 +575,16 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     );
   };
 
+  const renderChart = () => {
+    if (viewType === 'heatmap') {
+      return renderHeatmapChart();
+    }
+    if (viewType === 'small-multiples') {
+      return renderSmallMultiplesChart();
+    }
+    return renderStandardChart();
+  };
+
   return (
     <Card className={cn("overflow-hidden", className)} id="enhanced-embrex-timeline">
       <CardHeader className="bg-gradient-to-r from-chart-1/10 to-chart-2/10 border-b">
@@ -541,7 +601,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 </p>
               </div>
             </div>
-            {(importedData.length > 0 || isComparisonMode) && (
+            {(importedData.length > 0 || selectedFlocks.length > 0) && (
               <div className="flex gap-2">
                 {importedData.length > 0 && (
                   <Badge variant="secondary" className="gap-1">
@@ -549,7 +609,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                     {importedData.length} imported records
                   </Badge>
                 )}
-                {isComparisonMode && (
+                {selectedFlocks.length > 0 && (
                   <Badge variant="outline" className="gap-1">
                     <GitCompare className="h-3 w-3" />
                     Comparing {selectedFlocks.length} flocks
@@ -588,10 +648,6 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <Download className="h-4 w-4" />
               Export
             </Button>
-            <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Reset
-            </Button>
             <ChartDownloadButton chartId="enhanced-embrex-timeline" filename="enhanced-embrex-timeline" />
           </div>
         </div>
@@ -608,269 +664,47 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       </CardHeader>
       
       <CardContent className="space-y-6 p-6">
-        {/* Enhanced Controls */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Visualization Controls
-            </h3>
-            <div className="text-sm text-muted-foreground">
-              {timelineData.length} data points
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Multi-Flock Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Flocks for Comparison</label>
-              <Popover open={showFlockDropdown} onOpenChange={setShowFlockDropdown}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between bg-card"
-                  >
-                    <span className="truncate">
-                      {selectedFlocks.length === 0 
-                        ? "Select flocks..." 
-                        : `${selectedFlocks.length} flock${selectedFlocks.length > 1 ? 's' : ''} selected`
-                      }
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
-                  <div className="p-3 border-b">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search flocks..."
-                        value={flockSearch}
-                        onChange={(e) => setFlockSearch(e.target.value)}
-                        className="pl-8"
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    <div className="p-2">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedFlocks(flockOptions.map(f => f.id));
-                            setIsComparisonMode(true);
-                          }}
-                          className="text-xs"
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearFlockSelection}
-                          className="text-xs"
-                        >
-                          Clear All
-                        </Button>
-                      </div>
-                      {filteredFlockOptions.map((flock) => (
-                        <div key={flock.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded">
-                          <Checkbox
-                            checked={selectedFlocks.includes(flock.id)}
-                            onCheckedChange={() => toggleFlockSelection(flock.id)}
-                          />
-                          <div className="flex items-center gap-2 flex-1">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: flock.color }}
-                            />
-                            <span className="text-sm">#{flock.number} — {flock.name}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+        {/* Collapsible Controls */}
+        <CollapsibleTimelineControls
+          viewType={viewType}
+          setViewType={setViewType}
+          selectedFlocks={selectedFlocks}
+          setSelectedFlocks={setSelectedFlocks}
+          metric={metric}
+          setMetric={setMetric}
+          timeScale={timeScale}
+          setTimeScale={setTimeScale}
+          fromDate={fromDate}
+          setFromDate={setFromDate}
+          toDate={toDate}
+          setToDate={setToDate}
+          flockSearch={flockSearch}
+          setFlockSearch={setFlockSearch}
+          flockOptions={flockOptions}
+          onReset={handleReset}
+        />
 
-            {/* Metric Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Metric</label>
-              <Select value={metric} onValueChange={setMetric}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="totalEggs">Total Eggs</SelectItem>
-                  <SelectItem value="eggsCleared">Eggs Cleared</SelectItem>
-                  <SelectItem value="eggsInjected">Eggs Injected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Time Scale */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Time Scale</label>
-              <Select value={timeScale} onValueChange={setTimeScale}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="days">Daily</SelectItem>
-                  <SelectItem value="weeks">Weekly</SelectItem>
-                  <SelectItem value="months">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Chart Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Chart Type</label>
-              <div className="grid grid-cols-3 rounded-lg bg-muted p-1 gap-1">
-                <Button
-                  variant={viewType === 'area' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewType('area')}
-                  className="text-xs"
-                >
-                  Area
-                </Button>
-                <Button
-                  variant={viewType === 'line' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewType('line')}
-                  className="text-xs"
-                >
-                  Line
-                </Button>
-                <Button
-                  variant={viewType === 'bar' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewType('bar')}
-                  className="text-xs"
-                >
-                  Bar
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Date Range */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">From Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-card",
-                      !fromDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {fromDate ? format(fromDate, "PPP") : "Select start date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={fromDate}
-                    onSelect={setFromDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">To Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-card",
-                      !toDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {toDate ? format(toDate, "PPP") : "Select end date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={toDate}
-                    onSelect={setToDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Selected Flocks Display */}
-          {selectedFlocks.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Selected Flocks</label>
-              <div className="flex flex-wrap gap-2">
-                {selectedFlocks.map((flockId) => {
-                  const flock = flockOptions.find(f => f.id === flockId);
-                  return flock ? (
-                    <Badge key={flockId} variant="secondary" className="gap-2">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: flock.color }}
-                      />
-                      #{flock.number} — {flock.name}
-                      <button
-                        onClick={() => toggleFlockSelection(flockId)}
-                        className="ml-1 text-xs hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
+        {/* Chart Display */}
+        <div className="space-y-4">
+          {selectedFlocks.length > 6 && viewType !== 'heatmap' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800">
+                <strong>Tip:</strong> With {selectedFlocks.length} flocks selected, consider using the Heatmap view for better readability.
+              </p>
             </div>
           )}
+          {renderChart()}
         </div>
 
-        {/* Enhanced Timeline Chart */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg">Multi-Flock Timeline Comparison</h3>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {importedData.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-500" />
-                  Imported Data
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-chart-1" />
-                Database Data
-              </div>
-            </div>
-          </div>
-          <div className="border rounded-xl bg-gradient-to-b from-card to-card/50 p-6 shadow-sm">
-            {renderChart()}
-          </div>
-        </div>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileImport}
+          className="hidden"
+        />
       </CardContent>
-      
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileImport}
-        className="hidden"
-      />
     </Card>
   );
 };

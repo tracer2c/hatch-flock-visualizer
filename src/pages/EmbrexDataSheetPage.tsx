@@ -510,9 +510,14 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
-          <EnhancedEmbrexTimeline />
+          {/* Other content moved above timeline */}
         </TabsContent>
       </Tabs>
+      
+      {/* Enhanced Embrex Timeline moved to bottom */}
+      <div className="mt-8">
+        <EnhancedEmbrexTimeline />
+      </div>
     </div>
   );
 };
