@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   RotateCcw, 
   CalendarIcon, 
@@ -18,7 +19,9 @@ import {
   FileSpreadsheet,
   TrendingUp,
   BarChart3,
-  Activity
+  Activity,
+  X,
+  GitCompare
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -47,13 +50,7 @@ import {
 
 interface TimelineData {
   period: string;
-  totalEggs: number;
-  eggsCleared?: number;
-  eggsInjected?: number;
-  flockName: string;
-  batchNumber: string;
-  setDate: string;
-  flockColor?: string;
+  [flockKey: string]: number | string;
 }
 
 interface FlockOption {
@@ -68,26 +65,26 @@ interface EnhancedEmbrexTimelineProps {
 }
 
 const FLOCK_COLORS = [
-  'hsl(var(--chart-1))', // blue
-  'hsl(var(--chart-2))', // green
-  'hsl(var(--chart-3))', // orange
-  'hsl(var(--chart-4))', // violet
-  'hsl(var(--chart-5))', // red
-  '#8B5CF6', // purple
-  '#06B6D4', // cyan
-  '#F59E0B', // amber
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  '#8B5CF6',
+  '#06B6D4',
+  '#F59E0B',
 ];
 
 export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProps) => {
   const [viewType, setViewType] = useState<'bar' | 'line' | 'area'>('area');
-  const [selectedFlock, setSelectedFlock] = useState<string>('all');
-  const [metric, setMetric] = useState<string>('total_eggs');
+  const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
+  const [metric, setMetric] = useState<string>('totalEggs');
   const [timeScale, setTimeScale] = useState<string>('months');
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
-  const [compareFlocks, setCompareFlocks] = useState<string[]>([]);
   const [flockSearch, setFlockSearch] = useState("");
   const [showFlockDropdown, setShowFlockDropdown] = useState(false);
+  const [isComparisonMode, setIsComparisonMode] = useState(false);
   
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
   const [importedData, setImportedData] = useState<EmbrexCSVData[]>([]);
@@ -101,12 +98,11 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
   useEffect(() => {
     loadFlockOptions();
-    loadTimelineData();
   }, []);
 
   useEffect(() => {
     loadTimelineData();
-  }, [selectedFlock, metric, timeScale, fromDate, toDate, compareFlocks, importedData]);
+  }, [selectedFlocks, metric, timeScale, fromDate, toDate, importedData]);
 
   const loadFlockOptions = async () => {
     try {
@@ -150,9 +146,9 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         `)
         .order('set_date', { ascending: true });
 
-      // Apply flock filter
-      if (selectedFlock !== 'all') {
-        query = query.eq('flocks.id', selectedFlock);
+      // Apply flock filter for comparison mode
+      if (selectedFlocks.length > 0) {
+        query = query.in('flocks.id', selectedFlocks);
       }
 
       // Apply date range filter
@@ -168,7 +164,9 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       if (error) throw error;
 
       // Process database data
-      const processedDbData: TimelineData[] = data?.map((batch: any) => {
+      const processedData = new Map<string, any>();
+
+      data?.forEach((batch: any) => {
         const date = new Date(batch.set_date);
         let period = '';
         
@@ -186,22 +184,25 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             period = format(date, 'yyyy-MM');
         }
 
-        const flockOption = flockOptions.find(f => f.id === batch.flocks.id);
+        if (!processedData.has(period)) {
+          processedData.set(period, { period });
+        }
 
-        return {
-          period,
-          totalEggs: batch.total_eggs_set || 0,
-          eggsCleared: batch.eggs_cleared || 0,
-          eggsInjected: batch.eggs_injected || 0,
-          flockName: batch.flocks.flock_name,
-          batchNumber: batch.batch_number,
-          setDate: batch.set_date,
-          flockColor: flockOption?.color || FLOCK_COLORS[0],
-        };
-      }) || [];
+        const periodData = processedData.get(period);
+        const flockOption = flockOptions.find(f => f.id === batch.flocks.id);
+        const flockKey = `${batch.flocks.flock_name}_${metric}`;
+
+        if (metric === 'totalEggs') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.total_eggs_set || 0);
+        } else if (metric === 'eggsCleared') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_cleared || 0);
+        } else if (metric === 'eggsInjected') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_injected || 0);
+        }
+      });
 
       // Process imported CSV data
-      const processedImportedData: TimelineData[] = importedData.map((record) => {
+      importedData.forEach((record) => {
         const date = new Date(record.date);
         let period = '';
         
@@ -219,42 +220,23 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             period = format(date, 'yyyy-MM');
         }
 
-        return {
-          period,
-          totalEggs: record.totalEggs,
-          eggsCleared: record.eggsCleared || 0,
-          eggsInjected: record.eggsInjected || 0,
-          flockName: record.flockName,
-          batchNumber: record.batchNumber,
-          setDate: record.date,
-          flockColor: '#8B5CF6', // Purple for imported data
-        };
+        if (!processedData.has(period)) {
+          processedData.set(period, { period });
+        }
+
+        const periodData = processedData.get(period);
+        const flockKey = `${record.flockName}_${metric}`;
+
+        if (metric === 'totalEggs') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + record.totalEggs;
+        } else if (metric === 'eggsCleared') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + (record.eggsCleared || 0);
+        } else if (metric === 'eggsInjected') {
+          periodData[flockKey] = (periodData[flockKey] || 0) + (record.eggsInjected || 0);
+        }
       });
 
-      // Combine and aggregate data
-      const allData = [...processedDbData, ...processedImportedData];
-      
-      // Aggregate by time period
-      const aggregatedData = allData.reduce((acc: Record<string, TimelineData>, curr) => {
-        if (!acc[curr.period]) {
-          acc[curr.period] = {
-            period: curr.period,
-            totalEggs: 0,
-            eggsCleared: 0,
-            eggsInjected: 0,
-            flockName: curr.flockName,
-            batchNumber: curr.batchNumber,
-            setDate: curr.setDate,
-            flockColor: curr.flockColor,
-          };
-        }
-        acc[curr.period].totalEggs += curr.totalEggs;
-        acc[curr.period].eggsCleared! += curr.eggsCleared || 0;
-        acc[curr.period].eggsInjected! += curr.eggsInjected || 0;
-        return acc;
-      }, {});
-
-      const finalData = Object.values(aggregatedData).sort((a, b) => 
+      const finalData = Array.from(processedData.values()).sort((a, b) => 
         a.period.localeCompare(b.period)
       );
 
@@ -302,7 +284,6 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         description: `Imported ${parsedData.length} records from CSV`,
       });
       
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -336,14 +317,14 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   };
 
   const handleReset = () => {
-    setSelectedFlock('all');
-    setMetric('total_eggs');
+    setSelectedFlocks([]);
+    setMetric('totalEggs');
     setTimeScale('months');
     setFromDate(undefined);
     setToDate(undefined);
-    setCompareFlocks([]);
     setFlockSearch("");
     setImportedData([]);
+    setIsComparisonMode(false);
   };
 
   const filteredFlockOptions = flockOptions.filter(flock =>
@@ -351,12 +332,29 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     flock.number.toString().includes(flockSearch)
   );
 
-  const toggleFlockComparison = (flockId: string) => {
-    if (compareFlocks.includes(flockId)) {
-      setCompareFlocks(compareFlocks.filter(id => id !== flockId));
-    } else if (compareFlocks.length < 4) {
-      setCompareFlocks([...compareFlocks, flockId]);
+  const toggleFlockSelection = (flockId: string) => {
+    if (selectedFlocks.includes(flockId)) {
+      setSelectedFlocks(selectedFlocks.filter(id => id !== flockId));
+    } else {
+      setSelectedFlocks([...selectedFlocks, flockId]);
     }
+    setIsComparisonMode(true);
+  };
+
+  const clearFlockSelection = () => {
+    setSelectedFlocks([]);
+    setIsComparisonMode(false);
+  };
+
+  const getFlockDataKeys = () => {
+    const keys: string[] = [];
+    selectedFlocks.forEach(flockId => {
+      const flock = flockOptions.find(f => f.id === flockId);
+      if (flock) {
+        keys.push(`${flock.name}_${metric}`);
+      }
+    });
+    return keys;
   };
 
   const renderChart = () => {
@@ -378,18 +376,17 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             <Activity className="w-12 h-12 text-muted-foreground mx-auto" />
             <div>
               <p className="text-muted-foreground mb-2">No data available</p>
-              <p className="text-sm text-muted-foreground">Import CSV data or adjust your filters</p>
+              <p className="text-sm text-muted-foreground">Select flocks and import CSV data or adjust your filters</p>
             </div>
           </div>
         </div>
       );
     }
 
-    const chartData = timelineData;
-
+    const dataKeys = getFlockDataKeys();
+    
     const customTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
-        const data = payload[0].payload;
         return (
           <div className="bg-card border border-border rounded-lg p-4 shadow-lg backdrop-blur-sm">
             <p className="font-semibold text-card-foreground mb-3 text-base">{label}</p>
@@ -402,9 +399,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                       style={{ backgroundColor: entry.color }}
                     />
                     <span className="text-sm text-muted-foreground">
-                      {entry.dataKey === 'totalEggs' ? 'Total Eggs' :
-                       entry.dataKey === 'eggsCleared' ? 'Eggs Cleared' :
-                       entry.dataKey === 'eggsInjected' ? 'Eggs Injected' : entry.dataKey}:
+                      {entry.dataKey.replace(`_${metric}`, '')}:
                     </span>
                   </div>
                   <span className="font-medium text-card-foreground">
@@ -412,11 +407,6 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                   </span>
                 </div>
               ))}
-              <div className="pt-2 border-t border-border mt-3">
-                <div className="text-xs text-muted-foreground">
-                  Flock: {data.flockName} | Batch: {data.batchNumber}
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -425,7 +415,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     };
 
     const commonProps = {
-      data: chartData,
+      data: timelineData,
       margin: { top: 20, right: 30, left: 20, bottom: 5 }
     };
 
@@ -434,18 +424,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         {viewType === 'bar' ? (
           <BarChart {...commonProps}>
             <defs>
-              <linearGradient id="totalEggsGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.2}/>
-              </linearGradient>
-              <linearGradient id="eggsClearedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2}/>
-              </linearGradient>
-              <linearGradient id="eggsInjectedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0.2}/>
-              </linearGradient>
+              {dataKeys.map((key, index) => (
+                <linearGradient key={key} id={`gradient${index}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.2}/>
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
             <XAxis 
@@ -461,28 +445,15 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             />
             <Tooltip content={customTooltip} />
             <Legend />
-            <Bar 
-              dataKey="totalEggs" 
-              fill="url(#totalEggsGradient)" 
-              name="Total Eggs" 
-              radius={[2, 2, 0, 0]}
-            />
-            {metric === 'all' && (
-              <>
-                <Bar 
-                  dataKey="eggsCleared" 
-                  fill="url(#eggsClearedGradient)" 
-                  name="Eggs Cleared" 
-                  radius={[2, 2, 0, 0]}
-                />
-                <Bar 
-                  dataKey="eggsInjected" 
-                  fill="url(#eggsInjectedGradient)" 
-                  name="Eggs Injected" 
-                  radius={[2, 2, 0, 0]}
-                />
-              </>
-            )}
+            {dataKeys.map((key, index) => (
+              <Bar 
+                key={key}
+                dataKey={key} 
+                fill={`url(#gradient${index})`}
+                name={key.replace(`_${metric}`, '')}
+                radius={[2, 2, 0, 0]}
+              />
+            ))}
           </BarChart>
         ) : viewType === 'line' ? (
           <LineChart {...commonProps}>
@@ -500,53 +471,28 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             />
             <Tooltip content={customTooltip} />
             <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="totalEggs" 
-              stroke="hsl(var(--chart-1))" 
-              strokeWidth={3}
-              dot={{ fill: "hsl(var(--chart-1))", strokeWidth: 2, r: 5 }}
-              activeDot={{ r: 7, stroke: "hsl(var(--chart-1))", strokeWidth: 2 }}
-              name="Total Eggs"
-            />
-            {metric === 'all' && (
-              <>
-                <Line 
-                  type="monotone" 
-                  dataKey="eggsCleared" 
-                  stroke="hsl(var(--chart-2))" 
-                  strokeWidth={3}
-                  dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 7, stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
-                  name="Eggs Cleared"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="eggsInjected" 
-                  stroke="hsl(var(--chart-3))" 
-                  strokeWidth={3}
-                  dot={{ fill: "hsl(var(--chart-3))", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 7, stroke: "hsl(var(--chart-3))", strokeWidth: 2 }}
-                  name="Eggs Injected"
-                />
-              </>
-            )}
+            {dataKeys.map((key, index) => (
+              <Line 
+                key={key}
+                type="monotone" 
+                dataKey={key} 
+                stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                strokeWidth={3}
+                dot={{ fill: FLOCK_COLORS[index % FLOCK_COLORS.length], strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 7, stroke: FLOCK_COLORS[index % FLOCK_COLORS.length], strokeWidth: 2 }}
+                name={key.replace(`_${metric}`, '')}
+              />
+            ))}
           </LineChart>
         ) : (
           <AreaChart {...commonProps}>
             <defs>
-              <linearGradient id="areaGradient1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.05}/>
-              </linearGradient>
-              <linearGradient id="areaGradient2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05}/>
-              </linearGradient>
-              <linearGradient id="areaGradient3" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0.05}/>
-              </linearGradient>
+              {dataKeys.map((key, index) => (
+                <linearGradient key={key} id={`areaGradient${index}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.05}/>
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
             <XAxis 
@@ -562,34 +508,17 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             />
             <Tooltip content={customTooltip} />
             <Legend />
-            <Area 
-              type="monotone" 
-              dataKey="totalEggs" 
-              stroke="hsl(var(--chart-1))" 
-              strokeWidth={2}
-              fill="url(#areaGradient1)"
-              name="Total Eggs"
-            />
-            {metric === 'all' && (
-              <>
-                <Area 
-                  type="monotone" 
-                  dataKey="eggsCleared" 
-                  stroke="hsl(var(--chart-2))" 
-                  strokeWidth={2}
-                  fill="url(#areaGradient2)"
-                  name="Eggs Cleared"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="eggsInjected" 
-                  stroke="hsl(var(--chart-3))" 
-                  strokeWidth={2}
-                  fill="url(#areaGradient3)"
-                  name="Eggs Injected"
-                />
-              </>
-            )}
+            {dataKeys.map((key, index) => (
+              <Area 
+                key={key}
+                type="monotone" 
+                dataKey={key} 
+                stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                strokeWidth={2}
+                fill={`url(#areaGradient${index})`}
+                name={key.replace(`_${metric}`, '')}
+              />
+            ))}
           </AreaChart>
         )}
       </ResponsiveContainer>
@@ -608,15 +537,25 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <div>
                 <CardTitle className="text-xl">Enhanced Embrex Timeline</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Advanced visualization with CSV import/export capabilities
+                  Multi-flock comparison with CSV import/export capabilities
                 </p>
               </div>
             </div>
-            {importedData.length > 0 && (
-              <Badge variant="secondary" className="gap-1">
-                <FileSpreadsheet className="h-3 w-3" />
-                {importedData.length} imported records
-              </Badge>
+            {(importedData.length > 0 || isComparisonMode) && (
+              <div className="flex gap-2">
+                {importedData.length > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    {importedData.length} imported records
+                  </Badge>
+                )}
+                {isComparisonMode && (
+                  <Badge variant="outline" className="gap-1">
+                    <GitCompare className="h-3 w-3" />
+                    Comparing {selectedFlocks.length} flocks
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -682,40 +621,91 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Flock Selection */}
+            {/* Multi-Flock Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Flock</label>
-              <Select value={selectedFlock} onValueChange={setSelectedFlock}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All flocks</SelectItem>
-                  {flockOptions.map((flock) => (
-                    <SelectItem key={flock.id} value={flock.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: flock.color }}
-                        />
-                        #{flock.number} — {flock.name}
+              <label className="text-sm font-medium">Select Flocks for Comparison</label>
+              <Popover open={showFlockDropdown} onOpenChange={setShowFlockDropdown}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-card"
+                  >
+                    <span className="truncate">
+                      {selectedFlocks.length === 0 
+                        ? "Select flocks..." 
+                        : `${selectedFlocks.length} flock${selectedFlocks.length > 1 ? 's' : ''} selected`
+                      }
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <div className="p-3 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search flocks..."
+                        value={flockSearch}
+                        onChange={(e) => setFlockSearch(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFlocks(flockOptions.map(f => f.id));
+                            setIsComparisonMode(true);
+                          }}
+                          className="text-xs"
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFlockSelection}
+                          className="text-xs"
+                        >
+                          Clear All
+                        </Button>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      {filteredFlockOptions.map((flock) => (
+                        <div key={flock.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded">
+                          <Checkbox
+                            checked={selectedFlocks.includes(flock.id)}
+                            onCheckedChange={() => toggleFlockSelection(flock.id)}
+                          />
+                          <div className="flex items-center gap-2 flex-1">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: flock.color }}
+                            />
+                            <span className="text-sm">#{flock.number} — {flock.name}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Metric Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Metrics</label>
+              <label className="text-sm font-medium">Metric</label>
               <Select value={metric} onValueChange={setMetric}>
                 <SelectTrigger className="bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="total_eggs">Total Eggs Only</SelectItem>
-                  <SelectItem value="all">All Metrics</SelectItem>
+                  <SelectItem value="totalEggs">Total Eggs</SelectItem>
+                  <SelectItem value="eggsCleared">Eggs Cleared</SelectItem>
+                  <SelectItem value="eggsInjected">Eggs Injected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -735,7 +725,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               </Select>
             </div>
 
-            {/* Enhanced View Type */}
+            {/* Chart Type */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Chart Type</label>
               <div className="grid grid-cols-3 rounded-lg bg-muted p-1 gap-1">
@@ -790,7 +780,6 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                     selected={fromDate}
                     onSelect={setFromDate}
                     initialFocus
-                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -817,19 +806,18 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                     selected={toDate}
                     onSelect={setToDate}
                     initialFocus
-                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
 
-          {/* Selected Flocks */}
-          {compareFlocks.length > 0 && (
+          {/* Selected Flocks Display */}
+          {selectedFlocks.length > 0 && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Comparing Flocks</label>
+              <label className="text-sm font-medium">Selected Flocks</label>
               <div className="flex flex-wrap gap-2">
-                {compareFlocks.map((flockId) => {
+                {selectedFlocks.map((flockId) => {
                   const flock = flockOptions.find(f => f.id === flockId);
                   return flock ? (
                     <Badge key={flockId} variant="secondary" className="gap-2">
@@ -839,10 +827,10 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                       />
                       #{flock.number} — {flock.name}
                       <button
-                        onClick={() => toggleFlockComparison(flockId)}
+                        onClick={() => toggleFlockSelection(flockId)}
                         className="ml-1 text-xs hover:text-destructive"
                       >
-                        ×
+                        <X className="h-3 w-3" />
                       </button>
                     </Badge>
                   ) : null;
@@ -855,7 +843,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         {/* Enhanced Timeline Chart */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg">Timeline Visualization</h3>
+            <h3 className="font-semibold text-lg">Multi-Flock Timeline Comparison</h3>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               {importedData.length > 0 && (
                 <div className="flex items-center gap-1">
