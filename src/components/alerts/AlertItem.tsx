@@ -34,9 +34,9 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/40';
-      case 'warning': return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800/40';
-      case 'info': return 'bg-primary/10 border-primary/20';
+      case 'critical': return 'bg-[hsl(var(--alert-critical-bg))] border-[hsl(var(--alert-critical-border))]';
+      case 'warning': return 'bg-[hsl(var(--alert-warning-bg))] border-[hsl(var(--alert-warning-border))]';
+      case 'info': return 'bg-[hsl(var(--alert-info-bg))] border-[hsl(var(--alert-info-border))]';
       default: return 'bg-muted/10 border-border';
     }
   };
@@ -44,11 +44,11 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200">Needs Attention</Badge>;
+        return <Badge className="bg-[hsl(var(--alert-critical))] text-white hover:bg-[hsl(var(--alert-critical))]/90">Needs Attention</Badge>;
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200">Monitor</Badge>;
+        return <Badge className="bg-[hsl(var(--alert-warning))] text-white hover:bg-[hsl(var(--alert-warning))]/90">Monitor</Badge>;
       case 'info':
-        return <Badge variant="secondary">Info</Badge>;
+        return <Badge className="bg-[hsl(var(--alert-info))] text-white hover:bg-[hsl(var(--alert-info))]/90">Info</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
