@@ -338,45 +338,141 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     const dataKeys = getFlockDataKeys();
     if (dataKeys.length === 0 || timelineData.length === 0) return null;
 
-    // Transform data for heatmap
-    const heatmapData = timelineData.map(item => {
-      const newItem: any = { period: item.period };
-      dataKeys.forEach((key, index) => {
-        const value = item[key] as number || 0;
-        const max = Math.max(...timelineData.map(d => (d[key] as number) || 0));
-        newItem[key] = value;
-        newItem[`${key}_intensity`] = max > 0 ? value / max : 0;
-      });
-      return newItem;
-    });
+    // Get all unique periods
+    const periods = timelineData.map(item => item.period).sort();
+    
+    // Calculate min/max values for color scaling
+    const allValues = timelineData.flatMap(item => 
+      dataKeys.map(key => (item[key] as number) || 0)
+    );
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+    
+    // Create a color intensity function
+    const getColorIntensity = (value: number) => {
+      if (maxValue === minValue) return 0.5;
+      return (value - minValue) / (maxValue - minValue);
+    };
+
+    // Get color for value
+    const getHeatmapColor = (value: number, flockIndex: number) => {
+      const intensity = getColorIntensity(value);
+      if (value === 0) return 'hsl(var(--muted))';
+      
+      // Use sophisticated color gradients based on intensity
+      const baseHue = 200 + (flockIndex * 40) % 360; // Different hue for each flock
+      const saturation = 70;
+      const lightness = Math.max(20, 80 - (intensity * 50)); // Darker = higher value
+      
+      return `hsl(${baseHue}, ${saturation}%, ${lightness}%)`;
+    };
 
     return (
-      <div className="space-y-4">
-        {dataKeys.map((key, index) => {
-          const flockName = key.replace(`_${metric}`, '');
-          return (
-            <div key={key} className="space-y-2">
-              <h4 className="text-sm font-medium">{flockName}</h4>
-              <div className="grid grid-cols-12 gap-1">
-                {heatmapData.map((item, i) => {
-                  const intensity = item[`${key}_intensity`];
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h4 className="text-lg font-semibold">Flock Performance Heatmap</h4>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
+              <span>No data</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(200, 70%, 70%)' }}></div>
+              <span>Low</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(200, 70%, 40%)' }}></div>
+              <span>Medium</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(200, 70%, 20%)' }}></div>
+              <span>High</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border border-border rounded-lg overflow-hidden bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="p-3 text-left font-medium text-muted-foreground min-w-[120px]">
+                    Flock Name
+                  </th>
+                  {periods.map(period => (
+                    <th key={period} className="p-3 text-center font-medium text-muted-foreground min-w-[100px]">
+                      {period}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dataKeys.map((key, flockIndex) => {
+                  const flockName = key.replace(`_${metric}`, '');
                   return (
-                    <div
-                      key={i}
-                      className="aspect-square rounded text-xs flex items-center justify-center text-white font-medium"
-                      style={{
-                        backgroundColor: `hsl(${FLOCK_COLORS[index % FLOCK_COLORS.length].match(/\d+/)?.[0] || 200}, 70%, ${20 + intensity * 50}%)`,
-                      }}
-                      title={`${item.period}: ${item[key]}`}
-                    >
-                      {item[key] || 0}
-                    </div>
+                    <tr key={key} className="border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors">
+                      <td className="p-3 font-medium bg-muted/30 border-r border-border">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: FLOCK_COLORS[flockIndex % FLOCK_COLORS.length] }}
+                          />
+                          {flockName}
+                        </div>
+                      </td>
+                      {periods.map(period => {
+                        const dataPoint = timelineData.find(item => item.period === period);
+                        const value = (dataPoint?.[key] as number) || 0;
+                        const backgroundColor = getHeatmapColor(value, flockIndex);
+                        const textColor = getColorIntensity(value) > 0.6 ? '#ffffff' : 'hsl(var(--foreground))';
+                        
+                        return (
+                          <td 
+                            key={period}
+                            className="p-3 text-center relative group transition-all duration-200 hover:ring-2 hover:ring-primary/50"
+                            style={{ 
+                              backgroundColor,
+                              color: textColor
+                            }}
+                          >
+                            <div className="font-medium">
+                              {value === 0 ? '—' : value.toLocaleString()}
+                            </div>
+                            {/* Tooltip on hover */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                              <div className="text-sm font-medium text-popover-foreground whitespace-nowrap">
+                                {flockName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {period}: {value.toLocaleString()} {metric === 'totalEggs' ? 'eggs' : metric === 'eggsCleared' ? 'cleared' : 'injected'}
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
-          );
-        })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        {/* Summary Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Total {metric === 'totalEggs' ? 'Eggs' : metric === 'eggsCleared' ? 'Cleared' : 'Injected'}</div>
+            <div className="text-2xl font-bold">{allValues.reduce((sum, val) => sum + val, 0).toLocaleString()}</div>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Average per Period</div>
+            <div className="text-2xl font-bold">{Math.round(allValues.reduce((sum, val) => sum + val, 0) / periods.length).toLocaleString()}</div>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Peak Performance</div>
+            <div className="text-2xl font-bold">{maxValue.toLocaleString()}</div>
+          </div>
+        </div>
       </div>
     );
   };
