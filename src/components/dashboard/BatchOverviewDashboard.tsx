@@ -288,6 +288,7 @@ const BatchOverviewDashboard: React.FC = () => {
         onStatusChange={setStatusFilter}
         onMachineChange={(m) => setMachineFilter(m)}
         onDateRangeChange={(range) => setDateRange(range)}
+        onDemoCleanup={handleDemoCleanup}
         onExport={() => {
           const toDownload = [
             { id: "overview-kpis", filename: "overview-kpis.png" },
@@ -300,7 +301,6 @@ const BatchOverviewDashboard: React.FC = () => {
             }
           })();
         }}
-        
       />
 
       <div className="grid grid-cols-12 gap-6">
