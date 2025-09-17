@@ -288,7 +288,7 @@ const BatchOverviewDashboard: React.FC = () => {
         onStatusChange={setStatusFilter}
         onMachineChange={(m) => setMachineFilter(m)}
         onDateRangeChange={(range) => setDateRange(range)}
-        onDemoCleanup={handleDemoCleanup}
+        
         onExport={() => {
           const toDownload = [
             { id: "overview-kpis", filename: "overview-kpis.png" },
@@ -507,9 +507,16 @@ const BatchOverviewDashboard: React.FC = () => {
                 <div className={`transition-all duration-300 ${!showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
                   {!showMachineUtil && (
                     <div className="space-y-3">
-                      {qaAlerts && qaAlerts.length > 0 ? (
+                       {qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 5).map((alert) => (
-                          <div key={alert.id} className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                          <div 
+                            key={alert.id} 
+                            className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => {
+                              // Navigate to the house detail page where QA can be updated
+                              window.location.href = `/house/${alert.batches?.unit_id || alert.batches?.batch_number}`;
+                            }}
+                          >
                             <div className="flex items-center gap-3">
                               <AlertTriangle className="h-4 w-4 text-destructive" />
                               <div>
@@ -525,7 +532,14 @@ const BatchOverviewDashboard: React.FC = () => {
                       )}
                       {qaAlerts && qaAlerts.length > 5 && (
                         <div className="mt-4 text-center">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // Navigate to QA entry page to see all alerts
+                              window.location.href = '/qa-entry';
+                            }}
+                          >
                             View All {qaAlerts.length} Alerts
                           </Button>
                         </div>

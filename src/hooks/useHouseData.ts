@@ -321,6 +321,7 @@ export const useQAAlerts = () => {
           *,
           batches (
             batch_number,
+            unit_id,
             flocks (flock_number, flock_name)
           )
         `)
