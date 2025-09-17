@@ -162,7 +162,7 @@ export const useHatchDropAnalysis = (batchId?: string) => {
         daysSinceSet: differenceInDays(new Date(), new Date(targetBatchData.set_date))
       };
 
-      // Find similar high-performing batches for comparison
+      // Find all comparable batches for relative performance analysis
       const { data: comparisonBatches, error: compError } = await supabase
         .from('batches')
         .select(`
@@ -212,12 +212,12 @@ export const useHatchDropAnalysis = (batchId?: string) => {
         .gte('set_date', format(subDays(new Date(), 180), 'yyyy-MM-dd'))
         .not('fertility_analysis', 'is', null)
         .order('set_date', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (compError) throw compError;
 
-      // Process and filter similar batches
-      const similarBatches = (comparisonBatches || [])
+      // Process all batches and calculate actual hatch rates
+      const allProcessedBatches = (comparisonBatches || [])
         .map((batch: any) => {
           const fert = batch.fertility_analysis?.[0];
           const qa = batch.qa_monitoring || [];
@@ -252,16 +252,81 @@ export const useHatchDropAnalysis = (batchId?: string) => {
             daysSinceSet: differenceInDays(new Date(), new Date(batch.set_date))
           };
         })
-        .filter((batch): batch is HatchDropBatch => 
-          batch !== null && 
-          batch.actualHatch >= (expectedHatch - 2) && // Within 2% of expected
-          Math.abs(batch.age - targetBatch.age) <= 10 && // Similar age
-          batch.breed === targetBatch.breed // Same breed
-        )
-        .slice(0, 3); // Top 3 similar batches
+        .filter((batch): batch is HatchDropBatch => batch !== null);
 
+      // First, try to find batches with similar characteristics (same breed, similar age)
+      let candidateBatches = allProcessedBatches.filter(batch => 
+        batch.breed === targetBatch.breed && 
+        Math.abs(batch.age - targetBatch.age) <= 15
+      );
+
+      // If no similar batches found, expand to any breed but similar age
+      if (candidateBatches.length < 3) {
+        candidateBatches = allProcessedBatches.filter(batch => 
+          Math.abs(batch.age - targetBatch.age) <= 20
+        );
+      }
+
+      // If still not enough, use all available batches
+      if (candidateBatches.length < 3) {
+        candidateBatches = allProcessedBatches;
+      }
+
+      // Sort by hatch rate and take the top 25% as "high-performing"
+      candidateBatches.sort((a, b) => b.actualHatch - a.actualHatch);
+      const topPercentileCount = Math.max(3, Math.floor(candidateBatches.length * 0.25));
+      const similarBatches = candidateBatches.slice(0, topPercentileCount).slice(0, 5);
+
+      // If no comparable batches exist, provide industry standard comparison
       if (similarBatches.length === 0) {
-        throw new Error('No similar high-performing batches found for comparison');
+        // Create synthetic comparison based on industry standards
+        const industryStandard = {
+          avgTemp: 99.5,
+          avgHumidity: 58,
+          fertility: 85,
+          qualityScore: 92,
+          earlyDead: 15,
+          lateDead: 8,
+          residuePercent: 2
+        };
+
+        const factors: {
+          name: string;
+          impact: 'critical' | 'high' | 'medium' | 'low';
+          difference: number;
+          unit: string;
+          description: string;
+        }[] = [
+          {
+            name: 'Temperature Control',
+            impact: Math.abs(targetBatch.avgTemp - industryStandard.avgTemp) > 1 ? 'critical' : 'low',
+            difference: targetBatch.avgTemp - industryStandard.avgTemp,
+            unit: '°F',
+            description: `Temperature deviation from industry standard (${industryStandard.avgTemp}°F)`
+          },
+          {
+            name: 'Initial Fertility',
+            impact: (industryStandard.fertility - targetBatch.fertility) > 5 ? 'critical' : 'medium',
+            difference: targetBatch.fertility - industryStandard.fertility,
+            unit: '%',
+            description: `Fertility compared to industry average (${industryStandard.fertility}%)`
+          }
+        ];
+
+        return {
+          underperformingBatch: targetBatch,
+          similarBatches: [],
+          factors,
+          insights: {
+            primaryCause: 'Insufficient comparison data',
+            recommendations: [
+              'Collect more historical data for better analysis',
+              'Review industry best practices for this breed and age group',
+              'Monitor environmental conditions more closely'
+            ],
+            confidenceScore: 0.4
+          }
+        };
       }
 
       // Calculate average metrics for comparison batches
@@ -448,16 +513,10 @@ export const useUnderperformingBatches = () => {
         'h_n': 87
       };
 
-      return (data || [])
+      const processedBatches = (data || [])
         .map((batch: any) => {
           const fertility = batch.fertility_analysis?.[0];
           if (!fertility || typeof fertility.hatch_percent !== 'number') return null;
-
-          const baseExpected = breedStandards[batch.flocks?.breed?.toLowerCase() || ''] || 85;
-          const ageAdjustment = batch.flocks?.age_weeks ? 
-            Math.max(-5, Math.min(5, (45 - batch.flocks.age_weeks) * 0.2)) : 0;
-          const expectedHatch = baseExpected + ageAdjustment;
-          const hatchDrop = expectedHatch - fertility.hatch_percent;
 
           return {
             id: batch.id,
@@ -466,16 +525,31 @@ export const useUnderperformingBatches = () => {
             flockNumber: batch.flocks?.flock_number || 0,
             breed: batch.flocks?.breed || 'unknown',
             actualHatch: fertility.hatch_percent,
-            expectedHatch,
-            hatchDrop,
             setDate: batch.set_date,
-            status: batch.status
+            age: batch.flocks?.age_weeks || 0,
+            daysSinceSet: differenceInDays(new Date(), new Date(batch.set_date))
           };
         })
-        .filter((batch): batch is NonNullable<typeof batch> => 
-          batch !== null && batch.hatchDrop > 5
-        )
-        .sort((a, b) => b.hatchDrop - a.hatchDrop);
+        .filter((batch): batch is NonNullable<typeof batch> => batch !== null);
+
+      if (processedBatches.length < 3) {
+        return []; // Need at least 3 batches for meaningful comparison
+      }
+
+      // Calculate the 75th percentile of hatch rates (top 25% performers)
+      const hatchRates = processedBatches.map(b => b.actualHatch).sort((a, b) => b - a);
+      const percentile75Index = Math.floor(hatchRates.length * 0.25);
+      const benchmark = hatchRates[percentile75Index] || hatchRates[0];
+
+      // Identify batches that are significantly below the 75th percentile
+      return processedBatches
+        .map(batch => ({
+          ...batch,
+          expectedHatch: benchmark,
+          hatchDrop: benchmark - batch.actualHatch
+        }))
+        .filter(batch => batch.hatchDrop > 3) // Batches more than 3% below top performers
+        .sort((a, b) => b.hatchDrop - a.hatchDrop); // Sort by worst performance first
     },
   });
 };
