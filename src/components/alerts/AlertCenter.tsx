@@ -65,7 +65,7 @@ const AlertCenter = () => {
             <AlertTriangle className="h-5 w-5" />
             Alert Center
             {alerts && alerts.length > 0 && (
-              <Badge className="ml-2 bg-[hsl(var(--alert-info))] text-white hover:bg-[hsl(var(--alert-info))]/90">
+              <Badge className="ml-2 bg-primary text-primary-foreground">
                 {alerts.length}
               </Badge>
             )}
@@ -84,19 +84,19 @@ const AlertCenter = () => {
         {/* Alert Summary */}
         <div className="flex gap-2 mt-2">
           {criticalCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-[hsl(var(--alert-critical))] text-white hover:bg-[hsl(var(--alert-critical))]/90">
+            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
               <AlertTriangle className="h-3 w-3" />
               {criticalCount} Needs Attention
             </Badge>
           )}
           {warningCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-[hsl(var(--alert-warning))] text-white hover:bg-[hsl(var(--alert-warning))]/90">
+            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
               <AlertTriangle className="h-3 w-3" />
               {warningCount} Monitor
             </Badge>
           )}
           {infoCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-[hsl(var(--alert-info))] text-white hover:bg-[hsl(var(--alert-info))]/90">
+            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
               <Bell className="h-3 w-3" />
               {infoCount} Info
             </Badge>

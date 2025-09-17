@@ -32,26 +32,15 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
     }
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'bg-[hsl(var(--alert-critical-bg))] border-[hsl(var(--alert-critical-border))]';
-      case 'warning': return 'bg-[hsl(var(--alert-warning-bg))] border-[hsl(var(--alert-warning-border))]';
-      case 'info': return 'bg-[hsl(var(--alert-info-bg))] border-[hsl(var(--alert-info-border))]';
-      default: return 'bg-muted/10 border-border';
-    }
+  const getSeverityColor = () => {
+    return 'glass-card border-border/20';
   };
 
   const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return <Badge className="bg-[hsl(var(--alert-critical))] text-white hover:bg-[hsl(var(--alert-critical))]/90">Needs Attention</Badge>;
-      case 'warning':
-        return <Badge className="bg-[hsl(var(--alert-warning))] text-white hover:bg-[hsl(var(--alert-warning))]/90">Monitor</Badge>;
-      case 'info':
-        return <Badge className="bg-[hsl(var(--alert-info))] text-white hover:bg-[hsl(var(--alert-info))]/90">Info</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
+    return <Badge className="bg-muted text-muted-foreground">
+      {severity === 'critical' ? 'Needs Attention' : 
+       severity === 'warning' ? 'Monitor' : 'Info'}
+    </Badge>;
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -97,7 +86,7 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
   };
 
   return (
-    <div className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)} cursor-pointer hover:shadow-md transition-shadow`}
+    <div className={`p-4 rounded-lg border ${getSeverityColor()} cursor-pointer hover:shadow-md transition-shadow`}
          onClick={handleViewDetails}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">

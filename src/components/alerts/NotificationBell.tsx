@@ -30,13 +30,8 @@ const NotificationBell = () => {
     }
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'border-l-4 border-l-[hsl(var(--alert-critical))] bg-[hsl(var(--alert-critical-bg))]';
-      case 'warning': return 'border-l-4 border-l-[hsl(var(--alert-warning))] bg-[hsl(var(--alert-warning-bg))]';
-      case 'info': return 'border-l-4 border-l-[hsl(var(--alert-info))] bg-[hsl(var(--alert-info-bg))]';
-      default: return 'border-l-4 border-l-muted bg-muted/20';
-    }
+  const getSeverityColor = () => {
+    return 'glass-card border-border/20';
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -86,11 +81,7 @@ const NotificationBell = () => {
         <Bell className="h-5 w-5" />
         {alertCount > 0 && (
           <Badge 
-            className={`absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 min-w-0 text-white ${
-              criticalCount > 0 
-                ? 'bg-[hsl(var(--alert-critical))] hover:bg-[hsl(var(--alert-critical))]/90' 
-                : 'bg-[hsl(var(--alert-info))] hover:bg-[hsl(var(--alert-info))]/90'
-            }`}
+            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 min-w-0 bg-primary text-primary-foreground"
           >
             {alertCount > 99 ? '99+' : alertCount}
           </Badge>
@@ -135,7 +126,7 @@ const NotificationBell = () => {
                     {alerts.slice(0, 10).map((alert) => (
                     <div 
                       key={alert.id} 
-                      className={`p-3 hover:bg-muted/50 cursor-pointer ${getSeverityColor(alert.severity)}`}
+                      className={`p-3 hover:bg-muted/50 cursor-pointer ${getSeverityColor()}`}
                       onClick={() => handleAlertClick(alert)}
                     >
                       <div className="flex items-start gap-3">
@@ -174,13 +165,7 @@ const NotificationBell = () => {
                             </div>
                             
                             <Badge 
-                              className={`text-xs ml-2 text-white ${
-                                alert.severity === 'critical' 
-                                  ? 'bg-[hsl(var(--alert-critical))] hover:bg-[hsl(var(--alert-critical))]/90' 
-                                  : alert.severity === 'warning' 
-                                  ? 'bg-[hsl(var(--alert-warning))] hover:bg-[hsl(var(--alert-warning))]/90'
-                                  : 'bg-[hsl(var(--alert-info))] hover:bg-[hsl(var(--alert-info))]/90'
-                              }`}
+                              className="text-xs ml-2 bg-muted text-muted-foreground"
                             >
                               {alert.severity === 'critical' ? 'Needs Attention' : 
                                alert.severity === 'warning' ? 'Monitor' : 'Info'}
