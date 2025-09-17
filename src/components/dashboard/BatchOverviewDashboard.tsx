@@ -509,21 +509,20 @@ const BatchOverviewDashboard: React.FC = () => {
                     <div className="space-y-3">
                        {qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 5).map((alert) => (
-                          <div 
-                            key={alert.id} 
-                            className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                            onClick={() => {
-                              // Navigate to the house detail page where QA can be updated
-                              window.location.href = `/house/${alert.batches?.unit_id || alert.batches?.batch_number}`;
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <AlertTriangle className="h-4 w-4 text-destructive" />
-                              <div>
-                                <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
-                                <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
-                              </div>
-                            </div>
+                           <div 
+                             key={alert.id} 
+                             className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                             onClick={() => {
+                               // Navigate to the QA entry page for this house
+                               navigate(`/data-entry/house/${alert.batches?.unit_id}/qa`);
+                             }}
+                           >
+                             <div className="flex items-center gap-3">
+                               <div>
+                                 <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
+                                 <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
+                               </div>
+                             </div>
                             <div className="text-xs text-muted-foreground">{alert.check_date}</div>
                           </div>
                         ))
@@ -536,8 +535,8 @@ const BatchOverviewDashboard: React.FC = () => {
                             variant="outline" 
                             size="sm"
                             onClick={() => {
-                              // Navigate to QA entry page to see all alerts
-                              window.location.href = '/qa-entry';
+                              // Navigate to data entry page to see all alerts
+                              navigate('/data-entry');
                             }}
                           >
                             View All {qaAlerts.length} Alerts
