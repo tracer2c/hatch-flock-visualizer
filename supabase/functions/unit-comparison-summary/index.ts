@@ -54,7 +54,7 @@ serve(async (req) => {
           clear_percent,
           analysis_date
         ),
-        egg_quality(
+        egg_pack_quality(
           quality_score,
           shell_quality,
           albumen_quality,
@@ -103,7 +103,7 @@ serve(async (req) => {
       }, 0) / (unitBatches.length || 1);
 
       const avgQuality = unitBatches.reduce((sum, batch) => {
-        const quality = batch.egg_quality?.[0]?.quality_score || 0;
+        const quality = batch.egg_pack_quality?.[0]?.quality_score || 0;
         return sum + quality;
       }, 0) / (unitBatches.length || 1);
 

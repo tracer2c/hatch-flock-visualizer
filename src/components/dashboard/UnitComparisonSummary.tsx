@@ -122,7 +122,7 @@ const UnitComparisonSummary: React.FC<UnitComparisonSummaryProps> = ({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            AI-Powered Unit Analysis
+            Unit Comparison Analysis
           </CardTitle>
           <Button 
             onClick={generateSummary}
@@ -211,7 +211,7 @@ const UnitComparisonSummary: React.FC<UnitComparisonSummaryProps> = ({
 
             {/* AI Analysis */}
             <div>
-              <h3 className="font-semibold mb-3 text-foreground">AI Analysis & Recommendations</h3>
+              <h3 className="font-semibold mb-3 text-foreground">Comparison Analysis & Recommendations</h3>
               <Card className="bg-gradient-to-br from-primary/5 to-secondary/5">
                 <CardContent className="pt-6">
                   {formatAISummary(summary.aiSummary)}
