@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { EmbrexTimeline } from "@/components/dashboard/EmbrexTimeline";
+import { EnhancedEmbrexTimeline } from "@/components/dashboard/EnhancedEmbrexTimeline";
 
 interface EmbrexData {
   batch_id: string;
@@ -510,7 +510,7 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
-          <EmbrexTimeline />
+          <EnhancedEmbrexTimeline />
         </TabsContent>
       </Tabs>
     </div>
