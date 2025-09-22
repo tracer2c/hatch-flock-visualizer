@@ -276,7 +276,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  {editingId ? 'Edit Residue Record' : 'Add New Residue Record'}
+                  {editingId ? 'Edit Residue Record' : 'Add New Fertility Record'}
                 </div>
                 {isFormOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
               </CardTitle>
@@ -583,7 +583,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 {data.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                      No Fertility analysis records found. Click "Add New Residue Record" to get started.
+                      No Fertility analysis records found. Click "Add New Fertility Record" to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
