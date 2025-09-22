@@ -31,7 +31,7 @@ const EmbrexDataSheetPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
-  const [comparisonMode, setComparisonMode] = useState<'all' | 'timeline'>('all');
+  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'timeline'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -270,10 +270,14 @@ const EmbrexDataSheetPage = () => {
       )}
 
       <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             All Data
+          </TabsTrigger>
+          <TabsTrigger value="selected" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Selected Flocks & Compare
           </TabsTrigger>
           <TabsTrigger value="timeline" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -388,6 +392,108 @@ const EmbrexDataSheetPage = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="selected" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Selected Flocks ({selectedFlocks.length} selected)</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {selectedFlocks.length === 0 ? "Select flocks from the All Data tab to view here." : "Viewing selected flocks and their performance comparison."}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {selectedFlocks.length > 0 ? (
+                <div className="space-y-8">
+                  {/* Selected Flocks Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Flock Name</TableHead>
+                          <TableHead>Batch #</TableHead>
+                          <TableHead className="text-right">Total Eggs</TableHead>
+                          <TableHead className="text-right">Clears</TableHead>
+                          <TableHead className="text-right">Clear %</TableHead>
+                          <TableHead className="text-right">Injected</TableHead>
+                          <TableHead className="text-right">Injected %</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {comparisonData.map((item) => (
+                          <TableRow key={item.batch_id}>
+                            <TableCell className="font-medium">{item.flock_name}</TableCell>
+                            <TableCell>{item.batch_number}</TableCell>
+                            <TableCell className="text-right font-mono">{item.total_eggs_set.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-mono">{item.eggs_cleared?.toLocaleString() ?? "—"}</TableCell>
+                            <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_cleared, item.total_eggs_set)}</TableCell>
+                            <TableCell className="text-right font-mono">{item.eggs_injected?.toLocaleString() ?? "—"}</TableCell>
+                            <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_injected, item.total_eggs_set)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Performance Comparison Chart */}
+                  <div>
+                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Performance Comparison
+                    </h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={generateComparisonChart()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis 
+                          dataKey="batch" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          fontSize={11}
+                          stroke="hsl(var(--muted-foreground))"
+                        />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                                  <p className="font-medium mb-2">{label}</p>
+                                  <p className="text-sm text-muted-foreground mb-2">{data.flock}</p>
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                      <span>Clear %:</span>
+                                      <span className="font-medium">{data.clearPct.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Injected %:</span>
+                                      <span className="font-medium">{data.injectedPct.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                      <span>Total Eggs:</span>
+                                      <span>{data.totalEggs.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="clearPct" fill="hsl(348 100% 67%)" name="Clear %" />
+                        <Bar dataKey="injectedPct" fill="hsl(142 76% 36%)" name="Injected %" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No flocks selected. Use the checkboxes in the All Data tab to select flocks for comparison.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
 
         <TabsContent value="timeline" className="space-y-4">
