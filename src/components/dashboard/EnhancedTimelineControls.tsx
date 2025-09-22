@@ -246,9 +246,10 @@ export const EnhancedTimelineControls = ({
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-2 max-h-80 z-[110]" align="start">
-                    <ScrollArea className="max-h-64">
-                      <div className="space-y-2 pr-3">
+                   <PopoverContent className="w-full p-0 z-[110] bg-background/95 backdrop-blur-md border shadow-lg" align="start">
+                     <div className="p-2">
+                       <ScrollArea className="h-64 w-full">
+                         <div className="space-y-2 pr-3">
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -286,10 +287,11 @@ export const EnhancedTimelineControls = ({
                               </Badge>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </PopoverContent>
+                         ))}
+                         </div>
+                       </ScrollArea>
+                     </div>
+                   </PopoverContent>
                 </Popover>
               </div>
 
