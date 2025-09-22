@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
+import FertilityDataEntry from "@/components/dashboard/FertilityDataEntry";
 
 
 interface HouseInfo {
@@ -26,13 +26,13 @@ const ResidueEntryPage = () => {
   const { houseId } = useParams<{ houseId: string }>();
   const navigate = useNavigate();
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
-  const [residueData, setResidueData] = useState([]);
+  const [fertilityData, setFertilityData] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (houseId) {
       loadHouseInfo();
-      loadResidueData();
+      loadFertilityData();
     }
   }, [houseId]);
 
@@ -71,34 +71,34 @@ const ResidueEntryPage = () => {
     }
   };
 
-  const loadResidueData = async () => {
+  const loadFertilityData = async () => {
     if (!houseId) return;
     
     const { data, error } = await supabase
-      .from('residue_analysis')
+      .from('fertility_analysis')
       .select('*')
       .eq('batch_id', houseId);
 
     if (error) {
       toast({
-        title: "Error loading residue data",
+        title: "Error loading fertility data",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      setResidueData(data || []);
+      setFertilityData(data || []);
     }
   };
 
-  const handleResidueDataUpdate = async (newData: any[]) => {
+  const handleFertilityDataUpdate = async (newData: any[]) => {
     const dataWithBatchId = newData.map(record => ({
       ...record,
       batch_id: houseId
     }));
     
-    setResidueData(dataWithBatchId);
+    setFertilityData(dataWithBatchId);
     toast({
-      title: "Residue Data Updated",
+      title: "Fertility Data Updated",
       description: "Data linked to current house"
     });
   };
@@ -152,7 +152,7 @@ const ResidueEntryPage = () => {
           
           {/* Breadcrumb */}
           <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; House {houseInfo.batch_number} &gt; Residue Analysis
+            Data Entry &gt; House {houseInfo.batch_number} &gt; Fertility Analysis
           </div>
           
           {/* House Context Header */}
@@ -161,7 +161,7 @@ const ResidueEntryPage = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
                   <AlertTriangle className="h-6 w-6 text-orange-600" />
-                  Residue Analysis - House {houseInfo.batch_number}
+                  Fertility Analysis - House {houseInfo.batch_number}
                 </CardTitle>
                 <Badge className={getStatusColor(houseInfo.status)}>
                   {houseInfo.status}
@@ -191,16 +191,15 @@ const ResidueEntryPage = () => {
           </Card>
         </div>
 
-        {/* Residue Data Entry Component */}
-        <ResidueDataEntry 
-          data={residueData} 
-          onDataUpdate={handleResidueDataUpdate}
+        {/* Fertility Data Entry Component */}
+        <FertilityDataEntry 
+          data={fertilityData} 
+          onDataUpdate={handleFertilityDataUpdate}
           batchInfo={{
             id: houseInfo.id,
             batch_number: houseInfo.batch_number,
             flock_name: houseInfo.flock_name,
-            flock_number: houseInfo.flock_number,
-            house_number: houseInfo.house_number
+            flock_number: houseInfo.flock_number
           }}
         />
       </div>
