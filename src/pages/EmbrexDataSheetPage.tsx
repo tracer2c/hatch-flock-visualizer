@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -257,9 +258,9 @@ const EmbrexDataSheetPage = () => {
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
                 </button>
-                <div className="h-full overflow-auto">
-                  <EnhancedEmbrexTimeline className="h-full" />
-                </div>
+                <ScrollArea className="h-full">
+                  <EnhancedEmbrexTimeline />
+                </ScrollArea>
               </div>
             </DialogContent>
           </Dialog>
