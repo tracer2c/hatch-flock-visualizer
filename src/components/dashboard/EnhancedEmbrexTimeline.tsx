@@ -761,16 +761,16 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
   return (
     <Card className={cn("overflow-hidden", className)} id="enhanced-embrex-timeline">
-      <CardHeader className="bg-gradient-to-r from-chart-1/10 to-chart-2/10 border-b">
+      <CardHeader className="bg-gradient-to-r from-chart-1/10 to-chart-2/10 border-b py-4">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <TrendingUp className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-xl">Enhanced Embrex Timeline</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <CardTitle className="text-lg">Enhanced Embrex Timeline</CardTitle>
+                <p className="text-xs text-muted-foreground">
                   Multi-{selectionMode.slice(0, -1)} comparison with CSV import/export capabilities
                 </p>
               </div>

@@ -247,15 +247,19 @@ const EmbrexDataSheetPage = () => {
                 Timeline
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Embrex Timeline Analysis
-                </DialogTitle>
-              </DialogHeader>
-              <div className="mt-4">
-                <EnhancedEmbrexTimeline />
+            <DialogContent className="w-screen h-screen max-w-none max-h-none m-0 p-0 overflow-hidden">
+              <div className="relative h-full">
+                <button 
+                  onClick={() => setTimelineOpen(false)}
+                  className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+                <div className="h-full overflow-auto">
+                  <EnhancedEmbrexTimeline className="h-full" />
+                </div>
               </div>
             </DialogContent>
           </Dialog>
