@@ -30,7 +30,7 @@ const EmbrexDataSheetPage = () => {
   const [filteredData, setFilteredData] = useState<EmbrexData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedHouses, setSelectedHouses] = useState<string[]>([]);
+  const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
   const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'compare' | 'timeline'>('all');
   const { toast } = useToast();
 
@@ -146,8 +146,8 @@ const EmbrexDataSheetPage = () => {
     return acc;
   }, { invalidCount: 0, exceedsTotalCount: 0, exceedsPercentageCount: 0 });
 
-  const comparisonData = selectedHouses.length > 0 ? 
-    filteredData.filter(item => selectedHouses.includes(item.batch_id)) : 
+  const comparisonData = selectedFlocks.length > 0 ? 
+    filteredData.filter(item => selectedFlocks.includes(item.batch_id)) : 
     filteredData;
 
   const generateComparisonChart = () => {
@@ -277,7 +277,7 @@ const EmbrexDataSheetPage = () => {
           </TabsTrigger>
           <TabsTrigger value="selected" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Selected Houses
+            Selected Flocks
           </TabsTrigger>
           <TabsTrigger value="compare" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -335,12 +335,12 @@ const EmbrexDataSheetPage = () => {
                         <TableRow key={item.batch_id} className={`hover:bg-muted/50 ${!validation.isValid ? 'bg-red-50' : ''}`}>
                           <TableCell>
                             <Checkbox
-                              checked={selectedHouses.includes(item.batch_id)}
+                              checked={selectedFlocks.includes(item.batch_id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedHouses([...selectedHouses, item.batch_id]);
+                                  setSelectedFlocks([...selectedFlocks, item.batch_id]);
                                 } else {
-                                  setSelectedHouses(selectedHouses.filter(id => id !== item.batch_id));
+                                  setSelectedFlocks(selectedFlocks.filter(id => id !== item.batch_id));
                                 }
                               }}
                             />
@@ -399,13 +399,13 @@ const EmbrexDataSheetPage = () => {
         <TabsContent value="selected" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Selected Houses ({selectedHouses.length} selected)</CardTitle>
+              <CardTitle>Selected Flocks ({selectedFlocks.length} selected)</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {selectedHouses.length === 0 ? "Select houses from the All Data tab to view here." : "Viewing only selected houses."}
+                {selectedFlocks.length === 0 ? "Select flocks from the All Data tab to view here." : "Viewing only selected flocks."}
               </p>
             </CardHeader>
             <CardContent>
-              {selectedHouses.length > 0 ? (
+              {selectedFlocks.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -436,7 +436,7 @@ const EmbrexDataSheetPage = () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No houses selected. Use the checkboxes in the All Data tab to select houses for comparison.
+                  No flocks selected. Use the checkboxes in the All Data tab to select flocks for comparison.
                 </div>
               )}
             </CardContent>
@@ -446,13 +446,13 @@ const EmbrexDataSheetPage = () => {
         <TabsContent value="compare" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>House Performance Comparison</CardTitle>
+              <CardTitle>Flock Performance Comparison</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {selectedHouses.length === 0 ? "Select houses to compare their clear vs injected rates." : `Comparing ${selectedHouses.length} houses.`}
+                {selectedFlocks.length === 0 ? "Select flocks to compare their clear vs injected rates." : `Comparing ${selectedFlocks.length} flocks.`}
               </p>
             </CardHeader>
             <CardContent>
-              {selectedHouses.length > 0 ? (
+              {selectedFlocks.length > 0 ? (
                 <div className="space-y-6">
                   <ResponsiveContainer width="100%" height={400}>
                     <BarChart data={generateComparisonChart()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -502,7 +502,7 @@ const EmbrexDataSheetPage = () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  Select houses from the All Data tab to see performance comparison charts.
+                  Select flocks from the All Data tab to see performance comparison charts.
                 </div>
               )}
             </CardContent>
@@ -510,7 +510,7 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
-          {/* Other content moved above timeline */}
+          <EnhancedEmbrexTimeline />
         </TabsContent>
       </Tabs>
       
