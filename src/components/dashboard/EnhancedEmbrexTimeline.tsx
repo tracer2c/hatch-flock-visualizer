@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { EnhancedTimelineControls } from "./EnhancedTimelineControls";
+import { DataAvailabilityFeedback } from "./DataAvailabilityFeedback";
 import { Badge } from "@/components/ui/badge";
 import { useEntityOptions } from "@/hooks/useEntityData";
 import { 
@@ -170,6 +171,49 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     });
 
     setLoading(true);
+
+    // Check data availability for all selected entities
+    try {
+      let availabilityQuery = supabase.from('batches').select('id, flock_id, unit_id, set_date');
+      
+      if (fromDate) {
+        availabilityQuery = availabilityQuery.gte('set_date', fromDate.toISOString().split('T')[0]);
+      }
+      if (toDate) {
+        availabilityQuery = availabilityQuery.lte('set_date', toDate.toISOString().split('T')[0]);
+      }
+
+      const { data: allBatches } = await availabilityQuery;
+      
+      // Find which entities have data
+      const entitiesWithData = new Set();
+      if (allBatches) {
+        allBatches.forEach(batch => {
+          if (selectionMode === 'flocks' && batch.flock_id) {
+            if (validEntities.includes(batch.flock_id)) {
+              entitiesWithData.add(batch.flock_id);
+            }
+          } else if (selectionMode === 'hatcheries' && batch.unit_id) {
+            if (validEntities.includes(batch.unit_id)) {
+              entitiesWithData.add(batch.unit_id);
+            }
+          }
+        });
+      }
+
+      const entitiesWithoutData = validEntities.filter(id => !entitiesWithData.has(id));
+      console.log(`📊 Data availability check: ${entitiesWithData.size} of ${validEntities.length} selected ${selectionMode} have data in date range`);
+      
+      if (entitiesWithoutData.length > 0) {
+        const entityNames = entitiesWithoutData.map(id => {
+          const entity = entityOptions.find(e => e.id === id);
+          return entity ? entity.name : id;
+        }).join(', ');
+        console.warn(`⚠️ No data found for: ${entityNames}`);
+      }
+    } catch (error) {
+      console.error('Error checking data availability:', error);
+    }
 
     try {
       let query = supabase
@@ -1043,6 +1087,19 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           entityOptions={entityOptions}
           onReset={handleReset}
         />
+
+        {/* Data Availability Feedback */}
+        {selectedEntities.length > 0 && !loading && (
+          <DataAvailabilityFeedback
+            selectedEntities={selectedEntities}
+            selectionMode={selectionMode}
+            timelineData={timelineData}
+            fromDate={fromDate}
+            toDate={toDate}
+            entityOptions={entityOptions}
+            metric={metric}
+          />
+        )}
 
         {/* Chart Display */}
         <div className="space-y-4">
