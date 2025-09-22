@@ -263,6 +263,7 @@ export const CollapsibleTimelineControls = ({
                     <SelectItem value="totalEggs">Total Eggs</SelectItem>
                     <SelectItem value="eggsCleared">Eggs Cleared</SelectItem>
                     <SelectItem value="eggsInjected">Eggs Injected</SelectItem>
+                    <SelectItem value="residuePercent">Residue %</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

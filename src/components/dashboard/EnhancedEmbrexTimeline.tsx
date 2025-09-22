@@ -162,6 +162,30 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       const processedData = new Map<string, any>();
 
+      // Fetch residue analysis data for selected flocks
+      let residueData: any[] = [];
+      if (metric === 'residuePercent' && selectedFlocks.length > 0) {
+        const { data: residue, error: residueError } = await supabase
+          .from('residue_analysis')
+          .select(`
+            *,
+            batches!inner (
+              id,
+              set_date,
+              flocks!inner (
+                id,
+                flock_name,
+                flock_number
+              )
+            )
+          `)
+          .in('batches.flock_id', selectedFlocks);
+        
+        if (!residueError) {
+          residueData = residue || [];
+        }
+      }
+
       // Process batch data
       batchData?.forEach((batch: any) => {
         const date = new Date(batch.set_date);
@@ -194,6 +218,37 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_cleared || 0);
         } else if (metric === 'eggsInjected') {
           periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_injected || 0);
+        }
+      });
+
+      // Process residue analysis data
+      residueData?.forEach((residue: any) => {
+        const date = new Date(residue.batches.set_date);
+        let period = '';
+        
+        switch (timeScale) {
+          case 'months':
+            period = format(date, 'yyyy-MM');
+            break;
+          case 'weeks':
+            period = format(date, 'yyyy-\'W\'ww');
+            break;
+          case 'days':
+            period = format(date, 'yyyy-MM-dd');
+            break;
+          default:
+            period = format(date, 'yyyy-MM');
+        }
+
+        if (!processedData.has(period)) {
+          processedData.set(period, { period });
+        }
+
+        const periodData = processedData.get(period);
+        const flockKey = `${residue.batches.flocks.flock_name}_${metric}`;
+
+        if (metric === 'residuePercent') {
+          periodData[flockKey] = residue.residue_percent || 0;
         }
       });
 
