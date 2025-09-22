@@ -174,7 +174,16 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
     // Check data availability for all selected entities
     try {
-      let availabilityQuery = supabase.from('batches').select('id, flock_id, unit_id, set_date');
+      let availabilityQuery = supabase.from('batches').select(`
+        id, 
+        flock_id, 
+        unit_id, 
+        set_date,
+        flocks!inner (
+          id,
+          house_number
+        )
+      `);
       
       if (fromDate) {
         availabilityQuery = availabilityQuery.gte('set_date', fromDate.toISOString().split('T')[0]);
@@ -193,6 +202,10 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             if (validEntities.includes(batch.flock_id)) {
               entitiesWithData.add(batch.flock_id);
             }
+          } else if (selectionMode === 'houses' && batch.flocks?.house_number) {
+            if (validEntities.includes(batch.flocks.house_number)) {
+              entitiesWithData.add(batch.flocks.house_number);
+            }
           } else if (selectionMode === 'hatcheries' && batch.unit_id) {
             if (validEntities.includes(batch.unit_id)) {
               entitiesWithData.add(batch.unit_id);
@@ -203,6 +216,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       const entitiesWithoutData = validEntities.filter(id => !entitiesWithData.has(id));
       console.log(`📊 Data availability check: ${entitiesWithData.size} of ${validEntities.length} selected ${selectionMode} have data in date range`);
+      console.log(`✅ Entities with data: ${Array.from(entitiesWithData).join(', ')}`);
       
       if (entitiesWithoutData.length > 0) {
         const entityNames = entitiesWithoutData.map(id => {
