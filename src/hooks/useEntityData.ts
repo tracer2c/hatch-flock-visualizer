@@ -80,9 +80,9 @@ export const useHouseOptions = () => {
   });
 };
 
-export const useUnitOptions = () => {
+export const useHatcherOptions = () => {
   return useQuery({
-    queryKey: ['unit-options'],
+    queryKey: ['hatcher-options'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('units')
@@ -103,18 +103,18 @@ export const useUnitOptions = () => {
   });
 };
 
-export const useEntityOptions = (mode: 'flocks' | 'houses' | 'units') => {
+export const useEntityOptions = (mode: 'flocks' | 'houses' | 'hatchers') => {
   const flockOptions = useFlockOptions();
   const houseOptions = useHouseOptions();
-  const unitOptions = useUnitOptions();
+  const hatcherOptions = useHatcherOptions();
 
   switch (mode) {
     case 'flocks':
       return flockOptions;
     case 'houses':
       return houseOptions;
-    case 'units':
-      return unitOptions;
+    case 'hatchers':
+      return hatcherOptions;
     default:
       return flockOptions;
   }

@@ -37,8 +37,8 @@ interface EntityOption {
 interface EnhancedTimelineControlsProps {
   viewType: 'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples';
   setViewType: (type: 'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples') => void;
-  selectionMode: 'flocks' | 'houses' | 'units';
-  setSelectionMode: (mode: 'flocks' | 'houses' | 'units') => void;
+  selectionMode: 'flocks' | 'houses' | 'hatchers';
+  setSelectionMode: (mode: 'flocks' | 'houses' | 'hatchers') => void;
   selectedEntities: string[];
   setSelectedEntities: (entities: string[]) => void;
   metric: string;
@@ -81,8 +81,15 @@ export const EnhancedTimelineControls = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (controlsRef.current && !controlsRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setShowEntityDropdown(false);
+        // Check if the click is not on a popover or dropdown content
+        const target = event.target as Element;
+        if (!target.closest('[data-radix-popper-content-wrapper]') && 
+            !target.closest('[role="dialog"]') &&
+            !target.closest('[data-radix-popover-content]') &&
+            !target.closest('.radix-popover-content')) {
+          setIsOpen(false);
+          setShowEntityDropdown(false);
+        }
       }
     };
 
@@ -116,7 +123,7 @@ export const EnhancedTimelineControls = ({
     switch (mode) {
       case 'flocks': return <Users className="h-4 w-4" />;
       case 'houses': return <Home className="h-4 w-4" />;
-      case 'units': return <Building2 className="h-4 w-4" />;
+      case 'hatchers': return <Building2 className="h-4 w-4" />;
       default: return <Users className="h-4 w-4" />;
     }
   };
@@ -182,7 +189,13 @@ export const EnhancedTimelineControls = ({
               {/* Selection Mode */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">Visualization Mode</h4>
-                <RadioGroup value={selectionMode} onValueChange={setSelectionMode} className="flex gap-6">
+                <RadioGroup 
+                  value={selectionMode} 
+                  onValueChange={(value) => {
+                    setSelectionMode(value as 'flocks' | 'houses' | 'hatchers');
+                  }} 
+                  className="flex gap-6"
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="flocks" id="flocks" />
                     <Label htmlFor="flocks" className="flex items-center gap-2 cursor-pointer">
@@ -198,10 +211,10 @@ export const EnhancedTimelineControls = ({
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="units" id="units" />
-                    <Label htmlFor="units" className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="hatchers" id="hatchers" />
+                    <Label htmlFor="hatchers" className="flex items-center gap-2 cursor-pointer">
                       <Building2 className="h-4 w-4" />
-                      Units
+                      Hatchers
                     </Label>
                   </div>
                 </RadioGroup>
@@ -215,7 +228,14 @@ export const EnhancedTimelineControls = ({
                 </h4>
                 <Popover open={showEntityDropdown} onOpenChange={setShowEntityDropdown}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-between"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEntityDropdown(!showEntityDropdown);
+                      }}
+                    >
                       <span>
                         {selectedEntities.length === 0 
                           ? `Select ${selectionMode}...` 
