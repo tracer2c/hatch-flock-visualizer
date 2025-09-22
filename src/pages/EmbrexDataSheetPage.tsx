@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { EnhancedEmbrexTimeline } from "@/components/dashboard/EnhancedEmbrexTimeline";
+import { Link } from "react-router-dom";
 
 interface EmbrexData {
   batch_id: string;
@@ -34,7 +32,6 @@ const EmbrexDataSheetPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
   const [comparisonMode, setComparisonMode] = useState<'all' | 'selected'>('all');
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -238,32 +235,12 @@ const EmbrexDataSheetPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="gap-2"
-              >
-                <TrendingUp className="h-4 w-4" />
-                Timeline
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-screen h-screen max-w-none max-h-none m-0 p-0 overflow-hidden">
-              <div className="relative h-full">
-                <button 
-                  onClick={() => setTimelineOpen(false)}
-                  className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-                <ScrollArea className="h-full">
-                  <EnhancedEmbrexTimeline />
-                </ScrollArea>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button asChild variant="outline" className="gap-2">
+            <Link to="/embrex-timeline">
+              <TrendingUp className="h-4 w-4" />
+              Timeline
+            </Link>
+          </Button>
           <Button onClick={exportToCSV} className="gap-2">
             <Download className="h-4 w-4" />
             Export CSV
