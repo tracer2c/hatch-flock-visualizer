@@ -24,7 +24,7 @@ export const DataAvailabilityFeedback = ({
   const entitiesWithData = new Set<string>();
   timelineData.forEach(item => {
     Object.keys(item).forEach(key => {
-      if (key.includes(`_${metric}_`)) {
+      if (key.includes(`_${metric}_`) && key !== 'period') {
         const entityId = key.split('_').pop();
         if (entityId) {
           entitiesWithData.add(entityId);
@@ -32,6 +32,13 @@ export const DataAvailabilityFeedback = ({
       }
     });
   });
+
+  // Debug logging to match with chart rendering
+  console.log('🔍 DataAvailabilityFeedback - Timeline data keys:', 
+    timelineData.length > 0 ? Object.keys(timelineData[0]).filter(k => k !== 'period') : []
+  );
+  console.log('📊 DataAvailabilityFeedback - Entities with data:', Array.from(entitiesWithData));
+  console.log('📋 DataAvailabilityFeedback - Selected entities:', selectedEntities);
 
   const entitiesWithoutData = selectedEntities.filter(id => !entitiesWithData.has(id));
   const hasData = entitiesWithData.size > 0;

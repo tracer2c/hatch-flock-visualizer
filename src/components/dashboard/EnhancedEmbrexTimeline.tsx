@@ -549,19 +549,33 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       });
     }
     
-    console.log('Available data keys:', keys);
-    console.log(`Found ${keys.length} data keys for ${selectedEntities.length} selected entities`);
+    console.log('🔍 Available data keys:', keys);
+    console.log(`📊 Found ${keys.length} data keys for ${selectedEntities.length} selected entities`);
     
-    // Debug: Check if all selected entities have corresponding data keys
-    const entityToKeyMap = new Map();
+    // Debug: Extract entity IDs using the same logic as DataAvailabilityFeedback
+    const entitiesWithData = new Set<string>();
     keys.forEach(key => {
-      const entityId = key.split('_')[2]; // Extract entity ID from key
-      entityToKeyMap.set(entityId, key);
+      if (key.includes(`_${metric}_`)) {
+        const entityId = key.split('_').pop(); // Same logic as DataAvailabilityFeedback
+        if (entityId) {
+          entitiesWithData.add(entityId);
+        }
+      }
     });
     
-    const missingEntities = selectedEntities.filter(entityId => !entityToKeyMap.has(entityId));
+    console.log(`📈 Entities with data in keys: ${Array.from(entitiesWithData).join(', ')}`);
+    console.log(`📋 Selected entities: ${selectedEntities.join(', ')}`);
+    
+    const missingEntities = selectedEntities.filter(entityId => !entitiesWithData.has(entityId));
     if (missingEntities.length > 0) {
-      console.warn('Missing data keys for entities:', missingEntities);
+      console.warn('⚠️ Missing data keys for entities:', missingEntities);
+      
+      // Find entity names for missing entities
+      const missingNames = missingEntities.map(id => {
+        const entity = entityOptions.find(e => e.id === id);
+        return entity ? `${entity.name} (${id})` : id;
+      });
+      console.warn('⚠️ Missing entity details:', missingNames);
     }
     
     return keys;
