@@ -151,7 +151,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         early_dead: earlyDead,
         late_dead: 0,
         cull_chicks: 0,
-        fertility_percent: totalEggs > 0 ? (calculated.fertileEggs / totalEggs) * 100 : 0,
+        // fertility_percent is a generated column - removed to prevent insert error
         hatch_percent: 0,
         hof_percent: 0,
         hoi_percent: 0,
