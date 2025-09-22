@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
+import { ArrowLeft, Egg, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
@@ -98,7 +98,7 @@ const ResidueEntryPage = () => {
     
     setResidueData(dataWithBatchId);
     toast({
-      title: "Residue Data Updated",
+      title: "Fertility Data Updated",
       description: "Data linked to current house"
     });
   };
@@ -152,7 +152,7 @@ const ResidueEntryPage = () => {
           
           {/* Breadcrumb */}
           <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; House {houseInfo.batch_number} &gt; Residue Analysis
+            Data Entry &gt; House {houseInfo.batch_number} &gt; Fertility Analysis
           </div>
           
           {/* House Context Header */}
@@ -160,8 +160,8 @@ const ResidueEntryPage = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
-                  <AlertTriangle className="h-6 w-6 text-orange-600" />
-                  Residue Analysis - House {houseInfo.batch_number}
+                  <Egg className="h-6 w-6 text-green-600" />
+                  Fertility Analysis - House {houseInfo.batch_number}
                 </CardTitle>
                 <Badge className={getStatusColor(houseInfo.status)}>
                   {houseInfo.status}
