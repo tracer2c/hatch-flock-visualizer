@@ -150,6 +150,16 @@ const EmbrexDataSheetPage = () => {
     filteredData.filter(item => selectedFlocks.includes(item.batch_id)) : 
     filteredData;
 
+  const selectedValidationSummary = comparisonData.reduce((acc, item) => {
+    const validation = validateEmbrexData(item);
+    if (!validation.isValid) {
+      acc.invalidCount++;
+      if (validation.exceedsTotal) acc.exceedsTotalCount++;
+      if (validation.exceedsPercentage) acc.exceedsPercentageCount++;
+    }
+    return acc;
+  }, { invalidCount: 0, exceedsTotalCount: 0, exceedsPercentageCount: 0 });
+
   const generateComparisonChart = () => {
     if (comparisonData.length === 0) return [];
     
@@ -240,34 +250,6 @@ const EmbrexDataSheetPage = () => {
         </div>
       </div>
 
-      {/* Validation Summary */}
-      {validationSummary.invalidCount > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
-              <AlertTriangle className="h-5 w-5" />
-              Data Validation Issues Found
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="text-orange-700">
-                <span className="font-medium">{validationSummary.invalidCount}</span> total issues
-              </div>
-              {validationSummary.exceedsTotalCount > 0 && (
-                <div className="text-orange-700">
-                  <span className="font-medium">{validationSummary.exceedsTotalCount}</span> exceed total eggs
-                </div>
-              )}
-              {validationSummary.exceedsPercentageCount > 0 && (
-                <div className="text-orange-700">
-                  <span className="font-medium">{validationSummary.exceedsPercentageCount}</span> exceed 100%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
@@ -286,6 +268,34 @@ const EmbrexDataSheetPage = () => {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
+          {/* Validation Summary for All Data */}
+          {validationSummary.invalidCount > 0 && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Data Validation Issues Found
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-orange-700">
+                    <span className="font-medium">{validationSummary.invalidCount}</span> total issues
+                  </div>
+                  {validationSummary.exceedsTotalCount > 0 && (
+                    <div className="text-orange-700">
+                      <span className="font-medium">{validationSummary.exceedsTotalCount}</span> exceed total eggs
+                    </div>
+                  )}
+                  {validationSummary.exceedsPercentageCount > 0 && (
+                    <div className="text-orange-700">
+                      <span className="font-medium">{validationSummary.exceedsPercentageCount}</span> exceed 100%
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -393,6 +403,35 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
         <TabsContent value="selected" className="space-y-4">
+          {/* Validation Summary for Selected Flocks */}
+          {selectedFlocks.length > 0 && selectedValidationSummary.invalidCount > 0 && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Data Validation Issues Found in Selected Flocks
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-orange-700">
+                    <span className="font-medium">{selectedValidationSummary.invalidCount}</span> total issues
+                  </div>
+                  {selectedValidationSummary.exceedsTotalCount > 0 && (
+                    <div className="text-orange-700">
+                      <span className="font-medium">{selectedValidationSummary.exceedsTotalCount}</span> exceed total eggs
+                    </div>
+                  )}
+                  {selectedValidationSummary.exceedsPercentageCount > 0 && (
+                    <div className="text-orange-700">
+                      <span className="font-medium">{selectedValidationSummary.exceedsPercentageCount}</span> exceed 100%
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Selected Flocks ({selectedFlocks.length} selected)</CardTitle>
