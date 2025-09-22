@@ -123,8 +123,8 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
     },
     {
       id: 'fertility',
-      title: 'Fertility Analysis',
-      description: 'Track fertility rates, early/late dead, and hatch data',
+      title: 'Residue Analysis',
+      description: 'Analyze unhatched eggs, contamination, and pathology',
       icon: Egg,
       color: 'from-green-500 to-green-600',
       count: dataCounts.fertility,
@@ -141,8 +141,8 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
     },
     {
       id: 'residue',
-      title: 'Residue Analysis',
-      description: 'Analyze unhatched eggs, contamination, and pathology',
+      title: 'Fertility Analysis',
+      description: 'Track fertility rates, early/late dead, and hatch data',
       icon: AlertTriangle,
       color: 'from-orange-500 to-orange-600',
       count: dataCounts.residue,
