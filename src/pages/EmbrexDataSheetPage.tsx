@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -31,7 +32,8 @@ const EmbrexDataSheetPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
-  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'timeline'>('all');
+  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected'>('all');
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -235,14 +237,28 @@ const EmbrexDataSheetPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setComparisonMode('timeline')} 
-            className="gap-2"
-          >
-            <TrendingUp className="h-4 w-4" />
-            Timeline
-          </Button>
+          <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Timeline
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Embrex Timeline Analysis
+                </DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                <EnhancedEmbrexTimeline />
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button onClick={exportToCSV} className="gap-2">
             <Download className="h-4 w-4" />
             Export CSV
@@ -251,7 +267,7 @@ const EmbrexDataSheetPage = () => {
       </div>
 
 
-      <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
+      <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as 'all' | 'selected')} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
