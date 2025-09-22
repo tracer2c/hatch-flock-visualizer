@@ -112,12 +112,34 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   // Handle selection mode changes - clear selected entities to prevent conflicts
   useEffect(() => {
     setSelectedEntities([]);
+    setTimelineData([]); // Clear existing data immediately
   }, [selectionMode]);
+
+  // Auto-select first 3 entities when options are loaded and no entities are selected
+  useEffect(() => {
+    if (entityOptions && entityOptions.length > 0 && selectedEntities.length === 0) {
+      const defaultEntities = entityOptions.slice(0, Math.min(3, entityOptions.length)).map(e => e.id);
+      setSelectedEntities(defaultEntities);
+    }
+  }, [entityOptions, selectedEntities.length, selectionMode]);
 
   // Removed loadFlockOptions as it's now handled by useEntityOptions hook
 
   const loadTimelineData = async () => {
+    // Validate selectedEntities match current selection mode
     if (selectedEntities.length === 0) {
+      setTimelineData([]);
+      setLoading(false);
+      return;
+    }
+
+    // Check if selectedEntities are valid for current mode
+    const validEntities = selectedEntities.filter(entityId => {
+      return entityOptions.some(option => option.id === entityId);
+    });
+
+    if (validEntities.length === 0) {
+      console.log('No valid entities for current selection mode, waiting for auto-selection...');
       setTimelineData([]);
       setLoading(false);
       return;
@@ -125,7 +147,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
     console.log('Loading timeline data:', { 
       selectionMode, 
-      selectedEntities, 
+      selectedEntities: validEntities, 
       metric, 
       timeScale,
       fromDate: fromDate?.toISOString(),
@@ -153,14 +175,19 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           )
         `);
 
+      // Use validated entities for queries
+      const validEntities = selectedEntities.filter(entityId => {
+        return entityOptions.some(option => option.id === entityId);
+      });
+
       // Apply filtering based on selection mode
       if (selectionMode === 'flocks') {
-        query = query.in('flocks.id', selectedEntities);
+        query = query.in('flocks.id', validEntities);
       } else if (selectionMode === 'houses') {
         // For houses, selectedEntities contains house_number values (like "H1", "TH2", etc.)
-        query = query.in('flocks.house_number', selectedEntities);
+        query = query.in('flocks.house_number', validEntities);
       } else if (selectionMode === 'hatcheries') {
-        query = query.in('unit_id', selectedEntities);
+        query = query.in('unit_id', validEntities);
       }
 
       if (fromDate) {
@@ -184,7 +211,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       // Fetch residue analysis data for selected entities
       let residueData: any[] = [];
-      if (metric === 'residuePercent' && selectedEntities.length > 0) {
+      if (metric === 'residuePercent' && validEntities.length > 0) {
         let residueQuery = supabase
           .from('residue_analysis')
           .select(`
@@ -204,12 +231,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
         // Apply filtering based on selection mode
         if (selectionMode === 'flocks') {
-          residueQuery = residueQuery.in('batches.flock_id', selectedEntities);
+          residueQuery = residueQuery.in('batches.flock_id', validEntities);
         } else if (selectionMode === 'houses') {
           // For houses, selectedEntities contains house_number values
-          residueQuery = residueQuery.in('batches.flocks.house_number', selectedEntities);
+          residueQuery = residueQuery.in('batches.flocks.house_number', validEntities);
         } else if (selectionMode === 'hatcheries') {
-          residueQuery = residueQuery.in('batches.unit_id', selectedEntities);
+          residueQuery = residueQuery.in('batches.unit_id', validEntities);
         }
 
         const { data: residue, error: residueError } = await residueQuery;
@@ -439,13 +466,18 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
   const getEntityDataKeys = () => {
     const keys: string[] = [];
-    selectedEntities.forEach((entityId, index) => {
-      const entity = entityOptions.find(e => e.id === entityId);
-      if (entity) {
-        // Use entity ID with index to ensure uniqueness
-        keys.push(`${entity.name}_${metric}_${entityId}_${index}`);
-      }
-    });
+    
+    // Get all keys from timeline data that aren't 'period'
+    if (timelineData.length > 0) {
+      const firstPeriod = timelineData[0];
+      Object.keys(firstPeriod).forEach(key => {
+        if (key !== 'period') {
+          keys.push(key);
+        }
+      });
+    }
+    
+    console.log('Available data keys:', keys);
     return keys;
   };
 
