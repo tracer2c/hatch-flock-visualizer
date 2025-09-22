@@ -560,7 +560,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Residue Analysis Records</CardTitle>
+          <CardTitle>Fertility Analysis Records</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -583,7 +583,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 {data.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                      No residue analysis records found. Click "Add New Residue Record" to get started.
+                      No Fertility analysis records found. Click "Add New Residue Record" to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
