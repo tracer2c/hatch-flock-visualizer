@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { EnhancedTimelineControls } from "./EnhancedTimelineControls";
 import { Badge } from "@/components/ui/badge";
@@ -559,45 +560,57 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     const dataKeys = getEntityDataKeys();
     if (dataKeys.length === 0) return null;
 
+    // Determine grid layout based on number of items
+    const getGridCols = (count: number) => {
+      if (count <= 2) return 'grid-cols-1 lg:grid-cols-2';
+      if (count <= 4) return 'grid-cols-1 md:grid-cols-2';
+      if (count <= 6) return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+      return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
+    };
+
     return (
-      <div className="grid grid-cols-2 gap-4">
-        {dataKeys.map((key, index) => {
-          const entityName = key.replace(`_${metric}`, '');
-          return (
-            <Card key={key} className="p-4">
-              <h4 className="text-sm font-medium mb-2">{entityName}</h4>
-              <ResponsiveContainer width="100%" height={150}>
-                <LineChart data={timelineData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
-                  <XAxis 
-                    dataKey="period" 
-                    fontSize={10}
-                    stroke="hsl(var(--muted-foreground))"
-                  />
-                  <YAxis 
-                    fontSize={10}
-                    stroke="hsl(var(--muted-foreground))"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey={key} 
-                    stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
-          );
-        })}
-      </div>
+      <ScrollArea className="max-h-[600px]">
+        <div className={`grid ${getGridCols(dataKeys.length)} gap-4 pr-3`}>
+          {dataKeys.map((key, index) => {
+            const entityName = key.replace(`_${metric}`, '');
+            return (
+              <Card key={key} className="p-4 min-h-[200px]">
+                <h4 className="text-sm font-medium mb-2 truncate" title={entityName}>
+                  {entityName}
+                </h4>
+                <ResponsiveContainer width="100%" height={150}>
+                  <LineChart data={timelineData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+                    <XAxis 
+                      dataKey="period" 
+                      fontSize={10}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      fontSize={10}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey={key} 
+                      stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+            );
+          })}
+        </div>
+      </ScrollArea>
     );
   };
 

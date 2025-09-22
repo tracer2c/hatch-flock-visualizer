@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -245,47 +246,49 @@ export const EnhancedTimelineControls = ({
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-2 max-h-64 overflow-y-auto" align="start">
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEntities(entityOptions.map(e => e.id))}
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEntities([])}
-                        >
-                          Clear All
-                        </Button>
-                      </div>
-                      {entityOptions.map((entity) => (
-                        <div
-                          key={entity.id}
-                          className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
-                          onClick={() => toggleEntitySelection(entity.id)}
-                        >
-                          <Checkbox
-                            checked={selectedEntities.includes(entity.id)}
-                            onChange={() => {}}
-                          />
-                          <div className="flex items-center gap-2 flex-1">
-                            <div 
-                              className="w-3 h-3 rounded-full border"
-                              style={{ backgroundColor: entity.color }}
-                            />
-                            <span className="text-sm">{entity.name}</span>
-                            <Badge variant="outline" className="text-xs">
-                              #{entity.number}
-                            </Badge>
-                          </div>
+                  <PopoverContent className="w-full p-2 max-h-80 z-[110]" align="start">
+                    <ScrollArea className="max-h-64">
+                      <div className="space-y-2 pr-3">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedEntities(entityOptions.map(e => e.id))}
+                          >
+                            Select All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedEntities([])}
+                          >
+                            Clear All
+                          </Button>
                         </div>
-                      ))}
-                    </div>
+                        {entityOptions.map((entity) => (
+                          <div
+                            key={entity.id}
+                            className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
+                            onClick={() => toggleEntitySelection(entity.id)}
+                          >
+                            <Checkbox
+                              checked={selectedEntities.includes(entity.id)}
+                              onChange={() => {}}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div 
+                                className="w-3 h-3 rounded-full border"
+                                style={{ backgroundColor: entity.color }}
+                              />
+                              <span className="text-sm">{entity.name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                #{entity.number}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </PopoverContent>
                 </Popover>
               </div>
