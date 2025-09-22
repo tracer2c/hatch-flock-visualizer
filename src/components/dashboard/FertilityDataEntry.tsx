@@ -185,13 +185,13 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         onDataUpdate(updatedData);
         toast({
           title: "Record Updated",
-          description: "Fertility record updated successfully"
+          description: "Residue record updated successfully"
         });
       } else {
         onDataUpdate([...data, result.data]);
         toast({
           title: "Record Added",
-          description: "New fertility record added successfully"
+          description: "New Residue record added successfully"
         });
       }
 
@@ -201,7 +201,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       handleCancel();
     } catch (error: any) {
       console.error('Error saving fertility data:', error);
-      const errorMessage = error?.message || error?.details || "Failed to save fertility analysis data";
+      const errorMessage = error?.message || error?.details || "Failed to save Residue analysis data";
       toast({
         title: "Error saving record",
         description: errorMessage,
@@ -325,7 +325,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            {editingId ? 'Edit Fertility Record' : 'Add New Fertility Record'}
+            {editingId ? 'Edit Fertility Record' : 'Add New Residue Record'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -422,7 +422,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
             <div className="text-center py-8">
               <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Fertility Records</h3>
-              <p className="text-gray-600">No fertility analysis records found. Click "Add New Fertility Record" to get started.</p>
+              <p className="text-gray-600">No fertility analysis records found. Click "Add New Residue Record" to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
