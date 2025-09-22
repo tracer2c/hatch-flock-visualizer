@@ -3,8 +3,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
-import { CollapsibleTimelineControls } from "./CollapsibleTimelineControls";
+import { EnhancedTimelineControls } from "./EnhancedTimelineControls";
 import { Badge } from "@/components/ui/badge";
+import { useEntityOptions } from "@/hooks/useEntityData";
 import { 
   Upload, 
   Download, 
@@ -47,7 +48,7 @@ interface TimelineData {
   [flockKey: string]: number | string;
 }
 
-interface FlockOption {
+interface EntityOption {
   id: string;
   name: string;
   number: number;
@@ -71,16 +72,15 @@ const FLOCK_COLORS = [
 
 export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProps) => {
   const [viewType, setViewType] = useState<'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples'>('area');
-  const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState<'flocks' | 'houses' | 'units'>('flocks');
+  const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
   const [metric, setMetric] = useState<string>('totalEggs');
   const [timeScale, setTimeScale] = useState<string>('months');
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
-  const [flockSearch, setFlockSearch] = useState("");
   
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
   const [importedData, setImportedData] = useState<EmbrexCSVData[]>([]);
-  const [flockOptions, setFlockOptions] = useState<FlockOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -88,43 +88,17 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadFlockOptions();
-  }, []);
+  // Use the entity options hook based on selection mode
+  const { data: entityOptions = [], isLoading: entitiesLoading } = useEntityOptions(selectionMode);
 
   useEffect(() => {
     loadTimelineData();
-  }, [selectedFlocks, metric, timeScale, fromDate, toDate, importedData]);
+  }, [selectedEntities, selectionMode, metric, timeScale, fromDate, toDate, importedData]);
 
-  const loadFlockOptions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('flocks')
-        .select('id, flock_name, flock_number')
-        .order('flock_number');
-
-      if (error) throw error;
-
-      const options: FlockOption[] = data?.map((flock, index) => ({
-        id: flock.id,
-        name: flock.flock_name,
-        number: flock.flock_number,
-        color: FLOCK_COLORS[index % FLOCK_COLORS.length]
-      })) || [];
-
-      setFlockOptions(options);
-    } catch (error) {
-      console.error('Error loading flock options:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load flock options",
-        variant: "destructive",
-      });
-    }
-  };
+  // Removed loadFlockOptions as it's now handled by useEntityOptions hook
 
   const loadTimelineData = async () => {
-    if (selectedFlocks.length === 0) {
+    if (selectedEntities.length === 0) {
       setTimelineData([]);
       setLoading(false);
       return;
@@ -142,13 +116,23 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           eggs_cleared,
           eggs_injected,
           set_date,
+          unit_id,
           flocks!inner (
             id,
             flock_name,
-            flock_number
+            flock_number,
+            house_number
           )
-        `)
-        .in('flocks.id', selectedFlocks);
+        `);
+
+      // Apply filtering based on selection mode
+      if (selectionMode === 'flocks') {
+        query = query.in('flocks.id', selectedEntities);
+      } else if (selectionMode === 'houses') {
+        query = query.in('flocks.house_number', selectedEntities);
+      } else if (selectionMode === 'units') {
+        query = query.in('unit_id', selectedEntities);
+      }
 
       if (fromDate) {
         query = query.gte('set_date', fromDate.toISOString());
@@ -162,24 +146,36 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       const processedData = new Map<string, any>();
 
-      // Fetch residue analysis data for selected flocks
+      // Fetch residue analysis data for selected entities
       let residueData: any[] = [];
-      if (metric === 'residuePercent' && selectedFlocks.length > 0) {
-        const { data: residue, error: residueError } = await supabase
+      if (metric === 'residuePercent' && selectedEntities.length > 0) {
+        let residueQuery = supabase
           .from('residue_analysis')
           .select(`
             *,
             batches!inner (
               id,
               set_date,
+              unit_id,
               flocks!inner (
                 id,
                 flock_name,
-                flock_number
+                flock_number,
+                house_number
               )
             )
-          `)
-          .in('batches.flock_id', selectedFlocks);
+          `);
+
+        // Apply filtering based on selection mode
+        if (selectionMode === 'flocks') {
+          residueQuery = residueQuery.in('batches.flock_id', selectedEntities);
+        } else if (selectionMode === 'houses') {
+          residueQuery = residueQuery.in('batches.flocks.house_number', selectedEntities);
+        } else if (selectionMode === 'units') {
+          residueQuery = residueQuery.in('batches.unit_id', selectedEntities);
+        }
+
+        const { data: residue, error: residueError } = await residueQuery;
         
         if (!residueError) {
           residueData = residue || [];
@@ -210,14 +206,24 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         }
 
         const periodData = processedData.get(period);
-        const flockKey = `${batch.flocks.flock_name}_${metric}`;
+        let entityKey = '';
+        
+        // Create entity key based on selection mode
+        if (selectionMode === 'flocks') {
+          entityKey = `${batch.flocks.flock_name}_${metric}`;
+        } else if (selectionMode === 'houses') {
+          entityKey = `House ${batch.flocks.house_number}_${metric}`;
+        } else if (selectionMode === 'units') {
+          const unit = entityOptions.find(e => e.id === batch.unit_id);
+          entityKey = `${unit?.name || 'Unknown Unit'}_${metric}`;
+        }
 
         if (metric === 'totalEggs') {
-          periodData[flockKey] = (periodData[flockKey] || 0) + batch.total_eggs_set;
+          periodData[entityKey] = (periodData[entityKey] || 0) + batch.total_eggs_set;
         } else if (metric === 'eggsCleared') {
-          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_cleared || 0);
+          periodData[entityKey] = (periodData[entityKey] || 0) + (batch.eggs_cleared || 0);
         } else if (metric === 'eggsInjected') {
-          periodData[flockKey] = (periodData[flockKey] || 0) + (batch.eggs_injected || 0);
+          periodData[entityKey] = (periodData[entityKey] || 0) + (batch.eggs_injected || 0);
         }
       });
 
@@ -245,10 +251,20 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         }
 
         const periodData = processedData.get(period);
-        const flockKey = `${residue.batches.flocks.flock_name}_${metric}`;
+        let entityKey = '';
+        
+        // Create entity key based on selection mode
+        if (selectionMode === 'flocks') {
+          entityKey = `${residue.batches.flocks.flock_name}_${metric}`;
+        } else if (selectionMode === 'houses') {
+          entityKey = `House ${residue.batches.flocks.house_number}_${metric}`;
+        } else if (selectionMode === 'units') {
+          const unit = entityOptions.find(e => e.id === residue.batches.unit_id);
+          entityKey = `${unit?.name || 'Unknown Unit'}_${metric}`;
+        }
 
         if (metric === 'residuePercent') {
-          periodData[flockKey] = residue.residue_percent || 0;
+          periodData[entityKey] = residue.residue_percent || 0;
         }
       });
 
@@ -369,28 +385,28 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   };
 
   const handleReset = () => {
-    setSelectedFlocks([]);
+    setSelectedEntities([]);
+    setSelectionMode('flocks');
     setMetric('totalEggs');
     setTimeScale('months');
     setFromDate(undefined);
     setToDate(undefined);
-    setFlockSearch("");
     setImportedData([]);
   };
 
-  const getFlockDataKeys = () => {
+  const getEntityDataKeys = () => {
     const keys: string[] = [];
-    selectedFlocks.forEach(flockId => {
-      const flock = flockOptions.find(f => f.id === flockId);
-      if (flock) {
-        keys.push(`${flock.name}_${metric}`);
+    selectedEntities.forEach(entityId => {
+      const entity = entityOptions.find(e => e.id === entityId);
+      if (entity) {
+        keys.push(`${entity.name}_${metric}`);
       }
     });
     return keys;
   };
 
   const renderHeatmapChart = () => {
-    const dataKeys = getFlockDataKeys();
+    const dataKeys = getEntityDataKeys();
     if (dataKeys.length === 0 || timelineData.length === 0) return null;
 
     // Get all unique periods
@@ -410,12 +426,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     };
 
     // Get color for value
-    const getHeatmapColor = (value: number, flockIndex: number) => {
+    const getHeatmapColor = (value: number, entityIndex: number) => {
       const intensity = getColorIntensity(value);
       if (value === 0) return 'hsl(var(--muted))';
       
       // Use sophisticated color gradients based on intensity
-      const baseHue = 200 + (flockIndex * 40) % 360; // Different hue for each flock
+      const baseHue = 200 + (entityIndex * 40) % 360; // Different hue for each entity
       const saturation = 70;
       const lightness = Math.max(20, 80 - (intensity * 50)); // Darker = higher value
       
@@ -425,7 +441,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h4 className="text-lg font-semibold">Flock Performance Heatmap</h4>
+          <h4 className="text-lg font-semibold">{selectionMode.charAt(0).toUpperCase() + selectionMode.slice(0, -1)} Performance Heatmap</h4>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
@@ -452,7 +468,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="p-3 text-left font-medium text-muted-foreground min-w-[120px]">
-                    Flock Name
+                    {selectionMode.charAt(0).toUpperCase() + selectionMode.slice(0, -1)} Name
                   </th>
                   {periods.map(period => (
                     <th key={period} className="p-3 text-center font-medium text-muted-foreground min-w-[100px]">
@@ -462,23 +478,23 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 </tr>
               </thead>
               <tbody>
-                {dataKeys.map((key, flockIndex) => {
-                  const flockName = key.replace(`_${metric}`, '');
+                {dataKeys.map((key, entityIndex) => {
+                  const entityName = key.replace(`_${metric}`, '');
                   return (
                     <tr key={key} className="border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors">
                       <td className="p-3 font-medium bg-muted/30 border-r border-border">
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full border"
-                            style={{ backgroundColor: FLOCK_COLORS[flockIndex % FLOCK_COLORS.length] }}
+                            style={{ backgroundColor: FLOCK_COLORS[entityIndex % FLOCK_COLORS.length] }}
                           />
-                          {flockName}
+                          {entityName}
                         </div>
                       </td>
                       {periods.map(period => {
                         const dataPoint = timelineData.find(item => item.period === period);
                         const value = (dataPoint?.[key] as number) || 0;
-                        const backgroundColor = getHeatmapColor(value, flockIndex);
+                        const backgroundColor = getHeatmapColor(value, entityIndex);
                         const textColor = getColorIntensity(value) > 0.6 ? '#ffffff' : 'hsl(var(--foreground))';
                         
                         return (
@@ -496,7 +512,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                             {/* Tooltip on hover */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                               <div className="text-sm font-medium text-popover-foreground whitespace-nowrap">
-                                {flockName}
+                                {entityName}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {period}: {value.toLocaleString()} {metric === 'totalEggs' ? 'eggs' : metric === 'eggsCleared' ? 'cleared' : 'injected'}
@@ -533,16 +549,16 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   };
 
   const renderSmallMultiplesChart = () => {
-    const dataKeys = getFlockDataKeys();
+    const dataKeys = getEntityDataKeys();
     if (dataKeys.length === 0) return null;
 
     return (
       <div className="grid grid-cols-2 gap-4">
         {dataKeys.map((key, index) => {
-          const flockName = key.replace(`_${metric}`, '');
+          const entityName = key.replace(`_${metric}`, '');
           return (
             <Card key={key} className="p-4">
-              <h4 className="text-sm font-medium mb-2">{flockName}</h4>
+              <h4 className="text-sm font-medium mb-2">{entityName}</h4>
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart data={timelineData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.3} />
@@ -597,14 +613,14 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             <Activity className="w-12 h-12 text-muted-foreground mx-auto" />
             <div>
               <p className="text-muted-foreground mb-2">No data available</p>
-              <p className="text-sm text-muted-foreground">Select flocks and import CSV data or adjust your filters</p>
+              <p className="text-sm text-muted-foreground">Select {selectionMode} and import CSV data or adjust your filters</p>
             </div>
           </div>
         </div>
       );
     }
 
-    const dataKeys = getFlockDataKeys();
+    const dataKeys = getEntityDataKeys();
     
     const customTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
@@ -748,11 +764,11 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <div>
                 <CardTitle className="text-xl">Enhanced Embrex Timeline</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Multi-flock comparison with CSV import/export capabilities
+                  Multi-{selectionMode.slice(0, -1)} comparison with CSV import/export capabilities
                 </p>
               </div>
             </div>
-            {(importedData.length > 0 || selectedFlocks.length > 0) && (
+            {(importedData.length > 0 || selectedEntities.length > 0) && (
               <div className="flex gap-2">
                 {importedData.length > 0 && (
                   <Badge variant="secondary" className="gap-1">
@@ -760,10 +776,10 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                     {importedData.length} imported records
                   </Badge>
                 )}
-                {selectedFlocks.length > 0 && (
+                {selectedEntities.length > 0 && (
                   <Badge variant="outline" className="gap-1">
                     <GitCompare className="h-3 w-3" />
-                    Comparing {selectedFlocks.length} flocks
+                    Comparing {selectedEntities.length} {selectionMode}
                   </Badge>
                 )}
               </div>
@@ -815,12 +831,14 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       </CardHeader>
       
       <CardContent className="space-y-6 p-6">
-        {/* Collapsible Controls */}
-        <CollapsibleTimelineControls
+        {/* Enhanced Controls */}
+        <EnhancedTimelineControls
           viewType={viewType}
           setViewType={setViewType}
-          selectedFlocks={selectedFlocks}
-          setSelectedFlocks={setSelectedFlocks}
+          selectionMode={selectionMode}
+          setSelectionMode={setSelectionMode}
+          selectedEntities={selectedEntities}
+          setSelectedEntities={setSelectedEntities}
           metric={metric}
           setMetric={setMetric}
           timeScale={timeScale}
@@ -829,18 +847,16 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           setFromDate={setFromDate}
           toDate={toDate}
           setToDate={setToDate}
-          flockSearch={flockSearch}
-          setFlockSearch={setFlockSearch}
-          flockOptions={flockOptions}
+          entityOptions={entityOptions}
           onReset={handleReset}
         />
 
         {/* Chart Display */}
         <div className="space-y-4">
-          {selectedFlocks.length > 6 && viewType !== 'heatmap' && (
+          {selectedEntities.length > 6 && viewType !== 'heatmap' && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <p className="text-sm text-amber-800">
-                <strong>Tip:</strong> With {selectedFlocks.length} flocks selected, consider using the Heatmap view for better readability.
+                <strong>Tip:</strong> With {selectedEntities.length} {selectionMode} selected, consider using the Heatmap view for better readability.
               </p>
             </div>
           )}
