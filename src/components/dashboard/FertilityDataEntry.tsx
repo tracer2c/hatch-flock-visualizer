@@ -415,13 +415,13 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Fertility Records</CardTitle>
+          <CardTitle>Residue Records</CardTitle>
         </CardHeader>
         <CardContent>
           {data.length === 0 ? (
             <div className="text-center py-8">
               <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Fertility Records</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Residue Records</h3>
               <p className="text-gray-600">No fertility analysis records found. Click "Add New Residue Record" to get started.</p>
             </div>
           ) : (
