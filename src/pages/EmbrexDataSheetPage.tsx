@@ -500,11 +500,6 @@ const EmbrexDataSheetPage = () => {
           <EnhancedEmbrexTimeline />
         </TabsContent>
       </Tabs>
-      
-      {/* Enhanced Embrex Timeline moved to bottom */}
-      <div className="mt-8">
-        <EnhancedEmbrexTimeline />
-      </div>
     </div>
   );
 };
