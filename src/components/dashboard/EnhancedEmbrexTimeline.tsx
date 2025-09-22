@@ -218,12 +218,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         
         // Create entity key based on selection mode
         if (selectionMode === 'flocks') {
-          entityKey = `${batch.flocks.flock_name}_${metric}`;
+          entityKey = `${batch.flocks.flock_name}_${metric}_${batch.flocks.id}`;
         } else if (selectionMode === 'houses') {
-          entityKey = `House ${batch.flocks.house_number}_${metric}`;
+          entityKey = `House ${batch.flocks.house_number}_${metric}_${batch.flocks.house_number}`;
         } else if (selectionMode === 'hatcheries') {
           const unit = entityOptions.find(e => e.id === batch.unit_id);
-          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}`;
+          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}_${batch.unit_id}`;
         }
 
         if (metric === 'totalEggs') {
@@ -263,12 +263,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         
         // Create entity key based on selection mode
         if (selectionMode === 'flocks') {
-          entityKey = `${residue.batches.flocks.flock_name}_${metric}`;
+          entityKey = `${residue.batches.flocks.flock_name}_${metric}_${residue.batches.flocks.id}`;
         } else if (selectionMode === 'houses') {
-          entityKey = `House ${residue.batches.flocks.house_number}_${metric}`;
+          entityKey = `House ${residue.batches.flocks.house_number}_${metric}_${residue.batches.flocks.house_number}`;
         } else if (selectionMode === 'hatcheries') {
           const unit = entityOptions.find(e => e.id === residue.batches.unit_id);
-          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}`;
+          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}_${residue.batches.unit_id}`;
         }
 
         if (metric === 'residuePercent') {
@@ -300,7 +300,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         }
 
         const periodData = processedData.get(period);
-        const flockKey = `${record.flockName}_${metric}`;
+        const flockKey = `${record.flockName}_${metric}_imported_${Math.random().toString(36).substr(2, 9)}`;
 
         if (metric === 'totalEggs') {
           periodData[flockKey] = (periodData[flockKey] || 0) + record.totalEggs;
@@ -404,10 +404,11 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
   const getEntityDataKeys = () => {
     const keys: string[] = [];
-    selectedEntities.forEach(entityId => {
+    selectedEntities.forEach((entityId, index) => {
       const entity = entityOptions.find(e => e.id === entityId);
       if (entity) {
-        keys.push(`${entity.name}_${metric}`);
+        // Use entity ID with index to ensure uniqueness
+        keys.push(`${entity.name}_${metric}_${entityId}_${index}`);
       }
     });
     return keys;
@@ -487,7 +488,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               </thead>
               <tbody>
                 {dataKeys.map((key, entityIndex) => {
-                  const entityName = key.replace(`_${metric}`, '');
+                  const entityName = key.split('_')[0]; // Extract entity name from key
                   return (
                     <tr key={key} className="border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors">
                       <td className="p-3 font-medium bg-muted/30 border-r border-border">
@@ -572,7 +573,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       <ScrollArea className="max-h-[600px]">
         <div className={`grid ${getGridCols(dataKeys.length)} gap-4 pr-3`}>
           {dataKeys.map((key, index) => {
-            const entityName = key.replace(`_${metric}`, '');
+            const entityName = key.split('_')[0]; // Extract entity name from unique key
             return (
               <Card key={key} className="p-4 min-h-[200px]">
                 <h4 className="text-sm font-medium mb-2 truncate" title={entityName}>
@@ -656,7 +657,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                       style={{ backgroundColor: entry.color }}
                     />
                     <span className="text-sm text-muted-foreground">
-                      {entry.dataKey.replace(`_${metric}`, '')}:
+                      {entry.dataKey.split('_')[0]}:
                     </span>
                   </div>
                   <span className="font-medium text-card-foreground">
@@ -692,7 +693,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 key={key}
                 dataKey={key} 
                 fill={FLOCK_COLORS[index % FLOCK_COLORS.length]}
-                name={key.replace(`_${metric}`, '')}
+                name={key.split('_')[0]}
                 stackId={viewType === 'stacked' ? 'stack' : undefined}
               />
             ))}
@@ -719,7 +720,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
                 strokeWidth={3}
                 dot={{ r: 4 }}
-                name={key.replace(`_${metric}`, '')}
+                name={key.split('_')[0]}
               />
             ))}
           </LineChart>
@@ -753,7 +754,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
                 strokeWidth={2}
                 fill={`url(#areaGradient${index})`}
-                name={key.replace(`_${metric}`, '')}
+                name={key.split('_')[0]}
               />
             ))}
           </AreaChart>
