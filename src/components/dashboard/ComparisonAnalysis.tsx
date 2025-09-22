@@ -290,7 +290,7 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
           </TabsTrigger>
           <TabsTrigger value="units" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Units
+            Hatcheries
           </TabsTrigger>
           <TabsTrigger value="breeds" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
