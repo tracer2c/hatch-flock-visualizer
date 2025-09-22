@@ -16,12 +16,15 @@ import {
   Activity,
   Grid3X3,
   GitCompare,
-  RotateCcw
+  RotateCcw,
+  AlertCircle,
+  Users
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart, 
   Bar, 
@@ -82,7 +85,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
   
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
   const [importedData, setImportedData] = useState<EmbrexCSVData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
@@ -91,6 +94,14 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
   // Use the entity options hook based on selection mode
   const { data: entityOptions = [], isLoading: entitiesLoading } = useEntityOptions(selectionMode);
+
+  // Auto-select first 3 entities when options are loaded and no entities are selected
+  useEffect(() => {
+    if (entityOptions && entityOptions.length > 0 && selectedEntities.length === 0) {
+      const defaultEntities = entityOptions.slice(0, Math.min(3, entityOptions.length)).map(e => e.id);
+      setSelectedEntities(defaultEntities);
+    }
+  }, [entityOptions, selectedEntities.length]);
 
   useEffect(() => {
     if (entityOptions && entityOptions.length > 0) {
@@ -111,6 +122,15 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       setLoading(false);
       return;
     }
+
+    console.log('Loading timeline data:', { 
+      selectionMode, 
+      selectedEntities, 
+      metric, 
+      timeScale,
+      fromDate: fromDate?.toISOString(),
+      toDate: toDate?.toISOString()
+    });
 
     setLoading(true);
 
@@ -137,6 +157,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       if (selectionMode === 'flocks') {
         query = query.in('flocks.id', selectedEntities);
       } else if (selectionMode === 'houses') {
+        // For houses, selectedEntities contains house_number values (like "H1", "TH2", etc.)
         query = query.in('flocks.house_number', selectedEntities);
       } else if (selectionMode === 'hatcheries') {
         query = query.in('unit_id', selectedEntities);
@@ -151,6 +172,13 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
 
       const { data: batchData, error } = await query;
       if (error) throw error;
+
+      console.log('Batch data loaded:', { 
+        count: batchData?.length || 0, 
+        selectionMode, 
+        selectedEntities,
+        sampleData: batchData?.slice(0, 2)
+      });
 
       const processedData = new Map<string, any>();
 
@@ -178,6 +206,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         if (selectionMode === 'flocks') {
           residueQuery = residueQuery.in('batches.flock_id', selectedEntities);
         } else if (selectionMode === 'houses') {
+          // For houses, selectedEntities contains house_number values
           residueQuery = residueQuery.in('batches.flocks.house_number', selectedEntities);
         } else if (selectionMode === 'hatcheries') {
           residueQuery = residueQuery.in('batches.unit_id', selectedEntities);
@@ -314,6 +343,12 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
       const finalData = Array.from(processedData.values()).sort((a, b) => 
         a.period.localeCompare(b.period)
       );
+
+      console.log('Final timeline data:', { 
+        periods: finalData.length,
+        dataKeys: Object.keys(finalData[0] || {}).filter(k => k !== 'period'),
+        samplePeriod: finalData[0]
+      });
 
       setTimelineData(finalData);
     } catch (error) {
@@ -763,7 +798,70 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     );
   };
 
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-muted/20 rounded-lg border-2 border-dashed border-muted-foreground/25">
+      <div className="p-3 bg-muted/50 rounded-full mb-4">
+        <Users className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">No {selectionMode} Selected</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-md">
+        Select one or more {selectionMode} from the dropdown above to view timeline data and analytics.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Available: {entityOptions.length} {selectionMode}
+      </p>
+    </div>
+  );
+
+  const renderLoadingState = () => (
+    <div className="space-y-4">
+      <Skeleton className="h-4 w-48" />
+      <Skeleton className="h-64 w-full" />
+      <div className="flex gap-2">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+    </div>
+  );
+
+  const renderNoDataState = () => (
+    <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-muted/20 rounded-lg border border-muted-foreground/25">
+      <div className="p-3 bg-muted/50 rounded-full mb-4">
+        <AlertCircle className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-md">
+        No timeline data found for the selected {selectionMode} in the specified date range.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Try adjusting your date range or selecting different {selectionMode}.
+      </p>
+    </div>
+  );
+
   const renderChart = () => {
+    // Show loading state while entities are loading
+    if (entitiesLoading) {
+      return renderLoadingState();
+    }
+
+    // Show empty state if no entities selected
+    if (selectedEntities.length === 0) {
+      return renderEmptyState();
+    }
+
+    // Show loading state while data is loading
+    if (loading) {
+      return renderLoadingState();
+    }
+
+    // Show no data state if no timeline data
+    if (timelineData.length === 0) {
+      return renderNoDataState();
+    }
+
+    // Render the appropriate chart
     if (viewType === 'heatmap') {
       return renderHeatmapChart();
     }
