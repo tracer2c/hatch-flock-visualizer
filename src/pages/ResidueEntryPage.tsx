@@ -98,7 +98,7 @@ const ResidueEntryPage = () => {
     
     setResidueData(dataWithBatchId);
     toast({
-      title: "Fertility Data Updated",
+      title: "Residue Data Updated",
       description: "Data linked to current house"
     });
   };
@@ -152,7 +152,7 @@ const ResidueEntryPage = () => {
           
           {/* Breadcrumb */}
           <div className="text-sm text-gray-600 mb-4">
-            Data Entry &gt; House {houseInfo.batch_number} &gt; Fertility Analysis
+            Data Entry &gt; {houseInfo.flock_name} # {houseInfo.house_number} &gt; Residue Analysis
           </div>
           
           {/* House Context Header */}
@@ -161,7 +161,7 @@ const ResidueEntryPage = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
                   <Egg className="h-6 w-6 text-green-600" />
-                  Fertility Analysis - House {houseInfo.batch_number}
+                  Residue Analysis - {houseInfo.flock_name} # {houseInfo.house_number}
                 </CardTitle>
                 <Badge className={getStatusColor(houseInfo.status)}>
                   {houseInfo.status}
