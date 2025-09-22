@@ -63,16 +63,31 @@ interface EnhancedEmbrexTimelineProps {
   className?: string;
 }
 
-const FLOCK_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#8B5CF6',
-  '#06B6D4',
-  '#F59E0B',
-];
+// Enhanced color generation for unlimited entities
+const generateEntityColor = (index: number): string => {
+  const baseColors = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+    '#8B5CF6', '#06B6D4', '#F59E0B', '#EF4444', '#10B981',
+    '#F97316', '#6366F1', '#EC4899', '#84CC16', '#F472B6',
+    '#22D3EE', '#A78BFA', '#FB923C', '#34D399', '#FBBF24',
+    '#F87171', '#60A5FA', '#A3E635', '#C084FC', '#38BDF8',
+    '#4ADE80', '#FACC15', '#FB7185', '#818CF8', '#2DD4BF'
+  ];
+  
+  if (index < baseColors.length) {
+    return baseColors[index];
+  }
+  
+  // Generate additional colors using golden angle for good distribution
+  const hue = (index * 137.5) % 360;
+  const saturation = 70 + (index % 3) * 10;
+  const lightness = 50 + (index % 4) * 5;
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
 
 export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProps) => {
   const [viewType, setViewType] = useState<'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples'>('area');
@@ -371,11 +386,24 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         a.period.localeCompare(b.period)
       );
 
+      const allDataKeys = Object.keys(finalData[0] || {}).filter(k => k !== 'period');
       console.log('Final timeline data:', { 
         periods: finalData.length,
-        dataKeys: Object.keys(finalData[0] || {}).filter(k => k !== 'period'),
+        dataKeys: allDataKeys,
+        dataKeysCount: allDataKeys.length,
+        selectedEntitiesCount: selectedEntities.length,
         samplePeriod: finalData[0]
       });
+
+      // Log potential rendering issues
+      if (allDataKeys.length !== selectedEntities.length) {
+        console.warn('Data key count mismatch:', {
+          expectedEntities: selectedEntities.length,
+          actualDataKeys: allDataKeys.length,
+          selectedEntities,
+          dataKeys: allDataKeys
+        });
+      }
 
       setTimelineData(finalData);
     } catch (error) {
@@ -478,6 +506,20 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
     }
     
     console.log('Available data keys:', keys);
+    console.log(`Found ${keys.length} data keys for ${selectedEntities.length} selected entities`);
+    
+    // Debug: Check if all selected entities have corresponding data keys
+    const entityToKeyMap = new Map();
+    keys.forEach(key => {
+      const entityId = key.split('_')[2]; // Extract entity ID from key
+      entityToKeyMap.set(entityId, key);
+    });
+    
+    const missingEntities = selectedEntities.filter(entityId => !entityToKeyMap.has(entityId));
+    if (missingEntities.length > 0) {
+      console.warn('Missing data keys for entities:', missingEntities);
+    }
+    
     return keys;
   };
 
@@ -562,7 +604,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full border"
-                            style={{ backgroundColor: FLOCK_COLORS[entityIndex % FLOCK_COLORS.length] }}
+                            style={{ backgroundColor: generateEntityColor(entityIndex) }}
                           />
                           {entityName}
                         </div>
@@ -665,10 +707,10 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                         borderRadius: '8px',
                       }}
                     />
-                    <Line 
+                     <Line 
                       type="monotone" 
                       dataKey={key} 
-                      stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                      stroke={generateEntityColor(index)}
                       strokeWidth={2}
                       dot={{ r: 2 }}
                     />
@@ -759,7 +801,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
               <Bar 
                 key={key}
                 dataKey={key} 
-                fill={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                fill={generateEntityColor(index)}
                 name={key.split('_')[0]}
                 stackId={viewType === 'stacked' ? 'stack' : undefined}
               />
@@ -784,7 +826,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 key={key}
                 type="monotone" 
                 dataKey={key} 
-                stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                stroke={generateEntityColor(index)}
                 strokeWidth={3}
                 dot={{ r: 4 }}
                 name={key.split('_')[0]}
@@ -796,8 +838,8 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
             <defs>
               {dataKeys.map((key, index) => (
                 <linearGradient key={key} id={`areaGradient${index}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={FLOCK_COLORS[index % FLOCK_COLORS.length]} stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor={generateEntityColor(index)} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={generateEntityColor(index)} stopOpacity={0.1}/>
                 </linearGradient>
               ))}
             </defs>
@@ -818,7 +860,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
                 key={key}
                 type="monotone" 
                 dataKey={key} 
-                stroke={FLOCK_COLORS[index % FLOCK_COLORS.length]}
+                stroke={generateEntityColor(index)}
                 strokeWidth={2}
                 fill={`url(#areaGradient${index})`}
                 name={key.split('_')[0]}
