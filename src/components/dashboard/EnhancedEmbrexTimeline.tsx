@@ -72,7 +72,7 @@ const FLOCK_COLORS = [
 
 export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProps) => {
   const [viewType, setViewType] = useState<'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples'>('area');
-  const [selectionMode, setSelectionMode] = useState<'flocks' | 'houses' | 'hatchers'>('flocks');
+  const [selectionMode, setSelectionMode] = useState<'flocks' | 'houses' | 'hatcheries'>('flocks');
   const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
   const [metric, setMetric] = useState<string>('totalEggs');
   const [timeScale, setTimeScale] = useState<string>('months');
@@ -137,7 +137,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
         query = query.in('flocks.id', selectedEntities);
       } else if (selectionMode === 'houses') {
         query = query.in('flocks.house_number', selectedEntities);
-      } else if (selectionMode === 'hatchers') {
+      } else if (selectionMode === 'hatcheries') {
         query = query.in('unit_id', selectedEntities);
       }
 
@@ -178,7 +178,7 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           residueQuery = residueQuery.in('batches.flock_id', selectedEntities);
         } else if (selectionMode === 'houses') {
           residueQuery = residueQuery.in('batches.flocks.house_number', selectedEntities);
-        } else if (selectionMode === 'hatchers') {
+        } else if (selectionMode === 'hatcheries') {
           residueQuery = residueQuery.in('batches.unit_id', selectedEntities);
         }
 
@@ -220,9 +220,9 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           entityKey = `${batch.flocks.flock_name}_${metric}`;
         } else if (selectionMode === 'houses') {
           entityKey = `House ${batch.flocks.house_number}_${metric}`;
-        } else if (selectionMode === 'hatchers') {
+        } else if (selectionMode === 'hatcheries') {
           const unit = entityOptions.find(e => e.id === batch.unit_id);
-          entityKey = `${unit?.name || 'Unknown Hatcher'}_${metric}`;
+          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}`;
         }
 
         if (metric === 'totalEggs') {
@@ -265,9 +265,9 @@ export const EnhancedEmbrexTimeline = ({ className }: EnhancedEmbrexTimelineProp
           entityKey = `${residue.batches.flocks.flock_name}_${metric}`;
         } else if (selectionMode === 'houses') {
           entityKey = `House ${residue.batches.flocks.house_number}_${metric}`;
-        } else if (selectionMode === 'hatchers') {
+        } else if (selectionMode === 'hatcheries') {
           const unit = entityOptions.find(e => e.id === residue.batches.unit_id);
-          entityKey = `${unit?.name || 'Unknown Hatcher'}_${metric}`;
+          entityKey = `${unit?.name || 'Unknown Hatchery'}_${metric}`;
         }
 
         if (metric === 'residuePercent') {

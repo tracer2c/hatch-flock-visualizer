@@ -177,7 +177,7 @@ const EmbrexDataSheetPage = () => {
       "Flock #",
       "Flock Name", 
       "Age (weeks)",
-      "Batch #",
+      "Houses",
       "Set Date",
       "Status",
       "Total Eggs",
@@ -252,7 +252,7 @@ const EmbrexDataSheetPage = () => {
 
 
       <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             All Data
@@ -260,10 +260,6 @@ const EmbrexDataSheetPage = () => {
           <TabsTrigger value="selected" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Selected Flocks & Compare
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Timeline
           </TabsTrigger>
         </TabsList>
 
@@ -324,7 +320,7 @@ const EmbrexDataSheetPage = () => {
                       <TableHead>Flock #</TableHead>
                       <TableHead>Flock Name</TableHead>
                       <TableHead>Age (weeks)</TableHead>
-                      <TableHead>Batch #</TableHead>
+                      <TableHead>Houses</TableHead>
                       <TableHead>Set Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Total Eggs</TableHead>
@@ -535,9 +531,6 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
 
-        <TabsContent value="timeline" className="space-y-4">
-          <EnhancedEmbrexTimeline />
-        </TabsContent>
       </Tabs>
     </div>
   );

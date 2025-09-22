@@ -103,7 +103,7 @@ export const useHatcherOptions = () => {
   });
 };
 
-export const useEntityOptions = (mode: 'flocks' | 'houses' | 'hatchers') => {
+export const useEntityOptions = (mode: 'flocks' | 'houses' | 'hatcheries') => {
   const flockOptions = useFlockOptions();
   const houseOptions = useHouseOptions();
   const hatcherOptions = useHatcherOptions();
@@ -113,7 +113,7 @@ export const useEntityOptions = (mode: 'flocks' | 'houses' | 'hatchers') => {
       return flockOptions;
     case 'houses':
       return houseOptions;
-    case 'hatchers':
+    case 'hatcheries':
       return hatcherOptions;
     default:
       return flockOptions;

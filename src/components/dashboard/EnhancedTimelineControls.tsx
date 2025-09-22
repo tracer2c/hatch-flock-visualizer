@@ -37,8 +37,8 @@ interface EntityOption {
 interface EnhancedTimelineControlsProps {
   viewType: 'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples';
   setViewType: (type: 'bar' | 'line' | 'area' | 'stacked' | 'heatmap' | 'small-multiples') => void;
-  selectionMode: 'flocks' | 'houses' | 'hatchers';
-  setSelectionMode: (mode: 'flocks' | 'houses' | 'hatchers') => void;
+  selectionMode: 'flocks' | 'houses' | 'hatcheries';
+  setSelectionMode: (mode: 'flocks' | 'houses' | 'hatcheries') => void;
   selectedEntities: string[];
   setSelectedEntities: (entities: string[]) => void;
   metric: string;
@@ -123,7 +123,7 @@ export const EnhancedTimelineControls = ({
     switch (mode) {
       case 'flocks': return <Users className="h-4 w-4" />;
       case 'houses': return <Home className="h-4 w-4" />;
-      case 'hatchers': return <Building2 className="h-4 w-4" />;
+      case 'hatcheries': return <Building2 className="h-4 w-4" />;
       default: return <Users className="h-4 w-4" />;
     }
   };
@@ -192,8 +192,8 @@ export const EnhancedTimelineControls = ({
                 <RadioGroup 
                   value={selectionMode} 
                   onValueChange={(value) => {
-                    setSelectionMode(value as 'flocks' | 'houses' | 'hatchers');
-                  }} 
+                    setSelectionMode(value as 'flocks' | 'houses' | 'hatcheries');
+                  }}
                   className="flex gap-6"
                 >
                   <div className="flex items-center space-x-2">
@@ -211,10 +211,10 @@ export const EnhancedTimelineControls = ({
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="hatchers" id="hatchers" />
-                    <Label htmlFor="hatchers" className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="hatcheries" id="hatcheries" />
+                    <Label htmlFor="hatcheries" className="flex items-center gap-2 cursor-pointer">
                       <Building2 className="h-4 w-4" />
-                      Hatchers
+                      Hatcheries
                     </Label>
                   </div>
                 </RadioGroup>
