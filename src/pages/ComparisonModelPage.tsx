@@ -62,7 +62,7 @@ const ComparisonModelPage = () => {
           </CardContent>
         </Card>
       ) : (
-        <ComparisonAnalysis data={comparisonData || []} filters={filters} />
+        <ComparisonAnalysis data={comparisonData || []} />
       )}
     </div>
   );

@@ -27,9 +27,6 @@ import ComparisonModelPage from "./pages/ComparisonModelPage";
 import UnitComparisonPage from "./pages/UnitComparisonPage";
 import HouseFlowPage from "./pages/HouseFlowPage";
 import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
-import MachineDetailPage from "./pages/MachineDetailPage";
-import HouseDetailPage from "./pages/HouseDetailPage";
-import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -63,7 +60,6 @@ const App = () => (
                             <Route path="/process-flow" element={<ProcessFlowPage />} />
                             <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
-                            <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/unit-comparison" element={<UnitComparisonPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
@@ -79,8 +75,6 @@ const App = () => (
                             <Route path="/management" element={<ManagementPage />} />
                             <Route path="/report" element={<ProjectReport />} />
                             <Route path="/chat" element={<ChatPage />} />
-                            <Route path="/machine-detail/:machineId" element={<MachineDetailPage />} />
-                            <Route path="/house-detail/:houseId" element={<HouseDetailPage />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>

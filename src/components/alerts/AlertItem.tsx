@@ -2,8 +2,7 @@ import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/useAlerts";
-import { Info, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock, Eye, Wind, RotateCcw, Skull, TrendingUp, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { AlertTriangle, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock } from "lucide-react";
 
 interface AlertItemProps {
   alert: any;
@@ -13,7 +12,6 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
   const acknowledgeAlert = useAcknowledgeAlert();
   const resolveAlert = useResolveAlert();
   const dismissAlert = useDismissAlert();
-  const navigate = useNavigate();
 
   const getAlertIcon = (alertType: string) => {
     switch (alertType) {
@@ -21,26 +19,30 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
       case 'humidity': return <Droplets className="h-4 w-4" />;
       case 'critical_day': return <Calendar className="h-4 w-4" />;
       case 'machine_maintenance': return <Wrench className="h-4 w-4" />;
-      case 'co2_level': return <Wind className="h-4 w-4" />;
-      case 'ventilation_rate': return <Wind className="h-4 w-4" />;
-      case 'turning_frequency': return <RotateCcw className="h-4 w-4" />;
-      case 'mortality_spike': return <Skull className="h-4 w-4" />;
-      case 'hatch_approaching': return <Clock className="h-4 w-4" />;
-      case 'batch_status_change': return <TrendingUp className="h-4 w-4" />;
-      case 'checklist_incomplete': return <AlertTriangle className="h-4 w-4" />;
-      default: return <Info className="h-4 w-4" />;
+      default: return <AlertTriangle className="h-4 w-4" />;
     }
   };
 
-  const getSeverityColor = () => {
-    return 'glass-card border-border/20';
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-destructive/10 border-destructive/20';
+      case 'warning': return 'bg-orange-100 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800/40';
+      case 'info': return 'bg-primary/10 border-primary/20';
+      default: return 'bg-muted/10 border-border';
+    }
   };
 
   const getSeverityBadge = (severity: string) => {
-    return <Badge className="bg-muted text-muted-foreground">
-      {severity === 'critical' ? 'Needs Attention' : 
-       severity === 'warning' ? 'Monitor' : 'Info'}
-    </Badge>;
+    switch (severity) {
+      case 'critical':
+        return <Badge variant="destructive">Critical</Badge>;
+      case 'warning':
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200">Warning</Badge>;
+      case 'info':
+        return <Badge variant="secondary">Info</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -54,40 +56,8 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
-  const handleViewDetails = () => {
-    const alertContext = {
-      alertId: alert.id,
-      alertType: alert.alert_type,
-      severity: alert.severity,
-      message: alert.message,
-      batchDay: alert.batch_day,
-      currentTemperature: alert.current_temperature,
-      currentHumidity: alert.current_humidity,
-      co2Level: alert.co2_level,
-      ventilationRate: alert.ventilation_rate,
-      turningFrequency: alert.turning_frequency,
-      mortalityCount: alert.mortality_count
-    };
-
-    if (alert.batch_id) {
-      // Navigate to house detail page with alert context
-      navigate(`/house-detail/${alert.batch_id}`, { 
-        state: { alertContext } 
-      });
-    } else if (alert.machine_id) {
-      // Navigate to machine detail page with alert context
-      navigate(`/machine-detail/${alert.machine_id}`, { 
-        state: { alertContext } 
-      });
-    } else {
-      // Fallback to data entry page
-      navigate(`/data-entry`);
-    }
-  };
-
   return (
-    <div className={`p-4 rounded-lg border ${getSeverityColor()} cursor-pointer hover:shadow-md transition-shadow`}
-         onClick={handleViewDetails}>
+    <div className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           {getAlertIcon(alert.alert_type)}
@@ -125,46 +95,15 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
         {alert.current_humidity && (
           <div>{alert.current_humidity}%</div>
         )}
-
-        {alert.co2_level && (
-          <div>{alert.co2_level} ppm CO2</div>
-        )}
-
-        {alert.ventilation_rate && (
-          <div>{alert.ventilation_rate} CFM</div>
-        )}
-
-        {alert.turning_frequency && (
-          <div>{alert.turning_frequency}/day turns</div>
-        )}
-
-        {alert.mortality_count && (
-          <div>{alert.mortality_count} deaths</div>
-        )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleViewDetails();
-          }}
-        >
-          <Eye className="h-3 w-3 mr-1" />
-          View Details
-        </Button>
-        
         {alert.status === 'active' && (
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              acknowledgeAlert.mutate(alert.id);
-            }}
+            onClick={() => acknowledgeAlert.mutate(alert.id)}
             disabled={acknowledgeAlert.isPending}
           >
             <Check className="h-3 w-3 mr-1" />
@@ -175,10 +114,7 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
         <Button
           variant="outline"
           size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            resolveAlert.mutate(alert.id);
-          }}
+          onClick={() => resolveAlert.mutate(alert.id)}
           disabled={resolveAlert.isPending}
         >
           <Check className="h-3 w-3 mr-1" />
@@ -188,10 +124,7 @@ const AlertItem: React.FC<AlertItemProps> = ({ alert }) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            dismissAlert.mutate(alert.id);
-          }}
+          onClick={() => dismissAlert.mutate(alert.id)}
           disabled={dismissAlert.isPending}
         >
           <X className="h-3 w-3 mr-1" />

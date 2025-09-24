@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,7 +8,6 @@ import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/u
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   const { data: alerts, isLoading } = useActiveAlerts();
   const checkAlerts = useCheckAlerts();
   const acknowledgeAlert = useAcknowledgeAlert();
@@ -30,8 +28,13 @@ const NotificationBell = () => {
     }
   };
 
-  const getSeverityColor = () => {
-    return 'glass-card border-border/20';
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'border-l-4 border-l-destructive bg-destructive/5';
+      case 'warning': return 'border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-900/10';
+      case 'info': return 'border-l-4 border-l-primary bg-primary/5';
+      default: return 'border-l-4 border-l-muted';
+    }
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -43,30 +46,6 @@ const NotificationBell = () => {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
-  };
-
-  const handleAlertClick = (alert: any) => {
-    if (!alert.batch_id) return;
-    
-    setIsOpen(false);
-    
-    switch (alert.alert_type) {
-      case 'temperature':
-      case 'humidity':
-        navigate(`/data-entry/house/${alert.batch_id}/qa`);
-        break;
-      case 'checklist_incomplete':
-        navigate(`/checklist/house/${alert.batch_id}`);
-        break;
-      case 'machine_maintenance':
-        if (alert.machine_id) {
-          navigate(`/machine-detail/${alert.machine_id}`);
-        }
-        break;
-      default:
-        navigate(`/house-detail/${alert.batch_id}`);
-        break;
-    }
   };
 
   return (
@@ -81,7 +60,8 @@ const NotificationBell = () => {
         <Bell className="h-5 w-5" />
         {alertCount > 0 && (
           <Badge 
-            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 min-w-0 bg-primary text-primary-foreground"
+            variant={criticalCount > 0 ? "destructive" : "default"}
+            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 min-w-0"
           >
             {alertCount > 99 ? '99+' : alertCount}
           </Badge>
@@ -124,11 +104,7 @@ const NotificationBell = () => {
                 ) : alerts && alerts.length > 0 ? (
                   <div className="divide-y divide-border">
                     {alerts.slice(0, 10).map((alert) => (
-                    <div 
-                      key={alert.id} 
-                      className={`p-3 hover:bg-muted/50 cursor-pointer ${getSeverityColor()}`}
-                      onClick={() => handleAlertClick(alert)}
-                    >
+                    <div key={alert.id} className={`p-3 hover:bg-muted/50 ${getSeverityColor(alert.severity)}`}>
                       <div className="flex items-start gap-3">
                         <div className="mt-1">
                           {getAlertIcon(alert.alert_type)}
@@ -165,10 +141,11 @@ const NotificationBell = () => {
                             </div>
                             
                             <Badge 
-                              className="text-xs ml-2 bg-muted text-muted-foreground"
+                              variant={alert.severity === 'critical' ? 'destructive' : 
+                                     alert.severity === 'warning' ? 'default' : 'secondary'}
+                              className="text-xs ml-2"
                             >
-                              {alert.severity === 'critical' ? 'Needs Attention' : 
-                               alert.severity === 'warning' ? 'Monitor' : 'Info'}
+                              {alert.severity}
                             </Badge>
                           </div>
                           

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveAlerts, useCheckAlerts } from "@/hooks/useAlerts";
-import { AlertTriangle, Bell, RefreshCw, Thermometer, Droplets, Calendar, Wrench, Wind, RotateCcw, Skull, Clock, TrendingUp } from "lucide-react";
+import { AlertTriangle, Bell, RefreshCw, Thermometer, Droplets, Calendar, Wrench } from "lucide-react";
 import AlertItem from "./AlertItem";
 
 const AlertCenter = () => {
@@ -17,22 +17,15 @@ const AlertCenter = () => {
       case 'humidity': return <Droplets className="h-4 w-4" />;
       case 'critical_day': return <Calendar className="h-4 w-4" />;
       case 'machine_maintenance': return <Wrench className="h-4 w-4" />;
-      case 'co2_level': return <Wind className="h-4 w-4" />;
-      case 'ventilation_rate': return <Wind className="h-4 w-4" />;
-      case 'turning_frequency': return <RotateCcw className="h-4 w-4" />;
-      case 'mortality_spike': return <Skull className="h-4 w-4" />;
-      case 'hatch_approaching': return <Clock className="h-4 w-4" />;
-      case 'batch_status_change': return <TrendingUp className="h-4 w-4" />;
-      case 'checklist_incomplete': return <AlertTriangle className="h-4 w-4" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'critical';
-      case 'warning': return 'warning'; 
-      case 'info': return 'info';
+      case 'critical': return 'destructive';
+      case 'warning': return 'default';
+      case 'info': return 'secondary';
       default: return 'default';
     }
   };
@@ -65,7 +58,7 @@ const AlertCenter = () => {
             <AlertTriangle className="h-5 w-5" />
             Alert Center
             {alerts && alerts.length > 0 && (
-              <Badge className="ml-2 bg-primary text-primary-foreground">
+              <Badge variant="destructive" className="ml-2">
                 {alerts.length}
               </Badge>
             )}
@@ -84,19 +77,19 @@ const AlertCenter = () => {
         {/* Alert Summary */}
         <div className="flex gap-2 mt-2">
           {criticalCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
+            <Badge variant="destructive" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
-              {criticalCount} Needs Attention
+              {criticalCount} Critical
             </Badge>
           )}
           {warningCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
+            <Badge variant="default" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
-              {warningCount} Monitor
+              {warningCount} Warning
             </Badge>
           )}
           {infoCount > 0 && (
-            <Badge className="flex items-center gap-1 bg-muted text-muted-foreground">
+            <Badge variant="secondary" className="flex items-center gap-1">
               <Bell className="h-3 w-3" />
               {infoCount} Info
             </Badge>

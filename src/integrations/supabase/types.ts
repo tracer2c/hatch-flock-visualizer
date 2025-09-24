@@ -87,22 +87,18 @@ export type Database = {
           alert_type: Database["public"]["Enums"]["alert_type"]
           batch_day: number | null
           batch_id: string | null
-          co2_level: number | null
           created_at: string
           current_humidity: number | null
           current_temperature: number | null
           id: string
           machine_id: string | null
           message: string
-          mortality_count: number | null
           resolved_at: string | null
           severity: Database["public"]["Enums"]["alert_severity"]
           status: Database["public"]["Enums"]["alert_status"]
           title: string
           triggered_at: string
-          turning_frequency: number | null
           updated_at: string
-          ventilation_rate: number | null
         }
         Insert: {
           acknowledged_at?: string | null
@@ -111,22 +107,18 @@ export type Database = {
           alert_type: Database["public"]["Enums"]["alert_type"]
           batch_day?: number | null
           batch_id?: string | null
-          co2_level?: number | null
           created_at?: string
           current_humidity?: number | null
           current_temperature?: number | null
           id?: string
           machine_id?: string | null
           message: string
-          mortality_count?: number | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["alert_severity"]
           status?: Database["public"]["Enums"]["alert_status"]
           title: string
           triggered_at?: string
-          turning_frequency?: number | null
           updated_at?: string
-          ventilation_rate?: number | null
         }
         Update: {
           acknowledged_at?: string | null
@@ -135,22 +127,18 @@ export type Database = {
           alert_type?: Database["public"]["Enums"]["alert_type"]
           batch_day?: number | null
           batch_id?: string | null
-          co2_level?: number | null
           created_at?: string
           current_humidity?: number | null
           current_temperature?: number | null
           id?: string
           machine_id?: string | null
           message?: string
-          mortality_count?: number | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["alert_severity"]
           status?: Database["public"]["Enums"]["alert_status"]
           title?: string
           triggered_at?: string
-          turning_frequency?: number | null
           updated_at?: string
-          ventilation_rate?: number | null
         }
         Relationships: [
           {
@@ -1157,12 +1145,6 @@ export type Database = {
         | "critical_day"
         | "machine_maintenance"
         | "checklist_incomplete"
-        | "co2_level"
-        | "ventilation_rate"
-        | "turning_frequency"
-        | "mortality_spike"
-        | "hatch_approaching"
-        | "batch_status_change"
       batch_status:
         | "planned"
         | "setting"
@@ -1312,12 +1294,6 @@ export const Constants = {
         "critical_day",
         "machine_maintenance",
         "checklist_incomplete",
-        "co2_level",
-        "ventilation_rate",
-        "turning_frequency",
-        "mortality_spike",
-        "hatch_approaching",
-        "batch_status_change",
       ],
       batch_status: [
         "planned",

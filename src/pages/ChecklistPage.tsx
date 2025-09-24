@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom';
 import DailyChecklist from "@/components/dashboard/DailyChecklist";
 
 const ChecklistPage = () => {
-  const { houseId } = useParams();
+  const { batchId } = useParams();
 
   return (
     <div className="p-6">
-      <DailyChecklist selectedBatchId={houseId} />
+      <DailyChecklist selectedBatchId={batchId} />
     </div>
   );
 };

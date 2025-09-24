@@ -99,155 +99,6 @@ serve(async (req: Request) => {
           console.log(`Generated humidity alert for batch ${qa.batches?.batch_number}`);
         }
       }
-
-      // CO2 Level check (optimal range: 4000-6000 ppm)
-      if (qa.co2_level && (qa.co2_level < 3000 || qa.co2_level > 7000)) {
-        const existingCO2Alert = await supabase
-          .from('alerts')
-          .select('id')
-          .eq('batch_id', qa.batch_id)
-          .eq('alert_type', 'co2_level')
-          .eq('status', 'active')
-          .gte('triggered_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
-
-        if (!existingCO2Alert.data?.length) {
-          const severity = qa.co2_level < 2000 || qa.co2_level > 8000 ? 'critical' : 'warning';
-          const alert = {
-            alert_type: 'co2_level',
-            batch_id: qa.batch_id,
-            severity,
-            title: `CO2 Level Alert - ${qa.batches?.batch_number}`,
-            message: `CO2 level of ${qa.co2_level} ppm is outside optimal range (3000-7000 ppm)`,
-            co2_level: qa.co2_level,
-            batch_day: qa.day_of_incubation,
-            status: 'active'
-          };
-
-          const { error: insertError } = await supabase
-            .from('alerts')
-            .insert(alert);
-
-          if (!insertError) {
-            alertsGenerated.push(alert);
-            console.log(`Generated CO2 alert for batch ${qa.batches?.batch_number}`);
-          }
-        }
-      }
-
-      // Ventilation Rate check (optimal range: 0.5-2.0 CFM)
-      if (qa.ventilation_rate && (qa.ventilation_rate < 0.3 || qa.ventilation_rate > 2.5)) {
-        const existingVentAlert = await supabase
-          .from('alerts')
-          .select('id')
-          .eq('batch_id', qa.batch_id)
-          .eq('alert_type', 'ventilation_rate')
-          .eq('status', 'active')
-          .gte('triggered_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
-
-        if (!existingVentAlert.data?.length) {
-          const severity = qa.ventilation_rate < 0.2 || qa.ventilation_rate > 3.0 ? 'critical' : 'warning';
-          const alert = {
-            alert_type: 'ventilation_rate',
-            batch_id: qa.batch_id,
-            severity,
-            title: `Ventilation Alert - ${qa.batches?.batch_number}`,
-            message: `Ventilation rate of ${qa.ventilation_rate} CFM is outside optimal range (0.3-2.5 CFM)`,
-            ventilation_rate: qa.ventilation_rate,
-            batch_day: qa.day_of_incubation,
-            status: 'active'
-          };
-
-          const { error: insertError } = await supabase
-            .from('alerts')
-            .insert(alert);
-
-          if (!insertError) {
-            alertsGenerated.push(alert);
-            console.log(`Generated ventilation alert for batch ${qa.batches?.batch_number}`);
-          }
-        }
-      }
-
-      // Turning Frequency check (optimal: 24 times per day = hourly)
-      if (qa.turning_frequency && (qa.turning_frequency < 20 || qa.turning_frequency > 28)) {
-        const existingTurnAlert = await supabase
-          .from('alerts')
-          .select('id')
-          .eq('batch_id', qa.batch_id)
-          .eq('alert_type', 'turning_frequency')
-          .eq('status', 'active')
-          .gte('triggered_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
-
-        if (!existingTurnAlert.data?.length) {
-          const severity = qa.turning_frequency < 16 || qa.turning_frequency > 32 ? 'critical' : 'warning';
-          const alert = {
-            alert_type: 'turning_frequency',
-            batch_id: qa.batch_id,
-            severity,
-            title: `Turning Frequency Alert - ${qa.batches?.batch_number}`,
-            message: `Turning frequency of ${qa.turning_frequency}/day is outside optimal range (20-28/day)`,
-            turning_frequency: qa.turning_frequency,
-            batch_day: qa.day_of_incubation,
-            status: 'active'
-          };
-
-          const { error: insertError } = await supabase
-            .from('alerts')
-            .insert(alert);
-
-          if (!insertError) {
-            alertsGenerated.push(alert);
-            console.log(`Generated turning frequency alert for batch ${qa.batches?.batch_number}`);
-          }
-        }
-      }
-
-      // Mortality Spike check (alert if mortality > 2% of batch size in one day)
-      if (qa.mortality_count && qa.mortality_count > 0) {
-        // Get batch info to calculate percentage
-        const { data: batchInfo } = await supabase
-          .from('batches')
-          .select('total_eggs_set')
-          .eq('id', qa.batch_id)
-          .single();
-
-        if (batchInfo && batchInfo.total_eggs_set) {
-          const mortalityPercentage = (qa.mortality_count / batchInfo.total_eggs_set) * 100;
-          
-          if (mortalityPercentage > 1.5) { // Alert if mortality > 1.5%
-            const existingMortalityAlert = await supabase
-              .from('alerts')
-              .select('id')
-              .eq('batch_id', qa.batch_id)
-              .eq('alert_type', 'mortality_spike')
-              .eq('status', 'active')
-              .gte('triggered_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Last 24 hours
-
-            if (!existingMortalityAlert.data?.length) {
-              const severity = mortalityPercentage > 3.0 ? 'critical' : 'warning';
-              const alert = {
-                alert_type: 'mortality_spike',
-                batch_id: qa.batch_id,
-                severity,
-                title: `Mortality Spike Alert - ${qa.batches?.batch_number}`,
-                message: `High mortality detected: ${qa.mortality_count} birds (${mortalityPercentage.toFixed(1)}%) on Day ${qa.day_of_incubation}`,
-                mortality_count: qa.mortality_count,
-                batch_day: qa.day_of_incubation,
-                status: 'active'
-              };
-
-              const { error: insertError } = await supabase
-                .from('alerts')
-                .insert(alert);
-
-              if (!insertError) {
-                alertsGenerated.push(alert);
-                console.log(`Generated mortality spike alert for batch ${qa.batches?.batch_number}`);
-              }
-            }
-          }
-        }
-      }
     }
 
     // Check for critical day alerts
@@ -264,7 +115,6 @@ serve(async (req: Request) => {
 
     for (const batch of batches || []) {
       const daysSinceSet = Math.floor((new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24));
-      const daysUntilHatch = Math.floor((new Date(batch.expected_hatch_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       
       // Check for critical days (7, 14, 18, 21)
       if ([7, 14, 18, 21].includes(daysSinceSet)) {
@@ -295,43 +145,6 @@ serve(async (req: Request) => {
           if (!insertError) {
             alertsGenerated.push(alert);
             console.log(`Generated critical day alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
-          }
-        }
-      }
-
-      // Check for hatch approaching alerts (3 days, 1 day, day of hatch)
-      if ([3, 1, 0].includes(daysUntilHatch) && daysUntilHatch >= 0) {
-        const existingHatchAlert = await supabase
-          .from('alerts')
-          .select('id')
-          .eq('batch_id', batch.id)
-          .eq('alert_type', 'hatch_approaching')
-          .eq('status', 'active')
-          .gte('triggered_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-        if (!existingHatchAlert.data?.length) {
-          const severity = daysUntilHatch === 0 ? 'critical' : 'warning';
-          const message = daysUntilHatch === 0 
-            ? `Hatch day has arrived for batch ${batch.batch_number}! Expected hatch today.`
-            : `Batch ${batch.batch_number} expected to hatch in ${daysUntilHatch} day${daysUntilHatch === 1 ? '' : 's'}`;
-          
-          const alert = {
-            alert_type: 'hatch_approaching',
-            batch_id: batch.id,
-            severity,
-            title: `Hatch ${daysUntilHatch === 0 ? 'Day' : 'Approaching'} - ${batch.batch_number}`,
-            message,
-            batch_day: daysSinceSet,
-            status: 'active'
-          };
-
-          const { error: insertError } = await supabase
-            .from('alerts')
-            .insert(alert);
-
-          if (!insertError) {
-            alertsGenerated.push(alert);
-            console.log(`Generated hatch approaching alert for batch ${batch.batch_number} - ${daysUntilHatch} days until hatch`);
           }
         }
       }

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Link } from "react-router-dom";
+import { EmbrexTimeline } from "@/components/dashboard/EmbrexTimeline";
 
 interface EmbrexData {
   batch_id: string;
@@ -30,8 +30,8 @@ const EmbrexDataSheetPage = () => {
   const [filteredData, setFilteredData] = useState<EmbrexData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
-  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected'>('all');
+  const [selectedHouses, setSelectedHouses] = useState<string[]>([]);
+  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'compare' | 'timeline'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -146,19 +146,9 @@ const EmbrexDataSheetPage = () => {
     return acc;
   }, { invalidCount: 0, exceedsTotalCount: 0, exceedsPercentageCount: 0 });
 
-  const comparisonData = selectedFlocks.length > 0 ? 
-    filteredData.filter(item => selectedFlocks.includes(item.batch_id)) : 
+  const comparisonData = selectedHouses.length > 0 ? 
+    filteredData.filter(item => selectedHouses.includes(item.batch_id)) : 
     filteredData;
-
-  const selectedValidationSummary = comparisonData.reduce((acc, item) => {
-    const validation = validateEmbrexData(item);
-    if (!validation.isValid) {
-      acc.invalidCount++;
-      if (validation.exceedsTotal) acc.exceedsTotalCount++;
-      if (validation.exceedsPercentage) acc.exceedsPercentageCount++;
-    }
-    return acc;
-  }, { invalidCount: 0, exceedsTotalCount: 0, exceedsPercentageCount: 0 });
 
   const generateComparisonChart = () => {
     if (comparisonData.length === 0) return [];
@@ -177,7 +167,7 @@ const EmbrexDataSheetPage = () => {
       "Flock #",
       "Flock Name", 
       "Age (weeks)",
-      "Houses",
+      "Batch #",
       "Set Date",
       "Status",
       "Total Eggs",
@@ -235,11 +225,13 @@ const EmbrexDataSheetPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" className="gap-2">
-            <Link to="/embrex-timeline">
-              <TrendingUp className="h-4 w-4" />
-              Timeline
-            </Link>
+          <Button 
+            variant="outline" 
+            onClick={() => setComparisonMode('timeline')} 
+            className="gap-2"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Timeline
           </Button>
           <Button onClick={exportToCSV} className="gap-2">
             <Download className="h-4 w-4" />
@@ -248,48 +240,56 @@ const EmbrexDataSheetPage = () => {
         </div>
       </div>
 
+      {/* Validation Summary */}
+      {validationSummary.invalidCount > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <AlertTriangle className="h-5 w-5" />
+              Data Validation Issues Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="text-orange-700">
+                <span className="font-medium">{validationSummary.invalidCount}</span> total issues
+              </div>
+              {validationSummary.exceedsTotalCount > 0 && (
+                <div className="text-orange-700">
+                  <span className="font-medium">{validationSummary.exceedsTotalCount}</span> exceed total eggs
+                </div>
+              )}
+              {validationSummary.exceedsPercentageCount > 0 && (
+                <div className="text-orange-700">
+                  <span className="font-medium">{validationSummary.exceedsPercentageCount}</span> exceed 100%
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as 'all' | 'selected')} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             All Data
           </TabsTrigger>
           <TabsTrigger value="selected" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Selected Flocks & Compare
+            Selected Houses
+          </TabsTrigger>
+          <TabsTrigger value="compare" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Compare
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Timeline
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
-          {/* Validation Summary for All Data */}
-          {validationSummary.invalidCount > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-800">
-                  <AlertTriangle className="h-5 w-5" />
-                  Data Validation Issues Found
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="text-orange-700">
-                    <span className="font-medium">{validationSummary.invalidCount}</span> total issues
-                  </div>
-                  {validationSummary.exceedsTotalCount > 0 && (
-                    <div className="text-orange-700">
-                      <span className="font-medium">{validationSummary.exceedsTotalCount}</span> exceed total eggs
-                    </div>
-                  )}
-                  {validationSummary.exceedsPercentageCount > 0 && (
-                    <div className="text-orange-700">
-                      <span className="font-medium">{validationSummary.exceedsPercentageCount}</span> exceed 100%
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <Card>
             <CardHeader>
@@ -318,7 +318,7 @@ const EmbrexDataSheetPage = () => {
                       <TableHead>Flock #</TableHead>
                       <TableHead>Flock Name</TableHead>
                       <TableHead>Age (weeks)</TableHead>
-                      <TableHead>Houses</TableHead>
+                      <TableHead>Batch #</TableHead>
                       <TableHead>Set Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Total Eggs</TableHead>
@@ -335,12 +335,12 @@ const EmbrexDataSheetPage = () => {
                         <TableRow key={item.batch_id} className={`hover:bg-muted/50 ${!validation.isValid ? 'bg-red-50' : ''}`}>
                           <TableCell>
                             <Checkbox
-                              checked={selectedFlocks.includes(item.batch_id)}
+                              checked={selectedHouses.includes(item.batch_id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedFlocks([...selectedFlocks, item.batch_id]);
+                                  setSelectedHouses([...selectedHouses, item.batch_id]);
                                 } else {
-                                  setSelectedFlocks(selectedFlocks.filter(id => id !== item.batch_id));
+                                  setSelectedHouses(selectedHouses.filter(id => id !== item.batch_id));
                                 }
                               }}
                             />
@@ -397,138 +397,121 @@ const EmbrexDataSheetPage = () => {
         </TabsContent>
 
         <TabsContent value="selected" className="space-y-4">
-          {/* Validation Summary for Selected Flocks */}
-          {selectedFlocks.length > 0 && selectedValidationSummary.invalidCount > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-800">
-                  <AlertTriangle className="h-5 w-5" />
-                  Data Validation Issues Found in Selected Flocks
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="text-orange-700">
-                    <span className="font-medium">{selectedValidationSummary.invalidCount}</span> total issues
-                  </div>
-                  {selectedValidationSummary.exceedsTotalCount > 0 && (
-                    <div className="text-orange-700">
-                      <span className="font-medium">{selectedValidationSummary.exceedsTotalCount}</span> exceed total eggs
-                    </div>
-                  )}
-                  {selectedValidationSummary.exceedsPercentageCount > 0 && (
-                    <div className="text-orange-700">
-                      <span className="font-medium">{selectedValidationSummary.exceedsPercentageCount}</span> exceed 100%
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <Card>
             <CardHeader>
-              <CardTitle>Selected Flocks ({selectedFlocks.length} selected)</CardTitle>
+              <CardTitle>Selected Houses ({selectedHouses.length} selected)</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {selectedFlocks.length === 0 ? "Select flocks from the All Data tab to view here." : "Viewing selected flocks and their performance comparison."}
+                {selectedHouses.length === 0 ? "Select houses from the All Data tab to view here." : "Viewing only selected houses."}
               </p>
             </CardHeader>
             <CardContent>
-              {selectedFlocks.length > 0 ? (
-                <div className="space-y-8">
-                  {/* Selected Flocks Table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Flock Name</TableHead>
-                          <TableHead>Batch #</TableHead>
-                          <TableHead className="text-right">Total Eggs</TableHead>
-                          <TableHead className="text-right">Clears</TableHead>
-                          <TableHead className="text-right">Clear %</TableHead>
-                          <TableHead className="text-right">Injected</TableHead>
-                          <TableHead className="text-right">Injected %</TableHead>
+              {selectedHouses.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Flock Name</TableHead>
+                        <TableHead>Batch #</TableHead>
+                        <TableHead className="text-right">Total Eggs</TableHead>
+                        <TableHead className="text-right">Clears</TableHead>
+                        <TableHead className="text-right">Clear %</TableHead>
+                        <TableHead className="text-right">Injected</TableHead>
+                        <TableHead className="text-right">Injected %</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {comparisonData.map((item) => (
+                        <TableRow key={item.batch_id}>
+                          <TableCell className="font-medium">{item.flock_name}</TableCell>
+                          <TableCell>{item.batch_number}</TableCell>
+                          <TableCell className="text-right font-mono">{item.total_eggs_set.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-mono">{item.eggs_cleared?.toLocaleString() ?? "—"}</TableCell>
+                          <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_cleared, item.total_eggs_set)}</TableCell>
+                          <TableCell className="text-right font-mono">{item.eggs_injected?.toLocaleString() ?? "—"}</TableCell>
+                          <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_injected, item.total_eggs_set)}</TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {comparisonData.map((item) => (
-                          <TableRow key={item.batch_id}>
-                            <TableCell className="font-medium">{item.flock_name}</TableCell>
-                            <TableCell>{item.batch_number}</TableCell>
-                            <TableCell className="text-right font-mono">{item.total_eggs_set.toLocaleString()}</TableCell>
-                            <TableCell className="text-right font-mono">{item.eggs_cleared?.toLocaleString() ?? "—"}</TableCell>
-                            <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_cleared, item.total_eggs_set)}</TableCell>
-                            <TableCell className="text-right font-mono">{item.eggs_injected?.toLocaleString() ?? "—"}</TableCell>
-                            <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_injected, item.total_eggs_set)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Performance Comparison Chart */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Performance Comparison
-                    </h3>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={generateComparisonChart()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis 
-                          dataKey="batch" 
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          fontSize={11}
-                          stroke="hsl(var(--muted-foreground))"
-                        />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                        <Tooltip 
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                                  <p className="font-medium mb-2">{label}</p>
-                                  <p className="text-sm text-muted-foreground mb-2">{data.flock}</p>
-                                  <div className="space-y-1">
-                                    <div className="flex justify-between">
-                                      <span>Clear %:</span>
-                                      <span className="font-medium">{data.clearPct.toFixed(1)}%</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span>Injected %:</span>
-                                      <span className="font-medium">{data.injectedPct.toFixed(1)}%</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                      <span>Total Eggs:</span>
-                                      <span>{data.totalEggs.toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Legend />
-                        <Bar dataKey="clearPct" fill="hsl(348 100% 67%)" name="Clear %" />
-                        <Bar dataKey="injectedPct" fill="hsl(142 76% 36%)" name="Injected %" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No flocks selected. Use the checkboxes in the All Data tab to select flocks for comparison.
+                  No houses selected. Use the checkboxes in the All Data tab to select houses for comparison.
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        <TabsContent value="compare" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>House Performance Comparison</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {selectedHouses.length === 0 ? "Select houses to compare their clear vs injected rates." : `Comparing ${selectedHouses.length} houses.`}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {selectedHouses.length > 0 ? (
+                <div className="space-y-6">
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={generateComparisonChart()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="batch" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        fontSize={11}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                                <p className="font-medium mb-2">{label}</p>
+                                <p className="text-sm text-muted-foreground mb-2">{data.flock}</p>
+                                <div className="space-y-1">
+                                  <div className="flex justify-between">
+                                    <span>Clear %:</span>
+                                    <span className="font-medium">{data.clearPct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Injected %:</span>
+                                    <span className="font-medium">{data.injectedPct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Total Eggs:</span>
+                                    <span>{data.totalEggs.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="clearPct" fill="hsl(348 100% 67%)" name="Clear %" />
+                      <Bar dataKey="injectedPct" fill="hsl(142 76% 36%)" name="Injected %" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Select houses from the All Data tab to see performance comparison charts.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
+        <TabsContent value="timeline" className="space-y-4">
+          <EmbrexTimeline />
+        </TabsContent>
       </Tabs>
     </div>
   );

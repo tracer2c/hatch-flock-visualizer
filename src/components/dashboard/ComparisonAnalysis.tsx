@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, LineChart, Line } from 'recharts';
 import { Button } from "@/components/ui/button";
-import { Check, Activity, TrendingUp, BarChart3, Calendar, Building2, Home, Search } from "lucide-react";
+import { Check, Activity, TrendingUp, BarChart3, Calendar, Building2, Home } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,14 +9,9 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { useHelpContext } from '@/contexts/HelpContext';
-import HatchDropAnalyzer from './HatchDropAnalyzer';
 
 interface ComparisonAnalysisProps {
   data: any[];
-  filters?: {
-    unitIds?: string[];
-    houseNumbers?: string[];
-  };
 }
 
 
@@ -27,10 +22,9 @@ const formatFlockLabel = (item: any) => {
   return `${name}${numPart}${farmPart}`;
 };
 
-const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
+const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("flocks");
-  const [analysisBatchId, setAnalysisBatchId] = useState<string | null>(null);
   const { updateContext } = useHelpContext();
 
   const handleItemSelect = (batchNumber: string) => {
@@ -113,18 +107,7 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
         return acc;
       }, {} as any);
 
-    // Get all selected unit names from filters
-    const selectedUnitNames = new Set();
-    if (filters?.unitIds?.length) {
-      data.forEach(batch => {
-        if (filters.unitIds?.includes(batch.unitId)) {
-          selectedUnitNames.add(batch.unitName);
-        }
-      });
-    }
-
-    // Create result array starting with units that have data
-    const unitsWithData = Object.keys(unitData).map(unit => {
+    return Object.keys(unitData).map(unit => {
       const stats = unitData[unit];
       return {
         unit,
@@ -136,25 +119,7 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
         totalBatches: stats.totalBatches
       };
     });
-
-    // Add selected units that don't have data
-    selectedUnitNames.forEach(unitName => {
-      const unitNameStr = String(unitName);
-      if (!unitData[unitNameStr]) {
-        unitsWithData.push({
-          unit: unitNameStr,
-          location: 'N/A',
-          avgFertility: 0,
-          avgHatch: 0,
-          avgQualityScore: 0,
-          avgHOF: 0,
-          totalBatches: 0
-        });
-      }
-    });
-
-    return unitsWithData.sort((a, b) => a.unit.localeCompare(b.unit));
-  }, [data, filters]);
+  }, [data]);
 
   // Breed comparison data - only include batches with fertility data for breed comparison
   const breedComparison = useMemo(() => {
@@ -279,7 +244,7 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="flocks" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Flocks
@@ -290,7 +255,7 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
           </TabsTrigger>
           <TabsTrigger value="units" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Hatcheries
+            Units
           </TabsTrigger>
           <TabsTrigger value="breeds" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -299,10 +264,6 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
           <TabsTrigger value="trends" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Trends
-          </TabsTrigger>
-          <TabsTrigger value="hatch-drops" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Hatch Drops
           </TabsTrigger>
         </TabsList>
 
@@ -555,34 +516,26 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
                   </ResponsiveContainer>
                 </div>
 
-                 <div className="space-y-3">
-                   <h3 className="text-base font-semibold">Unit Statistics</h3>
-                   <div className="space-y-3">
-                     {unitComparison.map(stat => (
-                       <div key={stat.unit} className={`p-4 border rounded-lg ${stat.totalBatches === 0 ? 'bg-muted/30 border-dashed' : ''}`}>
-                         <div className="flex justify-between items-center mb-2">
-                           <h4 className="font-medium text-lg">{stat.unit}</h4>
-                           <Badge variant={stat.totalBatches === 0 ? "secondary" : "default"}>
-                             {stat.totalBatches === 0 ? "No data" : `${stat.totalBatches} batches`}
-                           </Badge>
-                         </div>
-                         <p className="text-sm text-muted-foreground mb-3">{stat.location}</p>
-                         {stat.totalBatches === 0 ? (
-                           <div className="text-sm text-muted-foreground italic">
-                             No completed batches found for the selected filters. Try adjusting the date range or batch status.
-                           </div>
-                         ) : (
-                           <div className="grid grid-cols-2 gap-2 text-sm">
-                             <div>Fertility: <span className="font-medium">{stat.avgFertility.toFixed(1)}%</span></div>
-                             <div>Hatch: <span className="font-medium">{stat.avgHatch.toFixed(1)}%</span></div>
-                             <div>Quality: <span className="font-medium">{stat.avgQualityScore.toFixed(1)}%</span></div>
-                             <div>HOF: <span className="font-medium">{stat.avgHOF.toFixed(1)}%</span></div>
-                           </div>
-                         )}
-                       </div>
-                     ))}
-                   </div>
-                 </div>
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold">Unit Statistics</h3>
+                  <div className="space-y-3">
+                    {unitComparison.map(stat => (
+                      <div key={stat.unit} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-medium text-lg">{stat.unit}</h4>
+                          <Badge>{stat.totalBatches} batches</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">{stat.location}</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>Fertility: <span className="font-medium">{stat.avgFertility.toFixed(1)}%</span></div>
+                          <div>Hatch: <span className="font-medium">{stat.avgHatch.toFixed(1)}%</span></div>
+                          <div>Quality: <span className="font-medium">{stat.avgQualityScore.toFixed(1)}%</span></div>
+                          <div>HOF: <span className="font-medium">{stat.avgHOF.toFixed(1)}%</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -669,64 +622,6 @@ const ComparisonAnalysis = ({ data, filters }: ComparisonAnalysisProps) => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="hatch-drops">
-          {analysisBatchId ? (
-            <HatchDropAnalyzer 
-              batchId={analysisBatchId} 
-              onClose={() => setAnalysisBatchId(null)}
-            />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Hatch Drop Analysis
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Select a batch from your comparison data to analyze potential hatch drops
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    Available batches with fertility data:
-                  </div>
-                  <div className="grid gap-3">
-                    {displayData
-                      .filter(batch => batch.hasFertilityData && batch.fertility !== null)
-                      .slice(0, 10)
-                      .map((batch) => (
-                        <div
-                          key={batch.batchNumber}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => setAnalysisBatchId(batch.id)}
-                        >
-                          <div>
-                            <div className="font-medium">{formatFlockLabel(batch)}</div>
-                            <div className="text-sm text-muted-foreground">
-                              Hatch: {batch.hatch?.toFixed(1) || 'N/A'}% • 
-                              Fertility: {batch.fertility?.toFixed(1) || 'N/A'}%
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            <Search className="h-4 w-4 mr-2" />
-                            Analyze
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-                  {displayData.filter(batch => batch.hasFertilityData).length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No batches with fertility data available for analysis
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
       </Tabs>
     </div>
   );

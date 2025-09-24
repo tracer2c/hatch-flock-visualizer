@@ -58,12 +58,6 @@ const navigationItems = [
     requiresAuth: true
   },
   {
-    path: '/embrex-timeline',
-    label: 'Embrex Timeline',
-    icon: TrendingUp,
-    requiresAuth: true
-  },
-  {
     path: '/checklist',
     label: 'Daily Tasks',
     icon: CheckSquare,
@@ -94,7 +88,7 @@ const advancedAnalyticsItems = [
   },
   {
     path: '/unit-comparison',
-    label: 'Hatcheries Weekly Comparison',
+    label: 'Unit Weekly Comparison',
     icon: BarChart3,
     requiresAuth: true,
     requiredRole: undefined

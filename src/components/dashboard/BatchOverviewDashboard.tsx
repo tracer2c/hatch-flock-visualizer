@@ -288,7 +288,6 @@ const BatchOverviewDashboard: React.FC = () => {
         onStatusChange={setStatusFilter}
         onMachineChange={(m) => setMachineFilter(m)}
         onDateRangeChange={(range) => setDateRange(range)}
-        
         onExport={() => {
           const toDownload = [
             { id: "overview-kpis", filename: "overview-kpis.png" },
@@ -301,6 +300,7 @@ const BatchOverviewDashboard: React.FC = () => {
             }
           })();
         }}
+        
       />
 
       <div className="grid grid-cols-12 gap-6">
@@ -507,22 +507,16 @@ const BatchOverviewDashboard: React.FC = () => {
                 <div className={`transition-all duration-300 ${!showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
                   {!showMachineUtil && (
                     <div className="space-y-3">
-                       {qaAlerts && qaAlerts.length > 0 ? (
+                      {qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 5).map((alert) => (
-                           <div 
-                             key={alert.id} 
-                             className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                             onClick={() => {
-                               // Navigate to the QA entry page for this house
-                               navigate(`/data-entry/house/${alert.batches?.unit_id}/qa`);
-                             }}
-                           >
-                             <div className="flex items-center gap-3">
-                               <div>
-                                 <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
-                                 <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
-                               </div>
-                             </div>
+                          <div key={alert.id} className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <div>
+                                <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
+                                <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
+                              </div>
+                            </div>
                             <div className="text-xs text-muted-foreground">{alert.check_date}</div>
                           </div>
                         ))
@@ -531,14 +525,7 @@ const BatchOverviewDashboard: React.FC = () => {
                       )}
                       {qaAlerts && qaAlerts.length > 5 && (
                         <div className="mt-4 text-center">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              // Navigate to data entry page to see all alerts
-                              navigate('/data-entry');
-                            }}
-                          >
+                          <Button variant="outline" size="sm">
                             View All {qaAlerts.length} Alerts
                           </Button>
                         </div>

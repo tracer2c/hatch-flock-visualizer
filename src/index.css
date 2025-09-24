@@ -36,36 +36,12 @@
 
     --radius: 0.5rem;
 
-    /* Enhanced Chart palette - modern, vibrant colors */
-    --chart-1: 217 91% 60%; /* vibrant blue */
-    --chart-2: 142 71% 45%; /* fresh green */
-    --chart-3: 25 95% 53%;  /* warm orange */
-    --chart-4: 271 81% 56%; /* rich violet */
-    --chart-5: 0 84% 60%;   /* striking red */
-    
-    /* Gradient definitions for charts */
-    --gradient-chart-1: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 45%) 100%);
-    --gradient-chart-2: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 35%) 100%);
-    --gradient-chart-3: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(25 95% 43%) 100%);
-    --gradient-chart-4: linear-gradient(135deg, hsl(271 81% 56%) 0%, hsl(271 81% 46%) 100%);
-    --gradient-chart-5: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 84% 50%) 100%);
-
-    /* Alert color palette - softer, more professional tones */
-    --alert-critical: 25 95% 53%;     /* warm amber instead of harsh red */
-    --alert-critical-bg: 25 100% 97%; /* very light amber background */
-    --alert-critical-border: 25 95% 85%; /* soft amber border */
-    
-    --alert-warning: 45 93% 58%;      /* golden yellow */
-    --alert-warning-bg: 45 100% 96%;  /* very light yellow background */
-    --alert-warning-border: 45 93% 80%; /* soft yellow border */
-    
-    --alert-info: 217 91% 60%;        /* calming blue */
-    --alert-info-bg: 217 100% 97%;    /* very light blue background */
-    --alert-info-border: 217 91% 85%; /* soft blue border */
-    
-    --alert-success: 142 71% 45%;     /* fresh green */
-    --alert-success-bg: 142 100% 96%; /* very light green background */
-    --alert-success-border: 142 71% 80%; /* soft green border */
+    /* Chart palette - vibrant, accessible HSL colors */
+    --chart-1: 217 91% 60%; /* blue */
+    --chart-2: 142 71% 45%; /* green */
+    --chart-3: 25 95% 53%;  /* orange */
+    --chart-4: 271 81% 56%; /* violet */
+    --chart-5: 0 84% 60%;   /* red */
 
     --sidebar-background: 0 0% 98%;
 
@@ -127,23 +103,6 @@
     --chart-3: 25 95% 60%;  /* orange */
     --chart-4: 271 81% 65%; /* violet */
     --chart-5: 0 84% 65%;   /* red */
-
-    /* Alert color palette (dark mode) - softer, professional tones */
-    --alert-critical: 25 95% 60%;     /* warmer amber for dark mode */
-    --alert-critical-bg: 25 100% 7%;  /* very dark amber background */
-    --alert-critical-border: 25 95% 25%; /* darker amber border */
-    
-    --alert-warning: 45 93% 65%;      /* brighter golden yellow for dark */
-    --alert-warning-bg: 45 100% 8%;   /* very dark yellow background */
-    --alert-warning-border: 45 93% 30%; /* darker yellow border */
-    
-    --alert-info: 217 91% 70%;        /* brighter blue for dark mode */
-    --alert-info-bg: 217 100% 8%;     /* very dark blue background */
-    --alert-info-border: 217 91% 30%; /* darker blue border */
-    
-    --alert-success: 142 71% 55%;     /* brighter green for dark mode */
-    --alert-success-bg: 142 100% 6%;  /* very dark green background */
-    --alert-success-border: 142 71% 25%; /* darker green border */
 
     /* Glass effect tokens */
     --glass-bg: 255 255 255 / 0.05;

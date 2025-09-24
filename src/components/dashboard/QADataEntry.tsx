@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin, Bell } from "lucide-react";
+import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BatchInfo {
@@ -475,55 +475,17 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     });
   };
 
-  const handleCheckAlerts = async () => {
-    try {
-      const { data: alertResult, error } = await supabase.functions.invoke('check-alerts');
-      
-      if (error) {
-        toast({
-          title: "Alert Check Failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Alert Check Complete",
-          description: `Generated ${alertResult?.alertsGenerated || 0} new alerts`,
-        });
-      }
-    } catch (err) {
-      toast({
-        title: "Alert Check Failed",
-        description: "Failed to trigger alert check",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Quality Assurance Data Entry
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Monitor incubation conditions, chick health, and equipment performance
-              </p>
-            </div>
-            <Button 
-              onClick={handleCheckAlerts}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Bell className="h-4 w-4" />
-              Check Alerts
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Quality Assurance Data Entry
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            Monitor incubation conditions, chick health, and equipment performance
+          </p>
           
           {/* Batch Context Header */}
           <div className="mt-4 p-4 bg-muted rounded-lg border">
@@ -1301,7 +1263,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium capitalize">
-                      {entry.type ? entry.type.replace('_', ' ') : 'Unknown'} Record
+                      {entry.type.replace('_', ' ')} Record
                     </div>
                     <div className="text-sm text-gray-600">
                       {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate} | 
