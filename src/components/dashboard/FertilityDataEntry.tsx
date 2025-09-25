@@ -141,7 +141,6 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         early_dead: 0, // Set to 0 for fertility analysis
         late_dead: 0, // Set to 0 for fertility analysis
         cull_chicks: 0, // Set to 0 for fertility analysis
-        fertility_percent: calculated.fertilityPercent,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
