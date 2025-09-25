@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
-import { RotateCcw, CalendarIcon, Search, ChevronDown } from "lucide-react";
+import { RotateCcw, CalendarIcon, Search, ChevronDown, Filter, Settings, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -454,197 +454,250 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Controls */}
-        <div className="space-y-4">
-          <h3 className="font-semibold">Controls</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Flock Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Flock</label>
-              <Select value={selectedFlock} onValueChange={setSelectedFlock}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All flocks</SelectItem>
-                  {flockOptions.map((flock) => (
-                    <SelectItem key={flock.id} value={flock.id}>
-                      #{flock.number} — {flock.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Enhanced Filter Panel */}
+        <div className="glass-card bg-gradient-to-br from-background/50 to-muted/30 border-2 border-border/50 rounded-xl p-6 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 border border-primary/20">
+              <Filter className="h-5 w-5 text-primary" />
             </div>
-
-            {/* Metric Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Metric</label>
-              <Select value={metric} onValueChange={setMetric}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total_eggs">Total Eggs</SelectItem>
-                  <SelectItem value="eggs_cleared">Eggs Cleared</SelectItem>
-                  <SelectItem value="eggs_injected">Eggs Injected</SelectItem>
-                </SelectContent>
-              </Select>
+            <div>
+              <h3 className="font-semibold text-lg bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Advanced Filters
+              </h3>
+              <p className="text-sm text-muted-foreground">Configure your data visualization</p>
             </div>
-
-            {/* Time Scale */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Time scale</label>
-              <Select value={timeScale} onValueChange={setTimeScale}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="days">Days</SelectItem>
-                  <SelectItem value="weeks">Weeks</SelectItem>
-                  <SelectItem value="months">Months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* View Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">View</label>
-              <Select value={viewType} onValueChange={(value) => setViewType(value as 'bar' | 'line' | 'area' | 'pie' | 'scatter')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bar">Bar Chart</SelectItem>
-                  <SelectItem value="line">Line Chart</SelectItem>
-                  <SelectItem value="area">Area Chart</SelectItem>
-                  <SelectItem value="pie">Pie Chart</SelectItem>
-                  <SelectItem value="scatter">Scatter Chart</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="ml-auto">
+              <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2 hover:bg-destructive/10 hover:text-destructive transition-all duration-200">
+                <RotateCcw className="h-4 w-4" />
+                Reset All
+              </Button>
             </div>
           </div>
 
-          {/* Date Range */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">From</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !fromDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {fromDate ? format(fromDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={fromDate}
-                    onSelect={setFromDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">To</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !toDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {toDate ? format(toDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={toDate}
-                    onSelect={setToDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Compare Flocks */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Compare flocks (up to 4)</label>
-            <Popover open={showFlockDropdown} onOpenChange={setShowFlockDropdown}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span className="text-muted-foreground">Select flocks to compare</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <div className="p-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search flocks..."
-                      value={flockSearch}
-                      onChange={(e) => setFlockSearch(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
+          {/* Primary Filters */}
+          <div className="space-y-6">
+            <div className="bg-card/60 border border-border/60 rounded-lg p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="h-4 w-4 text-primary" />
+                <h4 className="font-medium text-sm text-foreground/90">Primary Settings</h4>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Flock Selection */}
+                <div className="group space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Flock</label>
+                  <Select value={selectedFlock} onValueChange={setSelectedFlock}>
+                    <SelectTrigger className="h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-md border-border/60">
+                      <SelectItem value="all" className="hover:bg-accent/60">All flocks</SelectItem>
+                      {flockOptions.map((flock) => (
+                        <SelectItem key={flock.id} value={flock.id} className="hover:bg-accent/60">
+                          #{flock.number} — {flock.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="max-h-60 overflow-auto">
-                  {filteredFlockOptions.map((flock) => (
-                    <div
-                      key={flock.id}
-                      className="flex items-center space-x-2 px-3 py-2 cursor-pointer hover:bg-accent"
-                      onClick={() => toggleFlockComparison(flock.id)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={compareFlocks.includes(flock.id)}
-                        onChange={() => toggleFlockComparison(flock.id)}
-                        className="rounded"
+
+                {/* Metric Selection */}
+                <div className="group space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Metric</label>
+                  <Select value={metric} onValueChange={setMetric}>
+                    <SelectTrigger className="h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-md border-border/60">
+                      <SelectItem value="total_eggs" className="hover:bg-accent/60">Total Eggs</SelectItem>
+                      <SelectItem value="eggs_cleared" className="hover:bg-accent/60">Eggs Cleared</SelectItem>
+                      <SelectItem value="eggs_injected" className="hover:bg-accent/60">Eggs Injected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Time Scale */}
+                <div className="group space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Time Scale</label>
+                  <Select value={timeScale} onValueChange={setTimeScale}>
+                    <SelectTrigger className="h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-md border-border/60">
+                      <SelectItem value="days" className="hover:bg-accent/60">Days</SelectItem>
+                      <SelectItem value="weeks" className="hover:bg-accent/60">Weeks</SelectItem>
+                      <SelectItem value="months" className="hover:bg-accent/60">Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* View Type */}
+                <div className="group space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Visualization</label>
+                  <Select value={viewType} onValueChange={(value) => setViewType(value as 'bar' | 'line' | 'area' | 'pie' | 'scatter')}>
+                    <SelectTrigger className="h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-md border-border/60">
+                      <SelectItem value="bar" className="hover:bg-accent/60 flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Bar Chart
+                      </SelectItem>
+                      <SelectItem value="line" className="hover:bg-accent/60">Line Chart</SelectItem>
+                      <SelectItem value="area" className="hover:bg-accent/60">Area Chart</SelectItem>
+                      <SelectItem value="pie" className="hover:bg-accent/60">Pie Chart</SelectItem>
+                      <SelectItem value="scatter" className="hover:bg-accent/60">Scatter Chart</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Range Filters */}
+            <div className="bg-card/60 border border-border/60 rounded-lg p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                <h4 className="font-medium text-sm text-foreground/90">Date Range</h4>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">From Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm",
+                          !fromDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {fromDate ? format(fromDate, "MM/dd/yyyy") : "Select start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-card/95 backdrop-blur-md border-border/60" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={fromDate}
+                        onSelect={setFromDate}
+                        initialFocus
+                        className="rounded-lg"
                       />
-                      <span className="text-sm">#{flock.number} — {flock.name}</span>
-                    </div>
-                  ))}
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <div className="p-2 border-t text-xs text-muted-foreground">
-                  {compareFlocks.length}/4 selected
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
 
-          {/* Selected Flocks */}
-          {compareFlocks.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {compareFlocks.map((flockId) => {
-                const flock = flockOptions.find(f => f.id === flockId);
-                return flock ? (
-                  <Badge key={flockId} variant="secondary" className="gap-1">
-                    #{flock.number} — {flock.name}
-                    <button
-                      onClick={() => toggleFlockComparison(flockId)}
-                      className="ml-1 text-xs hover:text-destructive"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                ) : null;
-              })}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">To Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm",
+                          !toDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {toDate ? format(toDate, "MM/dd/yyyy") : "Select end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-card/95 backdrop-blur-md border-border/60" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={toDate}
+                        onSelect={setToDate}
+                        initialFocus
+                        className="rounded-lg"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Advanced Comparison */}
+            <div className="bg-card/60 border border-border/60 rounded-lg p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="h-4 w-4 text-primary" />
+                <h4 className="font-medium text-sm text-foreground/90">Advanced Comparison</h4>
+                <div className="ml-auto">
+                  <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30 text-primary">
+                    {compareFlocks.length}/4 selected
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wide">Compare Flocks</label>
+                  <Popover open={showFlockDropdown} onOpenChange={setShowFlockDropdown}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between h-10 bg-background/80 border-border/60 hover:border-primary/40 transition-all duration-200 hover:shadow-sm">
+                        <span className="text-muted-foreground">Select flocks to compare</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 bg-card/95 backdrop-blur-md border-border/60" align="start">
+                      <div className="p-3 border-b border-border/60">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search flocks..."
+                            value={flockSearch}
+                            onChange={(e) => setFlockSearch(e.target.value)}
+                            className="pl-9 bg-background/60 border-border/60"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-60 overflow-auto">
+                        {filteredFlockOptions.map((flock) => (
+                          <div
+                            key={flock.id}
+                            className="flex items-center space-x-3 px-3 py-2 cursor-pointer hover:bg-accent/60 transition-colors duration-150"
+                            onClick={() => toggleFlockComparison(flock.id)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={compareFlocks.includes(flock.id)}
+                              onChange={() => toggleFlockComparison(flock.id)}
+                              className="rounded border-border/60"
+                            />
+                            <span className="text-sm">#{flock.number} — {flock.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Selected Flocks Display */}
+                {compareFlocks.length > 0 && (
+                  <div className="pt-2">
+                    <div className="flex flex-wrap gap-2">
+                      {compareFlocks.map((flockId) => {
+                        const flock = flockOptions.find(f => f.id === flockId);
+                        return flock ? (
+                          <Badge 
+                            key={flockId} 
+                            variant="secondary" 
+                            className="gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-200 animate-fade-in"
+                          >
+                            #{flock.number} — {flock.name}
+                            <button
+                              onClick={() => toggleFlockComparison(flockId)}
+                              className="ml-1 text-xs hover:text-destructive transition-colors duration-150"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Timeline Chart */}
