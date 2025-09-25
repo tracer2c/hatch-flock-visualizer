@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
+  <CardContent className="pt-4">
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
@@ -730,43 +731,76 @@ export default function EmbrexTimelinePage() {
       </div>
 
       {/* Compact toolbar: Filters + quick chips (no KPI cards for extra room) */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            {/* Filters button with count bubble */}
-            <div className="relative">
-              <FiltersViewPopover
-                facetBy={facetBy} setFacetBy={setFacetBy}
-                selectedFlocks={selectedFlocks} setSelectedFlocks={setSelectedFlocks} flocksList={flocksList}
-                selectedUnits={selectedUnits} setSelectedUnits={setSelectedUnits} units={units}
-                granularity={granularity} setGranularity={setGranularity}
-                metrics={metrics} setMetrics={setMetrics}
-                dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo}
-                percentAgg={percentAgg} setPercentAgg={setPercentAgg}
-                rollingAvg={rollingAvg} setRollingAvg={setRollingAvg}
-                benchmark={benchmark} setBenchmark={setBenchmark}
-                viz={viz} setViz={setViz}
-                savedName={savedName} setSavedName={setSavedName}
-                savedViews={savedViews} saveCurrentView={saveCurrentView} applySavedView={applySavedView}
-              />
-              {filterCount > 0 && (
-                <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-primary text-primary-foreground">
-                  {filterCount}
-                </span>
-              )}
-            </div>
+<Card>
+  <CardContent className="pt-4">
+    <div className="flex items-center justify-between flex-wrap gap-2">
+      {/* left cluster: Filters + quick viz */}
+      <div className="flex items-center gap-2">
+        {/* Filters with count bubble */}
+        <div className="relative">
+          <FiltersViewPopover
+            facetBy={facetBy} setFacetBy={setFacetBy}
+            selectedFlocks={selectedFlocks} setSelectedFlocks={setSelectedFlocks} flocksList={flocksList}
+            selectedUnits={selectedUnits} setSelectedUnits={setSelectedUnits} units={units}
+            granularity={granularity} setGranularity={setGranularity}
+            metrics={metrics} setMetrics={setMetrics}
+            dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo}
+            percentAgg={percentAgg} setPercentAgg={setPercentAgg}
+            rollingAvg={rollingAvg} setRollingAvg={setRollingAvg}
+            benchmark={benchmark} setBenchmark={setBenchmark}
+            viz={viz} setViz={setViz}
+            savedName={savedName} setSavedName={setSavedName}
+            savedViews={savedViews} saveCurrentView={saveCurrentView} applySavedView={applySavedView}
+          />
+          {filterCount > 0 && (
+            <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-primary text-primary-foreground">
+              {filterCount}
+            </span>
+          )}
+        </div>
 
-            {/* Read-only summary chips */}
-            <div className="flex flex-wrap gap-1">
-              <Badge variant="outline" className="gap-1"><Layers className="h-3 w-3" /> {facetBy}</Badge>
-              <Badge variant="outline" className="gap-1"><Rows className="h-3 w-3" /> {granularity}</Badge>
-              {metrics.slice(0,3).map((m)=> <Badge key={m} variant="outline">{metricLabel[m]}</Badge>)}
-              {metrics.length>3 && <Badge variant="outline">+{metrics.length-3}</Badge>}
-              {(dateFrom || dateTo) && <Badge variant="outline"><CalendarIcon className="h-3 w-3 mr-1" /> {dateFrom || "…"} → {dateTo || "…"}</Badge>}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* NEW: Visualization quick-select */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground hidden sm:inline">Visualization</span>
+          <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
+            <SelectTrigger className="w-[210px] h-9">
+              <Monitor className="h-4 w-4 mr-2 opacity-70" />
+              <SelectValue placeholder="Choose view" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
+                <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* right cluster: quick actions + summary chips */}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
+          <RefreshCw className="h-4 w-4" /> Reset
+        </Button>
+        <Button variant="secondary" size="sm" className="gap-2" onClick={exportBucketsCsv}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
+        <Button variant="secondary" size="sm" className="gap-2" onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}>
+          <BarChart2 className="h-4 w-4" /> Embrex Summary
+        </Button>
+      </div>
+    </div>
+
+    {/* read-only chips row stays as-is */}
+    <div className="mt-3 flex flex-wrap gap-1">
+      <Badge variant="outline" className="gap-1"><Layers className="h-3 w-3" /> {facetBy}</Badge>
+      <Badge variant="outline" className="gap-1"><Rows className="h-3 w-3" /> {granularity}</Badge>
+      {metrics.slice(0,3).map((m)=> <Badge key={m} variant="outline">{metricLabel[m]}</Badge>)}
+      {metrics.length>3 && <Badge variant="outline">+{metrics.length-3}</Badge>}
+      {(dateFrom || dateTo) && <Badge variant="outline"><CalendarIcon className="h-3 w-3 mr-1" /> {dateFrom || "…"} → {dateTo || "…"}</Badge>}
+    </div>
+  </CardContent>
+</Card>
+
 
       {/* Visualization area — exactly ONE view */}
       <Card>
