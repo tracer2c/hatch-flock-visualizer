@@ -1,46 +1,46 @@
+/* EmbrexTimelinePage.tsx — premium controls + multi-view analytics */
+
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-/* ── shadcn/ui ───────────────────────────────────────────────────────────── */
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+/* ── shadcn/ui ── */
+import {
+  Card, CardHeader, CardTitle, CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose,
-} from "@/components/ui/drawer";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
-/* ── Icons ───────────────────────────────────────────────────────────────── */
+/* ── Icons ── */
 import {
-  Loader2, RefreshCw, ChevronsUpDown, Check, Filter,
-  Trash2, Download, BarChart2, LineChart, Activity,
+  Loader2, Calendar as CalendarIcon, RefreshCw, ChevronsUpDown, Check, X,
+  Download, Save, SlidersHorizontal, LineChart, BarChart2, Activity, Sparkles,
+  Percent, Layers, Rows, Grid2X2, Trash2, MoveRight,
 } from "lucide-react";
 
-/* ── Recharts ────────────────────────────────────────────────────────────── */
+/* ── Recharts ── */
 import {
-  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip as RTooltip,
-  Legend, CartesianGrid, ReferenceLine,
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend,
+  ReferenceLine, CartesianGrid, Area, AreaChart,
 } from "recharts";
 
 /* =============================================================================
-   Embrex Timeline (Enterprise, Compact Controls) — Controlled Tabs Fix
+   Types & constants
 ============================================================================= */
 
-/** ---------- Types ---------- */
 type Granularity = "year" | "month" | "week" | "day";
 type ChartMode = "bar" | "line";
 type MetricKey =
@@ -60,9 +60,9 @@ interface RawRow {
   flock_name: string;
   age_weeks: number;
   total_eggs_set: number;
-  eggs_cleared: number | null;
-  eggs_injected: number | null;
-  set_date: string;
+  eggs_cleared: number;
+  eggs_injected: number;
+  set_date: string; // ISO
   status: string;
 }
 
@@ -82,13 +82,6 @@ interface BucketRow {
   raw: RawRow[];
 }
 
-interface Facet {
-  key: string;
-  title: string;
-  rows: RawRow[];
-}
-
-/** ---------- Constants ---------- */
 const metricLabel: Record<MetricKey, string> = {
   age_weeks: "Age (weeks)",
   total_eggs_set: "Total Eggs",
@@ -98,17 +91,19 @@ const metricLabel: Record<MetricKey, string> = {
   injected_pct: "Injected %",
 };
 const ALL_METRICS = [
-  "age_weeks",
   "total_eggs_set",
   "eggs_cleared",
   "eggs_injected",
   "clear_pct",
   "injected_pct",
+  "age_weeks",
 ] as const;
+
+const seriesColors = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444"] as const;
 
 const DEFAULTS = {
   scale: "month" as Granularity,
-  metrics: ["total_eggs_set"] as MetricKey[],
+  metrics: ["total_eggs_set", "clear_pct"] as MetricKey[],
   view: "bar" as ChartMode,
   facetBy: "flock" as "flock" | "unit" | "flock_unit",
   unitFilter: "all",
@@ -117,16 +112,12 @@ const DEFAULTS = {
   to: "",
 };
 
-const seriesColors = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444"] as const;
-
-/** ---------- Helpers ---------- */
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
-const isMetricKey = (x: string): x is MetricKey =>
-  (ALL_METRICS as readonly string[]).includes(x as any);
-
 const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
+const isMetricKey = (x: string): x is MetricKey => (ALL_METRICS as readonly string[]).includes(x as any);
 const metricKind = (m: MetricKey) => (isPercentMetric(m) ? "pct" : "count") as "pct" | "count";
 
+/* Dates */
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -140,7 +131,6 @@ const fmtBucketLabel = (d: Date, g: Granularity) => {
   }
   return `${y}-${m}-${day}`;
 };
-
 const startOfBucket = (d: Date, g: Granularity) => {
   const y = d.getFullYear();
   if (g === "year") return new Date(y, 0, 1);
@@ -158,9 +148,6 @@ const startOfBucket = (d: Date, g: Granularity) => {
   return exact;
 };
 
-const formatVal = (m: MetricKey, v: number) =>
-  isPercentMetric(m) ? `${v.toFixed(1)}%` : Math.round(v).toLocaleString();
-
 const toCsv = (rows: Record<string, any>[]) => {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
@@ -168,7 +155,6 @@ const toCsv = (rows: Record<string, any>[]) => {
     v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   return [headers.join(","), ...rows.map(r => headers.map(h => esc(r[h])).join(","))].join("\n");
 };
-
 const saveFile = (filename: string, content: string, mime = "text/csv;charset=utf-8") => {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -186,7 +172,7 @@ export default function EmbrexTimelinePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  /* ── State ─────────────────────────────────────────────────────────────── */
+  /* ── State ── */
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RawRow[]>([]);
 
@@ -194,13 +180,11 @@ export default function EmbrexTimelinePage() {
     const s = searchParams.get("scale");
     return validScale(s) ? s : DEFAULTS.scale;
   });
-
   const [metrics, setMetrics] = useState<MetricKey[]>(() => {
-    const m = searchParams.get("metrics") ?? searchParams.get("metric") ?? "";
+    const m = searchParams.get("metrics") ?? "";
     const list = m ? m.split(",").filter(isMetricKey) : DEFAULTS.metrics;
     return Array.from(new Set(list)).slice(0, 4);
   });
-
   const [chartMode, setChartMode] = useState<ChartMode>(() =>
     searchParams.get("view") === "line" ? "line" : DEFAULTS.view
   );
@@ -236,10 +220,7 @@ export default function EmbrexTimelinePage() {
 
   const [savedName, setSavedName] = useState("");
 
-  // ACTIVE TAB (fix for Flock × Unit not showing)
-  const [activeFacetKey, setActiveFacetKey] = useState<string | undefined>(undefined);
-
-  /* ── Effects ───────────────────────────────────────────────────────────── */
+  /* ── Data load ── */
   useEffect(() => {
     document.title = "Embrex Timeline | Hatchery Dashboard";
   }, []);
@@ -275,10 +256,10 @@ export default function EmbrexTimelinePage() {
           flock_number: b.flocks.flock_number,
           unit_name: b.units?.name ?? "",
           flock_name: b.flocks.flock_name,
-          age_weeks: b.flocks.age_weeks,
-          total_eggs_set: b.total_eggs_set ?? 0,
-          eggs_cleared: b.eggs_cleared ?? 0,
-          eggs_injected: b.eggs_injected ?? 0,
+          age_weeks: Number(b.flocks.age_weeks ?? 0),
+          total_eggs_set: Number(b.total_eggs_set ?? 0),
+          eggs_cleared: Number(b.eggs_cleared ?? 0),
+          eggs_injected: Number(b.eggs_injected ?? 0),
           set_date: b.set_date,
           status: b.status ?? "",
         }));
@@ -293,7 +274,7 @@ export default function EmbrexTimelinePage() {
     })();
   }, [toast]);
 
-  // URL sync
+  /* ── URL sync ── */
   useEffect(() => {
     const sp = new URLSearchParams();
     sp.set("scale", granularity);
@@ -315,7 +296,7 @@ export default function EmbrexTimelinePage() {
     facetBy, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, setSearchParams
   ]);
 
-  /* ── Lists ─────────────────────────────────────────────────────────────── */
+  /* ── Derived lists ── */
   const units = useMemo(() => {
     const set = new Set<string>();
     rows.forEach(r => { if (r.unit_name) set.add(r.unit_name.trim()); });
@@ -335,17 +316,20 @@ export default function EmbrexTimelinePage() {
     return m;
   }, [rows]);
 
-  /* ── Filtering ─────────────────────────────────────────────────────────── */
+  /* ── Filtering ── */
   const baseFilteredRows = useMemo(() => {
     const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
     let out = rows;
-
     if (unitFilter !== "all") {
       out = out.filter(r => norm(r.unit_name) === norm(unitFilter));
     }
     if (selectedUnits.length) {
       const allow = new Set(selectedUnits.map(u => u.trim().toLowerCase()));
       out = out.filter(r => r.unit_name && allow.has(r.unit_name.trim().toLowerCase()));
+    }
+    if (selectedFlocks.length) {
+      const allow = new Set(selectedFlocks);
+      out = out.filter(r => allow.has(r.flock_number));
     }
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -356,13 +340,13 @@ export default function EmbrexTimelinePage() {
       out = out.filter(r => new Date(r.set_date) <= to);
     }
     return out;
-  }, [rows, unitFilter, selectedUnits, dateFrom, dateTo]);
+  }, [rows, unitFilter, selectedUnits, selectedFlocks, dateFrom, dateTo]);
 
-  /* ── Facets ────────────────────────────────────────────────────────────── */
+  /* ── Faceting ── */
+  type Facet = { key: string; title: string; rows: RawRow[]; };
   const facets: Facet[] = useMemo(() => {
     const data = baseFilteredRows;
-    const mode = facetBy;
-    if (mode === "flock") {
+    if (facetBy === "flock") {
       if (!selectedFlocks.length) return [{ key: "ALL", title: "All flocks", rows: data }];
       return selectedFlocks.map(num => ({
         key: `F-${num}`,
@@ -370,7 +354,7 @@ export default function EmbrexTimelinePage() {
         rows: data.filter(r => r.flock_number === num),
       }));
     }
-    if (mode === "unit") {
+    if (facetBy === "unit") {
       const unitList = selectedUnits.length
         ? selectedUnits
         : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[])).slice(0, 4);
@@ -380,7 +364,7 @@ export default function EmbrexTimelinePage() {
         rows: data.filter(r => (r.unit_name ?? "").toLowerCase() === u.toLowerCase()),
       }));
     }
-    // flock_unit
+    // flock × unit
     const flockList = selectedFlocks.length
       ? selectedFlocks
       : Array.from(new Set(data.map(r => r.flock_number))).slice(0, 2);
@@ -393,42 +377,28 @@ export default function EmbrexTimelinePage() {
         out.push({
           key: `FU-${f}-${u}`,
           title: `Flock #${f} — ${flocksMap.get(f) ?? ""} • Unit: ${u}`,
-          rows: data.filter(r =>
-            r.flock_number === f &&
-            (r.unit_name ?? "").trim().toLowerCase() === u.trim().toLowerCase()
-          ),
+          rows: data.filter(r => r.flock_number === f && (r.unit_name ?? "").toLowerCase() === u.toLowerCase()),
         });
       }
     }
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, flocksMap]);
 
-  // keep Tabs selection valid when facets change
-  useEffect(() => {
-    if (!facets.length) { setActiveFacetKey(undefined); return; }
-    const still = activeFacetKey && facets.some(f => f.key === activeFacetKey);
-    if (!still) setActiveFacetKey(facets[0].key);
-  }, [facets, activeFacetKey]);
-
-  /* ── Bucketing ─────────────────────────────────────────────────────────── */
+  /* ── Bucketing ── */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
     const map = new Map<string, BucketRow>();
     for (const r of subset) {
       const d = new Date(r.set_date);
       const start = startOfBucket(d, granularity);
       const key = fmtBucketLabel(start, granularity);
-
-      if (!map.has(key)) {
-        map.set(key, { bucketKey: key, date: start, count: {}, pct: {}, raw: [] });
-      }
+      if (!map.has(key)) map.set(key, { bucketKey: key, date: start, count: {}, pct: {}, raw: [] });
       const b = map.get(key)!;
       b.count.total_eggs_set = (b.count.total_eggs_set ?? 0) + (r.total_eggs_set ?? 0);
-      b.count.eggs_cleared = (b.count.eggs_cleared ?? 0) + (r.eggs_cleared ?? 0);
-      b.count.eggs_injected = (b.count.eggs_injected ?? 0) + (r.eggs_injected ?? 0);
-      b.count.age_weeks = (b.count.age_weeks ?? 0) + (r.age_weeks ?? 0);
+      b.count.eggs_cleared   = (b.count.eggs_cleared   ?? 0) + (r.eggs_cleared   ?? 0);
+      b.count.eggs_injected  = (b.count.eggs_injected  ?? 0) + (r.eggs_injected  ?? 0);
+      b.count.age_weeks      = (b.count.age_weeks      ?? 0) + (r.age_weeks      ?? 0);
       b.raw.push(r);
     }
-
     const out: BucketRow[] = [];
     map.forEach((b) => {
       const sumSet = b.count.total_eggs_set ?? 0;
@@ -444,16 +414,14 @@ export default function EmbrexTimelinePage() {
         b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
         b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
       }
-
       out.push(b);
     });
-
     out.sort((a, b) => +a.date - +b.date);
     return out;
   };
 
-  const chartDataForFacet = (rowsForFacet: RawRow[]) => {
-    const buckets = buildBuckets(rowsForFacet);
+  const chartDataForFacet = (facetRows: RawRow[]) => {
+    const buckets = buildBuckets(facetRows);
     const firstMetric = metrics[0] ?? "total_eggs_set";
     const values = buckets.map(b =>
       isPercentMetric(firstMetric)
@@ -468,14 +436,13 @@ export default function EmbrexTimelinePage() {
           return slice.reduce((a, c) => a + c, 0) / slice.length;
         })
       : [];
-
     return buckets.map((b, i) => ({
       bucket: b.bucketKey,
       date: b.date,
-      age_weeks: b.count.age_weeks ?? 0,
       total_eggs_set: b.count.total_eggs_set ?? 0,
       eggs_cleared: b.count.eggs_cleared ?? 0,
       eggs_injected: b.count.eggs_injected ?? 0,
+      age_weeks: b.count.age_weeks ?? 0,
       clear_pct: b.pct.clear_pct ?? 0,
       injected_pct: b.pct.injected_pct ?? 0,
       rolling: rollingAvg ? rolling[i] : undefined,
@@ -486,7 +453,7 @@ export default function EmbrexTimelinePage() {
     }));
   };
 
-  /* ── KPIs ──────────────────────────────────────────────────────────────── */
+  /* ── KPIs ── */
   const kpis = useMemo(() => {
     const all = baseFilteredRows;
     const totalSet = all.reduce((a, r) => a + (r.total_eggs_set ?? 0), 0);
@@ -497,7 +464,7 @@ export default function EmbrexTimelinePage() {
     return { totalSet, clrPct, injPct };
   }, [baseFilteredRows]);
 
-  /* ── Drill-down ────────────────────────────────────────────────────────── */
+  /* ── Drill-down modal ── */
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalRows, setModalRows] = useState<RawRow[]>([]);
@@ -507,40 +474,7 @@ export default function EmbrexTimelinePage() {
     setModalOpen(true);
   };
 
-  /* ── Saved Views ───────────────────────────────────────────────────────── */
-  const savedViews = useMemo(() => {
-    const views: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i) || "";
-      if (k.startsWith("embrexView:")) views.push(k.replace("embrexView:", ""));
-    }
-    return views.sort();
-  }, [searchParams]);
-
-  const saveCurrentView = () => {
-    if (!savedName.trim()) {
-      toast({ title: "Name required", description: "Provide a name to save this view." });
-      return;
-    }
-    const qs = searchParams.toString();
-    const key = `embrexView:${savedName.trim()}`;
-    localStorage.setItem(key, qs);
-    toast({ title: "View saved", description: `"${savedName}" saved.` });
-    setSavedName("");
-  };
-  const applySavedView = (name: string) => {
-    const key = `embrexView:${name}`;
-    const qs = localStorage.getItem(key);
-    if (!qs) {
-      toast({ title: "Not found", description: "Saved view does not exist.", variant: "destructive" });
-      return;
-    }
-    const url = new URL(window.location.href);
-    url.search = qs;
-    window.location.assign(url.toString());
-  };
-
-  /* ── Export CSV ────────────────────────────────────────────────────────── */
+  /* ── Export ── */
   const exportBucketsCsv = () => {
     const rowsToExport: Record<string, any>[] = [];
     facets.forEach((f) => {
@@ -565,7 +499,37 @@ export default function EmbrexTimelinePage() {
     saveFile("embrex_timeline.csv", csv);
   };
 
-  /* ── Reset ─────────────────────────────────────────────────────────────── */
+  /* ── Saved views ── */
+  const saveCurrentView = () => {
+    if (!savedName.trim()) {
+      toast({ title: "Name required", description: "Provide a name to save this view." });
+      return;
+    }
+    const qs = searchParams.toString();
+    localStorage.setItem(`embrexView:${savedName.trim()}`, qs);
+    toast({ title: "View saved", description: `"${savedName}" saved.` });
+    setSavedName("");
+  };
+  const applySavedView = (name: string) => {
+    const qs = localStorage.getItem(`embrexView:${name}`);
+    if (!qs) {
+      toast({ title: "Not found", description: "Saved view does not exist.", variant: "destructive" });
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.search = qs;
+    window.location.assign(url.toString());
+  };
+  const savedViews = useMemo(() => {
+    const views: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || "";
+      if (k.startsWith("embrexView:")) views.push(k.replace("embrexView:", ""));
+    }
+    return views.sort();
+  }, [modalOpen, searchParams]);
+
+  /* ── Reset ── */
   const handleReset = () => {
     setGranularity(DEFAULTS.scale);
     setMetrics([...DEFAULTS.metrics]);
@@ -581,7 +545,25 @@ export default function EmbrexTimelinePage() {
     setBenchmark("");
   };
 
-  /* ── Render ────────────────────────────────────────────────────────────── */
+  /* ── Helpers UI ── */
+  const DatePreset = ({ label, range }: { label: string; range: () => { from?: string; to?: string } }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2"
+      onClick={() => {
+        const r = range();
+        setDateFrom(r.from ?? "");
+        setDateTo(r.to ?? "");
+      }}
+    >
+      {label}
+    </Button>
+  );
+
+  /* =============================================================================
+     Render
+  ============================================================================= */
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -589,7 +571,7 @@ export default function EmbrexTimelinePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Embrex Timeline</h1>
           <p className="text-muted-foreground">
-            Analyze counts and percentages over time by flock and unit, with drill-down, benchmarks, and saved views.
+            Premium time-series analytics for eggs set, clears & injections with drill-downs, small-multiples, and saved views.
           </p>
         </div>
         <div className="flex gap-2">
@@ -599,13 +581,8 @@ export default function EmbrexTimelinePage() {
           <Button variant="secondary" className="gap-2" onClick={exportBucketsCsv} title="Export visible series">
             <Download className="h-4 w-4" /> Export CSV
           </Button>
-          <Button
-            className="gap-2"
-            variant="secondary"
-            onClick={() =>
-              navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })
-            }
-          >
+          <Button className="gap-2" variant="secondary" onClick={() =>
+            navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}>
             <BarChart2 className="h-4 w-4" /> Embrex Summary
           </Button>
         </div>
@@ -633,29 +610,163 @@ export default function EmbrexTimelinePage() {
         </Card>
       </div>
 
-      {/* ░░░ COMPACT CONTROLS: Toolbar + Chips + Drawer ░░░ */}
-      <Card className="sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/70">
-        <CardContent className="py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Facet */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Facet</span>
-                <Select value={facetBy} onValueChange={(v: any) => setFacetBy(v)}>
-                  <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+      {/* PREMIUM CONTROL BAR */}
+      <Card>
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Filters & View</CardTitle>
+            <div className="flex items-center gap-2">
+              <Input placeholder="Save view as…" value={savedName} onChange={(e) => setSavedName(e.target.value)} className="w-44" />
+              <Button variant="outline" className="gap-2" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
+              {savedViews.length > 0 && (
+                <Select onValueChange={applySavedView}>
+                  <SelectTrigger className="w-44"><SelectValue placeholder="Load saved view" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="flock">Flocks</SelectItem>
-                    <SelectItem value="unit">Units</SelectItem>
-                    <SelectItem value="flock_unit">Flock × Unit</SelectItem>
+                    {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
 
-              {/* Scale */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Scale</span>
+        <CardContent className="mt-4 space-y-5">
+          {/* Row 1: Facet / Compare chips / Scale / View */}
+          <div className="grid gap-3 md:grid-cols-12">
+            {/* Facet */}
+            <div className="md:col-span-3">
+              <div className="text-xs mb-1 text-muted-foreground">Facet by</div>
+              <Select value={facetBy} onValueChange={(v: any) => setFacetBy(v)}>
+                <SelectTrigger><SelectValue placeholder="Facet by" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flock">Flocks</SelectItem>
+                  <SelectItem value="unit">Units</SelectItem>
+                  <SelectItem value="flock_unit">Flock × Unit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Compare Flocks */}
+            <div className="md:col-span-4">
+              <div className="text-xs mb-1 text-muted-foreground">Compare flocks (up to 4)</div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {selectedFlocks.length ? (
+                      <div className="flex gap-1 flex-wrap">
+                        {selectedFlocks.map(n => (
+                          <Badge key={n} variant="secondary" className="gap-1">
+                            #{n}
+                            <X className="h-3 w-3 cursor-pointer"
+                               onClick={(e) => { e.stopPropagation(); setSelectedFlocks(prev => prev.filter(x => x !== n)); }} />
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : "Select flocks"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[360px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search flocks..." />
+                    <CommandEmpty>No flocks found.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        {flocks.map((f) => {
+                          const num = Number(f.value);
+                          const checked = selectedFlocks.includes(num);
+                          const atLimit = selectedFlocks.length >= 4;
+                          const disabled = !checked && atLimit;
+                          return (
+                            <CommandItem
+                              key={f.value}
+                              value={f.label}
+                              onSelect={() => {
+                                if (disabled) return;
+                                setSelectedFlocks(prev => {
+                                  const set = new Set(prev);
+                                  if (set.has(num)) set.delete(num); else set.add(num);
+                                  return Array.from(set).slice(0, 4);
+                                });
+                              }}
+                              className={disabled ? "opacity-50 pointer-events-none" : ""}
+                            >
+                              <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
+                                {checked && <Check className="h-3 w-3" />}
+                              </div>
+                              <span>{f.label}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  <div className="border-t p-2 text-xs text-muted-foreground">{selectedFlocks.length}/4 selected</div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Compare Units */}
+            <div className="md:col-span-3">
+              <div className="text-xs mb-1 text-muted-foreground">Compare units (up to 4)</div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {selectedUnits.length ? (
+                      <div className="flex gap-1 flex-wrap">
+                        {selectedUnits.map(u => (
+                          <Badge key={u} variant="secondary" className="gap-1">
+                            {u}
+                            <X className="h-3 w-3 cursor-pointer"
+                               onClick={(e) => { e.stopPropagation(); setSelectedUnits(prev => prev.filter(x => x !== u)); }} />
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : "Select units"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[360px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search units..." />
+                    <CommandEmpty>No units found.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        {units.map(u => {
+                          const checked = selectedUnits.includes(u);
+                          const atLimit = selectedUnits.length >= 4;
+                          const disabled = !checked && atLimit;
+                          return (
+                            <CommandItem
+                              key={u}
+                              value={u}
+                              onSelect={() => {
+                                if (disabled) return;
+                                setSelectedUnits(prev => checked ? prev.filter(x => x !== u) : [...prev, u]);
+                              }}
+                              className={disabled ? "opacity-50 pointer-events-none" : ""}
+                            >
+                              <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
+                                {checked && <Check className="h-3 w-3" />}
+                              </div>
+                              <span>{u}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  <div className="border-t p-2 text-xs text-muted-foreground">{selectedUnits.length}/4 selected</div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Scale / View */}
+            <div className="md:col-span-2">
+              <div className="text-xs mb-1 text-muted-foreground">Scale & View</div>
+              <div className="flex gap-2">
                 <Select value={granularity} onValueChange={(v: any) => setGranularity(v)}>
-                  <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28"><SelectValue placeholder="Scale" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="year">Years</SelectItem>
                     <SelectItem value="month">Months</SelectItem>
@@ -663,274 +774,132 @@ export default function EmbrexTimelinePage() {
                     <SelectItem value="day">Days</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              {/* View */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">View</span>
                 <Select value={chartMode} onValueChange={(v: any) => setChartMode(v)}>
-                  <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28"><SelectValue placeholder="View" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="bar"><div className="flex items-center gap-2"><BarChart2 className="h-4 w-4" /> Bar</div></SelectItem>
                     <SelectItem value="line"><div className="flex items-center gap-2"><LineChart className="h-4 w-4" /> Line</div></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Dates */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Dates</span>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 w-[132px]" />
-                <span className="text-muted-foreground text-xs">→</span>
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 w-[132px]" />
-              </div>
-            </div>
-
-            {/* actions + drawer */}
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={handleReset} className="h-8">
-                      <Trash2 className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">Reset</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Reset all filters</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <Button variant="ghost" size="sm" onClick={exportBucketsCsv} className="h-8">
-                <Download className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">Export CSV</span>
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}
-                className="h-8"
-              >
-                <BarChart2 className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">Embrex Summary</span>
-              </Button>
-
-              <Drawer>
-                <DrawerTrigger asChild>
-                  <Button size="sm" className="h-8">
-                    <Filter className="h-4 w-4" /> <span className="ml-1">More</span>
-                  </Button>
-                </DrawerTrigger>
-                <DrawerContent className="max-h-[85vh]">
-                  <DrawerHeader><DrawerTitle>More filters</DrawerTitle></DrawerHeader>
-                  <div className="px-4 pb-4 space-y-6 overflow-y-auto">
-                    {/* Metrics */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">Metrics</div>
-                        <Button variant="outline" size="sm" onClick={() => setMetrics([])}>Clear</Button>
-                      </div>
-                      <Select
-                        value=""
-                        onValueChange={(m) => {
-                          if (!isMetricKey(m)) return;
-                          setMetrics(prev => {
-                            const set = new Set(prev);
-                            if (set.has(m)) set.delete(m); else set.add(m);
-                            return Array.from(set).slice(0, 4);
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Add/remove metrics…" /></SelectTrigger>
-                        <SelectContent>
-                          {ALL_METRICS.map(m => (
-                            <SelectItem key={m} value={m}>
-                              <div className="flex items-center gap-2">
-                                <Checkbox checked={metrics.includes(m)} className="pointer-events-none" />
-                                <span>{metricLabel[m]}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Separator />
-
-                    {/* Flocks */}
-                    <div className="space-y-2">
-                      <div className="text-xs text-muted-foreground">Flocks</div>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="justify-between w-full">
-                            {selectedFlocks.length ? `${selectedFlocks.length} selected` : "Select flocks"}
-                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[320px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search flocks..." />
-                            <CommandEmpty>No flocks found.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {flocks.map((f) => {
-                                  const num = Number(f.value);
-                                  const checked = selectedFlocks.includes(num);
-                                  const atLimit = selectedFlocks.length >= 4;
-                                  const disabled = !checked && atLimit;
-                                  return (
-                                    <CommandItem
-                                      key={f.value}
-                                      value={f.label}
-                                      onSelect={() => {
-                                        if (disabled) return;
-                                        setSelectedFlocks(prev => {
-                                          const set = new Set(prev);
-                                          if (set.has(num)) set.delete(num); else set.add(num);
-                                          return Array.from(set).slice(0, 4);
-                                        });
-                                      }}
-                                      className={disabled ? "opacity-50 pointer-events-none" : ""}
-                                    >
-                                      <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                                        {checked && <Check className="h-3 w-3" />}
-                                      </div>
-                                      <span>{f.label}</span>
-                                    </CommandItem>
-                                  );
-                                })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Units */}
-                    <div className="space-y-2">
-                      <div className="text-xs text-muted-foreground">Units</div>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="justify-between w-full">
-                            {selectedUnits.length ? `${selectedUnits.length} selected` : "Select units"}
-                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[320px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search units..." />
-                            <CommandEmpty>No units found.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {units.map(u => {
-                                  const checked = selectedUnits.includes(u);
-                                  const atLimit = selectedUnits.length >= 4;
-                                  const disabled = !checked && atLimit;
-                                  return (
-                                    <CommandItem
-                                      key={u}
-                                      value={u}
-                                      onSelect={() => {
-                                        if (disabled) return;
-                                        setSelectedUnits(prev => checked ? prev.filter(x => x !== u) : [...prev, u]);
-                                      }}
-                                      className={disabled ? "opacity-50 pointer-events-none" : ""}
-                                    >
-                                      <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                                        {checked && <Check className="h-3 w-3" />}
-                                      </div>
-                                      <span>{u}</span>
-                                    </CommandItem>
-                                  );
-                                })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <Separator />
-
-                    {/* Advanced */}
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Percent aggregation</div>
-                        <Select value={percentAgg} onValueChange={(v: any) => setPercentAgg(v)}>
-                          <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="weighted">Weighted</SelectItem>
-                            <SelectItem value="unweighted">Unweighted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-end gap-2">
-                        <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v) => setRollingAvg(Boolean(v))} />
-                        <label htmlFor="rolling" className="text-sm">Rolling avg (3 buckets)</label>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Benchmark %</div>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          className="h-9 w-full"
-                          placeholder="e.g., 95"
-                          value={benchmark}
-                          onChange={(e) => setBenchmark(e.target.value === "" ? "" : Number(e.target.value))}
-                        />
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Save / Load */}
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Save view as…"
-                        value={savedName}
-                        onChange={e => setSavedName(e.target.value)}
-                        className="h-9 w-48"
-                      />
-                      <Button variant="outline" className="h-9 gap-2" onClick={saveCurrentView}>
-                        Save
-                      </Button>
-                      {savedViews.length > 0 && (
-                        <Select onValueChange={applySavedView}>
-                          <SelectTrigger className="h-9 w-48"><SelectValue placeholder="Load saved view" /></SelectTrigger>
-                          <SelectContent>
-                            {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  </div>
-                  <DrawerFooter>
-                    <DrawerClose asChild><Button className="w-full">Done</Button></DrawerClose>
-                  </DrawerFooter>
-                </DrawerContent>
-              </Drawer>
             </div>
           </div>
 
-          {/* chips */}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {metrics.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-background">
-                Metrics: {metrics.map(m => metricLabel[m]).join(", ")}
-                <button className="rounded-full border bg-muted/40 px-1 leading-none hover:bg-muted" onClick={() => setMetrics([])}>×</button>
-              </span>
-            )}
-            {selectedFlocks.length > 0 && <Badge variant="secondary">Flocks: {selectedFlocks.join(", ")}</Badge>}
-            {selectedUnits.length > 0 && <Badge variant="secondary">Units: {selectedUnits.join(", ")}</Badge>}
-            {(dateFrom || dateTo) && <Badge variant="secondary">Dates: {dateFrom || "…"} → {dateTo || "…"}</Badge>}
-            {percentAgg !== "weighted" && <Badge variant="secondary">Pct: Unweighted</Badge>}
-            {rollingAvg && <Badge variant="secondary">Rolling avg</Badge>}
-            {benchmark !== "" && <Badge variant="secondary">Benchmark: {benchmark}%</Badge>}
+          {/* Row 2: Metrics builder + date range + advanced */}
+          <div className="grid gap-3 md:grid-cols-12">
+            {/* Metrics builder */}
+            <div className="md:col-span-5">
+              <div className="text-xs mb-1 text-muted-foreground">Metrics (toggle up to 4)</div>
+              <div className="flex flex-wrap gap-2">
+                {ALL_METRICS.map((m) => {
+                  const active = metrics.includes(m);
+                  return (
+                    <Button
+                      key={m}
+                      size="sm"
+                      variant={active ? "default" : "outline"}
+                      className={`h-8 ${active ? "" : "bg-background"} gap-2`}
+                      onClick={() => {
+                        setMetrics(prev => {
+                          const set = new Set(prev);
+                          if (set.has(m)) set.delete(m); else set.add(m);
+                          return Array.from(set).slice(0, 4);
+                        });
+                      }}
+                    >
+                      {isPercentMetric(m) ? <Percent className="h-3.5 w-3.5" /> : <Layers className="h-3.5 w-3.5" />}
+                      {metricLabel[m]}
+                      {active && <X className="h-3 w-3 opacity-70" />}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Date range */}
+            <div className="md:col-span-4">
+              <div className="text-xs mb-1 text-muted-foreground flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" /> Date range
+              </div>
+              <div className="flex items-center gap-2">
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full" />
+                <span className="text-muted-foreground text-xs">to</span>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full" />
+                {(dateFrom || dateTo) && (
+                  <Button variant="ghost" size="icon" onClick={() => { setDateFrom(""); setDateTo(""); }} title="Clear dates">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <DatePreset label="Last 30d" range={() => {
+                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 30);
+                  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+                }} />
+                <DatePreset label="90d" range={() => {
+                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 90);
+                  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+                }} />
+                <DatePreset label="180d" range={() => {
+                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 180);
+                  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+                }} />
+                <DatePreset label="365d" range={() => {
+                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 365);
+                  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+                }} />
+                <DatePreset label="YTD" range={() => {
+                  const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
+                  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+                }} />
+                <DatePreset label="All time" range={() => ({ from: "", to: "" })} />
+              </div>
+            </div>
+
+            {/* Advanced */}
+            <div className="md:col-span-3">
+              <div className="text-xs mb-1 text-muted-foreground flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" /> Advanced
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Pct agg</span>
+                  <Select value={percentAgg} onValueChange={(v: any) => setPercentAgg(v)}>
+                    <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weighted">Weighted</SelectItem>
+                      <SelectItem value="unweighted">Unweighted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v) => setRollingAvg(Boolean(v))} />
+                  <label htmlFor="rolling" className="text-sm">Rolling avg</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Benchmark %</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    className="w-24"
+                    placeholder="e.g. 95"
+                    value={benchmark}
+                    onChange={(e) => setBenchmark(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* === Visualizations ================================================== */}
+
       {/* Timeline */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
             Timeline ({facets.length} {facets.length === 1 ? "view" : "views"})
           </CardTitle>
         </CardHeader>
@@ -945,7 +914,7 @@ export default function EmbrexTimelinePage() {
               {facets.length === 0 || facets.every(f => f.rows.length === 0) ? (
                 <div className="text-muted-foreground">No data for the current filters.</div>
               ) : (
-                <Tabs value={activeFacetKey} onValueChange={setActiveFacetKey} className="w-full">
+                <Tabs defaultValue={facets[0].key} className="w-full">
                   <TabsList className="flex flex-wrap justify-start max-w-full overflow-x-auto">
                     {facets.map(f => (
                       <TabsTrigger key={f.key} value={f.key} className="truncate max-w-[260px]">
@@ -958,36 +927,27 @@ export default function EmbrexTimelinePage() {
                     const data = chartDataForFacet(facet.rows);
                     const hasPct = metrics.some(isPercentMetric);
                     const hasCount = metrics.some(m => !isPercentMetric(m));
+
                     return (
-                      <TabsContent key={facet.key} value={facet.key} className="mt-4">
+                      <TabsContent key={facet.key} value={facet.key} className="mt-4 space-y-6">
+                        {/* Primary composed timeline */}
                         <div className="rounded-lg border bg-card">
                           <div className="border-b p-3 text-xs text-muted-foreground flex items-center gap-3">
-                            <Activity className="h-4 w-4" />
                             {metrics.map(m => metricLabel[m]).join(", ")} • {granularity}
                           </div>
                           <div className="p-3" style={{ height: 360 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <ComposedChart
-                                data={data}
-                                onClick={(e: any) => {
-                                  if (!e?.activePayload?.length) return;
-                                  const payload = e.activePayload[0]?.payload;
-                                  if (!payload) return;
-                                  const bucket = payload.bucket as string;
-                                  const raw = payload._raw as RawRow[];
-                                  openDrill(facet.title, bucket, raw);
-                                }}
-                              >
+                              <ComposedChart data={data} onClick={(e: any) => {
+                                if (!e?.activePayload?.length) return;
+                                const payload = e.activePayload[0]?.payload;
+                                if (!payload) return;
+                                openDrill(facet.title, payload.bucket as string, payload._raw as RawRow[]);
+                              }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="bucket" />
                                 {hasCount && <YAxis yAxisId="left" allowDecimals={false} />}
                                 {hasPct && <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />}
-                                <RTooltip
-                                  formatter={(value: any, name: string) => {
-                                    const m = name as MetricKey;
-                                    return [isMetricKey(m) ? formatVal(m, Number(value)) : value, metricLabel[m as MetricKey] ?? name];
-                                  }}
-                                />
+                                <Tooltip />
                                 <Legend />
                                 {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
                                   <ReferenceLine yAxisId="right" y={Number(benchmark)} stroke="#ef4444" strokeDasharray="4 4" label={`Benchmark ${benchmark}%`} />
@@ -1001,16 +961,92 @@ export default function EmbrexTimelinePage() {
                                   return <Line key={m} type="monotone" dataKey={m} yAxisId={yAxis} stroke={color} dot strokeWidth={2} />;
                                 })}
                                 {rollingAvg && (
-                                  <Line
-                                    type="monotone"
-                                    dataKey="rolling"
-                                    yAxisId={isPercentMetric(metrics[0] ?? "total_eggs_set") ? "right" : "left"}
-                                    stroke="#64748b"
-                                    dot={false}
-                                    strokeDasharray="5 5"
-                                    name="Rolling Avg"
-                                  />
+                                  <Line type="monotone" dataKey="rolling"
+                                        yAxisId={isPercentMetric(metrics[0] ?? "total_eggs_set") ? "right" : "left"}
+                                        stroke="#64748b" dot={false} strokeDasharray="5 5" name="Rolling Avg" />
                                 )}
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Stacked counts */}
+                        <div className="rounded-lg border bg-card">
+                          <div className="border-b p-3 text-xs text-muted-foreground flex items-center gap-2">
+                            <Layers className="h-4 w-4" /> Stacked counts
+                          </div>
+                          <div className="p-3" style={{ height: 260 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="bucket" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="total_eggs_set" stackId="a" fill={seriesColors[0]} name="Total Eggs" />
+                                <Bar dataKey="eggs_cleared"  stackId="a" fill={seriesColors[2]} name="Clears" />
+                                <Bar dataKey="eggs_injected" stackId="a" fill={seriesColors[1]} name="Injected" />
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Percent trends */}
+                        <div className="rounded-lg border bg-card">
+                          <div className="border-b p-3 text-xs text-muted-foreground flex items-center gap-2">
+                            <Percent className="h-4 w-4" /> Percent trends
+                          </div>
+                          <div className="p-3" style={{ height: 240 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="bucket" />
+                                <YAxis domain={[0, 100]} />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="clear_pct" stroke={seriesColors[2]} dot={false} name="Clear %" />
+                                <Line type="monotone" dataKey="injected_pct" stroke={seriesColors[1]} dot={false} name="Injected %" />
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Small multiples (sparklines) */}
+                        <div className="rounded-lg border bg-card">
+                          <div className="border-b p-3 text-xs text-muted-foreground flex items-center gap-2">
+                            <Grid2X2 className="h-4 w-4" /> Small multiples
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            {["total_eggs_set", "clear_pct", "injected_pct"].map((k, i) => (
+                              <div key={k} className="p-3">
+                                <div className="text-xs text-muted-foreground mb-1">{metricLabel[k as MetricKey]}</div>
+                                <div style={{ height: 100 }}>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={data}>
+                                      <XAxis dataKey="bucket" hide />
+                                      <YAxis hide domain={isPercentMetric(k as MetricKey) ? [0, 100] : ["auto", "auto"]} />
+                                      <Area type="monotone" dataKey={k} stroke={seriesColors[i]} fill={seriesColors[i]} fillOpacity={0.15} />
+                                    </AreaChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Age distribution */}
+                        <div className="rounded-lg border bg-card">
+                          <div className="border-b p-3 text-xs text-muted-foreground flex items-center gap-2">
+                            <Rows className="h-4 w-4" /> Age (weeks) distributed across buckets
+                          </div>
+                          <div className="p-3" style={{ height: 220 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="bucket" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6, 6, 0, 0]} />
                               </ComposedChart>
                             </ResponsiveContainer>
                           </div>
@@ -1025,14 +1061,14 @@ export default function EmbrexTimelinePage() {
         </CardContent>
       </Card>
 
-      {/* Drill-down modal (drawer) */}
-      <Drawer open={modalOpen} onOpenChange={setModalOpen}>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle>Bucket details</DrawerTitle>
-            <div className="text-sm text-muted-foreground">{modalTitle}</div>
-          </DrawerHeader>
-          <div className="px-4 pb-4 max-h-[60vh] overflow-auto">
+      {/* Drill-down modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Bucket details</DialogTitle>
+            <DialogDescription>{modalTitle}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-auto">
             <table className="w-full text-sm">
               <thead className="text-left sticky top-0 bg-background">
                 <tr className="border-b">
@@ -1062,11 +1098,15 @@ export default function EmbrexTimelinePage() {
               </tbody>
             </table>
           </div>
-          <DrawerFooter>
-            <DrawerClose asChild><Button className="w-full">Close</Button></DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
+
+      {/* Footer tip */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Sparkles className="h-4 w-4" />
+        Pro-tip: save views for “Exec”, “Ops”, or “QA” presets, then jump between them from the loader above.
+        <MoveRight className="h-4 w-4" />
+      </div>
     </div>
   );
 }
