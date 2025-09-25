@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-
-/* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,25 +12,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-  <CardContent className="pt-4">
 
-/* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
-  RefreshCw, Download, BarChart2, Calendar as CalendarIcon, ChevronsUpDown, Check, X,
-  Activity, Layers, Rows, Save, Trash2, Grid2X2
+  RefreshCw, Download, BarChart2, LineChart, Calendar as CalendarIcon, ChevronsUpDown, Check, X,
+  Activity, Percent, Layers, Grid2X2, Rows, Save, Trash2
 } from "lucide-react";
 
-/* ── Recharts ──────────────────────────────────────────────────────────────── */
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend,
   ReferenceLine, CartesianGrid, Area, AreaChart
 } from "recharts";
 
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Types & constants                                                        │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
+/* ───────── Types ───────── */
 type Granularity = "year" | "month" | "week" | "day";
 type MetricKey =
   | "age_weeks"
@@ -65,6 +57,7 @@ interface BucketRow {
   raw: RawRow[];
 }
 
+/* ───────── Constants ───────── */
 const metricLabel: Record<MetricKey, string> = {
   age_weeks: "Age (weeks)",
   total_eggs_set: "Total Eggs",
@@ -109,7 +102,7 @@ const saveFile = (filename: string, content: string, mime = "text/csv;charset=ut
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 };
 
-/* one shared palette */
+/* ONE palette used everywhere */
 const PALETTE = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#0ea5e9", "#7c3aed", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
 
 /* Visualization options — exactly one active at a time */
@@ -143,351 +136,15 @@ const DEFAULTS = {
   viz: "timeline_bar" as VizKind,
 };
 
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Filter helpers (badge count + popover UI)                                │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
-function useFilterCount({
-  facetBy, selectedFlocks, selectedUnits, granularity, metrics, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz,
-}: {
-  facetBy: FacetMode; selectedFlocks: any[]; selectedUnits: any[]; granularity: Granularity; metrics: MetricKey[];
-  dateFrom: string; dateTo: string; percentAgg: PercentAgg; rollingAvg: boolean; benchmark: number | "";
-  viz: VizKind;
-}) {
-  let n = 0;
-  if (facetBy !== DEFAULTS.facetBy) n++;
-  if (selectedFlocks.length) n++;
-  if (selectedUnits.length) n++;
-  if (granularity !== DEFAULTS.scale) n++;
-  if (metrics.join(",") !== DEFAULTS.metrics.join(",")) n++;
-  if (dateFrom || dateTo) n++;
-  if (percentAgg !== DEFAULTS.pctAgg || rollingAvg || benchmark !== "") n++;
-  if (viz !== DEFAULTS.viz) n++;
-  return n;
-}
-
-/** Compact popover that mirrors the reference UI (searchable groups, checkmarks, clear, save/load). */
-function FiltersViewPopover(props: {
-  facetBy: FacetMode; setFacetBy: (v: FacetMode)=>void;
-  selectedFlocks: number[]; setSelectedFlocks: (fn: (p:number[])=>number[])=>void; flocksList: {num:number;name:string}[];
-  selectedUnits: string[]; setSelectedUnits: (fn:(p:string[])=>string[])=>void; units: string[];
-  granularity: Granularity; setGranularity: (g:Granularity)=>void;
-  metrics: MetricKey[]; setMetrics: (fn:(p:MetricKey[])=>MetricKey[])=>void;
-  dateFrom: string; setDateFrom: (v:string)=>void; dateTo: string; setDateTo: (v:string)=>void;
-  percentAgg: PercentAgg; setPercentAgg: (v:PercentAgg)=>void; rollingAvg: boolean; setRollingAvg: (v:boolean)=>void;
-  benchmark: number | ""; setBenchmark: (v:number | "")=>void;
-  viz: VizKind; setViz: (v:VizKind)=>void;
-  savedName: string; setSavedName: (s:string)=>void; savedViews: string[];
-  saveCurrentView: ()=>void; applySavedView: (name:string)=>void;
-}) {
-  const {
-    facetBy, setFacetBy, selectedFlocks, setSelectedFlocks, flocksList,
-    selectedUnits, setSelectedUnits, units,
-    granularity, setGranularity, metrics, setMetrics,
-    dateFrom, setDateFrom, dateTo, setDateTo,
-    percentAgg, setPercentAgg, rollingAvg, setRollingAvg,
-    benchmark, setBenchmark, viz, setViz,
-    savedName, setSavedName, savedViews, saveCurrentView, applySavedView,
-  } = props;
-
-  const [flockQuery, setFlockQuery] = useState("");
-  const [unitQuery, setUnitQuery] = useState("");
-  const [metricQuery, setMetricQuery] = useState("");
-
-  const filteredFlocks = useMemo(
-    () => flocksList.filter(f => (`#${f.num} ${f.name}`.toLowerCase().includes(flockQuery.toLowerCase()))),
-    [flockQuery, flocksList]
-  );
-  const filteredUnits = useMemo(
-    () => units.filter(u => u.toLowerCase().includes(unitQuery.toLowerCase())),
-    [unitQuery, units]
-  );
-  const filteredMetrics = useMemo(
-    () => (ALL_METRICS as MetricKey[]).filter(m => metricLabel[m].toLowerCase().includes(metricQuery.toLowerCase())),
-    [metricQuery]
-  );
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Grid2X2 className="h-4 w-4" />
-          Filters
-        </Button>
-      </PopoverTrigger>
-
-      <PopoverContent className="w-[720px] p-0" align="start">
-        {/* Header: save/load/clear */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="flex items-center gap-2">
-            <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="w-44" />
-            <Button variant="outline" size="sm" onClick={saveCurrentView}><Save className="h-4 w-4 mr-1" />Save</Button>
-            {savedViews.length>0 && (
-              <Select onValueChange={(v)=>applySavedView(v)}>
-                <SelectTrigger className="w-44 h-8"><SelectValue placeholder="Load saved view" /></SelectTrigger>
-                <SelectContent>
-                  {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <Button
-            variant="ghost" size="sm"
-            onClick={()=>{
-              setFacetBy(DEFAULTS.facetBy);
-              setSelectedFlocks(()=>[]);
-              setSelectedUnits(()=>[]);
-              setGranularity(DEFAULTS.scale);
-              setMetrics(()=>[...DEFAULTS.metrics]);
-              setDateFrom(""); setDateTo("");
-              setPercentAgg(DEFAULTS.pctAgg);
-              setRollingAvg(false);
-              setBenchmark("");
-              setViz(DEFAULTS.viz);
-            }}
-          >
-            Clear
-          </Button>
-        </div>
-
-        {/* Body: tidy groups with search */}
-        <div className="max-h-[60vh] overflow-auto">
-          <Accordion type="multiple" defaultValue={["facet","compare","metrics","date","advanced","viz"]}>
-            {/* View */}
-            <AccordionItem value="facet">
-              <AccordionTrigger className="px-4">View</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="md:col-span-1">
-                    <div className="text-xs mb-1 text-muted-foreground">Facet by</div>
-                    <Select value={facetBy} onValueChange={(v:FacetMode)=>setFacetBy(v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="flock">Flocks</SelectItem>
-                        <SelectItem value="unit">Units</SelectItem>
-                        <SelectItem value="flock_unit">Flock × Unit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-1">
-                    <div className="text-xs mb-1 text-muted-foreground">Scale</div>
-                    <Select value={granularity} onValueChange={(v:Granularity)=>setGranularity(v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="year">Years</SelectItem>
-                        <SelectItem value="month">Months</SelectItem>
-                        <SelectItem value="week">Weeks</SelectItem>
-                        <SelectItem value="day">Days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Compare */}
-            <AccordionItem value="compare">
-              <AccordionTrigger className="px-4">Compare</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  {/* Flocks */}
-                  <div className="border rounded-md">
-                    <div className="px-3 py-2 border-b text-sm font-medium">Flocks</div>
-                    <Command className="p-0">
-                      <CommandInput value={flockQuery} onValueChange={setFlockQuery} placeholder="Search flocks…" />
-                      <CommandList className="max-h-56 overflow-auto">
-                        <CommandEmpty>No flocks.</CommandEmpty>
-                        <CommandGroup>
-                          {filteredFlocks.map(f=>{
-                            const checked = selectedFlocks.includes(f.num);
-                            return (
-                              <CommandItem
-                                key={f.num}
-                                value={`#${f.num} ${f.name}`}
-                                onSelect={()=>setSelectedFlocks(prev => checked ? prev.filter(x=>x!==f.num) : [...prev, f.num])}
-                              >
-                                <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                                  {checked && <Check className="h-3 w-3" />}
-                                </div>
-                                <span>#{f.num} — {f.name}</span>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </div>
-
-                  {/* Units */}
-                  <div className="border rounded-md">
-                    <div className="px-3 py-2 border-b text-sm font-medium">Units</div>
-                    <Command className="p-0">
-                      <CommandInput value={unitQuery} onValueChange={setUnitQuery} placeholder="Search units…" />
-                      <CommandList className="max-h-56 overflow-auto">
-                        <CommandEmpty>No units.</CommandEmpty>
-                        <CommandGroup>
-                          {filteredUnits.map(u=>{
-                            const checked = selectedUnits.includes(u);
-                            return (
-                              <CommandItem
-                                key={u}
-                                value={u}
-                                onSelect={()=>setSelectedUnits(prev => checked ? prev.filter(x=>x!==u) : [...prev, u])}
-                              >
-                                <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                                  {checked && <Check className="h-3 w-3" />}
-                                </div>
-                                <span>{u}</span>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Metrics */}
-            <AccordionItem value="metrics">
-              <AccordionTrigger className="px-4">Metrics</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="border rounded-md">
-                  <Command className="p-0">
-                    <CommandInput value={metricQuery} onValueChange={setMetricQuery} placeholder="Search metrics…" />
-                    <CommandList className="max-h-60 overflow-auto">
-                      <CommandEmpty>No metrics.</CommandEmpty>
-                      <CommandGroup>
-                        {(filteredMetrics as MetricKey[]).map(m=>{
-                          const checked = metrics.includes(m);
-                          return (
-                            <CommandItem
-                              key={m}
-                              value={metricLabel[m]}
-                              onSelect={()=>setMetrics(prev => checked ? prev.filter(x=>x!==m) : [...prev, m])}
-                            >
-                              <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                                {checked && <Check className="h-3 w-3" />}
-                              </div>
-                              <span>{metricLabel[m]}</span>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Date */}
-            <AccordionItem value="date">
-              <AccordionTrigger className="px-4">Date</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="flex items-center gap-2">
-                  <Input type="date" value={props.dateFrom} onChange={(e)=>props.setDateFrom(e.target.value)} className="w-44" />
-                  <span className="text-xs text-muted-foreground">to</span>
-                  <Input type="date" value={props.dateTo} onChange={(e)=>props.setDateTo(e.target.value)} className="w-44" />
-                  {(props.dateFrom || props.dateTo) && (
-                    <Button variant="ghost" size="icon" onClick={()=>{props.setDateFrom(""); props.setDateTo("");}}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {[
-                    ["Last 30d", 30], ["90d", 90], ["180d", 180], ["365d", 365],
-                  ].map(([label, days])=>(
-                    <Button key={label as string} variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
-                      const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days as number));
-                      props.setDateFrom(from.toISOString().slice(0,10)); props.setDateTo(to.toISOString().slice(0,10));
-                    }}>{label as string}</Button>
-                  ))}
-                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
-                    const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
-                    props.setDateFrom(from.toISOString().slice(0,10)); props.setDateTo(to.toISOString().slice(0,10));
-                  }}>YTD</Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{props.setDateFrom(""); props.setDateTo("");}}>All time</Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Advanced */}
-            <AccordionItem value="advanced">
-              <AccordionTrigger className="px-4">Advanced</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">Pct agg</span>
-                    <Select value={props.percentAgg} onValueChange={(v:PercentAgg)=>props.setPercentAgg(v)}>
-                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weighted">Weighted</SelectItem>
-                        <SelectItem value="unweighted">Unweighted</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="rolling2" checked={props.rollingAvg} onCheckedChange={(v)=>props.setRollingAvg(Boolean(v))} />
-                    <label htmlFor="rolling2" className="text-sm">Rolling avg (3 buckets)</label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">Benchmark %</span>
-                    <Input type="number" inputMode="decimal" className="w-24" placeholder="e.g. 95"
-                           value={props.benchmark} onChange={(e)=> props.setBenchmark(e.target.value === "" ? "" : Number(e.target.value))} />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Visualization */}
-            <AccordionItem value="viz">
-              <AccordionTrigger className="px-4">Visualization</AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <Select value={props.viz} onValueChange={(v:VizKind)=>props.setViz(v)}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-
-        {/* Footer: selected chips preview */}
-        <div className="px-4 py-3 border-t">
-          <div className="flex flex-wrap gap-1">
-            {!!selectedFlocks.length && selectedFlocks.slice(0,6).map(f => (
-              <Badge key={`f-${f}`} variant="secondary" className="gap-1">Flock #{f}<X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedFlocks(prev=>prev.filter(x=>x!==f))} /></Badge>
-            ))}
-            {!!selectedUnits.length && selectedUnits.slice(0,6).map(u => (
-              <Badge key={`u-${u}`} variant="secondary" className="gap-1">{u}<X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedUnits(prev=>prev.filter(x=>x!==u))} /></Badge>
-            ))}
-            {!!metrics.length && metrics.slice(0,6).map(m => (
-              <Badge key={`m-${m}`} variant="secondary" className="gap-1">{metricLabel[m]}<X className="h-3 w-3 cursor-pointer" onClick={()=>setMetrics(prev=>prev.filter(x=>x!==m))} /></Badge>
-            ))}
-            {(dateFrom || dateTo) && <Badge variant="secondary">{dateFrom || "…"} → {dateTo || "…"}</Badge>}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Page                                                                      │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
 export default function EmbrexTimelinePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  /* ── Data ── */
+  /* ── Controls state ── */
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RawRow[]>([]);
 
-  /* ── Controls state ── */
   const [granularity, setGranularity] = useState<Granularity>(() => validScale(searchParams.get("scale")) ? (searchParams.get("scale") as Granularity) : DEFAULTS.scale);
   const [metrics, setMetrics] = useState<MetricKey[]>(() => {
     const m = (searchParams.get("metrics") ?? "").split(",").filter(Boolean) as MetricKey[];
@@ -504,8 +161,10 @@ export default function EmbrexTimelinePage() {
     const b = searchParams.get("bench"); if (!b) return ""; const n = Number(b); return Number.isFinite(n) ? n : "";
   });
   const [viz, setViz] = useState<VizKind>(() => (Object.keys(VIZ_LABEL) as VizKind[]).includes((searchParams.get("viz") as VizKind)) ? (searchParams.get("viz") as VizKind) : DEFAULTS.viz);
+
   const [savedName, setSavedName] = useState("");
 
+  /* ── Load data ── */
   useEffect(() => { document.title = "Embrex Timeline | Hatchery Dashboard"; }, []);
   useEffect(() => {
     (async () => {
@@ -542,7 +201,7 @@ export default function EmbrexTimelinePage() {
     })();
   }, [toast]);
 
-  /* URL sync */
+  /* ── URL sync ── */
   useEffect(() => {
     const sp = new URLSearchParams();
     sp.set("scale", granularity);
@@ -559,7 +218,7 @@ export default function EmbrexTimelinePage() {
     setSearchParams(sp, { replace: true });
   }, [granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz, setSearchParams]);
 
-  /* Derived lists */
+  /* ── Lists ── */
   const units = useMemo(() => Array.from(new Set(rows.map(r => (r.unit_name || "").trim()).filter(Boolean))).sort(), [rows]);
   const flocksList = useMemo(() => {
     const uniq = new Map<number, string>();
@@ -568,7 +227,7 @@ export default function EmbrexTimelinePage() {
   }, [rows]);
   const flocksMap = useMemo(() => new Map(flocksList.map(({num,name}) => [num, name])), [flocksList]);
 
-  /* Filtering */
+  /* ── Filtering ── */
   const baseFilteredRows = useMemo(() => {
     let out = rows;
     if (selectedUnits.length) {
@@ -584,7 +243,7 @@ export default function EmbrexTimelinePage() {
     return out;
   }, [rows, selectedUnits, selectedFlocks, dateFrom, dateTo]);
 
-  /* Facets */
+  /* ── Facets ── */
   type Facet = { key: string; title: string; rows: RawRow[]; };
   const facets: Facet[] = useMemo(() => {
     const data = baseFilteredRows;
@@ -613,7 +272,7 @@ export default function EmbrexTimelinePage() {
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, flocksMap]);
 
-  /* Bucketing + chart data */
+  /* ── Bucketing ── */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
     const map = new Map<string, BucketRow>();
     for (const r of subset) {
@@ -669,7 +328,18 @@ export default function EmbrexTimelinePage() {
     }));
   };
 
-  /* Drill-down modal */
+  /* ── KPIs ── */
+  const kpis = useMemo(() => {
+    const all = baseFilteredRows;
+    const totalSet = all.reduce((a, r) => a + (r.total_eggs_set ?? 0), 0);
+    const totalClr = all.reduce((a, r) => a + (r.eggs_cleared ?? 0), 0);
+    const totalInj = all.reduce((a, r) => a + (r.eggs_injected ?? 0), 0);
+    const clrPct = totalSet ? (totalClr / totalSet) * 100 : 0;
+    const injPct = totalSet ? (totalInj / totalSet) * 100 : 0;
+    return { totalSet, clrPct, injPct };
+  }, [baseFilteredRows]);
+
+  /* ── Modal ── */
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalRows, setModalRows] = useState<RawRow[]>([]);
@@ -677,7 +347,7 @@ export default function EmbrexTimelinePage() {
     setModalTitle(`${facetTitle} • ${bucketLabel}`); setModalRows(raw); setModalOpen(true);
   };
 
-  /* Export / Saved Views */
+  /* ── Export / Saved Views ── */
   const exportBucketsCsv = () => {
     const out: Record<string, any>[] = [];
     facets.forEach(f => {
@@ -703,106 +373,231 @@ export default function EmbrexTimelinePage() {
     const v: string[] = []; for (let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||""; if (k.startsWith("embrexView:")) v.push(k.replace("embrexView:",""));} return v.sort();
   }, [modalOpen, searchParams]);
 
-  /* Toolbar filter count */
-  const filterCount = useFilterCount({
-    facetBy, selectedFlocks, selectedUnits, granularity, metrics, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz,
-  });
+  /* ── Helpers (multi-select dropdown) ── */
+  function MultiSelectPopover<T extends string | number>({
+    label, items, selected, onToggle, formatter
+  }: {
+    label: string;
+    items: T[];
+    selected: T[];
+    onToggle: (val: T) => void;
+    formatter?: (val: T) => string;
+  }) {
+    return (
+      <div>
+        <div className="text-xs mb-1 text-muted-foreground">{label}</div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" className="w-full justify-between">
+              {selected.length ? (
+                <div className="flex gap-1 flex-wrap">
+                  {selected.map((v) => (
+                    <Badge key={String(v)} variant="secondary" className="gap-1">
+                      {formatter ? formatter(v) : String(v)}
+                      <X className="h-3 w-3 cursor-pointer"
+                         onClick={(e) => { e.stopPropagation(); onToggle(v); }} />
+                    </Badge>
+                  ))}
+                </div>
+              ) : `Select ${label.toLowerCase()}`}
+              <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[360px] p-0">
+            <Command>
+              <CommandInput placeholder={`Search ${label.toLowerCase()}...`} />
+              <CommandEmpty>No results.</CommandEmpty>
+              <CommandList>
+                <CommandGroup>
+                  {items.map((v) => {
+                    const checked = selected.includes(v);
+                    return (
+                      <CommandItem
+                        key={String(v)}
+                        value={formatter ? formatter(v) : String(v)}
+                        onSelect={() => onToggle(v)}
+                      >
+                        <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
+                          {checked && <Check className="h-3 w-3" />}
+                        </div>
+                        <span>{formatter ? formatter(v) : String(v)}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
 
-  /* UI */
+  /* ── UI ── */
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Embrex Timeline</h1>
-          <p className="text-muted-foreground">Enterprise time-series analytics — one view at a time.</p>
+          <p className="text-muted-foreground">Enterprise time-series analytics. One view at a time for clarity.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-            <RefreshCw className="h-4 w-4" /> Reset
-          </Button>
-          <Button variant="secondary" className="gap-2" onClick={exportBucketsCsv}>
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
-          <Button variant="secondary" className="gap-2" onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}>
-            <BarChart2 className="h-4 w-4" /> Embrex Summary
-          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}><RefreshCw className="h-4 w-4" /> Reset</Button>
+          <Button variant="secondary" className="gap-2" onClick={exportBucketsCsv}><Download className="h-4 w-4" /> Export CSV</Button>
+          <Button variant="secondary" className="gap-2" onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}><BarChart2 className="h-4 w-4" /> Embrex Summary</Button>
         </div>
       </div>
 
-      {/* Compact toolbar: Filters + quick chips (no KPI cards for extra room) */}
-<Card>
-  <CardContent className="pt-4">
-    <div className="flex items-center justify-between flex-wrap gap-2">
-      {/* left cluster: Filters + quick viz */}
-      <div className="flex items-center gap-2">
-        {/* Filters with count bubble */}
-        <div className="relative">
-          <FiltersViewPopover
-            facetBy={facetBy} setFacetBy={setFacetBy}
-            selectedFlocks={selectedFlocks} setSelectedFlocks={setSelectedFlocks} flocksList={flocksList}
-            selectedUnits={selectedUnits} setSelectedUnits={setSelectedUnits} units={units}
-            granularity={granularity} setGranularity={setGranularity}
-            metrics={metrics} setMetrics={setMetrics}
-            dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo}
-            percentAgg={percentAgg} setPercentAgg={setPercentAgg}
-            rollingAvg={rollingAvg} setRollingAvg={setRollingAvg}
-            benchmark={benchmark} setBenchmark={setBenchmark}
-            viz={viz} setViz={setViz}
-            savedName={savedName} setSavedName={setSavedName}
-            savedViews={savedViews} saveCurrentView={saveCurrentView} applySavedView={applySavedView}
-          />
-          {filterCount > 0 && (
-            <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-primary text-primary-foreground">
-              {filterCount}
-            </span>
-          )}
-        </div>
+      {/* KPIs */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total Eggs Set</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-24" /> : kpis.totalSet.toLocaleString()}</CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Avg Clear %</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : `${kpis.clrPct.toFixed(1)}%`}</CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Avg Injected %</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{loading ? <Skeleton className="h-7 w-16" /> : `${kpis.injPct.toFixed(1)}%`}</CardContent></Card>
+      </div>
 
-        {/* NEW: Visualization quick-select */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground hidden sm:inline">Visualization</span>
-          <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
-            <SelectTrigger className="w-[210px] h-9">
-              <Monitor className="h-4 w-4 mr-2 opacity-70" />
-              <SelectValue placeholder="Choose view" />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
-                <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
+      {/* Controls */}
+      <Card>
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Filters & View</CardTitle>
+            <div className="flex items-center gap-2">
+              <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="w-44" />
+              <Button variant="outline" className="gap-2" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
+              {savedViews.length>0 && (
+                <Select onValueChange={(v)=>applySavedView(v)}>
+                  <SelectTrigger className="w-44"><SelectValue placeholder="Load saved view" /></SelectTrigger>
+                  <SelectContent>{savedViews.map(v=> <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="mt-4 grid gap-4 md:grid-cols-12">
+          {/* Facet */}
+          <div className="md:col-span-3">
+            <div className="text-xs mb-1 text-muted-foreground">Facet by</div>
+            <Select value={facetBy} onValueChange={(v: FacetMode)=>setFacetBy(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flock">Flocks</SelectItem>
+                <SelectItem value="unit">Units</SelectItem>
+                <SelectItem value="flock_unit">Flock × Unit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Compare flocks (no cap) */}
+          <div className="md:col-span-4">
+            <MultiSelectPopover<number>
+              label="Compare flocks"
+              items={flocksList.map(f=>f.num)}
+              selected={selectedFlocks}
+              onToggle={(v)=> setSelectedFlocks(prev => prev.includes(v) ? prev.filter(x=>x!==v) : [...prev, v])}
+              formatter={(n)=> `#${n} — ${flocksMap.get(n) ?? ""}`}
+            />
+          </div>
+
+          {/* Compare units (no cap) */}
+          <div className="md:col-span-5">
+            <MultiSelectPopover<string>
+              label="Compare units"
+              items={units}
+              selected={selectedUnits}
+              onToggle={(u)=> setSelectedUnits(prev => prev.includes(u) ? prev.filter(x=>x!==u) : [...prev, u])}
+            />
+          </div>
+
+          {/* Scale */}
+          <div className="md:col-span-2">
+            <div className="text-xs mb-1 text-muted-foreground">Scale</div>
+            <Select value={granularity} onValueChange={(v: Granularity)=>setGranularity(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="year">Years</SelectItem>
+                <SelectItem value="month">Months</SelectItem>
+                <SelectItem value="week">Weeks</SelectItem>
+                <SelectItem value="day">Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Metrics dropdown (no cap) */}
+          <div className="md:col-span-6">
+            <MultiSelectPopover<MetricKey>
+              label="Metrics"
+              items={[...ALL_METRICS]}
+              selected={metrics}
+              onToggle={(m)=> setMetrics(prev => prev.includes(m) ? prev.filter(x=>x!==m) : [...prev, m])}
+              formatter={(m)=> metricLabel[m]}
+            />
+          </div>
+
+          {/* Date range + presets */}
+          <div className="md:col-span-6">
+            <div className="text-xs mb-1 text-muted-foreground flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Date range</div>
+            <div className="flex items-center gap-2">
+              <Input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} className="w-full" />
+              <span className="text-muted-foreground text-xs">to</span>
+              <Input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} className="w-full" />
+              {(dateFrom || dateTo) && <Button variant="ghost" size="icon" onClick={()=>{setDateFrom(""); setDateTo("");}}><Trash2 className="h-4 w-4" /></Button>}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {[
+                ["Last 30d", 30], ["90d", 90], ["180d", 180], ["365d", 365],
+              ].map(([label, days])=>(
+                <Button key={label as string} variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
+                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days as number));
+                  setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
+                }}>{label as string}</Button>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
+                const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
+                setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
+              }}>YTD</Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{setDateFrom(""); setDateTo("");}}>All time</Button>
+            </div>
+          </div>
 
-      {/* right cluster: quick actions + summary chips */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-          <RefreshCw className="h-4 w-4" /> Reset
-        </Button>
-        <Button variant="secondary" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
-        <Button variant="secondary" size="sm" className="gap-2" onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}>
-          <BarChart2 className="h-4 w-4" /> Embrex Summary
-        </Button>
-      </div>
-    </div>
+          {/* Advanced */}
+          <div className="md:col-span-6">
+            <div className="text-xs mb-1 text-muted-foreground">Advanced</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Pct agg</span>
+                <Select value={percentAgg} onValueChange={(v: PercentAgg)=>setPercentAgg(v)}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weighted">Weighted</SelectItem>
+                    <SelectItem value="unweighted">Unweighted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v)=>setRollingAvg(Boolean(v))} />
+                <label htmlFor="rolling" className="text-sm">Rolling avg (3 buckets)</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Benchmark %</span>
+                <Input type="number" inputMode="decimal" className="w-24" placeholder="e.g. 95" value={benchmark} onChange={(e)=> setBenchmark(e.target.value === "" ? "" : Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
 
-    {/* read-only chips row stays as-is */}
-    <div className="mt-3 flex flex-wrap gap-1">
-      <Badge variant="outline" className="gap-1"><Layers className="h-3 w-3" /> {facetBy}</Badge>
-      <Badge variant="outline" className="gap-1"><Rows className="h-3 w-3" /> {granularity}</Badge>
-      {metrics.slice(0,3).map((m)=> <Badge key={m} variant="outline">{metricLabel[m]}</Badge>)}
-      {metrics.length>3 && <Badge variant="outline">+{metrics.length-3}</Badge>}
-      {(dateFrom || dateTo) && <Badge variant="outline"><CalendarIcon className="h-3 w-3 mr-1" /> {dateFrom || "…"} → {dateTo || "…"}</Badge>}
-    </div>
-  </CardContent>
-</Card>
+          {/* Visualization (only one at a time) */}
+          <div className="md:col-span-6">
+            <div className="text-xs mb-1 text-muted-foreground">Visualization</div>
+            <Select value={viz} onValueChange={(v: VizKind)=>setViz(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-
-      {/* Visualization area — exactly ONE view */}
+      {/* Visualization area — exactly ONE view rendered */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -812,13 +607,12 @@ export default function EmbrexTimelinePage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-[420px] w-full" />
+            <Skeleton className="h-[360px] w-full" />
           ) : (
             <Tabs defaultValue={facets[0]?.key || "ALL"} className="w-full">
               <TabsList className="flex flex-wrap justify-start max-w-full overflow-x-auto">
                 {facets.map(f => <TabsTrigger key={f.key} value={f.key} className="truncate max-w-[260px]">{f.title}</TabsTrigger>)}
               </TabsList>
-
               {facets.map((facet) => {
                 const data = chartDataForFacet(facet.rows);
                 const showTimeline = viz === "timeline_bar" || viz === "timeline_line";
@@ -826,7 +620,7 @@ export default function EmbrexTimelinePage() {
                   <TabsContent key={facet.key} value={facet.key} className="mt-4">
                     {/* Timeline – Bar/Line */}
                     {showTimeline && (
-                      <div style={{ height: 420 }}>
+                      <div style={{ height: 360 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={data} onClick={(e:any)=>{ if (!e?.activePayload?.length) return; const p=e.activePayload[0]?.payload; if (!p) return; openDrill(facet.title, p.bucket as string, p._raw as RawRow[]); }}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -854,7 +648,7 @@ export default function EmbrexTimelinePage() {
 
                     {/* Stacked Counts */}
                     {viz === "stacked_counts" && (
-                      <div style={{ height: 380 }}>
+                      <div style={{ height: 320 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -869,7 +663,7 @@ export default function EmbrexTimelinePage() {
 
                     {/* Percent Trends */}
                     {viz === "percent_trends" && (
-                      <div style={{ height: 340 }}>
+                      <div style={{ height: 280 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -887,7 +681,7 @@ export default function EmbrexTimelinePage() {
                         {["total_eggs_set","clear_pct","injected_pct"].map((k, i)=>(
                           <div key={k} className="p-2 border rounded-md">
                             <div className="text-xs text-muted-foreground mb-1">{metricLabel[k as MetricKey]}</div>
-                            <div style={{ height: 120 }}>
+                            <div style={{ height: 100 }}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={data}>
                                   <XAxis dataKey="bucket" hide />
@@ -903,7 +697,7 @@ export default function EmbrexTimelinePage() {
 
                     {/* Age Distribution */}
                     {viz === "age_distribution" && (
-                      <div style={{ height: 320 }}>
+                      <div style={{ height: 260 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -914,7 +708,7 @@ export default function EmbrexTimelinePage() {
                       </div>
                     )}
 
-                    {/* Heatmap (month×unit) — bar-grid proxy */}
+                    {/* Heatmap (month×unit) — simple bar-grid proxy */}
                     {viz === "heatmap" && (
                       <div className="grid gap-2" style={{ gridTemplateColumns: "140px 1fr" }}>
                         <div className="text-xs text-muted-foreground">Unit</div>
