@@ -255,7 +255,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
           </TabsTrigger>
           <TabsTrigger value="units" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Units
+            Hatcheries
           </TabsTrigger>
           <TabsTrigger value="breeds" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -494,7 +494,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Unit Performance Comparison
+                  Hatchery Performance Comparison
                 </CardTitle>
                 <ChartDownloadButton chartId="unit-comparison" filename="unit-comparison" />
               </div>
@@ -517,7 +517,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-base font-semibold">Unit Statistics</h3>
+                  <h3 className="text-base font-semibold">Hatchery Statistics</h3>
                   <div className="space-y-3">
                     {unitComparison.map(stat => (
                       <div key={stat.unit} className="p-4 border rounded-lg">
