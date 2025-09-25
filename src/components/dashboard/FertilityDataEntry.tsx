@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,14 +15,7 @@ interface FertilityRecord {
   sample_size: number;
   infertile_eggs: number;
   fertile_eggs: number;
-  early_dead: number;
-  late_dead: number;
-  cull_chicks: number;
   fertility_percent: number;
-  hatch_percent: number;
-  hof_percent: number;
-  hoi_percent?: number | null;
-  if_dev_percent?: number | null;
   analysis_date: string;
   technician_name?: string | null;
   notes?: string | null;
@@ -45,15 +37,12 @@ interface FertilityDataEntryProps {
 const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntryProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-const [formData, setFormData] = useState({
-  sampleSize: '648',
-  infertileEggs: '',
-  earlyDead: '',
-  lateDead: '',
-  cullChicks: '',
-  technicianName: '',
-  notes: ''
-});
+  const [formData, setFormData] = useState({
+    sampleSize: '648',
+    infertileEggs: '',
+    technicianName: '',
+    notes: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,62 +72,45 @@ const [formData, setFormData] = useState({
     }
   };
 
-const calculateValues = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, cullChicks: number) => {
-  const fertileEggs = Math.max(0, sampleSize - infertile);
-  const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - lateDead - cullChicks);
-  const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
-  const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
-  const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
-  const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
-  const ifDevPercent = hoiPercent - hofPercent; // delta due to culls
-  
-  return {
-    fertileEggs,
-    fertilityPercent: Number(fertilityPercent.toFixed(2)),
-    hatchPercent: Number(hatchPercent.toFixed(2)),
-    hofPercent: Number(hofPercent.toFixed(2)),
-    hoiPercent: Number(hoiPercent.toFixed(2)),
-    ifDevPercent: Number(ifDevPercent.toFixed(2)),
+  const calculateValues = (sampleSize: number, infertile: number) => {
+    const fertileEggs = Math.max(0, sampleSize - infertile);
+    const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
+    
+    return {
+      fertileEggs,
+      fertilityPercent: Number(fertilityPercent.toFixed(2)),
+    };
   };
-};
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-const validateForm = () => {
-  const sampleSize = Number(formData.sampleSize || 0);
-  const infertile = Number(formData.infertileEggs || 0);
-  const earlyDead = Number(formData.earlyDead || 0);
-  const lateDead = Number(formData.lateDead || 0);
-  const cullChicks = Number(formData.cullChicks || 0);
+  const validateForm = () => {
+    const sampleSize = Number(formData.sampleSize || 0);
+    const infertile = Number(formData.infertileEggs || 0);
 
-  if (!formData.sampleSize || sampleSize <= 0) {
-    return { isValid: false, error: "Sample Size is required and must be greater than 0" };
-  }
+    if (!formData.sampleSize || sampleSize <= 0) {
+      return { isValid: false, error: "Sample Size is required and must be greater than 0" };
+    }
 
-  if (!formData.infertileEggs || infertile < 0) {
-    return { isValid: false, error: "Infertile Eggs is required and cannot be negative" };
-  }
+    if (!formData.infertileEggs || infertile < 0) {
+      return { isValid: false, error: "Infertile Eggs is required and cannot be negative" };
+    }
 
-  if (earlyDead < 0 || lateDead < 0 || cullChicks < 0) {
-    return { isValid: false, error: "Early Dead, Late Dead, and Cull Chicks cannot be negative" };
-  }
+    if (infertile > sampleSize) {
+      return { 
+        isValid: false, 
+        error: `Infertile eggs (${infertile}) cannot exceed sample size (${sampleSize})` 
+      };
+    }
+    
+    return { isValid: true, error: "" };
+  };
 
-  const total = infertile + earlyDead + lateDead + cullChicks;
-  if (total > sampleSize) {
-    return { 
-      isValid: false, 
-      error: `Total count (${total}) cannot exceed sample size (${sampleSize}). Current: Infertile(${infertile}) + Early Dead(${earlyDead}) + Late Dead(${lateDead}) + Cull Chicks(${cullChicks}) = ${total}` 
-    };
-  }
-  
-  return { isValid: true, error: "" };
-};
-
-const isFormValid = () => {
-  return validateForm().isValid;
-};
+  const isFormValid = () => {
+    return validateForm().isValid;
+  };
 
   const handleSubmit = async () => {
     const validation = validateForm();
@@ -158,25 +130,18 @@ const isFormValid = () => {
     try {
       const sampleSize = Number(formData.sampleSize || 0);
       const infertile = Number(formData.infertileEggs || 0);
-      const earlyDead = Number(formData.earlyDead || 0);
-      const lateDead = Number(formData.lateDead || 0);
-      const cullChicks = Number(formData.cullChicks || 0);
       
-      const calculated = calculateValues(sampleSize, infertile, earlyDead, lateDead, cullChicks);
+      const calculated = calculateValues(sampleSize, infertile);
       
       const recordData = {
         batch_id: batchInfo.id,
         sample_size: sampleSize,
         infertile_eggs: infertile,
         fertile_eggs: calculated.fertileEggs,
-        early_dead: earlyDead,
-        late_dead: lateDead,
-        cull_chicks: cullChicks,
+        early_dead: 0, // Set to 0 for fertility analysis
+        late_dead: 0, // Set to 0 for fertility analysis
+        cull_chicks: 0, // Set to 0 for fertility analysis
         fertility_percent: calculated.fertilityPercent,
-        hatch_percent: calculated.hatchPercent,
-        hof_percent: calculated.hofPercent,
-        hoi_percent: calculated.hoiPercent,
-        if_dev_percent: calculated.ifDevPercent,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
@@ -279,16 +244,13 @@ const isFormValid = () => {
   };
 
   const handleEdit = (record: FertilityRecord) => {
-  setEditingId(record.id);
-  setFormData({
-    sampleSize: record.sample_size.toString(),
-    infertileEggs: record.infertile_eggs.toString(),
-    earlyDead: record.early_dead.toString(),
-    lateDead: record.late_dead.toString(),
-    cullChicks: (record.cull_chicks ?? 0).toString(),
-    technicianName: record.technician_name || '',
-    notes: record.notes || ''
-  });
+    setEditingId(record.id);
+    setFormData({
+      sampleSize: record.sample_size.toString(),
+      infertileEggs: record.infertile_eggs.toString(),
+      technicianName: record.technician_name || '',
+      notes: record.notes || ''
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -317,16 +279,13 @@ const isFormValid = () => {
   };
 
   const handleCancel = () => {
-  setEditingId(null);
-  setFormData({
-    sampleSize: '648',
-    infertileEggs: '',
-    earlyDead: '',
-    lateDead: '',
-    cullChicks: '',
-    technicianName: '',
-    notes: ''
-  });
+    setEditingId(null);
+    setFormData({
+      sampleSize: '648',
+      infertileEggs: '',
+      technicianName: '',
+      notes: ''
+    });
   };
 
   const calculateOverallAverages = () => {
@@ -334,16 +293,14 @@ const isFormValid = () => {
     
     const totalSampleSize = data.reduce((sum, record) => sum + record.sample_size, 0);
     const totalInfertile = data.reduce((sum, record) => sum + record.infertile_eggs, 0);
+    const totalFertile = data.reduce((sum, record) => sum + record.fertile_eggs, 0);
     const avgFertility = data.reduce((sum, record) => sum + (record.fertility_percent || 0), 0) / data.length;
-    const avgHatch = data.reduce((sum, record) => sum + (record.hatch_percent || 0), 0) / data.length;
-    const avgHOF = data.reduce((sum, record) => sum + (record.hof_percent || 0), 0) / data.length;
     
     return {
       totalSampleSize,
       totalInfertile,
-      avgFertility: Number(avgFertility.toFixed(2)),
-      avgHatch: Number(avgHatch.toFixed(2)),
-      avgHOF: Number(avgHOF.toFixed(2))
+      totalFertile,
+      avgFertility: Number(avgFertility.toFixed(2))
     };
   };
 
@@ -360,7 +317,7 @@ const isFormValid = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sampleSize">Sample Size *</Label>
               <Input
@@ -384,41 +341,29 @@ const isFormValid = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="earlyDead">Early Dead</Label>
+              <Label className="flex items-center gap-1">
+                Fertile Eggs (calculated)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Sample size - infertile eggs
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Input
-                id="earlyDead"
-                type="number"
-                min="0"
-                placeholder="e.g., 25"
-                value={formData.earlyDead}
-                onChange={(e) => handleInputChange('earlyDead', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lateDead">Late Dead</Label>
-              <Input
-                id="lateDead"
-                type="number"
-                min="0"
-                placeholder="e.g., 20"
-                value={formData.lateDead}
-                onChange={(e) => handleInputChange('lateDead', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cullChicks">Cull Chicks</Label>
-              <Input
-                id="cullChicks"
-                type="number"
-                min="0"
-                placeholder="e.g., 5"
-                value={formData.cullChicks}
-                onChange={(e) => handleInputChange('cullChicks', e.target.value)}
+                disabled
+                value={(() => {
+                  const s = Number(formData.sampleSize || 0);
+                  const inf = Number(formData.infertileEggs || 0);
+                  return calculateValues(s, inf).fertileEggs;
+                })()}
               />
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
-                Fertility % (auto)
+                Fertility %
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 opacity-70" />
@@ -433,106 +378,7 @@ const isFormValid = () => {
                 value={(() => {
                   const s = Number(formData.sampleSize || 0);
                   const inf = Number(formData.infertileEggs || 0);
-                  const ed = Number(formData.earlyDead || 0);
-                  const ld = Number(formData.lateDead || 0);
-                  const cc = Number(formData.cullChicks || 0);
-                  return calculateValues(s, inf, ed, ld, cc).fertilityPercent;
-                })()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Hatch % (HOS)
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Hatch of Set = hatched chicks ÷ sample size × 100
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                disabled
-                value={(() => {
-                  const s = Number(formData.sampleSize || 0);
-                  const inf = Number(formData.infertileEggs || 0);
-                  const ed = Number(formData.earlyDead || 0);
-                  const ld = Number(formData.lateDead || 0);
-                  const cc = Number(formData.cullChicks || 0);
-                  return calculateValues(s, inf, ed, ld, cc).hatchPercent;
-                })()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                HOF %
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Hatch of Fertile = hatched chicks ÷ fertile eggs × 100
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                disabled
-                value={(() => {
-                  const s = Number(formData.sampleSize || 0);
-                  const inf = Number(formData.infertileEggs || 0);
-                  const ed = Number(formData.earlyDead || 0);
-                  const ld = Number(formData.lateDead || 0);
-                  const cc = Number(formData.cullChicks || 0);
-                  return calculateValues(s, inf, ed, ld, cc).hofPercent;
-                })()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Incl. culls (fertile) %
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Hatch incl. culls = (hatched chicks + culls) ÷ fertile eggs × 100
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                disabled
-                value={(() => {
-                  const s = Number(formData.sampleSize || 0);
-                  const inf = Number(formData.infertileEggs || 0);
-                  const ed = Number(formData.earlyDead || 0);
-                  const ld = Number(formData.lateDead || 0);
-                  const cc = Number(formData.cullChicks || 0);
-                  return calculateValues(s, inf, ed, ld, cc).hoiPercent;
-                })()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                I/F dev. %
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Difference (incl. culls − HOF), impact due to culls
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                disabled
-                value={(() => {
-                  const s = Number(formData.sampleSize || 0);
-                  const inf = Number(formData.infertileEggs || 0);
-                  const ed = Number(formData.earlyDead || 0);
-                  const ld = Number(formData.lateDead || 0);
-                  const cc = Number(formData.cullChicks || 0);
-                  return calculateValues(s, inf, ed, ld, cc).ifDevPercent;
+                  return calculateValues(s, inf).fertilityPercent;
                 })()}
               />
             </div>
@@ -545,7 +391,7 @@ const isFormValid = () => {
                 onChange={(e) => handleInputChange('technicianName', e.target.value)}
               />
             </div>
-            <div className="space-y-2 md:col-span-3">
+            <div className="space-y-2 md:col-span-4">
               <Label htmlFor="notes">Notes</Label>
               <Input
                 id="notes"
@@ -555,6 +401,7 @@ const isFormValid = () => {
               />
             </div>
           </div>
+
           {/* Validation Summary */}
           {!isFormValid() && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-4">
@@ -594,14 +441,8 @@ const isFormValid = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Sample Size</TableHead>
                   <TableHead>Infertile</TableHead>
-                  <TableHead>Early Dead</TableHead>
-                  <TableHead>Late Dead</TableHead>
-                  <TableHead>Cull Chicks</TableHead>
+                  <TableHead>Fertile</TableHead>
                   <TableHead>Fertility %</TableHead>
-                  <TableHead>Hatch %</TableHead>
-                  <TableHead>HOF %</TableHead>
-                  <TableHead>Incl. culls (fertile) %</TableHead>
-                  <TableHead>I/F dev. %</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -614,49 +455,8 @@ const isFormValid = () => {
                     </TableCell>
                     <TableCell>{record.sample_size}</TableCell>
                     <TableCell>{record.infertile_eggs}</TableCell>
-                    <TableCell>{record.early_dead}</TableCell>
-                    <TableCell>{record.late_dead}</TableCell>
-                    <TableCell>{record.cull_chicks ?? 0}</TableCell>
+                    <TableCell>{record.fertile_eggs}</TableCell>
                     <TableCell>{Number(record.fertility_percent ?? 0).toFixed(2)}%</TableCell>
-                    <TableCell>{Number(record.hatch_percent ?? 0).toFixed(2)}%</TableCell>
-                    <TableCell>{(() => {
-                      if (record.hof_percent != null) return `${Number(record.hof_percent).toFixed(2)}%`;
-                      const s = record.sample_size || 0;
-                      const inf = record.infertile_eggs || 0;
-                      const ed = record.early_dead || 0;
-                      const ld = record.late_dead || 0;
-                      const cc = record.cull_chicks || 0;
-                      const fertile = Math.max(0, s - inf);
-                      const hatched = Math.max(0, s - inf - ed - ld - cc);
-                      const hof = fertile > 0 ? (hatched / fertile) * 100 : 0;
-                      return `${hof.toFixed(2)}%`;
-                    })()}</TableCell>
-                    <TableCell>{(() => {
-                      if (record.hoi_percent != null) return `${Number(record.hoi_percent).toFixed(2)}%`;
-                      const s = record.sample_size || 0;
-                      const inf = record.infertile_eggs || 0;
-                      const ed = record.early_dead || 0;
-                      const ld = record.late_dead || 0;
-                      const cc = record.cull_chicks || 0;
-                      const fertile = Math.max(0, s - inf);
-                      const hatched = Math.max(0, s - inf - ed - ld - cc);
-                      const hoi = fertile > 0 ? ((hatched + cc) / fertile) * 100 : 0;
-                      return `${hoi.toFixed(2)}%`;
-                    })()}</TableCell>
-                    <TableCell>{(() => {
-                      if (record.if_dev_percent != null) return `${Number(record.if_dev_percent).toFixed(2)}%`;
-                      const s = record.sample_size || 0;
-                      const inf = record.infertile_eggs || 0;
-                      const ed = record.early_dead || 0;
-                      const ld = record.late_dead || 0;
-                      const cc = record.cull_chicks || 0;
-                      const fertile = Math.max(0, s - inf);
-                      const hatched = Math.max(0, s - inf - ed - ld - cc);
-                      const hof = fertile > 0 ? (hatched / fertile) * 100 : 0;
-                      const hoi = fertile > 0 ? ((hatched + cc) / fertile) * 100 : 0;
-                      const ifdev = hoi - hof;
-                      return `${ifdev.toFixed(2)}%`;
-                    })()}</TableCell>
                     <TableCell>{record.technician_name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -685,12 +485,8 @@ const isFormValid = () => {
                     <TableCell>OVERALL AVERAGES</TableCell>
                     <TableCell>{overallAverages.totalSampleSize}</TableCell>
                     <TableCell>{overallAverages.totalInfertile}</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>-</TableCell>
+                    <TableCell>{overallAverages.totalFertile}</TableCell>
                     <TableCell>{overallAverages.avgFertility}%</TableCell>
-                    <TableCell>{overallAverages.avgHatch}%</TableCell>
-                    <TableCell>{overallAverages.avgHOF}%</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>-</TableCell>
                   </TableRow>
