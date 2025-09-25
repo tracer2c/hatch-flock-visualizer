@@ -94,7 +94,7 @@ const advancedAnalyticsItems = [
   },
   {
     path: '/unit-comparison',
-    label: 'Unit Weekly Comparison',
+    label: 'Hatcheries Weekly Comparison',
     icon: BarChart3,
     requiresAuth: true,
     requiredRole: undefined
