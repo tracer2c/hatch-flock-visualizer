@@ -17,6 +17,13 @@ import {
   Bar, 
   LineChart, 
   Line, 
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  ScatterChart,
+  Scatter,
+  Cell,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -43,7 +50,7 @@ interface EmbrexTimelineProps {
 }
 
 export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
-  const [viewType, setViewType] = useState<'bar' | 'line'>('bar');
+  const [viewType, setViewType] = useState<'bar' | 'line' | 'area' | 'pie' | 'scatter'>('bar');
   const [selectedFlock, setSelectedFlock] = useState<string>('all');
   const [metric, setMetric] = useState<string>('total_eggs');
   const [timeScale, setTimeScale] = useState<string>('months');
@@ -218,40 +225,74 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
       return <div className="h-64 flex items-center justify-center text-muted-foreground">No data available</div>;
     }
 
-    const ChartComponent = viewType === 'bar' ? BarChart : LineChart;
+    const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <ChartComponent data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis 
-            dataKey="period" 
-            stroke="hsl(var(--muted-foreground))" 
-            fontSize={11}
-          />
-          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <Tooltip 
-            content={({ active, payload, label }) => {
-              if (active && payload && payload.length) {
-                const data = payload[0].payload;
-                return (
-                  <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                    <p className="font-medium mb-2">{label}</p>
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span>Total Eggs:</span>
-                        <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+    if (viewType === 'bar') {
+      return (
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="period" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={11}
+            />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-2">{label}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Eggs:</span>
+                          <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          {viewType === 'bar' ? (
+                  );
+                }
+                return null;
+              }}
+            />
             <Bar dataKey="totalEggs" fill="hsl(var(--primary))" name="Total Eggs" />
-          ) : (
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (viewType === 'line') {
+      return (
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="period" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={11}
+            />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-2">{label}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Eggs:</span>
+                          <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
             <Line 
               type="monotone" 
               dataKey="totalEggs" 
@@ -260,10 +301,137 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
               dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
               name="Total Eggs"
             />
-          )}
-        </ChartComponent>
-      </ResponsiveContainer>
-    );
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (viewType === 'area') {
+      return (
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="period" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={11}
+            />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-2">{label}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Eggs:</span>
+                          <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="totalEggs" 
+              stroke="hsl(var(--primary))" 
+              fill="hsl(var(--primary))"
+              fillOpacity={0.3}
+              name="Total Eggs"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (viewType === 'pie') {
+      return (
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={timelineData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ period, totalEggs }) => `${period}: ${totalEggs.toLocaleString()}`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="totalEggs"
+            >
+              {timelineData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip 
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-2">{data.period}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Eggs:</span>
+                          <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (viewType === 'scatter') {
+      return (
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="period" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={11}
+            />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-2">{label}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Eggs:</span>
+                          <span className="font-medium">{data.totalEggs.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Scatter 
+              dataKey="totalEggs" 
+              fill="hsl(var(--primary))"
+              name="Total Eggs"
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -342,24 +510,18 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
             {/* View Type */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">View</label>
-              <div className="flex rounded-md bg-muted p-1">
-                <Button
-                  variant={viewType === 'bar' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewType('bar')}
-                  className="flex-1"
-                >
-                  Bar
-                </Button>
-                <Button
-                  variant={viewType === 'line' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewType('line')}
-                  className="flex-1"
-                >
-                  Line
-                </Button>
-              </div>
+              <Select value={viewType} onValueChange={(value) => setViewType(value as 'bar' | 'line' | 'area' | 'pie' | 'scatter')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">Bar Chart</SelectItem>
+                  <SelectItem value="line">Line Chart</SelectItem>
+                  <SelectItem value="area">Area Chart</SelectItem>
+                  <SelectItem value="pie">Pie Chart</SelectItem>
+                  <SelectItem value="scatter">Scatter Chart</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
