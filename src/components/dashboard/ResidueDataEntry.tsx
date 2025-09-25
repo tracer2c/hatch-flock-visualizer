@@ -96,14 +96,24 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     }
   };
 
-  // Calculate hatchability metrics
-  const calculateHatchabilityMetrics = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, cullChicks: number) => {
-    const fertileEggs = Math.max(0, sampleSize - infertile);
-    const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - lateDead - cullChicks);
-    const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
-    const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
-    const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
-    const ifDevPercent = hoiPercent - hofPercent; // delta due to culls
+  // Calculate hatchability metrics from residue counts
+  const calculateHatchabilityMetrics = () => {
+    const sampleSize = Number(formData.sampleSize) || 648;
+    const totalResidueCount = Number(formData.totalResidueCount) || 0;
+    const unhatchedFertile = Number(formData.unhatchedFertile) || 0;
+    const pippedNotHatched = Number(formData.pippedNotHatched) || 0;
+    const malformedChicks = Number(formData.malformedChicks) || 0;
+    const contaminatedEggs = Number(formData.contaminatedEggs) || 0;
+    
+    // Calculate based on residue analysis methodology
+    const hatchedChicks = Math.max(0, sampleSize - totalResidueCount);
+    const fertileEggs = Math.max(0, sampleSize - contaminatedEggs); // Assuming contaminated are mostly infertile
+    const viableChicks = Math.max(0, hatchedChicks - malformedChicks);
+    
+    const hatchPercent = sampleSize > 0 ? (hatchedChicks / sampleSize) * 100 : 0; // HOS
+    const hofPercent = fertileEggs > 0 ? (hatchedChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
+    const hoiPercent = fertileEggs > 0 ? (hatchedChicks / fertileEggs) * 100 : 0; // Hatch of Injected (same as HOF for residue)
+    const ifDevPercent = fertileEggs > 0 ? (malformedChicks / fertileEggs) * 100 : 0; // Malformed as % of fertile
     
     return {
       fertileEggs,
@@ -167,13 +177,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       const malformedChicks = Number(formData.malformedChicks) || 0;
       const contaminatedEggs = Number(formData.contaminatedEggs) || 0;
       
-      // For hatchability calculation, we'll use residue data where available
-      const infertile = 0; // This would come from fertility analysis
-      const earlyDead = 0; // This would come from fertility analysis  
-      const lateDead = 0; // This would come from fertility analysis
-      const cullChicks = malformedChicks; // Use malformed chicks as cull chicks
-      
-      const hatchabilityMetrics = calculateHatchabilityMetrics(sampleSize, infertile, earlyDead, lateDead, cullChicks);
+      const hatchabilityMetrics = calculateHatchabilityMetrics();
       
       const recordData = {
         batch_id: batchInfo.id,
@@ -456,14 +460,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 <Input
                   disabled
                   className="bg-white"
-                  value={(() => {
-                    const s = Number(formData.sampleSize || 648);
-                    const inf = 0; // Would come from fertility analysis
-                    const ed = 0; // Would come from fertility analysis
-                    const ld = 0; // Would come from fertility analysis
-                    const cc = Number(formData.malformedChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hatchPercent;
-                  })()}
+                  value={calculateHatchabilityMetrics().hatchPercent}
                 />
               </div>
 
@@ -482,14 +479,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 <Input
                   disabled
                   className="bg-white"
-                  value={(() => {
-                    const s = Number(formData.sampleSize || 648);
-                    const inf = 0;
-                    const ed = 0;
-                    const ld = 0;
-                    const cc = Number(formData.malformedChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hofPercent;
-                  })()}
+                  value={calculateHatchabilityMetrics().hofPercent}
                 />
               </div>
             </div>
