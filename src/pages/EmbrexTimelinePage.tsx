@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 
 /* ── Icons ───────────────────────────────────────────────────────────────── */
 import {
-  Loader2, Calendar as CalendarIcon, RefreshCw, ChevronsUpDown, Check, Filter,
+  Loader2, RefreshCw, ChevronsUpDown, Check, Filter,
   Trash2, Download, BarChart2, LineChart, Activity,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ import {
 } from "recharts";
 
 /* =============================================================================
-   Embrex Timeline (Enterprise, Compact Controls)
+   Embrex Timeline (Enterprise, Compact Controls) — Controlled Tabs Fix
 ============================================================================= */
 
 /** ---------- Types ---------- */
@@ -236,6 +236,9 @@ export default function EmbrexTimelinePage() {
 
   const [savedName, setSavedName] = useState("");
 
+  // ACTIVE TAB (fix for Flock × Unit not showing)
+  const [activeFacetKey, setActiveFacetKey] = useState<string | undefined>(undefined);
+
   /* ── Effects ───────────────────────────────────────────────────────────── */
   useEffect(() => {
     document.title = "Embrex Timeline | Hatchery Dashboard";
@@ -303,11 +306,8 @@ export default function EmbrexTimelinePage() {
     if (dateFrom) sp.set("from", dateFrom);
     if (dateTo) sp.set("to", dateTo);
     sp.set("pctAgg", percentAgg);
-    if (rollingAvg) sp.set("roll", "1");
-    else sp.delete("roll");
-    if (benchmark !== "" && Number.isFinite(Number(benchmark))) sp.set("bench", String(benchmark));
-    else sp.delete("bench");
-
+    if (rollingAvg) sp.set("roll", "1"); else sp.delete("roll");
+    if (benchmark !== "" && Number.isFinite(Number(benchmark))) sp.set("bench", String(benchmark)); else sp.delete("bench");
     setSearchParams(sp, { replace: true });
     sessionStorage.setItem("embrexTimelineQS", sp.toString());
   }, [
@@ -393,12 +393,22 @@ export default function EmbrexTimelinePage() {
         out.push({
           key: `FU-${f}-${u}`,
           title: `Flock #${f} — ${flocksMap.get(f) ?? ""} • Unit: ${u}`,
-          rows: data.filter(r => r.flock_number === f && (r.unit_name ?? "").toLowerCase() === u.toLowerCase()),
+          rows: data.filter(r =>
+            r.flock_number === f &&
+            (r.unit_name ?? "").trim().toLowerCase() === u.trim().toLowerCase()
+          ),
         });
       }
     }
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, flocksMap]);
+
+  // keep Tabs selection valid when facets change
+  useEffect(() => {
+    if (!facets.length) { setActiveFacetKey(undefined); return; }
+    const still = activeFacetKey && facets.some(f => f.key === activeFacetKey);
+    if (!still) setActiveFacetKey(facets[0].key);
+  }, [facets, activeFacetKey]);
 
   /* ── Bucketing ─────────────────────────────────────────────────────────── */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
@@ -935,7 +945,7 @@ export default function EmbrexTimelinePage() {
               {facets.length === 0 || facets.every(f => f.rows.length === 0) ? (
                 <div className="text-muted-foreground">No data for the current filters.</div>
               ) : (
-                <Tabs defaultValue={facets[0].key} className="w-full">
+                <Tabs value={activeFacetKey} onValueChange={setActiveFacetKey} className="w-full">
                   <TabsList className="flex flex-wrap justify-start max-w-full overflow-x-auto">
                     {facets.map(f => (
                       <TabsTrigger key={f.key} value={f.key} className="truncate max-w-[260px]">
@@ -1015,7 +1025,7 @@ export default function EmbrexTimelinePage() {
         </CardContent>
       </Card>
 
-      {/* Drill-down modal using Drawer for simplicity */}
+      {/* Drill-down modal (drawer) */}
       <Drawer open={modalOpen} onOpenChange={setModalOpen}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
