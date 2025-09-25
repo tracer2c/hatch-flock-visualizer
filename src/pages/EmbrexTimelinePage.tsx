@@ -489,22 +489,22 @@ export default function EmbrexTimelinePage() {
 
           {/* Compare flocks (no cap) */}
           <div className="md:col-span-4">
-            <MultiSelectPopover<number>
+            <MultiSelectPopover
               label="Compare flocks"
               items={flocksList.map(f=>f.num)}
               selected={selectedFlocks}
-              onToggle={(v)=> setSelectedFlocks(prev => prev.includes(v) ? prev.filter(x=>x!==v) : [...prev, v])}
-              formatter={(n)=> `#${n} — ${flocksMap.get(n) ?? ""}`}
+              onToggle={(v: number) => setSelectedFlocks(prev => prev.includes(v) ? prev.filter(x=>x!==v) : [...prev, v])}
+              formatter={(n: number) => `#${n} — ${flocksMap.get(n) ?? ""}`}
             />
           </div>
 
           {/* Compare units (no cap) */}
           <div className="md:col-span-5">
-            <MultiSelectPopover<string>
+            <MultiSelectPopover
               label="Compare units"
               items={units}
               selected={selectedUnits}
-              onToggle={(u)=> setSelectedUnits(prev => prev.includes(u) ? prev.filter(x=>x!==u) : [...prev, u])}
+              onToggle={(u: string) => setSelectedUnits(prev => prev.includes(u) ? prev.filter(x=>x!==u) : [...prev, u])}
             />
           </div>
 
@@ -524,12 +524,12 @@ export default function EmbrexTimelinePage() {
 
           {/* Metrics dropdown (no cap) */}
           <div className="md:col-span-6">
-            <MultiSelectPopover<MetricKey>
+            <MultiSelectPopover
               label="Metrics"
               items={[...ALL_METRICS]}
               selected={metrics}
-              onToggle={(m)=> setMetrics(prev => prev.includes(m) ? prev.filter(x=>x!==m) : [...prev, m])}
-              formatter={(m)=> metricLabel[m]}
+              onToggle={(m: MetricKey) => setMetrics(prev => prev.includes(m) ? prev.filter(x=>x!==m) : [...prev, m])}
+              formatter={(m: MetricKey) => metricLabel[m]}
             />
           </div>
 
