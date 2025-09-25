@@ -58,6 +58,12 @@ const navigationItems = [
     requiresAuth: true
   },
   {
+    path: '/embrex-timeline',
+    label: 'Embrex Timeline',
+    icon: TrendingUp,
+    requiresAuth: true
+  },
+  {
     path: '/checklist',
     label: 'Daily Tasks',
     icon: CheckSquare,
