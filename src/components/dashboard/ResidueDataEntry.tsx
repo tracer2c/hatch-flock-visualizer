@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Save, X, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface ResidueRecord {
   id: string;
@@ -48,6 +49,13 @@ interface ResidueRecord {
   upsideDownPercent: number;
   pipNumber: number;
   totalEggs: number;
+  // Hatchability metrics from fertility analysis
+  sampleSize?: number;
+  fertileEggs?: number;
+  hatchPercent?: number;
+  hofPercent?: number;
+  hoiPercent?: number;
+  ifDevPercent?: number;
 }
 
 interface BatchInfo {
@@ -87,7 +95,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     dryEgg: '',
     malpositioned: '',
     upsideDown: '',
-    pipNumber: ''
+    pipNumber: '',
+    // Hatchability metrics
+    sampleSize: '648'
   });
   const { toast } = useToast();
 
@@ -95,6 +105,24 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
   const calculatePercentage = (value: number) => {
     return Number(((value / TOTAL_EGGS) * 100).toFixed(2));
+  };
+
+  // Calculate hatchability metrics
+  const calculateHatchabilityMetrics = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, cullChicks: number) => {
+    const fertileEggs = Math.max(0, sampleSize - infertile);
+    const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - lateDead - cullChicks);
+    const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
+    const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
+    const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
+    const ifDevPercent = hoiPercent - hofPercent; // delta due to culls
+    
+    return {
+      fertileEggs,
+      hatchPercent: Number(hatchPercent.toFixed(2)),
+      hofPercent: Number(hofPercent.toFixed(2)),
+      hoiPercent: Number(hoiPercent.toFixed(2)),
+      ifDevPercent: Number(ifDevPercent.toFixed(2)),
+    };
   };
 
   const calculateTotalUsed = () => {
@@ -142,6 +170,15 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   const handleSubmit = () => {
     if (!validateForm()) return;
     
+    // Calculate hatchability metrics
+    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
+    const infertile = Number(formData.infertile) || 0;
+    const earlyDead = Number(formData.earlyDeath) || 0;
+    const lateDead = Number(formData.lateDeath) || 0;
+    const cullChicks = Number(formData.cullChicks) || 0;
+    
+    const hatchabilityMetrics = calculateHatchabilityMetrics(sampleSize, infertile, earlyDead, lateDead, cullChicks);
+    
     const newRecord: ResidueRecord = {
       id: editingId || Date.now().toString(),
       name: formData.name,
@@ -180,7 +217,14 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       upsideDown: Number(formData.upsideDown) || 0,
       upsideDownPercent: calculatePercentage(Number(formData.upsideDown) || 0),
       pipNumber: Number(formData.pipNumber) || 0,
-      totalEggs: TOTAL_EGGS
+      totalEggs: TOTAL_EGGS,
+      // Include hatchability metrics
+      sampleSize: sampleSize,
+      fertileEggs: hatchabilityMetrics.fertileEggs,
+      hatchPercent: hatchabilityMetrics.hatchPercent,
+      hofPercent: hatchabilityMetrics.hofPercent,
+      hoiPercent: hatchabilityMetrics.hoiPercent,
+      ifDevPercent: hatchabilityMetrics.ifDevPercent
     };
 
     if (editingId) {
@@ -224,7 +268,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       dryEgg: record.dryEgg.toString(),
       malpositioned: record.malpositioned.toString(),
       upsideDown: record.upsideDown.toString(),
-      pipNumber: record.pipNumber.toString()
+      pipNumber: record.pipNumber.toString(),
+      sampleSize: (record.sampleSize || TOTAL_EGGS).toString()
     });
   };
 
@@ -260,7 +305,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       dryEgg: '',
       malpositioned: '',
       upsideDown: '',
-      pipNumber: ''
+      pipNumber: '',
+      sampleSize: '648'
     });
   };
 
@@ -511,6 +557,158 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
             </div>
           </div>
 
+          {/* Hatchability Metrics Section */}
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">Hatchability Metrics</h3>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+              {/* Sample Size */}
+              <div className="space-y-2">
+                <Label htmlFor="sampleSize">Sample Size</Label>
+                <Input
+                  id="sampleSize"
+                  type="number"
+                  placeholder="e.g., 648"
+                  value={formData.sampleSize}
+                  onChange={(e) => handleInputChange('sampleSize', e.target.value)}
+                />
+              </div>
+
+              {/* Calculated Hatchability Metrics */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  Hatch % (HOS)
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Hatch of Set = hatched chicks ÷ sample size × 100
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  disabled
+                  className="bg-white"
+                  value={(() => {
+                    const s = Number(formData.sampleSize || 648);
+                    const inf = Number(formData.infertile || 0);
+                    const ed = Number(formData.earlyDeath || 0);
+                    const ld = Number(formData.lateDeath || 0);
+                    const cc = Number(formData.cullChicks || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hatchPercent;
+                  })()}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  HOF %
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Hatch of Fertile = hatched chicks ÷ fertile eggs × 100
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  disabled
+                  className="bg-white"
+                  value={(() => {
+                    const s = Number(formData.sampleSize || 648);
+                    const inf = Number(formData.infertile || 0);
+                    const ed = Number(formData.earlyDeath || 0);
+                    const ld = Number(formData.lateDeath || 0);
+                    const cc = Number(formData.cullChicks || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hofPercent;
+                  })()}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  I/F dev. %
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Fertile eggs ÷ sample size × 100
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  disabled
+                  className="bg-white"
+                  value={(() => {
+                    const s = Number(formData.sampleSize || 648);
+                    const inf = Number(formData.infertile || 0);
+                    const ed = Number(formData.earlyDeath || 0);
+                    const ld = Number(formData.lateDeath || 0);
+                    const cc = Number(formData.cullChicks || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).ifDevPercent;
+                  })()}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  Fertile Eggs
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Sample size - infertile eggs
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  disabled
+                  className="bg-white"
+                  value={(() => {
+                    const s = Number(formData.sampleSize || 648);
+                    const inf = Number(formData.infertile || 0);
+                    const ed = Number(formData.earlyDeath || 0);
+                    const ld = Number(formData.lateDeath || 0);
+                    const cc = Number(formData.cullChicks || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).fertileEggs;
+                  })()}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  HOI %
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Hatch incl. culls = (hatched chicks + culls) ÷ fertile eggs × 100
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  disabled
+                  className="bg-white"
+                  value={(() => {
+                    const s = Number(formData.sampleSize || 648);
+                    const inf = Number(formData.infertile || 0);
+                    const ed = Number(formData.earlyDeath || 0);
+                    const ld = Number(formData.lateDeath || 0);
+                    const cc = Number(formData.cullChicks || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hoiPercent;
+                  })()}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Validation Display */}
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between">
@@ -582,6 +780,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                   <TableHead>Contamination</TableHead>
                   <TableHead>Mold</TableHead>
                   <TableHead>Abnormal</TableHead>
+                  <TableHead>Hatch %</TableHead>
+                  <TableHead>HOF %</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -610,6 +810,12 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                       className={record.abnormalPercent > 2 ? "text-red-600 font-medium" : ""}
                     >
                       {record.abnormal} ({record.abnormalPercent}%)
+                    </TableCell>
+                    <TableCell className="font-medium text-blue-600">
+                      {record.hatchPercent ? `${record.hatchPercent}%` : '-'}
+                    </TableCell>
+                    <TableCell className="font-medium text-green-600">
+                      {record.hofPercent ? `${record.hofPercent}%` : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">

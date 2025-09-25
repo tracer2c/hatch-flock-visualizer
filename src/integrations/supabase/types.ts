@@ -87,18 +87,22 @@ export type Database = {
           alert_type: Database["public"]["Enums"]["alert_type"]
           batch_day: number | null
           batch_id: string | null
+          co2_level: number | null
           created_at: string
           current_humidity: number | null
           current_temperature: number | null
           id: string
           machine_id: string | null
           message: string
+          mortality_count: number | null
           resolved_at: string | null
           severity: Database["public"]["Enums"]["alert_severity"]
           status: Database["public"]["Enums"]["alert_status"]
           title: string
           triggered_at: string
+          turning_frequency: number | null
           updated_at: string
+          ventilation_rate: number | null
         }
         Insert: {
           acknowledged_at?: string | null
@@ -107,18 +111,22 @@ export type Database = {
           alert_type: Database["public"]["Enums"]["alert_type"]
           batch_day?: number | null
           batch_id?: string | null
+          co2_level?: number | null
           created_at?: string
           current_humidity?: number | null
           current_temperature?: number | null
           id?: string
           machine_id?: string | null
           message: string
+          mortality_count?: number | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["alert_severity"]
           status?: Database["public"]["Enums"]["alert_status"]
           title: string
           triggered_at?: string
+          turning_frequency?: number | null
           updated_at?: string
+          ventilation_rate?: number | null
         }
         Update: {
           acknowledged_at?: string | null
@@ -127,18 +135,22 @@ export type Database = {
           alert_type?: Database["public"]["Enums"]["alert_type"]
           batch_day?: number | null
           batch_id?: string | null
+          co2_level?: number | null
           created_at?: string
           current_humidity?: number | null
           current_temperature?: number | null
           id?: string
           machine_id?: string | null
           message?: string
+          mortality_count?: number | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["alert_severity"]
           status?: Database["public"]["Enums"]["alert_status"]
           title?: string
           triggered_at?: string
+          turning_frequency?: number | null
           updated_at?: string
+          ventilation_rate?: number | null
         }
         Relationships: [
           {
@@ -153,6 +165,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
           {
@@ -296,6 +315,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
           {
@@ -532,6 +558,13 @@ export type Database = {
             referencedRelation: "batches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "egg_pack_quality_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
         ]
       }
       fertility_analysis: {
@@ -598,6 +631,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fertility_analysis_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
         ]
@@ -841,6 +881,13 @@ export type Database = {
             referencedRelation: "batches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "qa_monitoring_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
         ]
       }
       residue_analysis: {
@@ -849,7 +896,12 @@ export type Database = {
           batch_id: string
           contaminated_eggs: number
           created_at: string
+          fertile_eggs: number | null
+          hatch_percent: number | null
+          hof_percent: number | null
+          hoi_percent: number | null
           id: string
+          if_dev_percent: number | null
           lab_technician: string | null
           malformed_chicks: number
           microscopy_results: string | null
@@ -858,6 +910,7 @@ export type Database = {
           pip_number: number
           pipped_not_hatched: number
           residue_percent: number | null
+          sample_size: number | null
           total_residue_count: number
           unhatched_fertile: number
         }
@@ -866,7 +919,12 @@ export type Database = {
           batch_id: string
           contaminated_eggs?: number
           created_at?: string
+          fertile_eggs?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
           id?: string
+          if_dev_percent?: number | null
           lab_technician?: string | null
           malformed_chicks?: number
           microscopy_results?: string | null
@@ -875,6 +933,7 @@ export type Database = {
           pip_number?: number
           pipped_not_hatched?: number
           residue_percent?: number | null
+          sample_size?: number | null
           total_residue_count: number
           unhatched_fertile?: number
         }
@@ -883,7 +942,12 @@ export type Database = {
           batch_id?: string
           contaminated_eggs?: number
           created_at?: string
+          fertile_eggs?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
           id?: string
+          if_dev_percent?: number | null
           lab_technician?: string | null
           malformed_chicks?: number
           microscopy_results?: string | null
@@ -892,6 +956,7 @@ export type Database = {
           pip_number?: number
           pipped_not_hatched?: number
           residue_percent?: number | null
+          sample_size?: number | null
           total_residue_count?: number
           unhatched_fertile?: number
         }
@@ -901,6 +966,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residue_analysis_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
         ]
@@ -951,6 +1023,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residue_analysis_schedule_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
         ]
@@ -1116,7 +1195,64 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      batches_with_fertility: {
+        Row: {
+          actual_hatch_date: string | null
+          batch_number: string | null
+          chicks_hatched: number | null
+          company_id: string | null
+          created_at: string | null
+          early_dead: number | null
+          eggs_cleared: number | null
+          eggs_injected: number | null
+          expected_hatch_date: string | null
+          fertile_eggs: number | null
+          fertility_percent: number | null
+          flock_id: string | null
+          hatch_percent: number | null
+          humidity_avg: number | null
+          id: string | null
+          infertile_eggs: number | null
+          machine_id: string | null
+          notes: string | null
+          set_date: string | null
+          status: Database["public"]["Enums"]["batch_status"] | null
+          temperature_avg: number | null
+          total_eggs_set: number | null
+          unit_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_unit_fk"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_next_house_number: {
@@ -1145,6 +1281,12 @@ export type Database = {
         | "critical_day"
         | "machine_maintenance"
         | "checklist_incomplete"
+        | "co2_level"
+        | "ventilation_rate"
+        | "turning_frequency"
+        | "mortality_spike"
+        | "hatch_approaching"
+        | "batch_status_change"
       batch_status:
         | "planned"
         | "setting"
@@ -1294,6 +1436,12 @@ export const Constants = {
         "critical_day",
         "machine_maintenance",
         "checklist_incomplete",
+        "co2_level",
+        "ventilation_rate",
+        "turning_frequency",
+        "mortality_spike",
+        "hatch_approaching",
+        "batch_status_change",
       ],
       batch_status: [
         "planned",
