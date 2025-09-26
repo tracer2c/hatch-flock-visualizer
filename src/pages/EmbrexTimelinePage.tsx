@@ -597,8 +597,9 @@ export default function EmbrexDashboard() {
   /* ── Sidebar dropdown (collapsible) state + outside click close ─────────── */
   const vizCardRef = useRef<HTMLDivElement>(null);
   const metricsCardRef = useRef<HTMLDivElement>(null);
-  const [vizOpen, setVizOpen] = useState(false);       // default collapsed
-  const [metricsOpen, setMetricsOpen] = useState(false); // default collapsed
+  const [vizOpen, setVizOpen] = useState(false);       // collapsed by default
+  thead
+  const [metricsOpen, setMetricsOpen] = useState(false);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -615,22 +616,16 @@ export default function EmbrexDashboard() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [vizOpen, metricsOpen]);
 
-  /* ─────────────────────────── Layout (No-scroll visuals) ─────────────────── */
+  /* ─────────────────────────────── SHELL (no top header) ──────────────────── */
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Main split: sidebar scrolls, visuals fixed */}
       <div className="h-full w-full grid" style={{ gridTemplateColumns: sidebarOpen ? "320px 1fr" : "0px 1fr" }}>
-        {/* Sidebar */}
+        {/* Sidebar (full height, scrollable) */}
         <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <div className="p-3 space-y-3">
             {/* Visualization (collapsible) */}
             <Card ref={vizCardRef} className="shadow-sm border-0">
-              <button
-                type="button"
-                onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }}
-                aria-expanded={vizOpen}
-                className="w-full text-left"
-              >
+              <button type="button" onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }} aria-expanded={vizOpen} className="w-full text-left">
                 <CardHeader className="pb-2 flex-row items-center gap-2">
                   <Monitor className="h-4 w-4 text-blue-600" />
                   <CardTitle className="text-sm font-semibold flex-1">Visualization</CardTitle>
@@ -667,12 +662,7 @@ export default function EmbrexDashboard() {
 
             {/* Metrics (collapsible) */}
             <Card ref={metricsCardRef} className="shadow-sm border-0">
-              <button
-                type="button"
-                onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }}
-                aria-expanded={metricsOpen}
-                className="w-full text-left"
-              >
+              <button type="button" onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }} aria-expanded={metricsOpen} className="w-full text-left">
                 <CardHeader className="pb-2 flex-row items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-green-600" />
                   <CardTitle className="text-sm font-semibold flex-1">Metrics</CardTitle>
@@ -757,16 +747,6 @@ export default function EmbrexDashboard() {
                       </CommandGroup>
                     </CommandList>
                   </Command>
-                  {selectedFlocks.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2 border-t">
-                      {selectedFlocks.slice(0,8).map(f => (
-                        <Badge key={`f-${f}`} variant="secondary" className="gap-1">
-                          Flock #{f}
-                          <X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedFlocks(prev=>prev.filter(x=>x!==f))} />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Units */}
@@ -795,16 +775,6 @@ export default function EmbrexDashboard() {
                       </CommandGroup>
                     </CommandList>
                   </Command>
-                  {selectedUnits.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2 border-t">
-                      {selectedUnits.slice(0,8).map(u => (
-                        <Badge key={`u-${u}`} variant="secondary" className="gap-1">
-                          {u}
-                          <X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedUnits(prev=>prev.filter(x=>x!==u))} />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -905,37 +875,39 @@ export default function EmbrexDashboard() {
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
               <CardHeader className="flex-none pb-3">
-                {/* Top controls bar */}
-                <div className="flex items-center justify-between mb-4 pb-3 border-b">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)}>
                       {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                     </Button>
                     <div>
                       <CardTitle className="text-xl">{VIZ_LABEL[viz]}</CardTitle>
-                      <p className="text-sm text-slate-600 mt-1">{compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}</p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        {compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Controls moved here (right side) */}
                   <div className="flex items-center gap-2">
-                    {/* Compare mode */}
-                    <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
-                      onClick={()=>setCompareMode(v=>!v)}>
-                      <LayoutGrid className="h-4 w-4" />
-                      {compareMode ? "Compare: On" : "Compare: Off"}
-                    </Button>
-                    {compareMode && (
-                      <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
-                        <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 col</SelectItem>
-                          <SelectItem value="2">2 cols</SelectItem>
-                          <SelectItem value="3">3 cols</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    
-                    {/* Saved views + actions */}
+                    <div className="flex items-center gap-2">
+                      <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
+                        onClick={()=>setCompareMode(v=>!v)}>
+                        <LayoutGrid className="h-4 w-4" />
+                        {compareMode ? "Compare: On" : "Compare: Off"}
+                      </Button>
+                      {compareMode && (
+                        <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
+                          <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 col</SelectItem>
+                            <SelectItem value="2">2 cols</SelectItem>
+                            <SelectItem value="3">3 cols</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+
                     <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
                     <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
                     {savedViews.length>0 && (
@@ -954,22 +926,6 @@ export default function EmbrexDashboard() {
                       <RefreshCw className="h-4 w-4" /> Reset
                     </Button>
                   </div>
-                </div>
-
-                {/* Chart title and facet tabs */}
-                <div className="flex items-center justify-between">
-                  <div></div>
-                  {!compareMode && (
-                    <Tabs value={activeFacet} onValueChange={setActiveFacet} className="w-auto">
-                      <TabsList className="bg-slate-100 max-w-[50vw] overflow-x-auto">
-                        {facets.map((facet) => (
-                          <TabsTrigger key={facet.key} value={facet.key} className="text-xs truncate max-w-[220px]">
-                            {facet.title}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
-                  )}
                 </div>
 
                 {!compareMode && (
