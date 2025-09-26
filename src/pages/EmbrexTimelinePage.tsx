@@ -985,34 +985,34 @@ export default function EmbrexDashboard() {
             <DialogDescription>{modalTitle}</DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left sticky top-0 bg-background">
-                <tr className="border-b">
-                  <th className="py-2 pr-2">Batch</th>
-                  <th className="py-2 pr-2">Flock</th>
-                  <th className="py-2 pr-2">Unit</th>
-                  <th className="py-2 pr-2">Set date</th>
-                  <th className="py-2 pr-2 text-right">Eggs set</th>
-                  <th className="py-2 pr-2 text-right">Clears</th>
-                  <th className="py-2 pr-2 text-right">Injected</th>
-                  <th className="py-2 pr-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="w-full text-sm">
+              <div className="text-left sticky top-0 bg-background">
+                <div className="border-b grid grid-cols-8 gap-2">
+                  <div className="py-2 pr-2 font-semibold">Batch</div>
+                  <div className="py-2 pr-2 font-semibold">Flock</div>
+                  <div className="py-2 pr-2 font-semibold">Unit</div>
+                  <div className="py-2 pr-2 font-semibold">Set date</div>
+                  <div className="py-2 pr-2 text-right font-semibold">Eggs set</div>
+                  <div className="py-2 pr-2 text-right font-semibold">Clears</div>
+                  <div className="py-2 pr-2 text-right font-semibold">Injected</div>
+                  <div className="py-2 pr-2 font-semibold">Status</div>
+                </div>
+              </div>
+              <div>
                 {modalRows.map(r=>(
-                  <tr key={r.batch_id} className="border-b last:border-0">
-                    <td className="py-2 pr-2 font-mono">{r.batch_number}</td>
-                    <td className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</td>
-                    <td className="py-2 pr-2">{r.unit_name}</td>
-                    <td className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</td>
-                    <td className="py-2 pr-2">{r.status}</td>
-                  </tr>
+                  <div key={r.batch_id} className="border-b last:border-0 grid grid-cols-8 gap-2">
+                    <div className="py-2 pr-2 font-mono">{r.batch_number}</div>
+                    <div className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</div>
+                    <div className="py-2 pr-2">{r.unit_name}</div>
+                    <div className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</div>
+                    <div className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</div>
+                    <div className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</div>
+                    <div className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</div>
+                    <div className="py-2 pr-2">{r.status}</div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
