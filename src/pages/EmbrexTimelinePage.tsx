@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -181,7 +181,7 @@ export default function EmbrexDashboard() {
       : DEFAULTS.viz
   );
 
-  /* Compare Mode & Sidebar state */
+  /* Compare Mode & Sidebar state (URL-synced) */
   const [compareMode, setCompareMode] = useState<boolean>(() => searchParams.get("cmp") === "1");
   const [compareCols, setCompareCols] = useState<number>(() => {
     const c = Number(searchParams.get("cols") || 2);
@@ -401,7 +401,7 @@ export default function EmbrexDashboard() {
     const url = new URL(window.location.href); url.search = qs; window.location.assign(url.toString());
   };
 
-  /* Quick metric palette */
+  /* Metric palette */
   const metricOptions = [
     { value: "total_eggs_set", label: "Total Eggs", color: PALETTE[0] },
     { value: "eggs_cleared",   label: "Clears",     color: PALETTE[1] },
@@ -419,16 +419,18 @@ export default function EmbrexDashboard() {
     }
   }, [facets, activeFacet]);
 
-  /* Chart renderer */
-  const renderChart = (data: any[], facetTitle: string, height: number) => {
+  /* ─────────────── Chart renderer (fills container; no hardcoded height) ─────────────── */
+  const renderChart = (data: any[], facetTitle: string) => {
+    const commonMargin = { top: 8, right: 16, left: 8, bottom: 8 };
+
     if (viz === "timeline_bar" || viz === "timeline_line") {
       const isBar = viz === "timeline_bar";
       return (
-        <div style={{ height }}>
+        <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{ top: 12, right: 24, left: 12, bottom: 8 }}
+              margin={commonMargin}
               onClick={(e:any)=>{ if (!e?.activePayload?.length) return; const p=e.activePayload[0]?.payload; if (!p) return; openDrill(facetTitle, p.bucket as string, p._raw as RawRow[]); }}
             >
               <CartesianGrid strokeDasharray="3 3" />
@@ -472,9 +474,9 @@ export default function EmbrexDashboard() {
 
     if (viz === "stacked_counts") {
       return (
-        <div style={{ height }}>
+        <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data}>
+            <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip /><Legend />
               <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
@@ -488,9 +490,9 @@ export default function EmbrexDashboard() {
 
     if (viz === "percent_trends") {
       return (
-        <div style={{ height }}>
+        <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data}>
+            <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="bucket" /><YAxis domain={[0,100]} /><Tooltip /><Legend />
               <Area type="monotone" dataKey="clear_pct" stroke={PALETTE[3]} fill={PALETTE[3]} fillOpacity={0.25} strokeWidth={2} name="Clear %" />
@@ -504,13 +506,13 @@ export default function EmbrexDashboard() {
     if (viz === "sparklines") {
       const keys: MetricKey[] = ["total_eggs_set","clear_pct","injected_pct"];
       return (
-        <div className="grid gap-3 md:grid-cols-3" style={{ height }}>
+        <div className="grid gap-3 md:grid-cols-3 h-full">
           {keys.map((k, i)=>(
-            <div key={k} className="p-2 border rounded-md">
+            <div key={k} className="p-2 border rounded-md flex flex-col min-h-0">
               <div className="text-xs text-muted-foreground mb-1">{metricLabel[k]}</div>
-              <div style={{ height: height - 56 }}>
+              <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data}>
+                  <AreaChart data={data} margin={commonMargin}>
                     <XAxis dataKey="bucket" hide />
                     <YAxis hide domain={isPercentMetric(k) ? [0,100] : ["auto","auto"]} />
                     <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} />
@@ -525,9 +527,9 @@ export default function EmbrexDashboard() {
 
     if (viz === "age_distribution") {
       return (
-        <div style={{ height }}>
+        <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data}>
+            <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip />
               <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6,6,0,0]} />
@@ -549,8 +551,9 @@ export default function EmbrexDashboard() {
       });
       const scale = (v: number, max: number) => max ? Math.round((v/max)*90)+10 : 0;
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
+
       return (
-        <div className="grid gap-2" style={{ gridTemplateColumns: "160px 1fr", height, overflow: "hidden" }}>
+        <div className="grid gap-2 h-full" style={{ gridTemplateColumns: "160px 1fr" }}>
           <div className="text-xs text-muted-foreground">Unit</div>
           <div className="text-xs text-muted-foreground">Time buckets</div>
           {Object.entries(byUnit).map(([u, m], idx)=>(
@@ -571,17 +574,14 @@ export default function EmbrexDashboard() {
     return null;
   };
 
-  /* Active facet */
+  /* Active facet & basic stats */
   const activeFacetObj = facets.find(f => f.key === activeFacet) || facets[0];
   const activeData = activeFacetObj ? chartDataForFacet(activeFacetObj.rows) : [];
-
-  /* Header stats (from active facet) */
   const totalEggs = activeData.reduce((a,c)=>a+(c.total_eggs_set||0),0);
   const avgClear = activeData.length ? (activeData.reduce((a,c)=>a+(c.clear_pct||0),0)/activeData.length) : 0;
   const avgInj = activeData.length ? (activeData.reduce((a,c)=>a+(c.injected_pct||0),0)/activeData.length) : 0;
   const avgAge = activeData.length ? (activeData.reduce((a,c)=>a+(c.age_weeks||0),0)/activeData.length) : 0;
 
-  /* Filter chips counter */
   const filterCount = (() => {
     let n = 0;
     if (facetBy !== DEFAULTS.facetBy) n++;
@@ -612,7 +612,7 @@ export default function EmbrexDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Compare mode quick toggle & columns */}
+          {/* Compare mode */}
           <div className="flex items-center gap-2">
             <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
               onClick={()=>setCompareMode(v=>!v)}>
@@ -631,7 +631,7 @@ export default function EmbrexDashboard() {
             )}
           </div>
 
-          {/* Saved views + export + reset */}
+          {/* Saved views + viz + actions */}
           <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
           <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
           {savedViews.length>0 && (
@@ -838,7 +838,7 @@ export default function EmbrexDashboard() {
               </CardContent>
             </Card>
 
-            {/* Settings */}
+            {/* Settings + Date Range */}
             <Card className="shadow-sm border-0">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -887,11 +887,8 @@ export default function EmbrexDashboard() {
                   <label htmlFor="rolling" className="text-xs text-slate-600">Show rolling average (3 buckets)</label>
                 </div>
 
-                {/* Date Range */}
                 <div className="pt-2 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-slate-600">Date Range</span>
-                  </div>
+                  <div className="text-xs text-slate-600 mb-1">Date Range</div>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       ["30d", 30], ["90d", 90], ["180d", 180], ["365d", 365]
@@ -955,7 +952,7 @@ export default function EmbrexDashboard() {
                   )}
                 </div>
 
-                {/* Key Metrics */}
+                {/* Optional headline metrics when not comparing */}
                 {!compareMode && (
                   <div className="grid grid-cols-4 gap-3 mt-3">
                     {[
@@ -981,30 +978,22 @@ export default function EmbrexDashboard() {
                   ) : (
                     <>
                       {compareMode ? (
-                        // Side-by-side grid
                         <div
                           className="grid gap-3 h-full"
                           style={{ gridTemplateColumns: `repeat(${compareCols}, minmax(0,1fr))` }}
                         >
-                          {facets.slice(0, compareCols * 2 /* keep big */).map((f, idx) => {
+                          {facets.slice(0, compareCols * 2).map((f) => {
                             const data = chartDataForFacet(f.rows);
-                            // compute a tall-enough height chunk within fixed area:
-                            // leave small header for each tile
                             return (
                               <div key={f.key} className="flex flex-col min-h-0 border rounded-lg">
                                 <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate">{f.title}</div>
-                                <div className="flex-1 min-h-0">
-                                  {renderChart(data, f.title, /* tile height */  Math.max(280,  /* responsive fallback */ 9999))}
-                                </div>
+                                <div className="flex-1 min-h-0">{renderChart(data, f.title)}</div>
                               </div>
                             );
                           })}
                         </div>
                       ) : (
-                        // Single chart fills
-                        <div className="h-full">
-                          {renderChart(activeData, activeFacetObj?.title || "All flocks", /* full height */  Math.max(360, 9999))}
-                        </div>
+                        <div className="h-full">{renderChart(activeData, activeFacetObj?.title || "All flocks")}</div>
                       )}
                     </>
                   )}
