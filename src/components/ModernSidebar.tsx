@@ -196,11 +196,10 @@ export function ModernSidebar() {
         collapsible="icon"
         className={cn(
           "border-r border-border/30 bg-background/95 backdrop-blur-sm",
-          "transition-all duration-300 ease-out",
-          collapsed ? "w-16" : "w-64"
+          "transition-all duration-300 ease-out"
         )}
       >
-        <SidebarContent className={cn("pt-16", collapsed ? "px-2" : "px-4")}>
+        <SidebarContent className="pt-16 px-2">
 
           <SidebarGroup>
             <SidebarGroupContent>
@@ -211,17 +210,20 @@ export function ModernSidebar() {
                   
                   return (
                     <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton asChild>
+                      <SidebarMenuButton 
+                        asChild 
+                        tooltip={collapsed ? item.label : undefined}
+                        className={cn(
+                          "group relative flex items-center rounded-lg transition-all duration-200",
+                          collapsed ? "justify-center p-3 w-10 h-10" : "gap-3 px-3 py-2.5",
+                          active
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                        )}
+                      >
                         <NavLink
                           to={item.path}
-                          className={cn(
-                            "group relative flex items-center rounded-lg transition-all duration-200",
-                            collapsed ? "justify-center p-3" : "gap-3 px-3 py-2.5",
-                            active
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                          )}
-                          title={collapsed ? item.label : undefined}
+                          className="flex items-center w-full h-full"
                         >
                           <Icon className={cn(
                             "flex-shrink-0 transition-colors",
@@ -229,7 +231,7 @@ export function ModernSidebar() {
                           )} />
                           
                           {!collapsed && (
-                            <span className="text-sm font-medium truncate">
+                            <span className="ml-3 text-sm font-medium truncate">
                               {item.label}
                             </span>
                           )}
@@ -253,14 +255,14 @@ export function ModernSidebar() {
                     >
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
+                          tooltip={collapsed ? "Advanced Analytics" : undefined}
                           className={cn(
                             "group relative flex items-center rounded-lg transition-all duration-200",
-                            collapsed ? "justify-center p-3" : "gap-3 px-3 py-2.5",
+                            collapsed ? "justify-center p-3 w-10 h-10" : "gap-3 px-3 py-2.5",
                             hasActiveAdvancedItem
                               ? "bg-accent text-foreground"
                               : "hover:bg-accent text-muted-foreground hover:text-foreground"
                           )}
-                          title={collapsed ? "Advanced Analytics" : undefined}
                         >
                           <TrendingUp className={cn(
                             "flex-shrink-0 transition-colors",
@@ -269,7 +271,7 @@ export function ModernSidebar() {
                           
                           {!collapsed && (
                             <>
-                              <span className="text-sm font-medium truncate">
+                              <span className="ml-3 text-sm font-medium truncate">
                                 Advanced Analytics
                               </span>
                               <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
