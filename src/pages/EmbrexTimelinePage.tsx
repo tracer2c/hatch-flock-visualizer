@@ -598,7 +598,6 @@ export default function EmbrexDashboard() {
   const vizCardRef = useRef<HTMLDivElement>(null);
   const metricsCardRef = useRef<HTMLDivElement>(null);
   const [vizOpen, setVizOpen] = useState(false);       // collapsed by default
-  thead
   const [metricsOpen, setMetricsOpen] = useState(false);
 
   useEffect(() => {
