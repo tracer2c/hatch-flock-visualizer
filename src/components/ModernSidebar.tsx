@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
   FileInput, 
@@ -115,6 +115,21 @@ export function ModernSidebar() {
   const { viewMode } = useViewMode();
   const location = useLocation();
   const currentPath = location.pathname;
+  const previousSidebarState = useRef<boolean>(open);
+
+  // Auto-collapse sidebar for Embrex Timeline page
+  useEffect(() => {
+    if (currentPath === '/embrex-timeline') {
+      // Store current state before auto-collapsing
+      previousSidebarState.current = open;
+      if (open) {
+        setOpen(false);
+      }
+    } else if (currentPath !== '/embrex-timeline' && !open && previousSidebarState.current) {
+      // Restore previous state when navigating away from timeline
+      setOpen(true);
+    }
+  }, [currentPath, open, setOpen]);
 
   // Keyboard shortcut to toggle sidebar
   useEffect(() => {
