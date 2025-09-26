@@ -8,19 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
-  RefreshCw, Download, BarChart2, Calendar as CalendarIcon, ChevronsUpDown, Check, X,
-  Activity, Layers, Rows, Save, Trash2, Grid2X2, Monitor
+  RefreshCw, Download, BarChart2, Calendar as CalendarIcon,
+  Activity, Layers, Rows, Save, Trash2, Settings, X,
+  Monitor, BarChart3, TrendingUp
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -56,6 +54,7 @@ interface RawRow {
   set_date: string;
   status: string;
 }
+
 interface BucketRow {
   bucketKey: string;
   date: Date;
@@ -72,54 +71,8 @@ const metricLabel: Record<MetricKey, string> = {
   clear_pct: "Clear %",
   injected_pct: "Injected %",
 };
-const ALL_METRICS = [
-  "total_eggs_set",
-  "eggs_cleared",
-  "eggs_injected",
-  "clear_pct",
-  "injected_pct",
-  "age_weeks",
-] as const;
 
-const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
-const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
-const fmtBucketLabel = (d: Date, g: Granularity) => {
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
-  if (g === "year") return `${y}`;
-  if (g === "month") return `${y}-${m}`;
-  if (g === "week") { const start = new Date(y, 0, 1); const wk = Math.floor((+d - +start) / (7 * 86400000)) + 1; return `${y}-W${String(wk).padStart(2, "0")}`; }
-  return `${y}-${m}-${day}`;
-};
-const startOfBucket = (d: Date, g: Granularity) => {
-  const y = d.getFullYear();
-  if (g === "year") return new Date(y, 0, 1);
-  if (g === "month") return new Date(y, d.getMonth(), 1);
-  if (g === "week") { const t = new Date(d), day = t.getDay(), diff = (day + 6) % 7; t.setDate(t.getDate() - diff); t.setHours(0,0,0,0); return t; }
-  const t = new Date(d); t.setHours(0,0,0,0); return t;
-};
-const toCsv = (rows: Record<string, any>[]) => {
-  if (!rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const esc = (v: any) => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
-  return [headers.join(","), ...rows.map(r => headers.map(h => esc(r[h])).join(","))].join("\n");
-};
-const saveFile = (filename: string, content: string, mime = "text/csv;charset=utf-8") => {
-  const blob = new Blob([content], { type: mime }); const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-};
-
-/* Shared palette across all views */
-const PALETTE = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#0ea5e9", "#7c3aed", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
-
-/* Visualization options — exactly one active at a time */
-type VizKind =
-  | "timeline_bar"
-  | "timeline_line"
-  | "stacked_counts"
-  | "percent_trends"
-  | "sparklines"
-  | "age_distribution"
-  | "heatmap";
+type VizKind = "timeline_bar" | "timeline_line" | "stacked_counts" | "percent_trends" | "sparklines" | "age_distribution";
 
 const VIZ_LABEL: Record<VizKind, string> = {
   timeline_bar: "Timeline – Bar",
@@ -128,10 +81,40 @@ const VIZ_LABEL: Record<VizKind, string> = {
   percent_trends: "Percent Trends",
   sparklines: "Sparklines",
   age_distribution: "Age Distribution",
-  heatmap: "Heatmap (month×unit)",
 };
 
-/* Defaults */
+const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
+const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
+
+const fmtBucketLabel = (d: Date, g: Granularity) => {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
+  if (g === "year") return `${y}`;
+  if (g === "month") return `${y}-${m}`;
+  if (g === "week") { 
+    const start = new Date(y, 0, 1); 
+    const wk = Math.floor((+d - +start) / (7 * 86400000)) + 1; 
+    return `${y}-W${String(wk).padStart(2, "0")}`; 
+  }
+  return `${y}-${m}-${day}`;
+};
+
+const startOfBucket = (d: Date, g: Granularity) => {
+  const y = d.getFullYear();
+  if (g === "year") return new Date(y, 0, 1);
+  if (g === "month") return new Date(y, d.getMonth(), 1);
+  if (g === "week") { 
+    const t = new Date(d), day = t.getDay(), diff = (day + 6) % 7; 
+    t.setDate(t.getDate() - diff); 
+    t.setHours(0,0,0,0); 
+    return t; 
+  }
+  const t = new Date(d); 
+  t.setHours(0,0,0,0); 
+  return t;
+};
+
+const PALETTE = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+
 const DEFAULTS = {
   scale: "month" as Granularity,
   metrics: ["total_eggs_set", "clear_pct"] as MetricKey[],
@@ -142,327 +125,6 @@ const DEFAULTS = {
   viz: "timeline_bar" as VizKind,
 };
 
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Filter helpers (count + popover UI)                                      │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
-function useFilterCount({
-  facetBy, selectedFlocks, selectedUnits, granularity, metrics, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz,
-}: {
-  facetBy: FacetMode; selectedFlocks: any[]; selectedUnits: any[]; granularity: Granularity; metrics: MetricKey[];
-  dateFrom: string; dateTo: string; percentAgg: PercentAgg; rollingAvg: boolean; benchmark: number | "";
-  viz: VizKind;
-}) {
-  let n = 0;
-  if (facetBy !== DEFAULTS.facetBy) n++;
-  if (selectedFlocks.length) n++;
-  if (selectedUnits.length) n++;
-  if (granularity !== DEFAULTS.scale) n++;
-  if (metrics.join(",") !== DEFAULTS.metrics.join(",")) n++;
-  if (dateFrom || dateTo) n++;
-  if (percentAgg !== DEFAULTS.pctAgg || rollingAvg || benchmark !== "") n++;
-  if (viz !== DEFAULTS.viz) n++;
-  return n;
-}
-
-/** Beautiful, fluid Filters popover: sticky header, soft sections, searchable lists, chips footer. */
-function FiltersViewPopover(props: {
-  facetBy: FacetMode; setFacetBy: (v: FacetMode)=>void;
-  selectedFlocks: number[]; setSelectedFlocks: (fn: (p:number[])=>number[])=>void; flocksList: {num:number;name:string}[];
-  selectedUnits: string[]; setSelectedUnits: (fn:(p:string[])=>string[])=>void; units: string[];
-  granularity: Granularity; setGranularity: (g:Granularity)=>void;
-  metrics: MetricKey[]; setMetrics: (fn:(p:MetricKey[])=>MetricKey[])=>void;
-  dateFrom: string; setDateFrom: (v:string)=>void; dateTo: string; setDateTo: (v:string)=>void;
-  percentAgg: PercentAgg; setPercentAgg: (v:PercentAgg)=>void; rollingAvg: boolean; setRollingAvg: (v:boolean)=>void;
-  benchmark: number | ""; setBenchmark: (v:number | "")=>void;
-  viz: VizKind; setViz: (v:VizKind)=>void;
-  savedName: string; setSavedName: (s:string)=>void; savedViews: string[];
-  saveCurrentView: ()=>void; applySavedView: (name:string)=>void;
-}) {
-  const {
-    facetBy, setFacetBy, selectedFlocks, setSelectedFlocks, flocksList,
-    selectedUnits, setSelectedUnits, units,
-    granularity, setGranularity, metrics, setMetrics,
-    dateFrom, setDateFrom, dateTo, setDateTo,
-    percentAgg, setPercentAgg, rollingAvg, setRollingAvg,
-    benchmark, setBenchmark, viz, setViz,
-    savedName, setSavedName, savedViews, saveCurrentView, applySavedView,
-  } = props;
-
-  const [flockQuery, setFlockQuery] = useState("");
-  const [unitQuery, setUnitQuery] = useState("");
-  const [metricQuery, setMetricQuery] = useState("");
-
-  const filteredFlocks = useMemo(
-    () => flocksList.filter(f => (`#${f.num} ${f.name}`.toLowerCase().includes(flockQuery.toLowerCase()))),
-    [flockQuery, flocksList]
-  );
-  const filteredUnits = useMemo(
-    () => units.filter(u => u.toLowerCase().includes(unitQuery.toLowerCase())),
-    [unitQuery, units]
-  );
-  const filteredMetrics = useMemo(
-    () => (ALL_METRICS as MetricKey[]).filter(m => metricLabel[m].toLowerCase().includes(metricQuery.toLowerCase())),
-    [metricQuery]
-  );
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Grid2X2 className="h-4 w-4" />
-          Filters
-        </Button>
-      </PopoverTrigger>
-
-      <PopoverContent className="w-[760px] p-0 overflow-hidden" align="start">
-        {/* Sticky, frosted header */}
-        <div className="backdrop-blur supports-[backdrop-filter]:bg-background/70 bg-background px-4 py-3 border-b sticky top-0 z-10">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="w-44" />
-              <Button variant="outline" size="sm" onClick={saveCurrentView}><Save className="h-4 w-4 mr-1" />Save</Button>
-              {savedViews.length>0 && (
-                <Select onValueChange={(v)=>applySavedView(v)}>
-                  <SelectTrigger className="w-44 h-8"><SelectValue placeholder="Load saved view" /></SelectTrigger>
-                  <SelectContent>
-                    {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <Button
-              variant="ghost" size="sm"
-              onClick={()=>{
-                setFacetBy(DEFAULTS.facetBy);
-                setSelectedFlocks(()=>[]);
-                setSelectedUnits(()=>[]);
-                setGranularity(DEFAULTS.scale);
-                setMetrics(()=>[...DEFAULTS.metrics]);
-                setDateFrom(""); setDateTo("");
-                setPercentAgg(DEFAULTS.pctAgg);
-                setRollingAvg(false);
-                setBenchmark("");
-                setViz(DEFAULTS.viz);
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="max-h-[64vh] overflow-auto p-4 space-y-4">
-          {/* Group: View */}
-          <section className="rounded-lg border p-3">
-            <h3 className="font-medium text-sm mb-3">View</h3>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="md:col-span-1">
-                <div className="text-xs mb-1 text-muted-foreground">Facet by</div>
-                <Select value={facetBy} onValueChange={(v:FacetMode)=>setFacetBy(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="flock">Flocks</SelectItem>
-                    <SelectItem value="unit">Units</SelectItem>
-                    <SelectItem value="flock_unit">Flock × Unit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-1">
-                <div className="text-xs mb-1 text-muted-foreground">Scale</div>
-                <Select value={granularity} onValueChange={(v:Granularity)=>setGranularity(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="year">Years</SelectItem>
-                    <SelectItem value="month">Months</SelectItem>
-                    <SelectItem value="week">Weeks</SelectItem>
-                    <SelectItem value="day">Days</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-1">
-                <div className="text-xs mb-1 text-muted-foreground">Visualization</div>
-                <Select value={viz} onValueChange={(v:VizKind)=>setViz(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-
-          {/* Group: Compare */}
-          <section className="rounded-lg border p-3">
-            <h3 className="font-medium text-sm mb-3">Compare</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Flocks */}
-              <div className="rounded-md border">
-                <div className="px-3 py-2 border-b text-sm font-medium">Flocks</div>
-                <Command className="p-0">
-                  <CommandInput value={flockQuery} onValueChange={setFlockQuery} placeholder="Search flocks…" />
-                  <CommandList className="max-h-56 overflow-auto">
-                    <CommandEmpty>No flocks.</CommandEmpty>
-                    <CommandGroup>
-                      {filteredFlocks.map(f=>{
-                        const checked = selectedFlocks.includes(f.num);
-                        return (
-                          <CommandItem
-                            key={f.num}
-                            value={`#${f.num} ${f.name}`}
-                            onSelect={()=>setSelectedFlocks(prev => checked ? prev.filter(x=>x!==f.num) : [...prev, f.num])}
-                          >
-                            <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                              {checked && <Check className="h-3 w-3" />}
-                            </div>
-                            <span>#{f.num} — {f.name}</span>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
-
-              {/* Units */}
-              <div className="rounded-md border">
-                <div className="px-3 py-2 border-b text-sm font-medium">Units</div>
-                <Command className="p-0">
-                  <CommandInput value={unitQuery} onValueChange={setUnitQuery} placeholder="Search units…" />
-                  <CommandList className="max-h-56 overflow-auto">
-                    <CommandEmpty>No units.</CommandEmpty>
-                    <CommandGroup>
-                      {filteredUnits.map(u=>{
-                        const checked = selectedUnits.includes(u);
-                        return (
-                          <CommandItem
-                            key={u}
-                            value={u}
-                            onSelect={()=>setSelectedUnits(prev => checked ? prev.filter(x=>x!==u) : [...prev, u])}
-                          >
-                            <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                              {checked && <Check className="h-3 w-3" />}
-                            </div>
-                            <span>{u}</span>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
-            </div>
-          </section>
-
-          {/* Group: Metrics */}
-          <section className="rounded-lg border p-3">
-            <h3 className="font-medium text-sm mb-3">Metrics</h3>
-            <div className="rounded-md border">
-              <Command className="p-0">
-                <CommandInput value={metricQuery} onValueChange={setMetricQuery} placeholder="Search metrics…" />
-                <CommandList className="max-h-60 overflow-auto">
-                  <CommandEmpty>No metrics.</CommandEmpty>
-                  <CommandGroup>
-                    {(filteredMetrics as MetricKey[]).map(m=>{
-                      const checked = metrics.includes(m);
-                      return (
-                        <CommandItem
-                          key={m}
-                          value={metricLabel[m]}
-                          onSelect={()=>setMetrics(prev => checked ? prev.filter(x=>x!==m) : [...prev, m])}
-                        >
-                          <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
-                            {checked && <Check className="h-3 w-3" />}
-                          </div>
-                          <span>{metricLabel[m]}</span>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          </section>
-
-          {/* Group: Date */}
-          <section className="rounded-lg border p-3">
-            <h3 className="font-medium text-sm mb-3">Date</h3>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} className="w-44" />
-              <span className="text-xs text-muted-foreground">to</span>
-              <Input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} className="w-44" />
-              {(dateFrom || dateTo) && (
-                <Button variant="ghost" size="icon" onClick={()=>{setDateFrom(""); setDateTo("");}}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {[
-                ["Last 30d", 30], ["90d", 90], ["180d", 180], ["365d", 365],
-              ].map(([label, days])=>(
-                <Button key={label as string} variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
-                  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days as number));
-                  setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
-                }}>{label as string}</Button>
-              ))}
-              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{
-                const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
-                setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
-              }}>YTD</Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={()=>{setDateFrom(""); setDateTo("");}}>All time</Button>
-            </div>
-          </section>
-
-          {/* Group: Advanced */}
-          <section className="rounded-lg border p-3">
-            <h3 className="font-medium text-sm mb-3">Advanced</h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Pct agg</span>
-                <Select value={percentAgg} onValueChange={(v:PercentAgg)=>setPercentAgg(v)}>
-                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weighted">Weighted</SelectItem>
-                    <SelectItem value="unweighted">Unweighted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="rolling2" checked={rollingAvg} onCheckedChange={(v)=>setRollingAvg(Boolean(v))} />
-                <label htmlFor="rolling2" className="text-sm">Rolling avg (3 buckets)</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Benchmark %</span>
-                <Input type="number" inputMode="decimal" className="w-24" placeholder="e.g. 95"
-                       value={benchmark} onChange={(e)=> setBenchmark(e.target.value === "" ? "" : Number(e.target.value))} />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* Footer chips */}
-        <div className="px-4 py-3 border-t bg-muted/30">
-          <div className="flex flex-wrap gap-1">
-            {!!selectedFlocks.length && selectedFlocks.slice(0,6).map(f => (
-              <Badge key={`f-${f}`} variant="secondary" className="gap-1">Flock #{f}<X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedFlocks(prev=>prev.filter(x=>x!==f))} /></Badge>
-            ))}
-            {!!selectedUnits.length && selectedUnits.slice(0,6).map(u => (
-              <Badge key={`u-${u}`} variant="secondary" className="gap-1">{u}<X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedUnits(prev=>prev.filter(x=>x!==u))} /></Badge>
-            ))}
-            {!!metrics.length && metrics.slice(0,6).map(m => (
-              <Badge key={`m-${m}`} variant="secondary" className="gap-1">{metricLabel[m]}<X className="h-3 w-3 cursor-pointer" onClick={()=>setMetrics(prev=>prev.filter(x=>x!==m))} /></Badge>
-            ))}
-            {(dateFrom || dateTo) && <Badge variant="secondary">{dateFrom || "…"} → {dateTo || "…"}</Badge>}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Page                                                                      │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
 export default function EmbrexTimelinePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -473,25 +135,44 @@ export default function EmbrexTimelinePage() {
   const [rows, setRows] = useState<RawRow[]>([]);
 
   /* Controls state */
-  const [granularity, setGranularity] = useState<Granularity>(() => validScale(searchParams.get("scale")) ? (searchParams.get("scale") as Granularity) : DEFAULTS.scale);
+  const [granularity, setGranularity] = useState<Granularity>(() => 
+    validScale(searchParams.get("scale")) ? (searchParams.get("scale") as Granularity) : DEFAULTS.scale
+  );
   const [metrics, setMetrics] = useState<MetricKey[]>(() => {
     const m = (searchParams.get("metrics") ?? "").split(",").filter(Boolean) as MetricKey[];
     return m.length ? m : DEFAULTS.metrics;
   });
-  const [facetBy, setFacetBy] = useState<FacetMode>(() => (["flock","unit","flock_unit"].includes(searchParams.get("facetBy") || "") ? (searchParams.get("facetBy") as FacetMode) : DEFAULTS.facetBy));
-  const [selectedFlocks, setSelectedFlocks] = useState<number[]>(() => (searchParams.get("flocks") || "").split(",").filter(Boolean).map(Number));
-  const [selectedUnits, setSelectedUnits] = useState<string[]>(() => (searchParams.get("units") || "").split(",").filter(Boolean));
+  const [facetBy, setFacetBy] = useState<FacetMode>(() => 
+    (["flock","unit","flock_unit"].includes(searchParams.get("facetBy") || "") ? 
+      (searchParams.get("facetBy") as FacetMode) : DEFAULTS.facetBy)
+  );
+  const [selectedFlocks, setSelectedFlocks] = useState<number[]>(() => 
+    (searchParams.get("flocks") || "").split(",").filter(Boolean).map(Number)
+  );
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(() => 
+    (searchParams.get("units") || "").split(",").filter(Boolean)
+  );
   const [dateFrom, setDateFrom] = useState<string>(() => searchParams.get("from") || DEFAULTS.from);
   const [dateTo, setDateTo] = useState<string>(() => searchParams.get("to") || DEFAULTS.to);
-  const [percentAgg, setPercentAgg] = useState<PercentAgg>(() => (searchParams.get("pctAgg") === "unweighted" ? "unweighted" : DEFAULTS.pctAgg));
+  const [percentAgg, setPercentAgg] = useState<PercentAgg>(() => 
+    (searchParams.get("pctAgg") === "unweighted" ? "unweighted" : DEFAULTS.pctAgg)
+  );
   const [rollingAvg, setRollingAvg] = useState<boolean>(() => searchParams.get("roll") === "1");
   const [benchmark, setBenchmark] = useState<number | "">(() => {
-    const b = searchParams.get("bench"); if (!b) return ""; const n = Number(b); return Number.isFinite(n) ? n : "";
+    const b = searchParams.get("bench"); 
+    if (!b) return ""; 
+    const n = Number(b); 
+    return Number.isFinite(n) ? n : "";
   });
-  const [viz, setViz] = useState<VizKind>(() => (Object.keys(VIZ_LABEL) as VizKind[]).includes((searchParams.get("viz") as VizKind)) ? (searchParams.get("viz") as VizKind) : DEFAULTS.viz);
-  const [savedName, setSavedName] = useState("");
+  const [viz, setViz] = useState<VizKind>(() => 
+    (Object.keys(VIZ_LABEL) as VizKind[]).includes((searchParams.get("viz") as VizKind)) ? 
+      (searchParams.get("viz") as VizKind) : DEFAULTS.viz
+  );
 
-  useEffect(() => { document.title = "Embrex Timeline | Hatchery Dashboard"; }, []);
+  useEffect(() => { 
+    document.title = "Embrex Timeline | Hatchery Dashboard"; 
+  }, []);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -504,6 +185,7 @@ export default function EmbrexTimelinePage() {
             flocks!inner(flock_number, flock_name, age_weeks)
           `)
           .order("set_date", { ascending: true });
+        
         if (error) throw error;
 
         const formatted: RawRow[] = (data ?? []).map((b: any) => ({
@@ -522,8 +204,14 @@ export default function EmbrexTimelinePage() {
         setRows(formatted);
       } catch (e) {
         console.error(e);
-        toast({ title: "Failed to load", description: "Could not load timeline data.", variant: "destructive" });
-      } finally { setLoading(false); }
+        toast({ 
+          title: "Failed to load", 
+          description: "Could not load timeline data.", 
+          variant: "destructive" 
+        });
+      } finally { 
+        setLoading(false); 
+      }
     })();
   }, [toast]);
 
@@ -539,19 +227,31 @@ export default function EmbrexTimelinePage() {
     if (dateTo) sp.set("to", dateTo);
     sp.set("pctAgg", percentAgg);
     if (rollingAvg) sp.set("roll", "1"); else sp.delete("roll");
-    if (benchmark !== "" && Number.isFinite(Number(benchmark))) sp.set("bench", String(benchmark)); else sp.delete("bench");
+    if (benchmark !== "" && Number.isFinite(Number(benchmark))) {
+      sp.set("bench", String(benchmark)); 
+    } else sp.delete("bench");
     sp.set("viz", viz);
     setSearchParams(sp, { replace: true });
   }, [granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz, setSearchParams]);
 
   /* Derived lists */
-  const units = useMemo(() => Array.from(new Set(rows.map(r => (r.unit_name || "").trim()).filter(Boolean))).sort(), [rows]);
+  const units = useMemo(() => 
+    Array.from(new Set(rows.map(r => (r.unit_name || "").trim()).filter(Boolean))).sort(), 
+    [rows]
+  );
+  
   const flocksList = useMemo(() => {
     const uniq = new Map<number, string>();
-    rows.forEach(r => { if (!uniq.has(r.flock_number)) uniq.set(r.flock_number, r.flock_name); });
+    rows.forEach(r => { 
+      if (!uniq.has(r.flock_number)) uniq.set(r.flock_number, r.flock_name); 
+    });
     return [...uniq.entries()].sort((a,b)=>a[0]-b[0]).map(([num,name])=>({num, name}));
   }, [rows]);
-  const flocksMap = useMemo(() => new Map(flocksList.map(({num,name}) => [num, name])), [flocksList]);
+  
+  const flocksMap = useMemo(() => 
+    new Map(flocksList.map(({num,name}) => [num, name])), 
+    [flocksList]
+  );
 
   /* Filtering */
   const baseFilteredRows = useMemo(() => {
@@ -564,8 +264,15 @@ export default function EmbrexTimelinePage() {
       const allow = new Set(selectedFlocks);
       out = out.filter(r => allow.has(r.flock_number));
     }
-    if (dateFrom) { const from = new Date(dateFrom); out = out.filter(r => new Date(r.set_date) >= from); }
-    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59,999); out = out.filter(r => new Date(r.set_date) <= to); }
+    if (dateFrom) { 
+      const from = new Date(dateFrom); 
+      out = out.filter(r => new Date(r.set_date) >= from); 
+    }
+    if (dateTo) { 
+      const to = new Date(dateTo); 
+      to.setHours(23,59,59,999); 
+      out = out.filter(r => new Date(r.set_date) <= to); 
+    }
     return out;
   }, [rows, selectedUnits, selectedFlocks, dateFrom, dateTo]);
 
@@ -582,11 +289,19 @@ export default function EmbrexTimelinePage() {
       }));
     }
     if (facetBy === "unit") {
-      const list = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
-      return list.map(u => ({ key: `U-${u}`, title: `Unit: ${u}`, rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) }));
+      const list = selectedUnits.length ? selectedUnits : 
+        Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
+      return list.map(u => ({ 
+        key: `U-${u}`, 
+        title: `Unit: ${u}`, 
+        rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) 
+      }));
     }
-    const flockList = selectedFlocks.length ? selectedFlocks : Array.from(new Set(data.map(r => r.flock_number)));
-    const unitList = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
+    const flockList = selectedFlocks.length ? selectedFlocks : 
+      Array.from(new Set(data.map(r => r.flock_number)));
+    const unitList = selectedUnits.length ? selectedUnits : 
+      Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
+    
     const out: Facet[] = [];
     for (const f of flockList) for (const u of unitList) {
       out.push({
@@ -605,7 +320,11 @@ export default function EmbrexTimelinePage() {
       const d = new Date(r.set_date);
       const start = startOfBucket(d, granularity);
       const key = fmtBucketLabel(start, granularity);
-      if (!map.has(key)) map.set(key, { bucketKey: key, date: start, count: {}, pct: {}, raw: [] });
+      
+      if (!map.has(key)) map.set(key, { 
+        bucketKey: key, date: start, count: {}, pct: {}, raw: [] 
+      });
+      
       const b = map.get(key)!;
       b.count.total_eggs_set = (b.count.total_eggs_set ?? 0) + (r.total_eggs_set ?? 0);
       b.count.eggs_cleared   = (b.count.eggs_cleared   ?? 0) + (r.eggs_cleared   ?? 0);
@@ -613,11 +332,13 @@ export default function EmbrexTimelinePage() {
       b.count.age_weeks      = (b.count.age_weeks      ?? 0) + (r.age_weeks      ?? 0);
       b.raw.push(r);
     }
+    
     const out: BucketRow[] = [];
     map.forEach((b) => {
       const sumSet = b.count.total_eggs_set ?? 0;
       const sumClr = b.count.eggs_cleared ?? 0;
       const sumInj = b.count.eggs_injected ?? 0;
+      
       if (percentAgg === "weighted") {
         b.pct.clear_pct = sumSet > 0 ? (sumClr / sumSet) * 100 : 0;
         b.pct.injected_pct = sumSet > 0 ? (sumInj / sumSet) * 100 : 0;
@@ -629,6 +350,7 @@ export default function EmbrexTimelinePage() {
       }
       out.push(b);
     });
+    
     out.sort((a,b)=>+a.date - +b.date);
     return out;
   };
@@ -636,13 +358,20 @@ export default function EmbrexTimelinePage() {
   const chartDataForFacet = (facetRows: RawRow[]) => {
     const buckets = buildBuckets(facetRows);
     const firstMetric = metrics[0] ?? "total_eggs_set";
-    const values = buckets.map(b => isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] ?? 0 : (b.count as any)[firstMetric] ?? 0);
+    const values = buckets.map(b => 
+      isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] ?? 0 : (b.count as any)[firstMetric] ?? 0
+    );
+    
     const rollWindow = 3;
     const rolling = rollingAvg ? values.map((_, i) => {
-      const s = Math.max(0, i - rollWindow + 1); const slice = values.slice(s, i + 1); return slice.reduce((a,c)=>a+c,0) / slice.length;
+      const s = Math.max(0, i - rollWindow + 1); 
+      const slice = values.slice(s, i + 1); 
+      return slice.reduce((a,c)=>a+c,0) / slice.length;
     }) : [];
+    
     return buckets.map((b, i) => ({
-      bucket: b.bucketKey, date: b.date,
+      bucket: b.bucketKey, 
+      date: b.date,
       total_eggs_set: b.count.total_eggs_set ?? 0,
       eggs_cleared: b.count.eggs_cleared ?? 0,
       eggs_injected: b.count.eggs_injected ?? 0,
@@ -658,305 +387,592 @@ export default function EmbrexTimelinePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalRows, setModalRows] = useState<RawRow[]>([]);
+  
   const openDrill = (facetTitle: string, bucketLabel: string, raw: RawRow[]) => {
-    setModalTitle(`${facetTitle} • ${bucketLabel}`); setModalRows(raw); setModalOpen(true);
+    setModalTitle(`${facetTitle} • ${bucketLabel}`); 
+    setModalRows(raw); 
+    setModalOpen(true);
   };
 
-  /* Export / Saved Views */
-  const exportBucketsCsv = () => {
-    const out: Record<string, any>[] = [];
-    facets.forEach(f => {
-      chartDataForFacet(f.rows).forEach(r => out.push({
-        facet: f.title, bucket: r.bucket,
-        total_eggs_set: r.total_eggs_set, eggs_cleared: r.eggs_cleared, eggs_injected: r.eggs_injected,
-        clear_pct: r.clear_pct, injected_pct: r.injected_pct, rolling: r.rolling ?? ""
-      }));
-    });
-    saveFile("embrex_timeline.csv", toCsv(out));
-  };
-  const saveCurrentView = () => {
-    if (!savedName.trim()) { toast({ title: "Name required", description: "Provide a name to save this view." }); return; }
-    localStorage.setItem(`embrexView:${savedName.trim()}`, searchParams.toString());
-    toast({ title: "View saved", description: `"${savedName}" saved.` }); setSavedName("");
-  };
-  const applySavedView = (name: string) => {
-    const qs = localStorage.getItem(`embrexView:${name}`);
-    if (!qs) return toast({ title: "Not found", description: "Saved view does not exist.", variant: "destructive" });
-    const url = new URL(window.location.href); url.search = qs; window.location.assign(url.toString());
-  };
-  const savedViews = useMemo(() => {
-    const v: string[] = []; for (let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||""; if (k.startsWith("embrexView:")) v.push(k.replace("embrexView:",""));} return v.sort();
-  }, [modalOpen, searchParams]);
+  const vizOptions = [
+    { value: "timeline_bar", label: "Timeline Bar", icon: BarChart3 },
+    { value: "timeline_line", label: "Timeline Line", icon: TrendingUp },
+    { value: "percent_trends", label: "Percent Trends", icon: Activity },
+    { value: "stacked_counts", label: "Stacked Counts", icon: Layers },
+    { value: "sparklines", label: "Sparklines", icon: Activity },
+    { value: "age_distribution", label: "Age Distribution", icon: BarChart2 }
+  ];
 
-  const filterCount = useFilterCount({
-    facetBy, selectedFlocks, selectedUnits, granularity, metrics, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz,
-  });
+  const metricOptions = [
+    { value: "total_eggs_set", label: "Total Eggs", color: PALETTE[0] },
+    { value: "eggs_cleared", label: "Cleared", color: PALETTE[1] },
+    { value: "eggs_injected", label: "Injected", color: PALETTE[2] },
+    { value: "clear_pct", label: "Clear %", color: PALETTE[3] },
+    { value: "injected_pct", label: "Injected %", color: PALETTE[4] },
+    { value: "age_weeks", label: "Age (weeks)", color: PALETTE[5] }
+  ];
 
-  /* UI */
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Embrex Timeline</h1>
-          <p className="text-muted-foreground">Enterprise time-series analytics — one view at a time.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-            <RefreshCw className="h-4 w-4" /> Reset
-          </Button>
-          <Button variant="secondary" className="gap-2" onClick={exportBucketsCsv}>
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
-          <Button variant="secondary" className="gap-2" onClick={() => navigate("/embrex-data-sheet", { state: { backToTimelineQS: searchParams.toString() } })}>
-            <BarChart2 className="h-4 w-4" /> Embrex Summary
-          </Button>
-        </div>
-      </div>
+  const currentFacet = facets[0] || { rows: [] };
+  const currentData = chartDataForFacet(currentFacet.rows);
 
-      {/* Toolbar: Filters + quick Visualization select + summary chips */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            {/* left cluster */}
-            <div className="flex items-center gap-2">
-              {/* Filters with count bubble */}
-              <div className="relative">
-                <FiltersViewPopover
-                  facetBy={facetBy} setFacetBy={setFacetBy}
-                  selectedFlocks={selectedFlocks} setSelectedFlocks={setSelectedFlocks} flocksList={flocksList}
-                  selectedUnits={selectedUnits} setSelectedUnits={setSelectedUnits} units={units}
-                  granularity={granularity} setGranularity={setGranularity}
-                  metrics={metrics} setMetrics={setMetrics}
-                  dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo}
-                  percentAgg={percentAgg} setPercentAgg={setPercentAgg}
-                  rollingAvg={rollingAvg} setRollingAvg={setRollingAvg}
-                  benchmark={benchmark} setBenchmark={setBenchmark}
-                  viz={viz} setViz={setViz}
-                  savedName={savedName} setSavedName={setSavedName}
-                  savedViews={savedViews} saveCurrentView={saveCurrentView} applySavedView={applySavedView}
+  // Calculate summary metrics
+  const summaryMetrics = useMemo(() => {
+    if (!currentData.length) return [];
+    
+    const latest = currentData[currentData.length - 1];
+    const previous = currentData[currentData.length - 2];
+    
+    const calcChange = (current: number, prev: number) => {
+      if (!prev) return "+0%";
+      const change = ((current - prev) / prev) * 100;
+      return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+    };
+
+    return [
+      { 
+        label: "Total Eggs", 
+        value: latest?.total_eggs_set?.toLocaleString() || "0", 
+        change: previous ? calcChange(latest?.total_eggs_set || 0, previous?.total_eggs_set || 0) : "+0%",
+        color: "blue" 
+      },
+      { 
+        label: "Clear Rate", 
+        value: `${(latest?.clear_pct || 0).toFixed(1)}%`, 
+        change: previous ? calcChange(latest?.clear_pct || 0, previous?.clear_pct || 0) : "+0%",
+        color: "green" 
+      },
+      { 
+        label: "Injection Rate", 
+        value: `${(latest?.injected_pct || 0).toFixed(1)}%`, 
+        change: previous ? calcChange(latest?.injected_pct || 0, previous?.injected_pct || 0) : "+0%",
+        color: "orange" 
+      },
+      { 
+        label: "Average Age", 
+        value: `${(latest?.age_weeks || 0).toFixed(1)}w`, 
+        change: previous ? calcChange(latest?.age_weeks || 0, previous?.age_weeks || 0) : "+0%",
+        color: "purple" 
+      }
+    ];
+  }, [currentData]);
+
+  const renderChart = () => {
+    const height = 480;
+    
+    if (viz === "timeline_bar") {
+      return (
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart 
+              data={currentData} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              onClick={(e:any)=>{ 
+                if (!e?.activePayload?.length) return; 
+                const p=e.activePayload[0]?.payload; 
+                if (!p) return; 
+                openDrill(currentFacet.title, p.bucket as string, p._raw as RawRow[]); 
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+              />
+              <Legend />
+              {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
+                <ReferenceLine 
+                  yAxisId="right" 
+                  y={Number(benchmark)} 
+                  stroke="#ef4444" 
+                  strokeDasharray="4 4" 
+                  label={`Target ${benchmark}%`} 
                 />
-                {filterCount > 0 && (
-                  <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-primary text-primary-foreground">
-                    {filterCount}
-                  </span>
-                )}
-              </div>
+              )}
+              {metrics.map((metric, i) => (
+                <Bar
+                  key={metric}
+                  dataKey={metric}
+                  yAxisId={isPercentMetric(metric) ? "right" : "left"}
+                  fill={metricOptions.find(m => m.value === metric)?.color || PALETTE[i]}
+                  radius={[4, 4, 0, 0]}
+                  name={metricOptions.find(m => m.value === metric)?.label}
+                />
+              ))}
+              {rollingAvg && (
+                <Line
+                  type="monotone"
+                  dataKey="rolling"
+                  yAxisId="right"
+                  stroke="#64748b"
+                  strokeWidth={2}
+                  dot={false}
+                  strokeDasharray="5 5"
+                  name="3-Period Rolling Avg"
+                />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
 
-              {/* Quick Visualization selector (handy) */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground hidden sm:inline">Visualization</span>
-                <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
-                  <SelectTrigger className="w-[220px] h-9">
-                    <Monitor className="h-4 w-4 mr-2 opacity-70" />
-                    <SelectValue placeholder="Choose view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
-                      <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+    if (viz === "timeline_line") {
+      return (
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+              />
+              <Legend />
+              {metrics.map((metric, i) => (
+                <Line
+                  key={metric}
+                  type="monotone"
+                  dataKey={metric}
+                  yAxisId={isPercentMetric(metric) ? "right" : "left"}
+                  stroke={metricOptions.find(m => m.value === metric)?.color || PALETTE[i]}
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  name={metricOptions.find(m => m.value === metric)?.label}
+                />
+              ))}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
 
-            {/* right cluster chips */}
-            <div className="flex flex-wrap gap-1">
-              <Badge variant="outline" className="gap-1"><Layers className="h-3 w-3" /> {facetBy}</Badge>
-              <Badge variant="outline" className="gap-1"><Rows className="h-3 w-3" /> {granularity}</Badge>
-              {metrics.slice(0,3).map((m)=> <Badge key={m} variant="outline">{metricLabel[m]}</Badge>)}
-              {metrics.length>3 && <Badge variant="outline">+{metrics.length-3}</Badge>}
-              {(dateFrom || dateTo) && <Badge variant="outline"><CalendarIcon className="h-3 w-3 mr-1" /> {dateFrom || "…"} → {dateTo || "…"}</Badge>}
-            </div>
+    if (viz === "percent_trends") {
+      return (
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+              />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="clear_pct"
+                stroke={PALETTE[3]}
+                fill={PALETTE[3]}
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Clear %"
+              />
+              <Area
+                type="monotone"
+                dataKey="injected_pct"
+                stroke={PALETTE[4]}
+                fill={PALETTE[4]}
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Injected %"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    if (viz === "stacked_counts") {
+      return (
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={currentData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
+              <Bar dataKey="eggs_cleared"  stackId="a" fill={PALETTE[2]} name="Clears" />
+              <Bar dataKey="eggs_injected" stackId="a" fill={PALETTE[1]} name="Injected" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-slate-500">Select a visualization type to display chart</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Embrex Analytics
+            </h1>
+            <p className="text-slate-600 mt-1">Production insights at your fingertips</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
+          </div>
+        </div>
 
-      {/* Visualization area — exactly ONE view */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            {VIZ_LABEL[viz]}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-[420px] w-full" />
-          ) : (
-            <Tabs defaultValue={facets[0]?.key || "ALL"} className="w-full">
-              <TabsList className="flex flex-wrap justify-start max-w-full overflow-x-auto">
-                {facets.map(f => <TabsTrigger key={f.key} value={f.key} className="truncate max-w-[260px]">{f.title}</TabsTrigger>)}
-              </TabsList>
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-140px)]">
+          {/* Left Sidebar - Controls */}
+          <div className="col-span-3 space-y-4">
+            {/* Visualization Type */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Monitor className="h-4 w-4 text-blue-600" />
+                  Visualization
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {vizOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <Button
+                      key={option.value}
+                      variant={viz === option.value ? "default" : "ghost"}
+                      className="w-full justify-start gap-2"
+                      onClick={() => setViz(option.value as VizKind)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {option.label}
+                    </Button>
+                  );
+                })}
+              </CardContent>
+            </Card>
 
-              {facets.map((facet) => {
-                const data = chartDataForFacet(facet.rows);
-                const showTimeline = viz === "timeline_bar" || viz === "timeline_line";
-                return (
-                  <TabsContent key={facet.key} value={facet.key} className="mt-4">
-                    {/* Timeline – Bar/Line */}
-                    {showTimeline && (
-                      <div style={{ height: 420 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={data} onClick={(e:any)=>{ if (!e?.activePayload?.length) return; const p=e.activePayload[0]?.payload; if (!p) return; openDrill(facet.title, p.bucket as string, p._raw as RawRow[]); }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="bucket" />
-                            <YAxis yAxisId="left" allowDecimals={false} />
-                            <YAxis yAxisId="right" orientation="right" domain={[0,100]} />
-                            <Tooltip />
-                            <Legend />
-                            {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
-                              <ReferenceLine yAxisId="right" y={Number(benchmark)} stroke="#ef4444" strokeDasharray="4 4" label={`Benchmark ${benchmark}%`} />
-                            )}
-                            {metrics.map((m, i) => {
-                              const color = PALETTE[i % PALETTE.length];
-                              const yAxis = isPercentMetric(m) ? "right" : "left";
-                              if (viz === "timeline_bar") return <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[6,6,0,0]} />;
-                              return <Line key={m} type="monotone" dataKey={m} yAxisId={yAxis} stroke={color} dot strokeWidth={2} />;
-                            })}
-                            {rollingAvg && (
-                              <Line type="monotone" dataKey="rolling" yAxisId={isPercentMetric(metrics[0] ?? "total_eggs_set") ? "right":"left"} stroke="#64748b" dot={false} strokeDasharray="5 5" name="Rolling Avg" />
-                            )}
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-
-                    {/* Stacked Counts */}
-                    {viz === "stacked_counts" && (
-                      <div style={{ height: 380 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip /><Legend />
-                            <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
-                            <Bar dataKey="eggs_cleared"  stackId="a" fill={PALETTE[2]} name="Clears" />
-                            <Bar dataKey="eggs_injected" stackId="a" fill={PALETTE[1]} name="Injected" />
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-
-                    {/* Percent Trends */}
-                    {viz === "percent_trends" && (
-                      <div style={{ height: 340 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="bucket" /><YAxis domain={[0,100]} /><Tooltip /><Legend />
-                            <Line type="monotone" dataKey="clear_pct" stroke={PALETTE[2]} dot={false} name="Clear %" />
-                            <Line type="monotone" dataKey="injected_pct" stroke={PALETTE[1]} dot={false} name="Injected %" />
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-
-                    {/* Sparklines */}
-                    {viz === "sparklines" && (
-                      <div className="grid gap-3 md:grid-cols-3">
-                        {["total_eggs_set","clear_pct","injected_pct"].map((k, i)=>(
-                          <div key={k} className="p-2 border rounded-md">
-                            <div className="text-xs text-muted-foreground mb-1">{metricLabel[k as MetricKey]}</div>
-                            <div style={{ height: 120 }}>
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data}>
-                                  <XAxis dataKey="bucket" hide />
-                                  <YAxis hide domain={isPercentMetric(k as MetricKey) ? [0,100] : ["auto","auto"]} />
-                                  <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} />
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Age Distribution */}
-                    {viz === "age_distribution" && (
-                      <div style={{ height: 320 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip />
-                            <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6,6,0,0]} />
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-
-                    {/* Heatmap (month×unit) — bar-grid proxy */}
-                    {viz === "heatmap" && (
-                      <div className="grid gap-2" style={{ gridTemplateColumns: "140px 1fr" }}>
-                        <div className="text-xs text-muted-foreground">Unit</div>
-                        <div className="text-xs text-muted-foreground">Month buckets</div>
-                        {(() => {
-                          const months = Array.from(new Set(data.map(d=>d.bucket)));
-                          const byUnit: Record<string, Record<string, number>> = {};
-                          facet.rows.forEach(r=>{
-                            const b = fmtBucketLabel(startOfBucket(new Date(r.set_date), granularity), granularity);
-                            byUnit[r.unit_name] = byUnit[r.unit_name] || {};
-                            byUnit[r.unit_name][b] = (byUnit[r.unit_name][b] || 0) + (r.total_eggs_set || 0);
-                          });
-                          const scale = (v: number, max: number) => max ? Math.round((v/max)*90)+10 : 0;
-                          const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
-                          return Object.entries(byUnit).map(([u, m], idx)=>(
-                            <div key={u} className="contents">
-                              <div className="text-xs py-1">{u || "—"}</div>
-                              <div className="flex gap-1">
-                                {months.map((mo)=> {
-                                  const v = m[mo] || 0; const h = scale(v, maxVal);
-                                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${v.toLocaleString()}`} />;
-                                })}
-                              </div>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Drill-down modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>Bucket details</DialogTitle><DialogDescription>{modalTitle}</DialogDescription></DialogHeader>
-          <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left sticky top-0 bg-background">
-                <tr className="border-b">
-                  <th className="py-2 pr-2">Batch</th>
-                  <th className="py-2 pr-2">Flock</th>
-                  <th className="py-2 pr-2">Unit</th>
-                  <th className="py-2 pr-2">Set date</th>
-                  <th className="py-2 pr-2 text-right">Eggs set</th>
-                  <th className="py-2 pr-2 text-right">Clears</th>
-                  <th className="py-2 pr-2 text-right">Injected</th>
-                  <th className="py-2 pr-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modalRows.map(r=>(
-                  <tr key={r.batch_id} className="border-b last:border-0">
-                    <td className="py-2 pr-2 font-mono">{r.batch_number}</td>
-                    <td className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</td>
-                    <td className="py-2 pr-2">{r.unit_name}</td>
-                    <td className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</td>
-                    <td className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</td>
-                    <td className="py-2 pr-2">{r.status}</td>
-                  </tr>
+            {/* Metrics Selection */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-green-600" />
+                  Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {metricOptions.map((metric) => (
+                  <div key={metric.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={metric.value}
+                      checked={metrics.includes(metric.value as MetricKey)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setMetrics([...metrics, metric.value as MetricKey]);
+                        } else {
+                          setMetrics(metrics.filter(m => m !== metric.value));
+                        }
+                      }}
+                    />
+                    <label htmlFor={metric.value} className="text-sm flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: metric.color }}
+                      />
+                      {metric.label}
+                    </label>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </CardContent>
+            </Card>
+
+            {/* Quick Controls */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-purple-600" />
+                  Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-600 mb-1 block">Time Scale</label>
+                  <Select value={granularity} onValueChange={(v: Granularity) => setGranularity(v)}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Daily</SelectItem>
+                      <SelectItem value="week">Weekly</SelectItem>
+                      <SelectItem value="month">Monthly</SelectItem>
+                      <SelectItem value="year">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-600 mb-1 block">Facet By</label>
+                  <Select value={facetBy} onValueChange={(v: FacetMode) => setFacetBy(v)}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flock">Flocks</SelectItem>
+                      <SelectItem value="unit">Units</SelectItem>
+                      <SelectItem value="flock_unit">Flock × Unit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-600 mb-1 block">Benchmark %</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 85"
+                    value={benchmark}
+                    onChange={(e) => setBenchmark(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rolling"
+                    checked={rollingAvg}
+                    onCheckedChange={(v) => setRollingAvg(Boolean(v))}
+                  />
+                  <label htmlFor="rolling" className="text-xs text-slate-600">
+                    Show rolling average
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Filters */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-orange-600" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Flocks Filter */}
+                <div>
+                  <label className="text-xs text-slate-600 mb-1 block">Flocks</label>
+                  <Select 
+                    value={selectedFlocks.length > 0 ? selectedFlocks[0].toString() : ""} 
+                    onValueChange={(v) => setSelectedFlocks(v ? [Number(v)] : [])}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="All flocks" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All flocks</SelectItem>
+                      {flocksList.map(flock => (
+                        <SelectItem key={flock.num} value={flock.num.toString()}>
+                          #{flock.num} - {flock.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Units Filter */}
+                <div>
+                  <label className="text-xs text-slate-600 mb-1 block">Units</label>
+                  <Select 
+                    value={selectedUnits.length > 0 ? selectedUnits[0] : ""} 
+                    onValueChange={(v) => setSelectedUnits(v ? [v] : [])}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="All units" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All units</SelectItem>
+                      {units.map(unit => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Date Range */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-orange-600" />
+                  Date Range
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {["30d", "90d", "180d", "YTD"].map((period) => (
+                    <Button 
+                      key={period} 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7"
+                      onClick={() => {
+                        const to = new Date();
+                        const from = new Date();
+                        if (period === "30d") from.setDate(to.getDate() - 30);
+                        else if (period === "90d") from.setDate(to.getDate() - 90);
+                        else if (period === "180d") from.setDate(to.getDate() - 180);
+                        else if (period === "YTD") from.setMonth(0, 1);
+                        setDateFrom(from.toISOString().slice(0, 10));
+                        setDateTo(to.toISOString().slice(0, 10));
+                      }}
+                    >
+                      {period}
+                    </Button>
+                  ))}
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <Input 
+                    type="date" 
+                    className="h-8" 
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                  <Input 
+                    type="date" 
+                    className="h-8" 
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Main Chart Area */}
+          <div className="col-span-9">
+            <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <CardTitle className="text-xl">
+                      {vizOptions.find(v => v.value === viz)?.label || "Timeline"}
+                    </CardTitle>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {currentFacet.title}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Facet Tabs */}
+                {facets.length > 1 && (
+                  <Tabs value={facets[0]?.key} className="w-auto">
+                    <TabsList className="bg-slate-100">
+                      {facets.slice(0, 3).map((facet) => (
+                        <TabsTrigger key={facet.key} value={facet.key} className="text-xs">
+                          {facet.title.split(" — ")[0]}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                )}
+              </CardHeader>
+
+              <CardContent className="pt-0">
+                {loading ? (
+                  <Skeleton className="h-[520px] w-full" />
+                ) : (
+                  <>
+                    {/* Key Metrics Bar */}
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                      {summaryMetrics.map((metric, i) => (
+                        <div key={i} className={`p-3 rounded-lg bg-gradient-to-r from-${metric.color}-50 to-${metric.color}-100 border border-${metric.color}-200`}>
+                          <div className="text-xs text-slate-600">{metric.label}</div>
+                          <div className="text-lg font-bold">{metric.value}</div>
+                          <div className={`text-xs ${metric.change.startsWith('+') && !metric.change.startsWith('+0') ? 'text-green-600' : metric.change.startsWith('-') ? 'text-red-600' : 'text-slate-500'}`}>
+                            {metric.change} vs last period
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart */}
+                    <div className="bg-white rounded-lg border border-slate-200">
+                      {renderChart()}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Drill-down modal */}
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Bucket Details</DialogTitle>
+              <DialogDescription>{modalTitle}</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left sticky top-0 bg-background">
+                  <tr className="border-b">
+                    <th className="py-2 pr-2">Batch</th>
+                    <th className="py-2 pr-2">Flock</th>
+                    <th className="py-2 pr-2">Unit</th>
+                    <th className="py-2 pr-2">Set Date</th>
+                    <th className="py-2 pr-2 text-right">Eggs Set</th>
+                    <th className="py-2 pr-2 text-right">Clears</th>
+                    <th className="py-2 pr-2 text-right">Injected</th>
+                    <th className="py-2 pr-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modalRows.map(r => (
+                    <tr key={r.batch_id} className="border-b last:border-0">
+                      <td className="py-2 pr-2 font-mono">{r.batch_number}</td>
+                      <td className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</td>
+                      <td className="py-2 pr-2">{r.unit_name}</td>
+                      <td className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</td>
+                      <td className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</td>
+                      <td className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</td>
+                      <td className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</td>
+                      <td className="py-2 pr-2">{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }
