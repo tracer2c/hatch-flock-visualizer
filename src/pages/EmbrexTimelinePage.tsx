@@ -618,57 +618,8 @@ export default function EmbrexDashboard() {
   /* ─────────────────────────── Layout (No-scroll visuals) ─────────────────── */
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Top bar (title & viz select removed per request) */}
-      <div className="h-14 px-4 border-b bg-white/70 backdrop-blur flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)} className="mr-1">
-            {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Compare mode */}
-          <div className="flex items-center gap-2">
-            <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
-              onClick={()=>setCompareMode(v=>!v)}>
-              <LayoutGrid className="h-4 w-4" />
-              {compareMode ? "Compare: On" : "Compare: Off"}
-            </Button>
-            {compareMode && (
-              <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
-                <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 col</SelectItem>
-                  <SelectItem value="2">2 cols</SelectItem>
-                  <SelectItem value="3">3 cols</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          {/* Saved views + actions */}
-          <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
-          <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
-          {savedViews.length>0 && (
-            <Select onValueChange={(v)=>applySavedView(v)}>
-              <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Load view" /></SelectTrigger>
-              <SelectContent>
-                {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
-          <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-            <Download className="h-4 w-4" /> Export
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-            <RefreshCw className="h-4 w-4" /> Reset
-          </Button>
-        </div>
-      </div>
-
       {/* Main split: sidebar scrolls, visuals fixed */}
-      <div className="h-[calc(100vh-56px)] w-full grid" style={{ gridTemplateColumns: sidebarOpen ? "320px 1fr" : "0px 1fr" }}>
+      <div className="h-full w-full grid" style={{ gridTemplateColumns: sidebarOpen ? "320px 1fr" : "0px 1fr" }}>
         {/* Sidebar */}
         <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <div className="p-3 space-y-3">
@@ -954,11 +905,60 @@ export default function EmbrexDashboard() {
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
               <CardHeader className="flex-none pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{VIZ_LABEL[viz]}</CardTitle>
-                    <p className="text-sm text-slate-600 mt-1">{compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}</p>
+                {/* Top controls bar */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)}>
+                      {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+                    </Button>
+                    <div>
+                      <CardTitle className="text-xl">{VIZ_LABEL[viz]}</CardTitle>
+                      <p className="text-sm text-slate-600 mt-1">{compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}</p>
+                    </div>
                   </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Compare mode */}
+                    <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
+                      onClick={()=>setCompareMode(v=>!v)}>
+                      <LayoutGrid className="h-4 w-4" />
+                      {compareMode ? "Compare: On" : "Compare: Off"}
+                    </Button>
+                    {compareMode && (
+                      <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
+                        <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 col</SelectItem>
+                          <SelectItem value="2">2 cols</SelectItem>
+                          <SelectItem value="3">3 cols</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    {/* Saved views + actions */}
+                    <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
+                    <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
+                    {savedViews.length>0 && (
+                      <Select onValueChange={(v)=>applySavedView(v)}>
+                        <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Load view" /></SelectTrigger>
+                        <SelectContent>
+                          {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
+                    <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
+                      <Download className="h-4 w-4" /> Export
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
+                      <RefreshCw className="h-4 w-4" /> Reset
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Chart title and facet tabs */}
+                <div className="flex items-center justify-between">
+                  <div></div>
                   {!compareMode && (
                     <Tabs value={activeFacet} onValueChange={setActiveFacet} className="w-auto">
                       <TabsList className="bg-slate-100 max-w-[50vw] overflow-x-auto">
