@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
-  Download, RefreshCw, Monitor, Layers, Rows, Grid2X2, Save, X
+  Download, RefreshCw, Monitor, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -140,9 +140,6 @@ const DEFAULTS = {
   viz: "timeline_bar" as VizKind,
 };
 
-/* ╭──────────────────────────────────────────────────────────────────────────╮
-   │ Page – New Layout, Old Power                                             │
-   ╰──────────────────────────────────────────────────────────────────────────╯ */
 export default function EmbrexDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -183,6 +180,14 @@ export default function EmbrexDashboard() {
       ? (searchParams.get("viz") as VizKind)
       : DEFAULTS.viz
   );
+
+  /* Compare Mode & Sidebar state */
+  const [compareMode, setCompareMode] = useState<boolean>(() => searchParams.get("cmp") === "1");
+  const [compareCols, setCompareCols] = useState<number>(() => {
+    const c = Number(searchParams.get("cols") || 2);
+    return [1,2,3].includes(c) ? c : 2;
+  });
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => searchParams.get("nav") !== "0");
 
   /* Saved views */
   const [savedName, setSavedName] = useState("");
@@ -242,8 +247,14 @@ export default function EmbrexDashboard() {
     if (rollingAvg) sp.set("roll", "1"); else sp.delete("roll");
     if (benchmark !== "" && Number.isFinite(Number(benchmark))) sp.set("bench", String(benchmark)); else sp.delete("bench");
     sp.set("viz", viz);
+    if (compareMode) sp.set("cmp","1"); else sp.delete("cmp");
+    if (compareCols !== 2) sp.set("cols", String(compareCols)); else sp.delete("cols");
+    sp.set("nav", sidebarOpen ? "1" : "0");
     setSearchParams(sp, { replace: true });
-  }, [granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo, percentAgg, rollingAvg, benchmark, viz, setSearchParams]);
+  }, [
+    granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo,
+    percentAgg, rollingAvg, benchmark, viz, compareMode, compareCols, sidebarOpen, setSearchParams
+  ]);
 
   /* Derived lists */
   const units = useMemo(
@@ -369,8 +380,9 @@ export default function EmbrexDashboard() {
   /* Export / Saved Views */
   const exportBucketsCsv = () => {
     const out: Record<string, any>[] = [];
-    facets.forEach(f => {
-      chartDataForFacet(f.rows).forEach(r => out.push({
+    (compareMode ? facets : [facets.find(f=>true)!]).forEach(f => {
+      const dat = chartDataForFacet(f.rows);
+      dat.forEach(r => out.push({
         facet: f.title, bucket: r.bucket,
         total_eggs_set: r.total_eggs_set, eggs_cleared: r.eggs_cleared, eggs_injected: r.eggs_injected,
         clear_pct: r.clear_pct, injected_pct: r.injected_pct, rolling: r.rolling ?? ""
@@ -402,16 +414,13 @@ export default function EmbrexDashboard() {
   /* Facet tabs state */
   const [activeFacet, setActiveFacet] = useState<string>("ALL");
   useEffect(() => {
-    // Keep active facet in sync with list
     if (!facets.find(f => f.key === activeFacet)) {
       setActiveFacet(facets[0]?.key ?? "ALL");
     }
   }, [facets, activeFacet]);
 
-  /* Chart renderer (single view) */
-  const renderChart = (data: any[], facetTitle: string) => {
-    const height = 460;
-
+  /* Chart renderer */
+  const renderChart = (data: any[], facetTitle: string, height: number) => {
     if (viz === "timeline_bar" || viz === "timeline_line") {
       const isBar = viz === "timeline_bar";
       return (
@@ -463,7 +472,7 @@ export default function EmbrexDashboard() {
 
     if (viz === "stacked_counts") {
       return (
-        <div style={{ height: height - 40 }}>
+        <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -479,7 +488,7 @@ export default function EmbrexDashboard() {
 
     if (viz === "percent_trends") {
       return (
-        <div style={{ height: height - 40 }}>
+        <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -495,11 +504,11 @@ export default function EmbrexDashboard() {
     if (viz === "sparklines") {
       const keys: MetricKey[] = ["total_eggs_set","clear_pct","injected_pct"];
       return (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3" style={{ height }}>
           {keys.map((k, i)=>(
             <div key={k} className="p-2 border rounded-md">
               <div className="text-xs text-muted-foreground mb-1">{metricLabel[k]}</div>
-              <div style={{ height: 120 }}>
+              <div style={{ height: height - 56 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data}>
                     <XAxis dataKey="bucket" hide />
@@ -516,7 +525,7 @@ export default function EmbrexDashboard() {
 
     if (viz === "age_distribution") {
       return (
-        <div style={{ height: height - 60 }}>
+        <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -528,18 +537,11 @@ export default function EmbrexDashboard() {
       );
     }
 
-    // heatmap (bar-grid proxy)
     if (viz === "heatmap") {
-      // Build unit x bucket intensity
-      const months = Array.from(new Set(data.map(d=>d.bucket)));
-      // Recompute from raw by unit
-      const byUnit: Record<string, Record<string, number>> = {};
-      (data[0]?._raw ?? []).forEach(() => { /* placeholder to hint type */ });
-      // We need facet raw rows per bucket -> rebuild from selected facet rows
-      // We'll pass raw via data[i]._raw; but it's per-bucket. Aggregate across buckets:
+      const months = Array.from(new Set(data.map((d:any)=>d.bucket)));
       const allRaw: RawRow[] = data.flatMap((d:any)=> d._raw ?? []);
-      const g = granularity; // lock-in for formatter
-      const fmt = (dt:string)=> fmtBucketLabel(startOfBucket(new Date(dt), g), g);
+      const byUnit: Record<string, Record<string, number>> = {};
+      const g = granularity; const fmt = (dt:string)=> fmtBucketLabel(startOfBucket(new Date(dt), g), g);
       allRaw.forEach(r=>{
         const b = fmt(r.set_date);
         byUnit[r.unit_name] = byUnit[r.unit_name] || {};
@@ -547,9 +549,8 @@ export default function EmbrexDashboard() {
       });
       const scale = (v: number, max: number) => max ? Math.round((v/max)*90)+10 : 0;
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
-
       return (
-        <div className="grid gap-2" style={{ gridTemplateColumns: "160px 1fr" }}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: "160px 1fr", height, overflow: "hidden" }}>
           <div className="text-xs text-muted-foreground">Unit</div>
           <div className="text-xs text-muted-foreground">Time buckets</div>
           {Object.entries(byUnit).map(([u, m], idx)=>(
@@ -570,9 +571,11 @@ export default function EmbrexDashboard() {
     return null;
   };
 
-  /* Quick header stats (demo from data) */
+  /* Active facet */
   const activeFacetObj = facets.find(f => f.key === activeFacet) || facets[0];
   const activeData = activeFacetObj ? chartDataForFacet(activeFacetObj.rows) : [];
+
+  /* Header stats (from active facet) */
   const totalEggs = activeData.reduce((a,c)=>a+(c.total_eggs_set||0),0);
   const avgClear = activeData.length ? (activeData.reduce((a,c)=>a+(c.clear_pct||0),0)/activeData.length) : 0;
   const avgInj = activeData.length ? (activeData.reduce((a,c)=>a+(c.injected_pct||0),0)/activeData.length) : 0;
@@ -589,68 +592,85 @@ export default function EmbrexDashboard() {
     if (dateFrom || dateTo) n++;
     if (percentAgg !== DEFAULTS.pctAgg || rollingAvg || benchmark !== "") n++;
     if (viz !== DEFAULTS.viz) n++;
+    if (compareMode) n++;
     return n;
   })();
 
-  /* UI */
+  /* ─────────────────────────── Layout (No-scroll visuals) ─────────────────── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Embrex Analytics
-            </h1>
-            <p className="text-slate-600 mt-1">Production insights at your fingertips</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Saved views inline */}
-            <div className="flex items-center gap-2">
-              <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-48" />
-              <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
-              {savedViews.length>0 && (
-                <Select onValueChange={(v)=>applySavedView(v)}>
-                  <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Load saved view" /></SelectTrigger>
-                  <SelectContent>
-                    {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-              <Download className="h-4 w-4" /> Export
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-              <RefreshCw className="h-4 w-4" /> Reset
-            </Button>
-            {/* Quick viz select beside controls (handy) */}
-            <Select value={viz} onValueChange={(v: VizKind)=>setViz(v)}>
-              <SelectTrigger className="h-8 w-[220px]">
-                <Monitor className="h-4 w-4 mr-2 opacity-70" />
-                <SelectValue placeholder="Choose view" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
-                  <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {/* Filter counter bubble */}
-            {filterCount > 0 && (
-              <Badge variant="default" className="ml-1">{filterCount} filters</Badge>
-            )}
-          </div>
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Top bar */}
+      <div className="h-14 px-4 border-b bg-white/70 backdrop-blur flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)} className="mr-1">
+            {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+          </Button>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Embrex Analytics
+          </h1>
+          <Badge variant="secondary" className="ml-2">Visuals fixed • Nav scrolls</Badge>
         </div>
 
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-140px)]">
-          {/* Left Sidebar - Controls */}
-          <div className="col-span-3 space-y-4">
-            {/* Visualization Type */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          {/* Compare mode quick toggle & columns */}
+          <div className="flex items-center gap-2">
+            <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
+              onClick={()=>setCompareMode(v=>!v)}>
+              <LayoutGrid className="h-4 w-4" />
+              {compareMode ? "Compare: On" : "Compare: Off"}
+            </Button>
+            {compareMode && (
+              <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
+                <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 col</SelectItem>
+                  <SelectItem value="2">2 cols</SelectItem>
+                  <SelectItem value="3">3 cols</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Saved views + export + reset */}
+          <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
+          <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
+          {savedViews.length>0 && (
+            <Select onValueChange={(v)=>applySavedView(v)}>
+              <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Load view" /></SelectTrigger>
+              <SelectContent>
+                {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={viz} onValueChange={(v: VizKind)=>setViz(v)}>
+            <SelectTrigger className="h-8 w-[200px]">
+              <Monitor className="h-4 w-4 mr-2 opacity-70" />
+              <SelectValue placeholder="Choose view" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
+                <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
+          <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
+            <RefreshCw className="h-4 w-4" /> Reset
+          </Button>
+        </div>
+      </div>
+
+      {/* Main split: sidebar scrolls, visuals fixed */}
+      <div className="h-[calc(100vh-56px)] w-full grid" style={{ gridTemplateColumns: sidebarOpen ? "320px 1fr" : "0px 1fr" }}>
+        {/* Sidebar */}
+        <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div className="p-3 space-y-3">
+            {/* Visualization quick list */}
+            <Card className="shadow-sm border-0">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Monitor className="h-4 w-4 text-blue-600" />
                   Visualization
@@ -682,9 +702,9 @@ export default function EmbrexDashboard() {
               </CardContent>
             </Card>
 
-            {/* Metrics Selection (multi) */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader className="pb-3">
+            {/* Metrics */}
+            <Card className="shadow-sm border-0">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-green-600" />
                   Metrics
@@ -719,16 +739,15 @@ export default function EmbrexDashboard() {
               </CardContent>
             </Card>
 
-            {/* Compare: Flocks & Units */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader className="pb-3">
+            {/* Compare selectors */}
+            <Card className="shadow-sm border-0">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Grid2X2 className="h-4 w-4 text-indigo-600" />
                   Compare
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Facet by */}
                 <div>
                   <div className="text-xs text-slate-600 mb-1">Facet by</div>
                   <Select value={facetBy} onValueChange={(v:FacetMode)=>setFacetBy(v)}>
@@ -769,7 +788,7 @@ export default function EmbrexDashboard() {
                   </Command>
                   {selectedFlocks.length > 0 && (
                     <div className="flex flex-wrap gap-1 p-2 border-t">
-                      {selectedFlocks.slice(0,6).map(f => (
+                      {selectedFlocks.slice(0,8).map(f => (
                         <Badge key={`f-${f}`} variant="secondary" className="gap-1">
                           Flock #{f}
                           <X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedFlocks(prev=>prev.filter(x=>x!==f))} />
@@ -807,7 +826,7 @@ export default function EmbrexDashboard() {
                   </Command>
                   {selectedUnits.length > 0 && (
                     <div className="flex flex-wrap gap-1 p-2 border-t">
-                      {selectedUnits.slice(0,6).map(u => (
+                      {selectedUnits.slice(0,8).map(u => (
                         <Badge key={`u-${u}`} variant="secondary" className="gap-1">
                           {u}
                           <X className="h-3 w-3 cursor-pointer" onClick={()=>setSelectedUnits(prev=>prev.filter(x=>x!==u))} />
@@ -820,8 +839,8 @@ export default function EmbrexDashboard() {
             </Card>
 
             {/* Settings */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader className="pb-3">
+            <Card className="shadow-sm border-0">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Settings className="h-4 w-4 text-purple-600" />
                   Settings
@@ -864,125 +883,136 @@ export default function EmbrexDashboard() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="rolling"
-                    checked={rollingAvg}
-                    onCheckedChange={(v)=>setRollingAvg(Boolean(v))}
-                  />
-                  <label htmlFor="rolling" className="text-xs text-slate-600">
-                    Show rolling average (3 buckets)
-                  </label>
+                  <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v)=>setRollingAvg(Boolean(v))}/>
+                  <label htmlFor="rolling" className="text-xs text-slate-600">Show rolling average (3 buckets)</label>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Date Range */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4 text-orange-600" />
-                  Date Range
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    ["30d", 30], ["90d", 90], ["180d", 180], ["365d", 365]
-                  ].map(([label, days]) => (
+                {/* Date Range */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-600">Date Range</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ["30d", 30], ["90d", 90], ["180d", 180], ["365d", 365]
+                    ].map(([label, days]) => (
+                      <Button
+                        key={label as string}
+                        variant="outline"
+                        size="sm"
+                        className="h-7"
+                        onClick={()=>{
+                          const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days as number));
+                          setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
+                        }}
+                      >
+                        {label as string}
+                      </Button>
+                    ))}
                     <Button
-                      key={label as string}
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
+                      variant="outline" size="sm" className="h-7"
                       onClick={()=>{
-                        const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days as number));
+                        const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
                         setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
                       }}
                     >
-                      {label as string}
+                      YTD
                     </Button>
-                  ))}
-                  <Button
-                    variant="outline" size="sm" className="h-7"
-                    onClick={()=>{
-                      const to = new Date(); const from = new Date(to.getFullYear(), 0, 1);
-                      setDateFrom(from.toISOString().slice(0,10)); setDateTo(to.toISOString().slice(0,10));
-                    }}
-                  >
-                    YTD
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-7" onClick={()=>{setDateFrom(""); setDateTo("");}}>
-                    All time
-                  </Button>
-                </div>
-                <div className="space-y-2 pt-2 border-t">
-                  <Input type="date" className="h-8" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} />
-                  <Input type="date" className="h-8" value={dateTo}   onChange={(e)=>setDateTo(e.target.value)} />
+                    <Button variant="outline" size="sm" className="h-7" onClick={()=>{setDateFrom(""); setDateTo("");}}>
+                      All time
+                    </Button>
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    <Input type="date" className="h-8" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} />
+                    <Input type="date" className="h-8" value={dateTo}   onChange={(e)=>setDateTo(e.target.value)} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+        </aside>
 
-          {/* Main Chart Area */}
-          <div className="col-span-9">
-            <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <div className="flex items-center gap-4">
+        {/* Visuals (fixed page, no scroll) */}
+        <main className="h-full overflow-hidden">
+          <div className="h-full p-3">
+            <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
+              <CardHeader className="flex-none pb-3">
+                <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">
-                      {VIZ_LABEL[viz]}
-                    </CardTitle>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {activeFacetObj?.title || "All flocks"}
-                    </p>
+                    <CardTitle className="text-xl">{VIZ_LABEL[viz]}</CardTitle>
+                    <p className="text-sm text-slate-600 mt-1">{compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}</p>
                   </div>
+                  {!compareMode && (
+                    <Tabs value={activeFacet} onValueChange={setActiveFacet} className="w-auto">
+                      <TabsList className="bg-slate-100 max-w-[50vw] overflow-x-auto">
+                        {facets.map((facet) => (
+                          <TabsTrigger key={facet.key} value={facet.key} className="text-xs truncate max-w-[220px]">
+                            {facet.title}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                  )}
                 </div>
 
-                {/* Facet Tabs */}
-                <Tabs value={activeFacet} onValueChange={setActiveFacet} className="w-auto">
-                  <TabsList className="bg-slate-100 max-w-[70vw] overflow-x-auto">
-                    {facets.map((facet) => (
-                      <TabsTrigger key={facet.key} value={facet.key} className="text-xs truncate max-w-[220px]">
-                        {facet.title}
-                      </TabsTrigger>
+                {/* Key Metrics */}
+                {!compareMode && (
+                  <div className="grid grid-cols-4 gap-3 mt-3">
+                    {[
+                      { label: "Total Eggs", value: totalEggs.toLocaleString() },
+                      { label: "Clear Rate", value: `${avgClear.toFixed(1)}%` },
+                      { label: "Injection Rate", value: `${avgInj.toFixed(1)}%` },
+                      { label: "Average Age", value: `${avgAge.toFixed(1)}w` },
+                    ].map((metric, i) => (
+                      <div key={i} className="p-3 rounded-lg border bg-white">
+                        <div className="text-xs text-slate-600">{metric.label}</div>
+                        <div className="text-lg font-bold">{metric.value}</div>
+                      </div>
                     ))}
-                  </TabsList>
-                </Tabs>
+                  </div>
+                )}
               </CardHeader>
 
-              <CardContent className="pt-0">
-                {/* Key Metrics Bar */}
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  {[
-                    { label: "Total Eggs", value: totalEggs.toLocaleString(), change: "", color: "blue" },
-                    { label: "Clear Rate", value: `${avgClear.toFixed(1)}%`, change: "", color: "green" },
-                    { label: "Injection Rate", value: `${avgInj.toFixed(1)}%`, change: "", color: "orange" },
-                    { label: "Average Age", value: `${avgAge.toFixed(1)}w`, change: "", color: "purple" },
-                  ].map((metric, i) => (
-                    <div key={i} className={`p-3 rounded-lg border`} style={{ background: "white" }}>
-                      <div className="text-xs text-slate-600">{metric.label}</div>
-                      <div className="text-lg font-bold">{metric.value}</div>
-                      {!!metric.change && (
-                        <div className={`text-xs ${metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                          {metric.change} vs last period
+              {/* Charts area fills remaining height; no scrolling */}
+              <CardContent className="flex-1 min-h-0 pt-0">
+                <div className="w-full h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+                  {loading ? (
+                    <Skeleton className="h-full w-full" />
+                  ) : (
+                    <>
+                      {compareMode ? (
+                        // Side-by-side grid
+                        <div
+                          className="grid gap-3 h-full"
+                          style={{ gridTemplateColumns: `repeat(${compareCols}, minmax(0,1fr))` }}
+                        >
+                          {facets.slice(0, compareCols * 2 /* keep big */).map((f, idx) => {
+                            const data = chartDataForFacet(f.rows);
+                            // compute a tall-enough height chunk within fixed area:
+                            // leave small header for each tile
+                            return (
+                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg">
+                                <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate">{f.title}</div>
+                                <div className="flex-1 min-h-0">
+                                  {renderChart(data, f.title, /* tile height */  Math.max(280,  /* responsive fallback */ 9999))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        // Single chart fills
+                        <div className="h-full">
+                          {renderChart(activeData, activeFacetObj?.title || "All flocks", /* full height */  Math.max(360, 9999))}
                         </div>
                       )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chart */}
-                <div className="bg-white rounded-lg border border-slate-200">
-                  {loading ? (
-                    <Skeleton className="h-[460px] w-full" />
-                  ) : (
-                    renderChart(activeData, activeFacetObj?.title || "All flocks")
+                    </>
                   )}
                 </div>
               </CardContent>
             </Card>
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Drill-down modal */}
