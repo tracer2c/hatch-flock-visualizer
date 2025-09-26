@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,7 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
-  Download, RefreshCw, Monitor, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid
+  Download, RefreshCw, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
+  Monitor, ChevronDown, ChevronRight
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -106,10 +107,8 @@ const saveFile = (filename: string, content: string, mime = "text/csv;charset=ut
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 };
 
-/* Shared palette across all views */
 const PALETTE = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
 
-/* Visualization options — exactly one active at a time */
 type VizKind =
   | "timeline_bar"
   | "timeline_line"
@@ -129,7 +128,6 @@ const VIZ_LABEL: Record<VizKind, string> = {
   heatmap: "Heatmap (month×unit)",
 };
 
-/* Defaults */
 const DEFAULTS = {
   scale: "month" as Granularity,
   metrics: ["total_eggs_set", "clear_pct"] as MetricKey[],
@@ -596,19 +594,36 @@ export default function EmbrexDashboard() {
     return n;
   })();
 
+  /* ── Sidebar dropdown (collapsible) state + outside click close ─────────── */
+  const vizCardRef = useRef<HTMLDivElement>(null);
+  const metricsCardRef = useRef<HTMLDivElement>(null);
+  const [vizOpen, setVizOpen] = useState(false);       // default collapsed
+  const [metricsOpen, setMetricsOpen] = useState(false); // default collapsed
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!(vizOpen || metricsOpen)) return;
+      const t = e.target as Node;
+      const insideViz = vizCardRef.current?.contains(t);
+      const insideMet = metricsCardRef.current?.contains(t);
+      if (!insideViz && !insideMet) {
+        setVizOpen(false);
+        setMetricsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [vizOpen, metricsOpen]);
+
   /* ─────────────────────────── Layout (No-scroll visuals) ─────────────────── */
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Top bar */}
+      {/* Top bar (title & viz select removed per request) */}
       <div className="h-14 px-4 border-b bg-white/70 backdrop-blur flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)} className="mr-1">
             {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
           </Button>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Embrex Analytics
-          </h1>
-          <Badge variant="secondary" className="ml-2">Visuals fixed • Nav scrolls</Badge>
         </div>
 
         <div className="flex items-center gap-2">
@@ -631,7 +646,7 @@ export default function EmbrexDashboard() {
             )}
           </div>
 
-          {/* Saved views + viz + actions */}
+          {/* Saved views + actions */}
           <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
           <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
           {savedViews.length>0 && (
@@ -642,17 +657,6 @@ export default function EmbrexDashboard() {
               </SelectContent>
             </Select>
           )}
-          <Select value={viz} onValueChange={(v: VizKind)=>setViz(v)}>
-            <SelectTrigger className="h-8 w-[200px]">
-              <Monitor className="h-4 w-4 mr-2 opacity-70" />
-              <SelectValue placeholder="Choose view" />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(VIZ_LABEL) as VizKind[]).map(v => (
-                <SelectItem key={v} value={v}>{VIZ_LABEL[v]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
           <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
             <Download className="h-4 w-4" /> Export
@@ -668,75 +672,91 @@ export default function EmbrexDashboard() {
         {/* Sidebar */}
         <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <div className="p-3 space-y-3">
-            {/* Visualization quick list */}
-            <Card className="shadow-sm border-0">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            {/* Visualization (collapsible) */}
+            <Card ref={vizCardRef} className="shadow-sm border-0">
+              <button
+                type="button"
+                onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }}
+                aria-expanded={vizOpen}
+                className="w-full text-left"
+              >
+                <CardHeader className="pb-2 flex-row items-center gap-2">
                   <Monitor className="h-4 w-4 text-blue-600" />
-                  Visualization
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {([
-                  { value: "timeline_bar", label: "Timeline Bar", icon: BarChart3 },
-                  { value: "timeline_line", label: "Timeline Line", icon: TrendingUp },
-                  { value: "stacked_counts", label: "Stacked Counts", icon: BarChart3 },
-                  { value: "percent_trends", label: "Percent Trends", icon: Activity },
-                  { value: "sparklines", label: "Sparklines", icon: Activity },
-                  { value: "age_distribution", label: "Age Distribution", icon: Activity },
-                  { value: "heatmap", label: "Heatmap", icon: Activity },
-                ] as Array<{value: VizKind; label: string; icon: any}>).map((opt) => {
-                  const Icon = opt.icon;
-                  return (
-                    <Button
-                      key={opt.value}
-                      variant={viz === opt.value ? "default" : "ghost"}
-                      className="w-full justify-start gap-2"
-                      onClick={() => setViz(opt.value)}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {opt.label}
-                    </Button>
-                  );
-                })}
-              </CardContent>
+                  <CardTitle className="text-sm font-semibold flex-1">Visualization</CardTitle>
+                  {vizOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </CardHeader>
+              </button>
+              {vizOpen && (
+                <CardContent className="space-y-2 pt-0">
+                  {([
+                    { value: "timeline_bar", label: "Timeline Bar", icon: BarChart3 },
+                    { value: "timeline_line", label: "Timeline Line", icon: TrendingUp },
+                    { value: "stacked_counts", label: "Stacked Counts", icon: BarChart3 },
+                    { value: "percent_trends", label: "Percent Trends", icon: Activity },
+                    { value: "sparklines", label: "Sparklines", icon: Activity },
+                    { value: "age_distribution", label: "Age Distribution", icon: Activity },
+                    { value: "heatmap", label: "Heatmap", icon: Activity },
+                  ] as Array<{value: VizKind; label: string; icon: any}>).map((opt) => {
+                    const Icon = opt.icon;
+                    return (
+                      <Button
+                        key={opt.value}
+                        variant={viz === opt.value ? "default" : "ghost"}
+                        className="w-full justify-start gap-2"
+                        onClick={() => setViz(opt.value)}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {opt.label}
+                      </Button>
+                    );
+                  })}
+                </CardContent>
+              )}
             </Card>
 
-            {/* Metrics */}
-            <Card className="shadow-sm border-0">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            {/* Metrics (collapsible) */}
+            <Card ref={metricsCardRef} className="shadow-sm border-0">
+              <button
+                type="button"
+                onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }}
+                aria-expanded={metricsOpen}
+                className="w-full text-left"
+              >
+                <CardHeader className="pb-2 flex-row items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-green-600" />
-                  Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {metricOptions.map((metric) => (
-                  <div key={metric.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={metric.value}
-                      checked={metrics.includes(metric.value as MetricKey)}
-                      onCheckedChange={(checked) => {
-                        setMetrics(prev => checked ? [...prev, metric.value as MetricKey] : prev.filter(m => m !== (metric.value as MetricKey)));
-                      }}
-                    />
-                    <label htmlFor={metric.value} className="text-sm flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: metric.color }} />
-                      {metric.label}
-                    </label>
-                  </div>
-                ))}
-                {metrics.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {metrics.slice(0,6).map(m => (
-                      <Badge key={m} variant="secondary" className="gap-1">
-                        {metricLabel[m]}
-                        <X className="h-3 w-3 cursor-pointer" onClick={()=>setMetrics(prev=>prev.filter(x=>x!==m))} />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
+                  <CardTitle className="text-sm font-semibold flex-1">Metrics</CardTitle>
+                  {metricsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </CardHeader>
+              </button>
+              {metricsOpen && (
+                <CardContent className="space-y-2 pt-0">
+                  {metricOptions.map((metric) => (
+                    <div key={metric.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={metric.value}
+                        checked={metrics.includes(metric.value as MetricKey)}
+                        onCheckedChange={(checked) => {
+                          setMetrics(prev => checked ? [...prev, metric.value as MetricKey] : prev.filter(m => m !== (metric.value as MetricKey)));
+                        }}
+                      />
+                      <label htmlFor={metric.value} className="text-sm flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: metric.color }} />
+                        {metric.label}
+                      </label>
+                    </div>
+                  ))}
+                  {metrics.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {metrics.slice(0,6).map(m => (
+                        <Badge key={m} variant="secondary" className="gap-1">
+                          {metricLabel[m]}
+                          <X className="h-3 w-3 cursor-pointer" onClick={()=>setMetrics(prev=>prev.filter(x=>x!==m))} />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </Card>
 
             {/* Compare selectors */}
@@ -952,7 +972,6 @@ export default function EmbrexDashboard() {
                   )}
                 </div>
 
-                {/* Optional headline metrics when not comparing */}
                 {!compareMode && (
                   <div className="grid grid-cols-4 gap-3 mt-3">
                     {[
@@ -970,7 +989,6 @@ export default function EmbrexDashboard() {
                 )}
               </CardHeader>
 
-              {/* Charts area fills remaining height; no scrolling */}
               <CardContent className="flex-1 min-h-0 pt-0">
                 <div className="w-full h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
                   {loading ? (
