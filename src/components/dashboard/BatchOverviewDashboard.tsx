@@ -5,12 +5,11 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useHouseData";
-import { Calendar as CalendarIcon, AlertTriangle, Activity, Thermometer, Package, Settings, Search, ChevronDown } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle, Activity, Thermometer, Package, Settings, Search } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { OverviewHeader } from "./OverviewHeader";
@@ -95,7 +94,10 @@ const BatchOverviewDashboard: React.FC = () => {
   const [showMachineUtil, setShowMachineUtil] = React.useState<boolean>(false);
 
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const [isDropdownOpen, setIsDropdownOpen] = React.useState<boolean>(false);
+  const [selectedHouses, setSelectedHouses] = React.useState<string[]>([]);
+  const [viewMode, setViewMode] = React.useState<"auto" | "manual">("auto");
+
+  const maxVisibleRows = 3; // UI constraint (fixed height ~ 3 rows)
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   const machinesList = React.useMemo(
@@ -182,9 +184,18 @@ const BatchOverviewDashboard: React.FC = () => {
     return sorted;
   }, [activeBatches, statusFilter, machineFilter, dateRange, searchTerm]);
 
-  // Show top 3 priority houses for dropdown
   const listForDisplay = React.useMemo(() => {
-    return filteredActiveBatches.slice(0, 3);
+    if (viewMode === "manual" && selectedHouses.length > 0) {
+      return filteredActiveBatches.filter((b: any) => selectedHouses.includes(b.id));
+    }
+    return filteredActiveBatches;
+  }, [filteredActiveBatches, viewMode, selectedHouses]);
+
+  const houseOptions = React.useMemo(() => {
+    return filteredActiveBatches.map((b: any) => ({
+      id: b.id,
+      label: `${b.batch_number} - ${b.flocks?.flock_name || "Unknown"} (${b.status})`,
+    }));
   }, [filteredActiveBatches]);
 
   const filteredMachineUtil = React.useMemo(() => {
@@ -375,82 +386,137 @@ const BatchOverviewDashboard: React.FC = () => {
                   Active Houses Pipeline
                 </div>
 
-                <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 px-3">
-                      View Houses
-                      <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                  {/* Search */}
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                    <Input
+                      placeholder="Search houses..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9 w-full"
+                    />
+                  </div>
+
+                  {/* View Mode */}
+                  <Select value={viewMode} onValueChange={(value: "auto" | "manual") => setViewMode(value)}>
+                    <SelectTrigger className="w-32 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-[100] min-w-[8rem]" position="popper" sideOffset={4}>
+                      <SelectItem value="auto">Auto View</SelectItem>
+                      <SelectItem value="manual">Select</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Manual selection (cap input to 3 chips visually; list still scrolls) */}
+                  {viewMode === "manual" && (
+                    <Select
+                      value={selectedHouses.length === 1 ? selectedHouses[0] : ""}
+                      onValueChange={(value) => {
+                        if (value) {
+                          setSelectedHouses((prev) => (prev.includes(value) ? prev : [...prev, value]));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-56 h-9">
+                        <SelectValue placeholder="Select houses..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg z-[100] max-h-60 overflow-y-auto min-w-[12rem]" position="popper" sideOffset={4}>
+                        {houseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Download chart */}
+                  <ChartDownloadButton chartId="active-houses-pipeline" filename="active-houses-pipeline.png" />
+                </div>
+              </CardTitle>
+
+              {/* Manual mode chips */}
+              {viewMode === "manual" && selectedHouses.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {selectedHouses.slice(0, 3).map((houseId) => {
+                    const house = filteredActiveBatches.find((b: any) => b.id === houseId);
+                    return house ? (
+                      <Badge key={houseId} variant="secondary" className="text-xs">
+                        {house.batch_number}
+                        <button
+                          onClick={() => setSelectedHouses((prev) => prev.filter((id) => id !== houseId))}
+                          className="ml-2 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                  {selectedHouses.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedHouses([])} className="h-6 px-2 text-xs">
+                      Clear All
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0 bg-popover border shadow-lg z-50" align="end">
-                    <div className="p-3 border-b">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search houses..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 h-9"
+                  )}
+                </div>
+              )}
+            </CardHeader>
+
+            {/* Fixed-height scroll area: ~3 rows visible, no outer expansion */}
+            <CardContent id="active-houses-pipeline">
+              {listForDisplay?.length ? (
+                <div
+                  className="
+                    space-y-4
+                    max-h-[312px]    /* ~3 rows worth of height */
+                    overflow-y-auto
+                    pr-1              /* avoid scrollbar overlap */
+                  "
+                >
+                  {listForDisplay.map((house: any) => (
+                    <div
+                      key={house.id}
+                      onClick={() => handleHouseClick(house.id)}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-medium text-card-foreground group-hover:text-accent-foreground">{house.batch_number}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {house.flocks?.flock_name} {house.flocks?.flock_number ? `(Flock ${house.flocks.flock_number})` : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
+                          {getProgressDisplay(house.set_date).isOverdue && <Badge variant="destructive" className="text-xs">OVERDUE</Badge>}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? "text-destructive" : "text-card-foreground"}`}>
+                          {getProgressDisplay(house.set_date).text}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {house.machines?.machine_number} {house.machines?.machine_type ? `(${house.machines.machine_type})` : ""}
+                        </div>
+                      </div>
+
+                      <div className="w-32">
+                        <Progress
+                          value={getProgressDisplay(house.set_date).progress}
+                          className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? "[&>div]:bg-destructive" : ""}`}
                         />
                       </div>
                     </div>
-                    <ScrollArea className="max-h-60">
-                      <div className="p-2">
-                        {listForDisplay?.length > 0 ? (
-                          <div className="space-y-2">
-                            {listForDisplay.map((house: any) => {
-                              const progress = getProgressDisplay(house.set_date);
-                              return (
-                                <div
-                                  key={house.id}
-                                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                                  onClick={() => {
-                                    handleHouseClick(house.id);
-                                    setIsDropdownOpen(false);
-                                  }}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium text-sm truncate">
-                                        {house.batch_number} - {house.flocks?.flock_name || "Unknown"}
-                                      </span>
-                                      <Badge variant="outline" className={`text-xs border ${getStatusColor(house.status)}`}>
-                                        {house.status}
-                                      </Badge>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {house.machines?.machine_number || "No Machine"} | {house.total_eggs_set || 0} eggs
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col items-end gap-1 min-w-0 ml-4">
-                                    <div className="text-xs text-muted-foreground text-right">
-                                      {progress.text}
-                                    </div>
-                                    <div className="w-16">
-                                      <Progress 
-                                        value={progress.progress} 
-                                        className={`h-2 ${progress.isOverdue ? 'bg-red-100' : 'bg-gray-200'}`}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No active houses found</p>
-                            <p className="text-xs">Try adjusting your search</p>
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </PopoverContent>
-                </Popover>
-              </CardTitle>
-            </CardHeader>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? `No houses found matching "${searchTerm}"` : "No active houses found. Start a new house from the Data Entry page."}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </section>
 
@@ -481,7 +547,7 @@ const BatchOverviewDashboard: React.FC = () => {
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
-                  
+                  {showMachineUtil && <ChartDownloadButton chartId="machine-utilization-status" filename="machine-utilization-status.png" />}
                 </div>
               </CardTitle>
             </CardHeader>
