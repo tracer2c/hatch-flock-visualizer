@@ -5,8 +5,9 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useHouseData";
-import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings, Search, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings, Search, Eye, ChevronDown, Expand, Compress } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
@@ -18,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHelpContext } from "@/contexts/HelpContext";
+
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
   const { data: performanceMetrics, isLoading: performanceLoading } = useBatchPerformanceMetrics();
@@ -300,6 +302,16 @@ const BatchOverviewDashboard: React.FC = () => {
     ? filteredMachineUtil.reduce((sum: number, m: any) => sum + m.utilization, 0) / filteredMachineUtil.length
     : 0;
 
+  // Function to handle chart download
+  const handleChartDownload = async () => {
+    try {
+      await downloadChart("active-houses-pipeline", "active-houses-pipeline.png");
+      toast({ title: "Download completed", description: "Chart has been downloaded successfully." });
+    } catch (error) {
+      toast({ title: "Download failed", description: "Failed to download chart.", variant: "destructive" });
+    }
+  };
+
   // Skeleton state for enterprise-level polish
   if (isLoading) {
     return (
@@ -505,7 +517,43 @@ const BatchOverviewDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  <ChartDownloadButton chartId="active-houses-pipeline" filename="active-houses-pipeline.png" />
+                  {/* Dropdown Menu with Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 px-3">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Actions
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {/* View Controls */}
+                      {filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
+                        <>
+                          <DropdownMenuItem onClick={() => setShowAllHouses(!showAllHouses)}>
+                            {showAllHouses ? (
+                              <>
+                                <Compress className="h-4 w-4 mr-2" />
+                                Collapse View
+                              </>
+                            ) : (
+                              <>
+                                <Expand className="h-4 w-4 mr-2" />
+                                Expand View ({filteredActiveBatches.length} total)
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      
+                      {/* Download Chart */}
+                      <DropdownMenuItem onClick={handleChartDownload}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Chart
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardTitle>
               
@@ -578,23 +626,6 @@ const BatchOverviewDashboard: React.FC = () => {
                        </div>
                      </div>
                      ))}
-                   
-                    {/* Toggle expand/collapse button */}
-                    {filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
-                      <div className="pt-4 border-t">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setShowAllHouses(!showAllHouses)}
-                          className="w-full transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          {showAllHouses 
-                            ? `Collapse View (Show Top ${maxDisplayHouses})` 
-                            : `Expand View (${filteredActiveBatches.length} Total)`
-                          }
-                        </Button>
-                      </div>
-                    )}
                   </div>
                ) : (
                  <div className="text-center py-8 text-muted-foreground">
