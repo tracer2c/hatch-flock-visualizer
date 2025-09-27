@@ -131,6 +131,42 @@ const BatchOverviewDashboard: React.FC = () => {
     return fromOk && toOk;
   };
 
+  // Helper functions - must be defined before useMemo hooks
+  const getDaysFromSet = (setDate: string) => {
+    const set = new Date(setDate);
+    const now = new Date();
+    return Math.floor((now.getTime() - set.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "setting":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "incubating":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "hatching":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "completed":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getProgressDisplay = (setDate: string) => {
+    const daysFromSet = getDaysFromSet(setDate);
+    const isOverdue = daysFromSet > 21;
+    const displayDays = Math.min(daysFromSet, 21);
+    const overdueDays = isOverdue ? daysFromSet - 21 : 0;
+    
+    return {
+      text: isOverdue ? `Day 21+ (${overdueDays} days overdue)` : `Day ${daysFromSet} of 21`,
+      progress: Math.min((daysFromSet / 21) * 100, 100),
+      isOverdue,
+      daysFromSet
+    };
+  };
+
   // Apply filters to active batches
   const filteredActiveBatches = React.useMemo(() => {
     let list = activeBatches ?? [];
@@ -263,41 +299,6 @@ const BatchOverviewDashboard: React.FC = () => {
   const avgMachineUtil = filteredMachineUtil?.length
     ? filteredMachineUtil.reduce((sum: number, m: any) => sum + m.utilization, 0) / filteredMachineUtil.length
     : 0;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "setting":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "incubating":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "hatching":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "completed":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getDaysFromSet = (setDate: string) => {
-    const set = new Date(setDate);
-    const now = new Date();
-    return Math.floor((now.getTime() - set.getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  const getProgressDisplay = (setDate: string) => {
-    const daysFromSet = getDaysFromSet(setDate);
-    const isOverdue = daysFromSet > 21;
-    const displayDays = Math.min(daysFromSet, 21);
-    const overdueDays = isOverdue ? daysFromSet - 21 : 0;
-    
-    return {
-      text: isOverdue ? `Day 21+ (${overdueDays} days overdue)` : `Day ${daysFromSet} of 21`,
-      progress: Math.min((daysFromSet / 21) * 100, 100),
-      isOverdue,
-      daysFromSet
-    };
-  };
 
   // Skeleton state for enterprise-level polish
   if (isLoading) {
