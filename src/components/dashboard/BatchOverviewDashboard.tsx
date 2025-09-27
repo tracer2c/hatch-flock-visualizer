@@ -5,11 +5,11 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useHouseData";
-import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings, Search, Eye, ChevronDown, Expand, Compress } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Settings, Search, Eye, ChevronDown } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+// NOTE: removed ChartDownloadButton from header; keeping it for the right rail later
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
@@ -19,6 +19,16 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useHelpContext } from "@/contexts/HelpContext";
+
+/* NEW: dropdown menu */
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 const BatchOverviewDashboard: React.FC = () => {
   const { data: activeBatches, isLoading: activeBatchesLoading } = useActiveBatches();
@@ -59,7 +69,6 @@ const BatchOverviewDashboard: React.FC = () => {
         return;
       }
 
-      // Prepare updates with realistic results
       const rateByBatch: Record<string, number> = {
         "6374-2025-5115": 0.89,
         "6371-2025-9896": 0.9,
@@ -98,7 +107,6 @@ const BatchOverviewDashboard: React.FC = () => {
         description: `${batches.length} batches completed and ${machineIds.length} machines freed.`,
       });
 
-      // Refresh view
       window.location.reload();
     } catch (e: any) {
       toast({ title: "Cleanup failed", description: e.message ?? String(e), variant: "destructive" });
@@ -124,7 +132,6 @@ const BatchOverviewDashboard: React.FC = () => {
     [machineUtil]
   );
 
-  // Helper to check date within range
   const isWithinRange = (dateStr: string) => {
     if (!dateStr) return true;
     const d = new Date(dateStr);
@@ -133,7 +140,6 @@ const BatchOverviewDashboard: React.FC = () => {
     return fromOk && toOk;
   };
 
-  // Helper functions - must be defined before useMemo hooks
   const getDaysFromSet = (setDate: string) => {
     const set = new Date(setDate);
     const now = new Date();
@@ -160,7 +166,7 @@ const BatchOverviewDashboard: React.FC = () => {
     const isOverdue = daysFromSet > 21;
     const displayDays = Math.min(daysFromSet, 21);
     const overdueDays = isOverdue ? daysFromSet - 21 : 0;
-    
+
     return {
       text: isOverdue ? `Day 21+ (${overdueDays} days overdue)` : `Day ${daysFromSet} of 21`,
       progress: Math.min((daysFromSet / 21) * 100, 100),
@@ -169,11 +175,8 @@ const BatchOverviewDashboard: React.FC = () => {
     };
   };
 
-  // Apply filters to active batches
   const filteredActiveBatches = React.useMemo(() => {
     let list = activeBatches ?? [];
-    
-    // Apply status, machine, and date filters
     list = list.filter((b: any) => {
       const statusOk = statusFilter === "all" ? true : b.status === statusFilter;
       const machineId = String(b.machine_id ?? b.machines?.id ?? "");
@@ -182,10 +185,9 @@ const BatchOverviewDashboard: React.FC = () => {
       return statusOk && machineOk && dateOk;
     });
 
-    // Apply search filter
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
-      list = list.filter((b: any) => 
+      list = list.filter((b: any) =>
         b.batch_number?.toLowerCase().includes(search) ||
         b.flocks?.flock_name?.toLowerCase().includes(search) ||
         b.machines?.machine_number?.toLowerCase().includes(search) ||
@@ -196,44 +198,34 @@ const BatchOverviewDashboard: React.FC = () => {
     return list;
   }, [activeBatches, statusFilter, machineFilter, dateRange, searchTerm]);
 
-  // Get priority-sorted houses for display
   const displayedHouses = React.useMemo(() => {
     if (viewMode === "manual" && selectedHouses.length > 0) {
-      // Manual selection mode - show selected houses
       return filteredActiveBatches.filter((b: any) => selectedHouses.includes(b.id));
     }
 
-    if (showAllHouses) {
-      // Show all filtered houses
-      return filteredActiveBatches;
-    }
+    if (showAllHouses) return filteredActiveBatches;
 
-    // Auto mode with priority sorting and limit
     const sorted = [...filteredActiveBatches].sort((a: any, b: any) => {
-      // Priority 1: Status urgency (overdue → hatching → incubating → setting)
       const statusPriority = { overdue: 0, hatching: 1, incubating: 2, setting: 3 };
       const aDays = getDaysFromSet(a.set_date);
       const bDays = getDaysFromSet(b.set_date);
       const aOverdue = aDays > 21;
       const bOverdue = bDays > 21;
-      
+
       if (aOverdue && !bOverdue) return -1;
       if (!aOverdue && bOverdue) return 1;
-      if (aOverdue && bOverdue) return bDays - aDays; // Most overdue first
-      
-      // Priority 2: Status
+      if (aOverdue && bOverdue) return bDays - aDays;
+
       const aStatusPriority = statusPriority[a.status as keyof typeof statusPriority] ?? 4;
       const bStatusPriority = statusPriority[b.status as keyof typeof statusPriority] ?? 4;
       if (aStatusPriority !== bStatusPriority) return aStatusPriority - bStatusPriority;
-      
-      // Priority 3: Days since set (more recent first for same status)
+
       return bDays - aDays;
     });
 
     return sorted.slice(0, maxDisplayHouses);
   }, [filteredActiveBatches, viewMode, selectedHouses, showAllHouses, maxDisplayHouses]);
 
-  // House options for dropdown
   const houseOptions = React.useMemo(() => {
     return filteredActiveBatches.map((b: any) => ({
       id: b.id,
@@ -242,7 +234,6 @@ const BatchOverviewDashboard: React.FC = () => {
     }));
   }, [filteredActiveBatches]);
 
-  // Optionally filter machines view when a specific machine is selected
   const filteredMachineUtil = React.useMemo(() => {
     if (!machineUtil) return [] as any[];
     return machineFilter === "all"
@@ -250,7 +241,6 @@ const BatchOverviewDashboard: React.FC = () => {
       : machineUtil.filter((m: any) => String(m.id) === machineFilter);
   }, [machineUtil, machineFilter]);
 
-  // Calculate key metrics first - handle null values
   const fertilityData = (performanceMetrics?.filter((b: any) => b?.fertility !== null && b?.fertility !== undefined) || []) as any[];
   const avgFert = fertilityData.length > 0
     ? fertilityData.reduce((sum: number, b: any) => sum + b.fertility, 0) / fertilityData.length
@@ -261,7 +251,6 @@ const BatchOverviewDashboard: React.FC = () => {
     ? hatchData.reduce((sum: number, b: any) => sum + b.hatch, 0) / hatchData.length
     : 0;
 
-  // Update help context with dashboard metrics
   React.useEffect(() => {
     if (!isLoading && activeBatches && performanceMetrics) {
       const totalActiveHouses = filteredActiveBatches.length;
@@ -274,7 +263,7 @@ const BatchOverviewDashboard: React.FC = () => {
         activePage: "Dashboard Overview",
         visibleElements: [
           "Active Houses Pipeline",
-          "Performance Percentages", 
+          "Performance Percentages",
           "QA Alerts",
           showMachineUtil ? "Machine Utilization" : "System Status"
         ],
@@ -294,25 +283,12 @@ const BatchOverviewDashboard: React.FC = () => {
     }
   }, [isLoading, activeBatches, performanceMetrics, qaAlerts, machineUtil, statusFilter, machineFilter, dateRange, showMachineUtil, updateContext, filteredActiveBatches, avgFert, avgHatch]);
 
-  // Calculate key metrics - handle null values
   const totalActiveHouses = filteredActiveBatches.length;
-
   const totalAlerts = qaAlerts?.length || 0;
   const avgMachineUtil = filteredMachineUtil?.length
     ? filteredMachineUtil.reduce((sum: number, m: any) => sum + m.utilization, 0) / filteredMachineUtil.length
     : 0;
 
-  // Function to handle chart download
-  const handleChartDownload = async () => {
-    try {
-      await downloadChart("active-houses-pipeline", "active-houses-pipeline.png");
-      toast({ title: "Download completed", description: "Chart has been downloaded successfully." });
-    } catch (error) {
-      toast({ title: "Download failed", description: "Failed to download chart.", variant: "destructive" });
-    }
-  };
-
-  // Skeleton state for enterprise-level polish
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -383,78 +359,77 @@ const BatchOverviewDashboard: React.FC = () => {
             }
           })();
         }}
-        
       />
 
       <div className="grid grid-cols-12 gap-6">
         {/* Main content */}
         <section className="col-span-12 lg:col-span-8 space-y-6">
-        {/* Key Performance Indicators */}
-        <div id="overview-kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
+          {/* KPIs */}
+          <div id="overview-kpis" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <StatCard
+                      title="Active Houses"
+                      value={totalActiveHouses}
+                      icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+                      trendLabel="Currently in process"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <EnhancedTooltip
+                    chartType="batch-overview"
+                    data={{ totalActiveHouses, activeBatches: filteredActiveBatches }}
                     title="Active Houses"
-                    value={totalActiveHouses}
-                    icon={<Activity className="h-4 w-4 text-muted-foreground" />}
-                    trendLabel="Currently in process"
+                    metrics={[
+                      { label: "Total Active", value: totalActiveHouses },
+                      { label: "Status", value: "Currently processing" },
+                    ]}
                   />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <EnhancedTooltip
-                  chartType="batch-overview"
-                  data={{ totalActiveHouses, activeBatches: filteredActiveBatches }}
-                  title="Active Houses"
-                  metrics={[
-                    { label: "Total Active", value: totalActiveHouses },
-                    { label: "Status", value: "Currently processing" },
-                  ]}
-                />
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Avg Fertility"
-                    value={`${avgFert.toFixed(1)}%`}
-                    icon={<Package className="h-4 w-4 text-muted-foreground" />}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <StatCard
+                      title="Avg Fertility"
+                      value={`${avgFert.toFixed(1)}%`}
+                      icon={<Package className="h-4 w-4 text-muted-foreground" />}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <EnhancedTooltip
+                    chartType="batch-overview"
+                    data={{ avgFert, target: 85 }}
+                    title="Average Fertility"
+                    metrics={[
+                      { label: "Current Average", value: `${avgFert.toFixed(1)}%` },
+                      { label: "Target", value: "85%" },
+                    ]}
                   />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <EnhancedTooltip
-                  chartType="batch-overview"
-                  data={{ avgFert, target: 85 }}
-                  title="Average Fertility"
-                  metrics={[
-                    { label: "Current Average", value: `${avgFert.toFixed(1)}%` },
-                    { label: "Target", value: "85%" },
-                  ]}
-                />
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <StatCard
-            title="Avg Hatch Rate"
-            value={`${avgHatch.toFixed(1)}%`}
-            icon={<Package className="h-4 w-4 text-muted-foreground" />}
-          />
+            <StatCard
+              title="Avg Hatch Rate"
+              value={`${avgHatch.toFixed(1)}%`}
+              icon={<Package className="h-4 w-4 text-muted-foreground" />}
+            />
 
-          <StatCard
-            title="Machine Utilization"
-            value={`${avgMachineUtil.toFixed(0)}%`}
-            icon={<Thermometer className="h-4 w-4 text-muted-foreground" />}
-            trendLabel="Average usage"
-          />
-        </div>
+            <StatCard
+              title="Machine Utilization"
+              value={`${avgMachineUtil.toFixed(0)}%`}
+              icon={<Thermometer className="h-4 w-4 text-muted-foreground" />}
+              trendLabel="Average usage"
+            />
+          </div>
 
           {/* Active Houses Pipeline */}
           <Card>
@@ -464,8 +439,9 @@ const BatchOverviewDashboard: React.FC = () => {
                   <CalendarIcon className="h-5 w-5" />
                   Active Houses Pipeline
                 </div>
+
                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 relative">
-                  {/* Search Input */}
+                  {/* Search */}
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                     <Input
@@ -476,7 +452,7 @@ const BatchOverviewDashboard: React.FC = () => {
                     />
                   </div>
 
-                  {/* View Mode Selector */}
+                  {/* View Mode */}
                   <div className="relative">
                     <Select value={viewMode} onValueChange={(value: "auto" | "manual") => setViewMode(value)}>
                       <SelectTrigger className="w-32 h-9">
@@ -489,11 +465,11 @@ const BatchOverviewDashboard: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* House Selection Dropdown - Only shown in manual mode */}
+                  {/* Manual selection */}
                   {viewMode === "manual" && (
                     <div className="relative">
-                      <Select 
-                        value={selectedHouses.length === 1 ? selectedHouses[0] : ""} 
+                      <Select
+                        value={selectedHouses.length === 1 ? selectedHouses[0] : ""}
                         onValueChange={(value) => {
                           if (value) {
                             setSelectedHouses(prev => {
@@ -517,47 +493,39 @@ const BatchOverviewDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Dropdown Menu with Actions */}
+                  {/* NEW: Top-right dropdown to expand/collapse (replaces download button) */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 px-3">
-                        <Settings className="h-4 w-4 mr-2" />
-                        Actions
-                        <ChevronDown className="h-4 w-4 ml-2" />
+                      <Button variant="outline" className="h-9">
+                        View Options <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      {/* View Controls */}
-                      {filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
-                        <>
-                          <DropdownMenuItem onClick={() => setShowAllHouses(!showAllHouses)}>
-                            {showAllHouses ? (
-                              <>
-                                <Compress className="h-4 w-4 mr-2" />
-                                Collapse View
-                              </>
-                            ) : (
-                              <>
-                                <Expand className="h-4 w-4 mr-2" />
-                                Expand View ({filteredActiveBatches.length} total)
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
-                      
-                      {/* Download Chart */}
-                      <DropdownMenuItem onClick={handleChartDownload}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Chart
+                      <DropdownMenuLabel>Active Houses</DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => setShowAllHouses(true)}
+                        disabled={showAllHouses}
+                      >
+                        Expand all houses
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowAllHouses(false)}
+                        disabled={!showAllHouses}
+                      >
+                        Collapse to Top {maxDisplayHouses}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => downloadChart("active-houses-pipeline", "active-houses-pipeline.png")}
+                      >
+                        Download chart (PNG)
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </CardTitle>
-              
-              {/* Manual mode selected houses display */}
+
+              {/* Manual mode selected chips */}
               {viewMode === "manual" && selectedHouses.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {selectedHouses.map((houseId) => {
@@ -565,7 +533,7 @@ const BatchOverviewDashboard: React.FC = () => {
                     return house ? (
                       <Badge key={houseId} variant="secondary" className="text-xs">
                         {house.batch_number}
-                        <button 
+                        <button
                           onClick={() => setSelectedHouses(prev => prev.filter(id => id !== houseId))}
                           className="ml-2 hover:text-destructive"
                         >
@@ -575,9 +543,9 @@ const BatchOverviewDashboard: React.FC = () => {
                     ) : null;
                   })}
                   {selectedHouses.length > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setSelectedHouses([])}
                       className="h-6 px-2 text-xs"
                     >
@@ -587,58 +555,75 @@ const BatchOverviewDashboard: React.FC = () => {
                 </div>
               )}
             </CardHeader>
+
             <CardContent id="active-houses-pipeline">
               {displayedHouses && displayedHouses.length > 0 ? (
-                 <div className="space-y-4">
-                   {displayedHouses.map((house) => (
-                     <div 
-                       key={house.id} 
-                       onClick={() => handleHouseClick(house.id)}
-                       className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors cursor-pointer group"
-                     >
-                       <div className="flex items-center gap-4">
-                         <div>
-                           <div className="font-medium text-card-foreground group-hover:text-accent-foreground">{house.batch_number}</div>
-                           <div className="text-sm text-muted-foreground">
-                             {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
-                           </div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
-                           {getProgressDisplay(house.set_date).isOverdue && (
-                             <Badge variant="destructive" className="text-xs">OVERDUE</Badge>
-                           )}
-                         </div>
-                       </div>
+                <div className="space-y-4">
+                  {displayedHouses.map((house) => (
+                    <div
+                      key={house.id}
+                      onClick={() => handleHouseClick(house.id)}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-medium text-card-foreground group-hover:text-accent-foreground">{house.batch_number}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {house.flocks?.flock_name} (Flock {house.flocks?.flock_number})
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
+                          {getProgressDisplay(house.set_date).isOverdue && (
+                            <Badge variant="destructive" className="text-xs">OVERDUE</Badge>
+                          )}
+                        </div>
+                      </div>
 
-                       <div className="text-right">
-                         <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? 'text-destructive' : 'text-card-foreground'}`}>
-                           {getProgressDisplay(house.set_date).text}
-                         </div>
-                         <div className="text-sm text-muted-foreground">{house.machines?.machine_number} ({house.machines?.machine_type})</div>
-                       </div>
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? 'text-destructive' : 'text-card-foreground'}`}>
+                          {getProgressDisplay(house.set_date).text}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{house.machines?.machine_number} ({house.machines?.machine_type})</div>
+                      </div>
 
-                       <div className="w-32">
-                         <Progress 
-                           value={getProgressDisplay(house.set_date).progress} 
-                           className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? '[&>div]:bg-destructive' : ''}`} 
-                         />
-                       </div>
-                     </div>
-                     ))}
-                  </div>
-               ) : (
-                 <div className="text-center py-8 text-muted-foreground">
-                   {searchTerm ? `No houses found matching "${searchTerm}"` : "No active houses found. Start a new house from the Data Entry page."}
-                 </div>
-               )}
+                      <div className="w-32">
+                        <Progress
+                          value={getProgressDisplay(house.set_date).progress}
+                          className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? '[&>div]:bg-destructive' : ''}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Bottom expand/collapse button still available when in auto mode */}
+                  {filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAllHouses(!showAllHouses)}
+                        className="w-full transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        {showAllHouses
+                          ? `Collapse View (Show Top ${maxDisplayHouses})`
+                          : `Expand View (${filteredActiveBatches.length} Total)`
+                        }
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? `No houses found matching "${searchTerm}"` : "No active houses found. Start a new house from the Data Entry page."}
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
 
         {/* Insights rail */}
         <aside className="col-span-12 lg:col-span-4 space-y-6">
-          {/* QA Alerts / Machine Utilization Toggle */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -673,6 +658,8 @@ const BatchOverviewDashboard: React.FC = () => {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+
+                  {/* KEEP: download for machine util */}
                   {showMachineUtil && (
                     <ChartDownloadButton chartId="machine-utilization-status" filename="machine-utilization-status.png" />
                   )}
@@ -681,7 +668,7 @@ const BatchOverviewDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="relative min-h-[200px]">
-                {/* Machine Utilization Content */}
+                {/* Machine Utilization */}
                 <div className={`transition-all duration-300 ${showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
                   {showMachineUtil && (
                     <div className="grid grid-cols-1 gap-4" id="machine-utilization-status">
@@ -707,8 +694,8 @@ const BatchOverviewDashboard: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
-                {/* QA Alerts Content */}
+
+                {/* QA Alerts */}
                 <div className={`transition-all duration-300 ${!showMachineUtil ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}>
                   {!showMachineUtil && (
                     <div className="space-y-3">
