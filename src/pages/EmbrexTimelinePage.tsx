@@ -80,7 +80,7 @@ const ALL_METRICS = [
   "age_weeks",
 ] as const;
 
-const isPercentMetric = (m: MetricKey | string) => m === "clear_pct" || m === "injected_pct";
+const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
@@ -105,6 +105,14 @@ const toCsv = (rows: Record<string, any>[]) => {
 const saveFile = (filename: string, content: string, mime = "text/csv;charset=utf-8") => {
   const blob = new Blob([content], { type: mime }); const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+};
+
+// Format numbers to max 2 decimal places
+const formatNumber = (value: number, isPercent: boolean = false): string => {
+  if (isPercent) {
+    return value.toFixed(2);
+  }
+  return Math.round(value).toLocaleString();
 };
 
 const PALETTE = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
@@ -136,6 +144,44 @@ const DEFAULTS = {
   to: "",
   pctAgg: "weighted" as PercentAgg,
   viz: "timeline_bar" as VizKind,
+};
+
+// Custom Glassmorphic Tooltip Component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div 
+        className="rounded-lg border border-white/20 p-2.5 shadow-xl"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+        }}
+      >
+        <p className="text-xs font-semibold text-slate-800 mb-1.5">{label}</p>
+        {payload.map((entry: any, index: number) => {
+          if (entry.dataKey === '_raw' || entry.dataKey === 'rolling' && entry.value === undefined) return null;
+          const isPercent = entry.dataKey === 'clear_pct' || entry.dataKey === 'injected_pct' || 
+                           (entry.dataKey === 'rolling' && (payload[0].dataKey === 'clear_pct' || payload[0].dataKey === 'injected_pct'));
+          const formattedValue = isPercent 
+            ? `${formatNumber(entry.value, true)}%`
+            : formatNumber(entry.value);
+          
+          return (
+            <div key={`item-${index}`} className="flex items-center gap-2 text-xs">
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: entry.color || '#64748b' }}
+              />
+              <span className="text-slate-600">{entry.name}:</span>
+              <span className="font-medium text-slate-800">{formattedValue}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
 };
 
 export default function EmbrexDashboard() {
@@ -383,7 +429,7 @@ export default function EmbrexDashboard() {
       dat.forEach(r => out.push({
         facet: f.title, bucket: r.bucket,
         total_eggs_set: r.total_eggs_set, eggs_cleared: r.eggs_cleared, eggs_injected: r.eggs_injected,
-        clear_pct: r.clear_pct, injected_pct: r.injected_pct, rolling: r.rolling ?? ""
+        clear_pct: parseFloat(r.clear_pct.toFixed(2)), injected_pct: parseFloat(r.injected_pct.toFixed(2)), rolling: r.rolling ? parseFloat(r.rolling.toFixed(2)) : ""
       }));
     });
     saveFile("embrex_timeline.csv", toCsv(out));
@@ -417,61 +463,9 @@ export default function EmbrexDashboard() {
     }
   }, [facets, activeFacet]);
 
-  /* ────────────────────── Glass tooltip (compact + 2dp) ───────────────────── */
-  const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
-  const GlassTooltipFactory = (firstMetricForRolling: MetricKey) =>
-    function GlassTooltip({ active, label, payload }: any) {
-      if (!active || !payload || !payload.length) return null;
-
-      const rows = payload
-        .filter((p: any) => p && p.dataKey && p.name != null)
-        .map((p: any) => {
-          const key = String(p.dataKey);
-          const isPct = isPercentMetric(key) || (key === "rolling" && isPercentMetric(firstMetricForRolling));
-          const value = isPct ? `${nf.format(Number(p.value || 0))}%` : nf.format(Number(p.value || 0));
-          const color = p.color || metricOptions.find(mm => mm.value === key)?.color || "#64748b";
-          return { name: String(p.name), value, color };
-        });
-
-      const style: React.CSSProperties = {
-        pointerEvents: "none",
-        background: "rgba(255,255,255,0.65)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        border: "1px solid rgba(148,163,184,0.35)",
-        boxShadow: "0 6px 26px rgba(0,0,0,0.10)",
-        borderRadius: 12,
-        padding: "8px 10px",
-        fontSize: 12,
-        lineHeight: 1.15,
-        color: "#0f172a",
-        maxWidth: 260,
-      };
-
-      return (
-        <div style={style}>
-          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>{label}</div>
-          {rows.map((r: any, i: number) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: i ? 4 : 0 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 9999, background: r.color }} />
-              <span style={{ opacity: 0.75 }}>{r.name} :</span>
-              <span style={{ fontWeight: 700, color: r.color }}>{r.value}</span>
-            </div>
-          ))}
-        </div>
-      );
-    };
-
   /* ─────────────── Chart renderer (fills container; no hardcoded height) ─────────────── */
   const renderChart = (data: any[], facetTitle: string) => {
     const commonMargin = { top: 8, right: 16, left: 8, bottom: 8 };
-    const tooltip = (
-      <Tooltip
-        content={GlassTooltipFactory((metrics[0] ?? "total_eggs_set") as MetricKey)}
-        wrapperStyle={{ outline: "none" }}
-        allowEscapeViewBox={{ x: true, y: true }}
-      />
-    );
 
     if (viz === "timeline_bar" || viz === "timeline_line") {
       const isBar = viz === "timeline_bar";
@@ -483,27 +477,27 @@ export default function EmbrexDashboard() {
               margin={commonMargin}
               onClick={(e:any)=>{ if (!e?.activePayload?.length) return; const p=e.activePayload[0]?.payload; if (!p) return; openDrill(facetTitle, p.bucket as string, p._raw as RawRow[]); }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12 }} allowDecimals={false} />
-              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} />
-              {tooltip}
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
                 <ReferenceLine
                   yAxisId="right"
                   y={Number(benchmark)}
                   stroke="#ef4444"
                   strokeDasharray="4 4"
-                  label={`Target ${benchmark}%`}
+                  label={{ value: `Target ${benchmark}%`, fontSize: 11 }}
                 />
               )}
               {metrics.map((m, i) => {
                 const color = metricOptions.find(mm => mm.value === m)?.color || PALETTE[i % PALETTE.length];
                 const yAxis = isPercentMetric(m) ? "right" : "left";
                 return isBar
-                  ? <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[6,6,0,0]} name={metricLabel[m]} />
-                  : <Line key={m} type="monotone" dataKey={m} yAxisId={yAxis} stroke={color} strokeWidth={3} dot={{ r: 3 }} name={metricLabel[m]} />;
+                  ? <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[4,4,0,0]} name={metricLabel[m]} />
+                  : <Line key={m} type="monotone" dataKey={m} yAxisId={yAxis} stroke={color} strokeWidth={2} dot={{ r: 2 }} name={metricLabel[m]} />;
               })}
               {rollingAvg && (
                 <Line
@@ -527,10 +521,11 @@ export default function EmbrexDashboard() {
         <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} />
-              {tooltip}
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
               <Bar dataKey="eggs_cleared"  stackId="a" fill={PALETTE[2]} name="Clears" />
               <Bar dataKey="eggs_injected" stackId="a" fill={PALETTE[1]} name="Injected" />
@@ -545,10 +540,11 @@ export default function EmbrexDashboard() {
         <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis domain={[0,100]} />
-              {tooltip}
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+              <YAxis domain={[0,100]} tick={{ fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Area type="monotone" dataKey="clear_pct" stroke={PALETTE[3]} fill={PALETTE[3]} fillOpacity={0.25} strokeWidth={2} name="Clear %" />
               <Area type="monotone" dataKey="injected_pct" stroke={PALETTE[4]} fill={PALETTE[4]} fillOpacity={0.25} strokeWidth={2} name="Injected %" />
             </ComposedChart>
@@ -569,8 +565,8 @@ export default function EmbrexDashboard() {
                   <AreaChart data={data} margin={commonMargin}>
                     <XAxis dataKey="bucket" hide />
                     <YAxis hide domain={isPercentMetric(k) ? [0,100] : ["auto","auto"]} />
-                    {tooltip}
-                    <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} name={metricLabel[k]} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -585,17 +581,17 @@ export default function EmbrexDashboard() {
         <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} />
-              {tooltip}
-              <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6,6,0,0]} name="Age (w)" />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="age_weeks" fill="#94a3b8" radius={[4,4,0,0]} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       );
     }
 
-    // heatmap keeps its minimal native titles
     if (viz === "heatmap") {
       const months = Array.from(new Set(data.map((d:any)=>d.bucket)));
       const allRaw: RawRow[] = data.flatMap((d:any)=> d._raw ?? []);
@@ -619,7 +615,7 @@ export default function EmbrexDashboard() {
               <div className="flex gap-1 items-end">
                 {months.map((mo)=> {
                   const v = m[mo] || 0; const h = scale(v, maxVal);
-                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${nf.format(v)}`} />;
+                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${v.toLocaleString()}`} />;
                 })}
               </div>
             </div>
@@ -656,7 +652,7 @@ export default function EmbrexDashboard() {
   /* ── Sidebar dropdown (collapsible) state + outside click close ─────────── */
   const vizCardRef = useRef<HTMLDivElement>(null);
   const metricsCardRef = useRef<HTMLDivElement>(null);
-  const [vizOpen, setVizOpen] = useState(false);       // collapsed by default
+  const [vizOpen, setVizOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
 
   useEffect(() => {
@@ -946,7 +942,7 @@ export default function EmbrexDashboard() {
                     </div>
                   </div>
 
-                  {/* Controls */}
+                  {/* Controls moved here (right side) */}
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2">
                       <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
@@ -990,9 +986,9 @@ export default function EmbrexDashboard() {
                   <div className="grid grid-cols-4 gap-3 mt-3">
                     {[
                       { label: "Total Eggs", value: totalEggs.toLocaleString() },
-                      { label: "Clear Rate", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgClear)}%` },
-                      { label: "Injection Rate", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgInj)}%` },
-                      { label: "Average Age", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgAge)}w` },
+                      { label: "Clear Rate", value: `${avgClear.toFixed(2)}%` },
+                      { label: "Injection Rate", value: `${avgInj.toFixed(2)}%` },
+                      { label: "Average Age", value: `${avgAge.toFixed(1)}w` },
                     ].map((metric, i) => (
                       <div key={i} className="p-3 rounded-lg border bg-white">
                         <div className="text-xs text-slate-600">{metric.label}</div>
