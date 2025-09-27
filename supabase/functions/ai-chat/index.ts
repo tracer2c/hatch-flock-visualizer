@@ -939,11 +939,11 @@ async function executeTool(toolName: string, parameters: any) {
           if (!batch) continue;
           
           // Determine house name from multiple sources
-          const houseName = batch.flocks?.house_number || 
-                           batch.flocks?.flock_name || 
-                           batch.units?.name || 
-                           batch.units?.code || 
-                           batch.batch_number || 
+          const houseName = (batch as any)?.flocks?.[0]?.house_number || 
+                           (batch as any)?.flocks?.[0]?.flock_name || 
+                           (batch as any)?.units?.[0]?.name || 
+                           (batch as any)?.units?.[0]?.code || 
+                           (batch as any)?.batch_number || 
                            'Unknown House';
           
           if (!tempGroups[houseName]) {
@@ -1002,7 +1002,7 @@ async function executeTool(toolName: string, parameters: any) {
     }
   } catch (error) {
     console.error(`Tool execution error for ${toolName}:`, error);
-    return { error: error.message, tool: toolName, parameters };
+    return { error: (error as Error).message, tool: toolName, parameters };
   }
 }
 
@@ -1352,13 +1352,13 @@ Current date: ${new Date().toISOString().split('T')[0]}`
           const structuredData = extractStructuredDataFromTools(toolResults);
           
           // Generate analytics response if we have charts
-          if (structuredData.charts && structuredData.charts.length > 0) {
+          if ((structuredData as any).charts && (structuredData as any).charts.length > 0) {
             const analyticsResponse = {
               type: 'analytics',
               title: 'Hatchery Performance Analysis',
               summary: generateEnhancedFallbackResponse(toolResults, structuredData),
-              charts: structuredData.charts,
-              metrics: structuredData.metrics,
+              charts: (structuredData as any).charts,
+              metrics: (structuredData as any).metrics,
               insights: [
                 'Data retrieved successfully from your hatchery management system',
                 'Use the visualizations above to identify trends and opportunities',
@@ -1391,6 +1391,7 @@ Current date: ${new Date().toISOString().split('T')[0]}`
                                     message.toLowerCase().includes('management dashboard') ||
                                     message.toLowerCase().includes('kpi') ||
                                     message.toLowerCase().includes('performance overview');
+          const structuredData = extractStructuredDataFromTools(toolResults);
           const fallbackData = generateEnhancedFallbackResponse(toolResults, structuredData, isExecutiveRequest);
           return new Response(JSON.stringify(fallbackData), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1435,7 +1436,7 @@ Current date: ${new Date().toISOString().split('T')[0]}`
       }
 
       // Check if we have structured data from batch tools
-      const structuredData = extractStructuredDataFromTools(toolResults);
+      const structuredData = toolResults && toolResults.length > 0 ? extractStructuredDataFromTools(toolResults) : {};
       
       // Check if this should be an executive summary
       const isExecutiveRequest = message.toLowerCase().includes('executive') || 
@@ -1469,7 +1470,7 @@ Current date: ${new Date().toISOString().split('T')[0]}`
   } catch (error) {
     console.error('AI Chat error:', error);
     return new Response(JSON.stringify({
-      error: error.message,
+      error: (error as Error).message,
       response: "I apologize, but I'm having trouble processing your request right now. Please try again."
     }), {
       status: 500,
@@ -2097,7 +2098,7 @@ async function generateSummary(responseContent: any, toolResults: any[], isExecu
               dataContext += `${analytics.upcoming_count} batches expected to hatch within 7 days. `;
             }
           } else if (data.data && Array.isArray(data.data) && data.data[0]?.fertility_percent !== undefined) {
-            const avgFertility = data.data.reduce((sum, item) => sum + (item.fertility_percent || 0), 0) / data.data.length;
+            const avgFertility = data.data.reduce((sum: number, item: any) => sum + (item.fertility_percent || 0), 0) / data.data.length;
             dataContext += `Analyzed ${data.data.length} fertility records with average fertility rate of ${avgFertility.toFixed(1)}%. `;
             
             if (shouldBeExecutive) {
@@ -2146,8 +2147,8 @@ Generate a JSON response with:
 Focus on:
 - Performance metrics and trends
 - Critical alerts or issues
-- Actionable recommendations
-- Comparative insights
+- Data-driven insights
+- Comparative analysis
 
 Keep it concise and actionable for hatchery operations.
 `;
@@ -2247,7 +2248,7 @@ function generateEnhancedFallbackResponse(toolResults: any[], structuredData?: a
 
         // Add executive summary if requested
         if (isExecutive) {
-          fallbackResponse.summary = {
+          (fallbackResponse as any).summary = {
             overview: `Current operations show ${analytics.totals.count} active batches with ${analytics.totals.total_eggs_set.toLocaleString()} eggs set and an average hatch rate of ${analytics.totals.avg_hatch_rate}%.`,
             keyPoints: [
               `${analytics.upcoming_count} batches expected to hatch within 7 days`,
@@ -2298,7 +2299,7 @@ function generateEnhancedFallbackResponse(toolResults: any[], structuredData?: a
 
   // Add a basic executive summary if requested
   if (isExecutive && response.trim()) {
-    fallbackResponse.summary = {
+    (fallbackResponse as any).summary = {
       overview: "Summary of recent hatchery operations based on available data.",
       keyPoints: [
         "Data has been retrieved from multiple operational systems",

@@ -169,7 +169,7 @@ Provide specific, helpful responses about what they're seeing.`;
     console.error('Error in contextual-help function:', error);
     
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       response: "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment."
     }), {
       status: 500,
