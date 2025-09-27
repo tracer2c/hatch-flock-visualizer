@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveBatches, useBatchPerformanceMetrics, useQAAlerts, useMachineUtilization } from "@/hooks/useHouseData";
-import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle, TrendingUp, TrendingDown, Activity, Thermometer, Package, RefreshCw, Download, Settings, Search, Eye } from "lucide-react";
 import { EnhancedTooltip } from "@/components/ui/enhanced-tooltip";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
@@ -107,6 +109,13 @@ const BatchOverviewDashboard: React.FC = () => {
   const [dateRange, setDateRange] = React.useState<{ from?: Date; to?: Date }>({});
   const [showMachineUtil, setShowMachineUtil] = React.useState<boolean>(false);
 
+  // Pipeline controls state
+  const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [selectedHouses, setSelectedHouses] = React.useState<string[]>([]);
+  const [viewMode, setViewMode] = React.useState<"auto" | "manual">("auto");
+  const [showAllHouses, setShowAllHouses] = React.useState<boolean>(false);
+  const maxDisplayHouses = 3;
+
   // Derived machines list for header
   const machinesList = React.useMemo(
     () => machineUtil?.map((m) => ({ id: String(m.id), name: m.machine_number })) ?? [],
@@ -124,15 +133,76 @@ const BatchOverviewDashboard: React.FC = () => {
 
   // Apply filters to active batches
   const filteredActiveBatches = React.useMemo(() => {
-    const list = activeBatches ?? [];
-    return list.filter((b: any) => {
+    let list = activeBatches ?? [];
+    
+    // Apply status, machine, and date filters
+    list = list.filter((b: any) => {
       const statusOk = statusFilter === "all" ? true : b.status === statusFilter;
       const machineId = String(b.machine_id ?? b.machines?.id ?? "");
       const machineOk = machineFilter === "all" ? true : machineId === machineFilter;
       const dateOk = isWithinRange(b.set_date);
       return statusOk && machineOk && dateOk;
     });
-  }, [activeBatches, statusFilter, machineFilter, dateRange]);
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      list = list.filter((b: any) => 
+        b.batch_number?.toLowerCase().includes(search) ||
+        b.flocks?.flock_name?.toLowerCase().includes(search) ||
+        b.machines?.machine_number?.toLowerCase().includes(search) ||
+        b.status?.toLowerCase().includes(search)
+      );
+    }
+
+    return list;
+  }, [activeBatches, statusFilter, machineFilter, dateRange, searchTerm]);
+
+  // Get priority-sorted houses for display
+  const displayedHouses = React.useMemo(() => {
+    if (viewMode === "manual" && selectedHouses.length > 0) {
+      // Manual selection mode - show selected houses
+      return filteredActiveBatches.filter((b: any) => selectedHouses.includes(b.id));
+    }
+
+    if (showAllHouses) {
+      // Show all filtered houses
+      return filteredActiveBatches;
+    }
+
+    // Auto mode with priority sorting and limit
+    const sorted = [...filteredActiveBatches].sort((a: any, b: any) => {
+      // Priority 1: Status urgency (overdue → hatching → incubating → setting)
+      const statusPriority = { overdue: 0, hatching: 1, incubating: 2, setting: 3 };
+      const aDays = getDaysFromSet(a.set_date);
+      const bDays = getDaysFromSet(b.set_date);
+      const aOverdue = aDays > 21;
+      const bOverdue = bDays > 21;
+      
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+      if (aOverdue && bOverdue) return bDays - aDays; // Most overdue first
+      
+      // Priority 2: Status
+      const aStatusPriority = statusPriority[a.status as keyof typeof statusPriority] ?? 4;
+      const bStatusPriority = statusPriority[b.status as keyof typeof statusPriority] ?? 4;
+      if (aStatusPriority !== bStatusPriority) return aStatusPriority - bStatusPriority;
+      
+      // Priority 3: Days since set (more recent first for same status)
+      return bDays - aDays;
+    });
+
+    return sorted.slice(0, maxDisplayHouses);
+  }, [filteredActiveBatches, viewMode, selectedHouses, showAllHouses, maxDisplayHouses]);
+
+  // House options for dropdown
+  const houseOptions = React.useMemo(() => {
+    return filteredActiveBatches.map((b: any) => ({
+      id: b.id,
+      label: `${b.batch_number} - ${b.flocks?.flock_name || 'Unknown'} (${b.status})`,
+      batch: b
+    }));
+  }, [filteredActiveBatches]);
 
   // Optionally filter machines view when a specific machine is selected
   const filteredMachineUtil = React.useMemo(() => {
@@ -380,14 +450,99 @@ const BatchOverviewDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="h-5 w-5" />
                   Active Houses Pipeline
+                  {filteredActiveBatches.length > maxDisplayHouses && !showAllHouses && (
+                    <Badge variant="secondary" className="ml-2">
+                      {displayedHouses.length} of {filteredActiveBatches.length}
+                    </Badge>
+                  )}
                 </div>
-                <ChartDownloadButton chartId="active-houses-pipeline" filename="active-houses-pipeline.png" />
+                <div className="flex items-center gap-2">
+                  {/* Search Input */}
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search houses..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9"
+                    />
+                  </div>
+
+                  {/* View Mode Selector */}
+                  <Select value={viewMode} onValueChange={(value: "auto" | "manual") => setViewMode(value)}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-md z-50">
+                      <SelectItem value="auto">Auto View</SelectItem>
+                      <SelectItem value="manual">Select</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* House Selection Dropdown - Only shown in manual mode */}
+                  {viewMode === "manual" && (
+                    <Select 
+                      value={selectedHouses.length === 1 ? selectedHouses[0] : ""} 
+                      onValueChange={(value) => {
+                        if (value) {
+                          setSelectedHouses(prev => {
+                            if (prev.includes(value)) return prev;
+                            return [...prev, value].slice(0, maxDisplayHouses);
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select houses..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border shadow-md z-50 max-h-60 overflow-y-auto">
+                        {houseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  <ChartDownloadButton chartId="active-houses-pipeline" filename="active-houses-pipeline.png" />
+                </div>
               </CardTitle>
+              
+              {/* Manual mode selected houses display */}
+              {viewMode === "manual" && selectedHouses.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {selectedHouses.map((houseId) => {
+                    const house = filteredActiveBatches.find((b: any) => b.id === houseId);
+                    return house ? (
+                      <Badge key={houseId} variant="secondary" className="text-xs">
+                        {house.batch_number}
+                        <button 
+                          onClick={() => setSelectedHouses(prev => prev.filter(id => id !== houseId))}
+                          className="ml-2 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                  {selectedHouses.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setSelectedHouses([])}
+                      className="h-6 px-2 text-xs"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardHeader>
             <CardContent id="active-houses-pipeline">
-              {filteredActiveBatches && filteredActiveBatches.length > 0 ? (
+              {displayedHouses && displayedHouses.length > 0 ? (
                  <div className="space-y-4">
-                   {filteredActiveBatches.map((house) => (
+                   {displayedHouses.map((house) => (
                      <div 
                        key={house.id} 
                        onClick={() => handleHouseClick(house.id)}
@@ -422,11 +577,40 @@ const BatchOverviewDashboard: React.FC = () => {
                          />
                        </div>
                      </div>
-                   ))}
+                     ))}
+                   
+                   {/* Show more button */}
+                   {!showAllHouses && filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
+                     <div className="pt-4 border-t">
+                       <Button 
+                         variant="outline" 
+                         onClick={() => setShowAllHouses(true)}
+                         className="w-full"
+                       >
+                         <Eye className="h-4 w-4 mr-2" />
+                         View All {filteredActiveBatches.length} Houses
+                       </Button>
+                     </div>
+                   )}
+                   
+                   {/* Show less button */}
+                   {showAllHouses && (
+                     <div className="pt-4 border-t">
+                       <Button 
+                         variant="outline" 
+                         onClick={() => setShowAllHouses(false)}
+                         className="w-full"
+                       >
+                         Show Top {maxDisplayHouses} Houses
+                       </Button>
+                     </div>
+                   )}
+                  </div>
+               ) : (
+                 <div className="text-center py-8 text-muted-foreground">
+                   {searchTerm ? `No houses found matching "${searchTerm}"` : "No active houses found. Start a new house from the Data Entry page."}
                  </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">No active houses found. Start a new house from the Data Entry page.</div>
-              )}
+               )}
             </CardContent>
           </Card>
         </section>
