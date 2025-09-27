@@ -451,59 +451,58 @@ const BatchOverviewDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="h-5 w-5" />
                   Active Houses Pipeline
-                  {filteredActiveBatches.length > maxDisplayHouses && !showAllHouses && (
-                    <Badge variant="secondary" className="ml-2">
-                      {displayedHouses.length} of {filteredActiveBatches.length}
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 relative">
                   {/* Search Input */}
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                     <Input
                       placeholder="Search houses..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9"
+                      className="pl-10 h-9 w-full"
                     />
                   </div>
 
                   {/* View Mode Selector */}
-                  <Select value={viewMode} onValueChange={(value: "auto" | "manual") => setViewMode(value)}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border shadow-md z-50">
-                      <SelectItem value="auto">Auto View</SelectItem>
-                      <SelectItem value="manual">Select</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Select value={viewMode} onValueChange={(value: "auto" | "manual") => setViewMode(value)}>
+                      <SelectTrigger className="w-32 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg z-[100] min-w-[8rem]" position="popper" sideOffset={4}>
+                        <SelectItem value="auto">Auto View</SelectItem>
+                        <SelectItem value="manual">Select</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   {/* House Selection Dropdown - Only shown in manual mode */}
                   {viewMode === "manual" && (
-                    <Select 
-                      value={selectedHouses.length === 1 ? selectedHouses[0] : ""} 
-                      onValueChange={(value) => {
-                        if (value) {
-                          setSelectedHouses(prev => {
-                            if (prev.includes(value)) return prev;
-                            return [...prev, value].slice(0, maxDisplayHouses);
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select houses..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border shadow-md z-50 max-h-60 overflow-y-auto">
-                        {houseOptions.map((option) => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Select 
+                        value={selectedHouses.length === 1 ? selectedHouses[0] : ""} 
+                        onValueChange={(value) => {
+                          if (value) {
+                            setSelectedHouses(prev => {
+                              if (prev.includes(value)) return prev;
+                              return [...prev, value].slice(0, maxDisplayHouses);
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-48 h-9">
+                          <SelectValue placeholder="Select houses..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg z-[100] max-h-60 overflow-y-auto min-w-[12rem]" position="popper" sideOffset={4}>
+                          {houseOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
 
                   <ChartDownloadButton chartId="active-houses-pipeline" filename="active-houses-pipeline.png" />
@@ -580,32 +579,22 @@ const BatchOverviewDashboard: React.FC = () => {
                      </div>
                      ))}
                    
-                   {/* Show more button */}
-                   {!showAllHouses && filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
-                     <div className="pt-4 border-t">
-                       <Button 
-                         variant="outline" 
-                         onClick={() => setShowAllHouses(true)}
-                         className="w-full"
-                       >
-                         <Eye className="h-4 w-4 mr-2" />
-                         View All {filteredActiveBatches.length} Houses
-                       </Button>
-                     </div>
-                   )}
-                   
-                   {/* Show less button */}
-                   {showAllHouses && (
-                     <div className="pt-4 border-t">
-                       <Button 
-                         variant="outline" 
-                         onClick={() => setShowAllHouses(false)}
-                         className="w-full"
-                       >
-                         Show Top {maxDisplayHouses} Houses
-                       </Button>
-                     </div>
-                   )}
+                    {/* Toggle expand/collapse button */}
+                    {filteredActiveBatches.length > maxDisplayHouses && viewMode === "auto" && (
+                      <div className="pt-4 border-t">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowAllHouses(!showAllHouses)}
+                          className="w-full transition-all duration-200 hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          {showAllHouses 
+                            ? `Collapse View (Show Top ${maxDisplayHouses})` 
+                            : `Expand View (${filteredActiveBatches.length} Total)`
+                          }
+                        </Button>
+                      </div>
+                    )}
                   </div>
                ) : (
                  <div className="text-center py-8 text-muted-foreground">
