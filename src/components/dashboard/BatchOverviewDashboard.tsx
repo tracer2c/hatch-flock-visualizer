@@ -533,7 +533,7 @@ const BatchOverviewDashboard: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      <Activity className="h-5 w-5" />
                       QA Alerts Requiring Attention
                     </>
                   )}
@@ -588,9 +588,9 @@ const BatchOverviewDashboard: React.FC = () => {
                     <div className="space-y-3">
                       {qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 5).map((alert) => (
-                          <div key={alert.id} className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                          <div key={alert.id} className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
                             <div className="flex items-center gap-3">
-                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <Activity className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Temperature/Humidity Alert</div>
                                 <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
