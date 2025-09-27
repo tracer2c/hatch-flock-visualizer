@@ -489,12 +489,12 @@ const BatchOverviewDashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getStatusColor(house.status)}>{house.status}</Badge>
-                          {getProgressDisplay(house.set_date).isOverdue && <Badge variant="destructive" className="text-xs">OVERDUE</Badge>}
+                          {getProgressDisplay(house.set_date).isOverdue && <Badge variant="secondary" className="text-xs">OVERDUE</Badge>}
                         </div>
                       </div>
 
                       <div className="text-right">
-                        <div className={`text-sm font-medium ${getProgressDisplay(house.set_date).isOverdue ? "text-destructive" : "text-card-foreground"}`}>
+                        <div className="text-sm font-medium text-card-foreground">
                           {getProgressDisplay(house.set_date).text}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -505,7 +505,7 @@ const BatchOverviewDashboard: React.FC = () => {
                       <div className="w-32">
                         <Progress
                           value={getProgressDisplay(house.set_date).progress}
-                          className={`h-2 ${getProgressDisplay(house.set_date).isOverdue ? "[&>div]:bg-destructive" : ""}`}
+                          className="h-2"
                         />
                       </div>
                     </div>
