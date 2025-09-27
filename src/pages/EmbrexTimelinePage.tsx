@@ -80,7 +80,7 @@ const ALL_METRICS = [
   "age_weeks",
 ] as const;
 
-const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
+const isPercentMetric = (m: MetricKey | string) => m === "clear_pct" || m === "injected_pct";
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
@@ -417,9 +417,61 @@ export default function EmbrexDashboard() {
     }
   }, [facets, activeFacet]);
 
+  /* ────────────────────── Glass tooltip (compact + 2dp) ───────────────────── */
+  const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+  const GlassTooltipFactory = (firstMetricForRolling: MetricKey) =>
+    function GlassTooltip({ active, label, payload }: any) {
+      if (!active || !payload || !payload.length) return null;
+
+      const rows = payload
+        .filter((p: any) => p && p.dataKey && p.name != null)
+        .map((p: any) => {
+          const key = String(p.dataKey);
+          const isPct = isPercentMetric(key) || (key === "rolling" && isPercentMetric(firstMetricForRolling));
+          const value = isPct ? `${nf.format(Number(p.value || 0))}%` : nf.format(Number(p.value || 0));
+          const color = p.color || metricOptions.find(mm => mm.value === key)?.color || "#64748b";
+          return { name: String(p.name), value, color };
+        });
+
+      const style: React.CSSProperties = {
+        pointerEvents: "none",
+        background: "rgba(255,255,255,0.65)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(148,163,184,0.35)",
+        boxShadow: "0 6px 26px rgba(0,0,0,0.10)",
+        borderRadius: 12,
+        padding: "8px 10px",
+        fontSize: 12,
+        lineHeight: 1.15,
+        color: "#0f172a",
+        maxWidth: 260,
+      };
+
+      return (
+        <div style={style}>
+          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>{label}</div>
+          {rows.map((r: any, i: number) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: i ? 4 : 0 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 9999, background: r.color }} />
+              <span style={{ opacity: 0.75 }}>{r.name} :</span>
+              <span style={{ fontWeight: 700, color: r.color }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
   /* ─────────────── Chart renderer (fills container; no hardcoded height) ─────────────── */
   const renderChart = (data: any[], facetTitle: string) => {
     const commonMargin = { top: 8, right: 16, left: 8, bottom: 8 };
+    const tooltip = (
+      <Tooltip
+        content={GlassTooltipFactory((metrics[0] ?? "total_eggs_set") as MetricKey)}
+        wrapperStyle={{ outline: "none" }}
+        allowEscapeViewBox={{ x: true, y: true }}
+      />
+    );
 
     if (viz === "timeline_bar" || viz === "timeline_line") {
       const isBar = viz === "timeline_bar";
@@ -435,7 +487,7 @@ export default function EmbrexDashboard() {
               <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
               <YAxis yAxisId="left" tick={{ fontSize: 12 }} allowDecimals={false} />
               <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} />
-              <Tooltip />
+              {tooltip}
               <Legend />
               {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
                 <ReferenceLine
@@ -476,7 +528,9 @@ export default function EmbrexDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip /><Legend />
+              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} />
+              {tooltip}
+              <Legend />
               <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
               <Bar dataKey="eggs_cleared"  stackId="a" fill={PALETTE[2]} name="Clears" />
               <Bar dataKey="eggs_injected" stackId="a" fill={PALETTE[1]} name="Injected" />
@@ -492,7 +546,9 @@ export default function EmbrexDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis domain={[0,100]} /><Tooltip /><Legend />
+              <XAxis dataKey="bucket" /><YAxis domain={[0,100]} />
+              {tooltip}
+              <Legend />
               <Area type="monotone" dataKey="clear_pct" stroke={PALETTE[3]} fill={PALETTE[3]} fillOpacity={0.25} strokeWidth={2} name="Clear %" />
               <Area type="monotone" dataKey="injected_pct" stroke={PALETTE[4]} fill={PALETTE[4]} fillOpacity={0.25} strokeWidth={2} name="Injected %" />
             </ComposedChart>
@@ -513,7 +569,8 @@ export default function EmbrexDashboard() {
                   <AreaChart data={data} margin={commonMargin}>
                     <XAxis dataKey="bucket" hide />
                     <YAxis hide domain={isPercentMetric(k) ? [0,100] : ["auto","auto"]} />
-                    <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} />
+                    {tooltip}
+                    <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} name={metricLabel[k]} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -529,14 +586,16 @@ export default function EmbrexDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={commonMargin}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} /><Tooltip />
-              <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6,6,0,0]} />
+              <XAxis dataKey="bucket" /><YAxis allowDecimals={false} />
+              {tooltip}
+              <Bar dataKey="age_weeks" fill="#94a3b8" radius={[6,6,0,0]} name="Age (w)" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       );
     }
 
+    // heatmap keeps its minimal native titles
     if (viz === "heatmap") {
       const months = Array.from(new Set(data.map((d:any)=>d.bucket)));
       const allRaw: RawRow[] = data.flatMap((d:any)=> d._raw ?? []);
@@ -560,7 +619,7 @@ export default function EmbrexDashboard() {
               <div className="flex gap-1 items-end">
                 {months.map((mo)=> {
                   const v = m[mo] || 0; const h = scale(v, maxVal);
-                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${v.toLocaleString()}`} />;
+                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${nf.format(v)}`} />;
                 })}
               </div>
             </div>
@@ -887,7 +946,7 @@ export default function EmbrexDashboard() {
                     </div>
                   </div>
 
-                  {/* Controls moved here (right side) */}
+                  {/* Controls */}
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2">
                       <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
@@ -931,9 +990,9 @@ export default function EmbrexDashboard() {
                   <div className="grid grid-cols-4 gap-3 mt-3">
                     {[
                       { label: "Total Eggs", value: totalEggs.toLocaleString() },
-                      { label: "Clear Rate", value: `${avgClear.toFixed(1)}%` },
-                      { label: "Injection Rate", value: `${avgInj.toFixed(1)}%` },
-                      { label: "Average Age", value: `${avgAge.toFixed(1)}w` },
+                      { label: "Clear Rate", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgClear)}%` },
+                      { label: "Injection Rate", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgInj)}%` },
+                      { label: "Average Age", value: `${new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(avgAge)}w` },
                     ].map((metric, i) => (
                       <div key={i} className="p-3 rounded-lg border bg-white">
                         <div className="text-xs text-slate-600">{metric.label}</div>
@@ -985,34 +1044,34 @@ export default function EmbrexDashboard() {
             <DialogDescription>{modalTitle}</DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-auto">
-            <div className="w-full text-sm">
-              <div className="text-left sticky top-0 bg-background">
-                <div className="border-b grid grid-cols-8 gap-2">
-                  <div className="py-2 pr-2 font-semibold">Batch</div>
-                  <div className="py-2 pr-2 font-semibold">Flock</div>
-                  <div className="py-2 pr-2 font-semibold">Unit</div>
-                  <div className="py-2 pr-2 font-semibold">Set date</div>
-                  <div className="py-2 pr-2 text-right font-semibold">Eggs set</div>
-                  <div className="py-2 pr-2 text-right font-semibold">Clears</div>
-                  <div className="py-2 pr-2 text-right font-semibold">Injected</div>
-                  <div className="py-2 pr-2 font-semibold">Status</div>
-                </div>
-              </div>
-              <div>
+            <table className="w-full text-sm">
+              <thead className="text-left sticky top-0 bg-background">
+                <tr className="border-b">
+                  <th className="py-2 pr-2">Batch</th>
+                  <th className="py-2 pr-2">Flock</th>
+                  <th className="py-2 pr-2">Unit</th>
+                  <th className="py-2 pr-2">Set date</th>
+                  <th className="py-2 pr-2 text-right">Eggs set</th>
+                  <th className="py-2 pr-2 text-right">Clears</th>
+                  <th className="py-2 pr-2 text-right">Injected</th>
+                  <th className="py-2 pr-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {modalRows.map(r=>(
-                  <div key={r.batch_id} className="border-b last:border-0 grid grid-cols-8 gap-2">
-                    <div className="py-2 pr-2 font-mono">{r.batch_number}</div>
-                    <div className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</div>
-                    <div className="py-2 pr-2">{r.unit_name}</div>
-                    <div className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</div>
-                    <div className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</div>
-                    <div className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</div>
-                    <div className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</div>
-                    <div className="py-2 pr-2">{r.status}</div>
-                  </div>
+                  <tr key={r.batch_id} className="border-b last:border-0">
+                    <td className="py-2 pr-2 font-mono">{r.batch_number}</td>
+                    <td className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</td>
+                    <td className="py-2 pr-2">{r.unit_name}</td>
+                    <td className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</td>
+                    <td className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</td>
+                    <td className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</td>
+                    <td className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</td>
+                    <td className="py-2 pr-2">{r.status}</td>
+                  </tr>
                 ))}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         </DialogContent>
       </Dialog>
