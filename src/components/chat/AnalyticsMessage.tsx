@@ -27,7 +27,7 @@ interface AnalyticsMessageProps {
       status?: 'good' | 'warning' | 'critical';
     }>;
     insights?: string[];
-    recommendations?: string[];
+    
     actions?: Array<{
       label: string;
       type: 'download' | 'drill-down' | 'compare';
@@ -150,27 +150,6 @@ export const AnalyticsMessage: React.FC<AnalyticsMessageProps> = ({ data }) => {
         </Card>
       )}
 
-      {/* Recommendations */}
-      {data.recommendations && data.recommendations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data.recommendations.map((recommendation, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0" />
-                  <MessageFormatter content={recommendation} className="text-sm" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Actions */}
       {data.actions && data.actions.length > 0 && (

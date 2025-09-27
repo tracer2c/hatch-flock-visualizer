@@ -1131,7 +1131,6 @@ Always return JSON structured as:
     }
   ],
   "insights": ["Real insight 1", "Real insight 2"],
-  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],
   "actions": [{"label": "Download Data", "type": "download", "data": {...}}]
 }
 
@@ -1365,11 +1364,6 @@ Current date: ${new Date().toISOString().split('T')[0]}`
                 'Use the visualizations above to identify trends and opportunities',
                 'Monitor key metrics regularly for optimal performance'
               ],
-              recommendations: [
-                'Review batch performance data weekly',
-                'Investigate any batches with below-average hatch rates',
-                'Optimize machine utilization to maximize capacity'
-              ]
             };
             
             return new Response(JSON.stringify({
@@ -1827,11 +1821,6 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
       `Average fertility rate: ${avgFertility.toFixed(1)}%`,
       avgFertility >= 85 ? 'Fertility rates are performing well' : 'Room for improvement in fertility rates'
     ],
-    recommendations: [
-      avgFertility < 80 ? 'Investigate factors affecting fertility in underperforming batches' : 'Maintain current breeding protocols',
-      'Monitor trends monthly to identify seasonal patterns',
-      'Focus on batches with fertility rates below 75%'
-    ]
   };
 }
 
@@ -1976,11 +1965,6 @@ function generateBatchCharts(message: string, data: any, preferredType?: 'bar' |
       `${analytics.upcoming_count} batches expected to hatch within 7 days`,
       analytics.overdue_count > 0 ? `${analytics.overdue_count} batches are overdue` : 'All batches on schedule'
     ],
-    recommendations: [
-      analytics.overdue_count > 0 ? 'Review overdue batches immediately' : 'Maintain current schedules',
-      analytics.totals.avg_hatch_rate < 80 ? 'Investigate factors affecting hatch rates' : 'Excellent hatch rate performance',
-      'Monitor upcoming hatches for proper preparation'
-    ]
   };
 }
 
@@ -2041,8 +2025,7 @@ function generateMachineCharts(message: string, machines: any[], preferredType?:
     metrics: [
       { label: 'Total Machines', value: machines.length.toString(), trend: 'stable', status: 'good' }
     ],
-    insights: [ `${machines.length} machines currently monitored`, 'Utilization rates help optimize capacity planning' ],
-    recommendations: [ 'Balance load across machines for optimal efficiency', 'Schedule maintenance during low utilization periods' ]
+    insights: [ `${machines.length} machines currently monitored`, 'Utilization rates help optimize capacity planning' ]
   };
 }
 
