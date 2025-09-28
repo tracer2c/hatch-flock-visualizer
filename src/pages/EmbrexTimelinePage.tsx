@@ -38,7 +38,13 @@ type MetricKey =
   | "eggs_cleared"
   | "eggs_injected"
   | "clear_pct"
-  | "injected_pct";
+  | "injected_pct"
+  | "fertility_percent"
+  | "early_dead_percent"
+  | "late_dead_percent"
+  | "total_mortality_percent"
+  | "hatch_percent"
+  | "if_dev_percent";
 type PercentAgg = "weighted" | "unweighted";
 type FacetMode = "flock" | "unit" | "flock_unit";
 
@@ -54,12 +60,27 @@ interface RawRow {
   eggs_injected: number;
   set_date: string;
   status: string;
+  fertility_percent?: number;
+  early_dead_percent?: number;
+  late_dead_percent?: number;
+  total_mortality_percent?: number;
+  hatch_percent?: number;
+  if_dev_percent?: number;
 }
 interface BucketRow {
   bucketKey: string;
   date: Date;
   count: { age_weeks?: number; total_eggs_set?: number; eggs_cleared?: number; eggs_injected?: number };
-  pct: { clear_pct?: number; injected_pct?: number };
+  pct: { 
+    clear_pct?: number; 
+    injected_pct?: number;
+    fertility_percent?: number;
+    early_dead_percent?: number;
+    late_dead_percent?: number;
+    total_mortality_percent?: number;
+    hatch_percent?: number;
+    if_dev_percent?: number;
+  };
   raw: RawRow[];
 }
 
@@ -70,17 +91,38 @@ const metricLabel: Record<MetricKey, string> = {
   eggs_injected: "Injected",
   clear_pct: "Clear %",
   injected_pct: "Injected %",
+  fertility_percent: "Fertility %",
+  early_dead_percent: "Early Dead %",
+  late_dead_percent: "Late Dead %", 
+  total_mortality_percent: "Total Mortality %",
+  hatch_percent: "Hatch %",
+  if_dev_percent: "I/F %",
 };
-const ALL_METRICS = [
+const BASIC_METRICS = [
   "total_eggs_set",
-  "eggs_cleared",
+  "eggs_cleared", 
   "eggs_injected",
   "clear_pct",
   "injected_pct",
   "age_weeks",
 ] as const;
 
-const isPercentMetric = (m: MetricKey) => m === "clear_pct" || m === "injected_pct";
+const FERTILITY_METRICS = [
+  "fertility_percent",
+  "early_dead_percent",
+  "late_dead_percent", 
+  "total_mortality_percent",
+  "hatch_percent",
+  "if_dev_percent",
+] as const;
+
+const ALL_METRICS = [...BASIC_METRICS, ...FERTILITY_METRICS] as const;
+
+const isPercentMetric = (m: MetricKey) => 
+  m === "clear_pct" || m === "injected_pct" || 
+  m === "fertility_percent" || m === "early_dead_percent" || 
+  m === "late_dead_percent" || m === "total_mortality_percent" || 
+  m === "hatch_percent" || m === "if_dev_percent";
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
@@ -203,6 +245,9 @@ export default function EmbrexDashboard() {
     const m = (searchParams.get("metrics") ?? "").split(",").filter(Boolean) as MetricKey[];
     return m.length ? m : DEFAULTS.metrics;
   });
+  const [showFertilityMetrics, setShowFertilityMetrics] = useState<boolean>(() => 
+    searchParams.get("fertility") === "1"
+  );
   const [facetBy, setFacetBy] = useState<FacetMode>(() =>
     (["flock","unit","flock_unit"].includes(searchParams.get("facetBy") || "") ? (searchParams.get("facetBy") as FacetMode) : DEFAULTS.facetBy)
   );
@@ -268,24 +313,63 @@ export default function EmbrexDashboard() {
           .select(`
             id, batch_number, total_eggs_set, eggs_cleared, eggs_injected, set_date, status,
             units ( name ),
-            flocks!inner(flock_number, flock_name, age_weeks)
+            flocks!inner(flock_number, flock_name, age_weeks),
+            fertility_analysis (
+              fertility_percent,
+              hatch_percent,
+              hof_percent,
+              hoi_percent,
+              if_dev_percent,
+              early_dead,
+              late_dead
+            ),
+            residue_analysis (
+              residue_percent,
+              hatch_percent,
+              hof_percent,
+              hoi_percent,
+              if_dev_percent
+            )
           `)
           .order("set_date", { ascending: true });
         if (error) throw error;
 
-        const formatted: RawRow[] = (data ?? []).map((b: any) => ({
-          batch_id: b.id,
-          batch_number: b.batch_number,
-          flock_number: b.flocks.flock_number,
-          unit_name: b.units?.name ?? "",
-          flock_name: b.flocks.flock_name,
-          age_weeks: Number(b.flocks.age_weeks ?? 0),
-          total_eggs_set: Number(b.total_eggs_set ?? 0),
-          eggs_cleared: Number(b.eggs_cleared ?? 0),
-          eggs_injected: Number(b.eggs_injected ?? 0),
-          set_date: b.set_date,
-          status: b.status ?? "",
-        }));
+        const formatted: RawRow[] = (data ?? []).map((b: any) => {
+          // Calculate mortality percentages from fertility analysis
+          const fertility = b.fertility_analysis?.[0];
+          const residue = b.residue_analysis?.[0];
+          const totalEggs = Number(b.total_eggs_set ?? 0);
+          
+          let early_dead_percent = 0;
+          let late_dead_percent = 0;
+          let total_mortality_percent = 0;
+          
+          if (fertility && totalEggs > 0) {
+            early_dead_percent = ((fertility.early_dead ?? 0) / totalEggs) * 100;
+            late_dead_percent = ((fertility.late_dead ?? 0) / totalEggs) * 100;
+            total_mortality_percent = early_dead_percent + late_dead_percent;
+          }
+
+          return {
+            batch_id: b.id,
+            batch_number: b.batch_number,
+            flock_number: b.flocks.flock_number,
+            unit_name: b.units?.name ?? "",
+            flock_name: b.flocks.flock_name,
+            age_weeks: Number(b.flocks.age_weeks ?? 0),
+            total_eggs_set: totalEggs,
+            eggs_cleared: Number(b.eggs_cleared ?? 0),
+            eggs_injected: Number(b.eggs_injected ?? 0),
+            set_date: b.set_date,
+            status: b.status ?? "",
+            fertility_percent: fertility?.fertility_percent ?? residue?.fertility_percent,
+            early_dead_percent,
+            late_dead_percent,
+            total_mortality_percent,
+            hatch_percent: fertility?.hatch_percent ?? residue?.hatch_percent,
+            if_dev_percent: fertility?.if_dev_percent ?? residue?.if_dev_percent,
+          };
+        });
         setRows(formatted);
       } catch (e) {
         console.error(e);
@@ -311,10 +395,12 @@ export default function EmbrexDashboard() {
     if (compareMode) sp.set("cmp","1"); else sp.delete("cmp");
     if (compareCols !== 2) sp.set("cols", String(compareCols)); else sp.delete("cols");
     sp.set("nav", sidebarOpen ? "1" : "0");
+    if (showFertilityMetrics) sp.set("fertility", "1"); else sp.delete("fertility");
     setSearchParams(sp, { replace: true });
   }, [
     granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo,
-    percentAgg, rollingAvg, benchmark, viz, compareMode, compareCols, sidebarOpen, setSearchParams
+    percentAgg, rollingAvg, benchmark, viz, compareMode, compareCols, sidebarOpen, 
+    showFertilityMetrics, setSearchParams
   ]);
 
   /* Derived lists */
@@ -394,12 +480,52 @@ export default function EmbrexDashboard() {
       const sumSet = b.count.total_eggs_set ?? 0;
       const sumClr = b.count.eggs_cleared ?? 0;
       const sumInj = b.count.eggs_injected ?? 0;
+      
+      // Calculate weighted averages for fertility metrics
+      const fertilityVals = b.raw.filter(r => r.fertility_percent != null);
+      const earlyVals = b.raw.filter(r => r.early_dead_percent != null);
+      const lateVals = b.raw.filter(r => r.late_dead_percent != null);
+      const totalMortVals = b.raw.filter(r => r.total_mortality_percent != null);
+      const hatchVals = b.raw.filter(r => r.hatch_percent != null);
+      const ifVals = b.raw.filter(r => r.if_dev_percent != null);
+      
       if (percentAgg === "weighted") {
         b.pct.clear_pct = sumSet > 0 ? (sumClr / sumSet) * 100 : 0;
         b.pct.injected_pct = sumSet > 0 ? (sumInj / sumSet) * 100 : 0;
+        
+        // Weighted averages for fertility metrics
+        b.pct.fertility_percent = fertilityVals.length > 0 ? 
+          fertilityVals.reduce((sum, r) => sum + (r.fertility_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.early_dead_percent = earlyVals.length > 0 ? 
+          earlyVals.reduce((sum, r) => sum + (r.early_dead_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.late_dead_percent = lateVals.length > 0 ? 
+          lateVals.reduce((sum, r) => sum + (r.late_dead_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.total_mortality_percent = totalMortVals.length > 0 ? 
+          totalMortVals.reduce((sum, r) => sum + (r.total_mortality_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.hatch_percent = hatchVals.length > 0 ? 
+          hatchVals.reduce((sum, r) => sum + (r.hatch_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.if_dev_percent = ifVals.length > 0 ? 
+          ifVals.reduce((sum, r) => sum + (r.if_dev_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
       } else {
         const valsClr = b.raw.map(r => (r.total_eggs_set ? (r.eggs_cleared ?? 0) / r.total_eggs_set * 100 : 0));
         const valsInj = b.raw.map(r => (r.total_eggs_set ? (r.eggs_injected ?? 0) / r.total_eggs_set * 100 : 0));
+        
+        // Unweighted averages for fertility metrics
+        b.pct.fertility_percent = fertilityVals.length > 0 ? 
+          fertilityVals.reduce((sum, r) => sum + r.fertility_percent!, 0) / fertilityVals.length : 0;
+        b.pct.early_dead_percent = earlyVals.length > 0 ? 
+          earlyVals.reduce((sum, r) => sum + r.early_dead_percent!, 0) / earlyVals.length : 0;
+        b.pct.late_dead_percent = lateVals.length > 0 ? 
+          lateVals.reduce((sum, r) => sum + r.late_dead_percent!, 0) / lateVals.length : 0;
+        b.pct.total_mortality_percent = totalMortVals.length > 0 ? 
+          totalMortVals.reduce((sum, r) => sum + r.total_mortality_percent!, 0) / totalMortVals.length : 0;
+        b.pct.hatch_percent = hatchVals.length > 0 ? 
+          hatchVals.reduce((sum, r) => sum + r.hatch_percent!, 0) / hatchVals.length : 0;
+        b.pct.if_dev_percent = ifVals.length > 0 ? 
+          ifVals.reduce((sum, r) => sum + r.if_dev_percent!, 0) / ifVals.length : 0;
+        
+        b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
+        b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
         b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
         b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
       }
@@ -425,6 +551,12 @@ export default function EmbrexDashboard() {
       age_weeks: b.count.age_weeks ?? 0,
       clear_pct: b.pct.clear_pct ?? 0,
       injected_pct: b.pct.injected_pct ?? 0,
+      fertility_percent: b.pct.fertility_percent ?? 0,
+      early_dead_percent: b.pct.early_dead_percent ?? 0,
+      late_dead_percent: b.pct.late_dead_percent ?? 0,
+      total_mortality_percent: b.pct.total_mortality_percent ?? 0,
+      hatch_percent: b.pct.hatch_percent ?? 0,
+      if_dev_percent: b.pct.if_dev_percent ?? 0,
       rolling: rollingAvg ? rolling[i] : undefined,
       _raw: b.raw,
     }));
@@ -446,7 +578,14 @@ export default function EmbrexDashboard() {
       dat.forEach(r => out.push({
         facet: f.title, bucket: r.bucket,
         total_eggs_set: r.total_eggs_set, eggs_cleared: r.eggs_cleared, eggs_injected: r.eggs_injected,
-        clear_pct: parseFloat(r.clear_pct.toFixed(2)), injected_pct: parseFloat(r.injected_pct.toFixed(2)), rolling: r.rolling ? parseFloat(r.rolling.toFixed(2)) : ""
+        clear_pct: parseFloat(r.clear_pct.toFixed(2)), injected_pct: parseFloat(r.injected_pct.toFixed(2)),
+        fertility_percent: parseFloat((r.fertility_percent || 0).toFixed(2)),
+        early_dead_percent: parseFloat((r.early_dead_percent || 0).toFixed(2)),
+        late_dead_percent: parseFloat((r.late_dead_percent || 0).toFixed(2)),
+        total_mortality_percent: parseFloat((r.total_mortality_percent || 0).toFixed(2)),
+        hatch_percent: parseFloat((r.hatch_percent || 0).toFixed(2)),
+        if_dev_percent: parseFloat((r.if_dev_percent || 0).toFixed(2)),
+        rolling: r.rolling ? parseFloat(r.rolling.toFixed(2)) : ""
       }));
     });
     saveFile("embrex_timeline.csv", toCsv(out));
@@ -463,7 +602,7 @@ export default function EmbrexDashboard() {
   };
 
   /* Metric palette */
-  const metricOptions = [
+  const basicMetricOptions = [
     { value: "total_eggs_set", label: "Total Eggs", color: PALETTE[0] },
     { value: "eggs_cleared",   label: "Clears",     color: PALETTE[1] },
     { value: "eggs_injected",  label: "Injected",   color: PALETTE[2] },
@@ -471,6 +610,17 @@ export default function EmbrexDashboard() {
     { value: "injected_pct",   label: "Injected %", color: PALETTE[4] },
     { value: "age_weeks",      label: "Age (w)",    color: PALETTE[5] },
   ] as const;
+
+  const fertilityMetricOptions = [
+    { value: "fertility_percent", label: "Fertility %", color: PALETTE[0] },
+    { value: "early_dead_percent", label: "Early Dead %", color: PALETTE[1] },
+    { value: "late_dead_percent", label: "Late Dead %", color: PALETTE[2] },
+    { value: "total_mortality_percent", label: "Total Mortality %", color: PALETTE[3] },
+    { value: "hatch_percent", label: "Hatch %", color: PALETTE[4] },
+    { value: "if_dev_percent", label: "I/F %", color: PALETTE[5] },
+  ] as const;
+
+  const metricOptions = showFertilityMetrics ? fertilityMetricOptions : basicMetricOptions;
 
   /* Facet tabs state */
   const [activeFacet, setActiveFacet] = useState<string>("ALL");
@@ -510,7 +660,8 @@ export default function EmbrexDashboard() {
                 />
               )}
               {metrics.map((m, i) => {
-                const color = metricOptions.find(mm => mm.value === m)?.color || PALETTE[i % PALETTE.length];
+                const allOptions = [...basicMetricOptions, ...fertilityMetricOptions];
+                const color = allOptions.find(mm => mm.value === m)?.color || PALETTE[i % PALETTE.length];
                 const yAxis = isPercentMetric(m) ? "right" : "left";
                 return isBar
                   ? <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[4,4,0,0]} name={metricLabel[m]} />
@@ -651,6 +802,9 @@ export default function EmbrexDashboard() {
   const avgClear = activeData.length ? (activeData.reduce((a,c)=>a+(c.clear_pct||0),0)/activeData.length) : 0;
   const avgInj = activeData.length ? (activeData.reduce((a,c)=>a+(c.injected_pct||0),0)/activeData.length) : 0;
   const avgAge = activeData.length ? (activeData.reduce((a,c)=>a+(c.age_weeks||0),0)/activeData.length) : 0;
+  const avgFertility = activeData.length ? (activeData.reduce((a,c)=>a+(c.fertility_percent||0),0)/activeData.length) : 0;
+  const avgHatch = activeData.length ? (activeData.reduce((a,c)=>a+(c.hatch_percent||0),0)/activeData.length) : 0;
+  const avgMortality = activeData.length ? (activeData.reduce((a,c)=>a+(c.total_mortality_percent||0),0)/activeData.length) : 0;
 
   const filterCount = (() => {
     let n = 0;
@@ -823,6 +977,28 @@ export default function EmbrexDashboard() {
               </button>
               {metricsOpen && (
                 <CardContent className="space-y-2 pt-0">
+                  {/* Metrics Toggle */}
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm font-medium">
+                        {showFertilityMetrics ? "Fertility & Mortality Metrics" : "Basic Metrics"}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowFertilityMetrics(!showFertilityMetrics);
+                        // Reset metrics when switching to avoid conflicts
+                        setMetrics(showFertilityMetrics ? ["total_eggs_set", "clear_pct"] : ["fertility_percent", "hatch_percent"]);
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      Switch to {showFertilityMetrics ? "Basic" : "Fertility"}
+                    </Button>
+                  </div>
+                  
                   {metricOptions.map((metric) => (
                     <div key={metric.value} className="flex items-center space-x-2">
                       <Checkbox
@@ -1082,12 +1258,17 @@ export default function EmbrexDashboard() {
 
                 {!compareMode && (
                   <div className="grid grid-cols-4 gap-3 mt-3">
-                    {[
+                    {(showFertilityMetrics ? [
+                      { label: "Total Eggs", value: totalEggs.toLocaleString() },
+                      { label: "Avg Fertility", value: `${avgFertility.toFixed(2)}%` },
+                      { label: "Avg Hatch", value: `${avgHatch.toFixed(2)}%` },
+                      { label: "Avg Mortality", value: `${avgMortality.toFixed(2)}%` },
+                    ] : [
                       { label: "Total Eggs", value: totalEggs.toLocaleString() },
                       { label: "Clear Rate", value: `${avgClear.toFixed(2)}%` },
                       { label: "Injection Rate", value: `${avgInj.toFixed(2)}%` },
                       { label: "Average Age", value: `${avgAge.toFixed(1)}w` },
-                    ].map((metric, i) => (
+                    ]).map((metric, i) => (
                       <div key={i} className="p-3 rounded-lg border bg-white">
                         <div className="text-xs text-slate-600">{metric.label}</div>
                         <div className="text-lg font-bold">{metric.value}</div>
