@@ -668,103 +668,78 @@ export default function EmbrexDashboard() {
 
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
-    <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 overflow-hidden">
-      <div className="text-center relative">
-        {/* Background Animation Elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-32 h-32 rounded-full opacity-10"
-              style={{
-                background: `linear-gradient(135deg, ${PALETTE[i % PALETTE.length]}, ${PALETTE[(i + 1) % PALETTE.length]})`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                transform: `scale(${0.5 + Math.random() * 0.5})`,
-                animation: `float ${3 + Math.random() * 2}s ease-in-out infinite alternate`,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Main Content */}
-        <div className="relative z-10 space-y-8">
-          {/* Welcome Title */}
+    <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+      <div className="max-w-2xl mx-auto px-6 text-center">
+        {/* Main Content Container */}
+        <div className="space-y-12">
+          
+          {/* Header Section */}
           <div 
-            className={`transition-all duration-1000 ${
-              welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            className={`transition-all duration-700 ease-out ${
+              welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
           >
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="relative">
-                <BarChart3 className="h-16 w-16 text-blue-600 animate-pulse" />
-                <div className="absolute inset-0 h-16 w-16 bg-blue-600/20 rounded-full animate-ping" />
+            {/* Icon */}
+            <div className="mb-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600/10 mb-6">
+                <BarChart3 className="h-10 w-10 text-blue-600" />
               </div>
-              <TrendingUp className="h-12 w-12 text-green-600 animate-bounce" />
-              <Activity className="h-10 w-10 text-purple-600 animate-pulse" />
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-              Welcome to
-            </h1>
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+            
+            {/* Title */}
+            <h1 className="text-5xl font-bold text-slate-900 mb-4">
               Timeline Analysis
-            </h2>
-            <div className="h-1 w-32 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto mt-4 rounded-full" />
+            </h1>
+            <div className="h-0.5 w-16 bg-blue-600 mx-auto mb-6"></div>
           </div>
 
-          {/* Subtitle */}
+          {/* Description */}
           <div 
-            className={`transition-all duration-1000 delay-500 ${
-              welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            className={`transition-all duration-700 ease-out delay-300 ${
+              welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
           >
-            <p className="text-xl text-slate-600 max-w-md mx-auto leading-relaxed">
+            <p className="text-xl text-slate-600 leading-relaxed mb-8">
               Discover insights from your hatchery data with powerful visualizations and analytics
             </p>
           </div>
 
           {/* Call to Action */}
           <div 
-            className={`transition-all duration-1000 delay-1000 ${
-              welcomeStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            className={`transition-all duration-700 ease-out delay-700 ${
+              welcomeStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
           >
-            <div className="space-y-6">
-              <div className="p-6 bg-white/80 backdrop-blur rounded-xl border border-white/50 shadow-xl max-w-lg mx-auto">
-                <p className="text-lg text-slate-700 mb-4">
-                  Choose your visualization and metrics to start exploring your data
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center mb-6">
-                  {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag, i) => (
-                    <span 
-                      key={tag}
-                      className="px-3 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-medium"
-                      style={{ animationDelay: `${i * 100}ms` }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <Button 
-                  onClick={() => setShowWelcome(false)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
-                >
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  Start Analyzing
-                </Button>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+              <p className="text-lg text-slate-700 mb-6">
+                Choose your visualization and metrics to start exploring your data
+              </p>
+              
+              {/* Feature Tags */}
+              <div className="flex flex-wrap gap-3 justify-center mb-8">
+                {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
+                  <span 
+                    key={tag}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
+              
+              {/* Start Button */}
+              <Button 
+                onClick={() => setShowWelcome(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-8 rounded-xl transition-colors duration-200"
+                size="lg"
+              >
+                <BarChart3 className="h-5 w-5 mr-2" />
+                Start Analyzing
+              </Button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* CSS Animation Keyframes */}
-      <style jsx>{`
-        @keyframes float {
-          from { transform: translateY(0px) rotate(0deg); }
-          to { transform: translateY(-20px) rotate(180deg); }
-        }
-      `}</style>
     </div>
   );
 
