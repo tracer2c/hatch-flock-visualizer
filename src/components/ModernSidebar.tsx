@@ -11,7 +11,8 @@ import {
   Workflow,
   ChevronDown,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  FileSpreadsheet
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +62,12 @@ const navigationItems = [
     path: '/embrex-timeline',
     label: 'Embrex Timeline',
     icon: TrendingUp,
+    requiresAuth: true
+  },
+  {
+    path: '/residue-breakout',
+    label: 'Residue Breakout',
+    icon: FileSpreadsheet,
     requiresAuth: true
   },
   {

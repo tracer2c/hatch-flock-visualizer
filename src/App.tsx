@@ -28,6 +28,7 @@ import UnitComparisonPage from "./pages/UnitComparisonPage";
 import HouseFlowPage from "./pages/HouseFlowPage";
 import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
+import ResidueBreakoutPage from "./pages/ResidueBreakoutPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -62,6 +63,7 @@ const App = () => (
                             <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
                             <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
+                            <Route path="/residue-breakout" element={<ResidueBreakoutPage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/unit-comparison" element={<UnitComparisonPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
