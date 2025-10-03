@@ -834,12 +834,25 @@ export default function EmbrexDashboard() {
       });
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
       
-      // Helper to get color based on value intensity using theme colors
+      // Helper to get color based on value intensity - yellow to orange to red gradient
       const getHeatColor = (value: number, max: number) => {
-        if (!value || !max) return 'hsl(var(--muted)/0.3)';
+        if (!value || !max) return '#f8fafc'; // Very light gray for empty cells
         const intensity = value / max;
-        // Use primary color with varying opacity for consistency
-        return `hsl(var(--primary)/${0.15 + intensity * 0.7})`;
+        
+        // Yellow → Orange → Red gradient (similar to reference image)
+        if (intensity < 0.25) {
+          return '#fef3c7'; // Very light yellow
+        } else if (intensity < 0.5) {
+          return '#fed7aa'; // Light orange
+        } else if (intensity < 0.65) {
+          return '#fdba74'; // Medium orange
+        } else if (intensity < 0.8) {
+          return '#fb923c'; // Strong orange
+        } else if (intensity < 0.9) {
+          return '#f97316'; // Deep orange
+        } else {
+          return '#ea580c'; // Red for highest values
+        }
       };
 
       return (
