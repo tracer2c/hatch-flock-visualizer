@@ -832,24 +832,71 @@ export default function EmbrexDashboard() {
         byUnit[r.unit_name] = byUnit[r.unit_name] || {};
         byUnit[r.unit_name][b] = (byUnit[r.unit_name][b] || 0) + (r.total_eggs_set || 0);
       });
-      const scale = (v: number, max: number) => max ? Math.round((v/max)*90)+10 : 0;
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
+      
+      // Helper to get color based on value intensity
+      const getHeatColor = (value: number, max: number) => {
+        if (!value || !max) return 'hsl(var(--muted))';
+        const intensity = value / max;
+        // Blue to red gradient based on intensity
+        const hue = 200 - (intensity * 200); // 200 (blue) to 0 (red)
+        const saturation = 50 + (intensity * 40); // 50% to 90%
+        const lightness = 85 - (intensity * 35); // 85% to 50%
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+      };
 
       return (
-        <div className="grid gap-2 h-full" style={{ gridTemplateColumns: "160px 1fr" }}>
-          <div className="text-xs text-muted-foreground">Hatchery</div>
-          <div className="text-xs text-muted-foreground">Time buckets</div>
-          {Object.entries(byUnit).map(([u, m], idx)=>(
-            <div key={u} className="contents">
-              <div className="text-xs py-1">{u || "—"}</div>
-              <div className="flex gap-1 items-end">
-                {months.map((mo)=> {
-                  const v = m[mo] || 0; const h = scale(v, maxVal);
-                  return <div key={mo} className="w-6 rounded" style={{ height: h, background: PALETTE[idx % PALETTE.length], opacity: v ? 0.7 : 0.1 }} title={`${u} • ${mo}: ${v.toLocaleString()}`} />;
-                })}
+        <div className="space-y-1 h-full overflow-auto p-4">
+          <div className="grid gap-1" style={{ gridTemplateColumns: `140px repeat(${months.length}, 40px)` }}>
+            <div className="text-xs font-medium text-muted-foreground">Hatchery</div>
+            {months.map((mo) => (
+              <div key={mo} className="text-xs text-muted-foreground text-center truncate" title={mo}>
+                {mo}
               </div>
+            ))}
+            
+            {Object.entries(byUnit).map(([u, m])=>(
+              <>
+                <div key={`${u}-label`} className="text-xs py-2 font-medium truncate" title={u}>
+                  {u || "—"}
+                </div>
+                {months.map((mo)=> {
+                  const v = m[mo] || 0;
+                  const bgColor = getHeatColor(v, maxVal);
+                  return (
+                    <div 
+                      key={`${u}-${mo}`} 
+                      className="aspect-square rounded border border-border/50 flex items-center justify-center transition-all hover:scale-110 hover:z-10 hover:shadow-md cursor-pointer"
+                      style={{ backgroundColor: bgColor }}
+                      title={`${u} • ${mo}: ${v.toLocaleString()} eggs`}
+                    >
+                      <span className="text-[10px] font-medium" style={{ color: v > maxVal * 0.5 ? '#fff' : '#000' }}>
+                        {v > 0 ? (v >= 1000 ? `${(v/1000).toFixed(1)}k` : v) : ''}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            ))}
+          </div>
+          
+          {/* Legend */}
+          <div className="flex items-center gap-4 pt-4 mt-4 border-t">
+            <span className="text-xs text-muted-foreground">Intensity:</span>
+            <div className="flex items-center gap-1">
+              {[0, 0.25, 0.5, 0.75, 1].map((intensity) => (
+                <div key={intensity} className="flex flex-col items-center gap-1">
+                  <div 
+                    className="w-8 h-8 rounded border border-border/50"
+                    style={{ backgroundColor: getHeatColor(intensity * maxVal, maxVal) }}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {intensity === 0 ? 'Low' : intensity === 1 ? 'High' : ''}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       );
     }

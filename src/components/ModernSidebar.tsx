@@ -55,18 +55,6 @@ const navigationItems = [
   {
     path: '/embrex-data-sheet',
     label: 'Embrex Data Sheet',
-    icon: BarChart3,
-    requiresAuth: true
-  },
-  {
-    path: '/embrex-timeline',
-    label: 'Embrex Timeline',
-    icon: TrendingUp,
-    requiresAuth: true
-  },
-  {
-    path: '/residue-breakout',
-    label: 'Residue Breakout',
     icon: FileSpreadsheet,
     requiresAuth: true
   },
