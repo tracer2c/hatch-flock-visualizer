@@ -62,7 +62,7 @@ const App = () => (
                             <Route path="/process-flow" element={<ProcessFlowPage />} />
                             <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
-                            <Route path="/embrex-timeline" element={<EmbrexDataSheetPage />} />
+                            <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/unit-comparison" element={<UnitComparisonPage />} />
