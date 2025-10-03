@@ -775,7 +775,7 @@ export default function EmbrexDashboard() {
 
       return (
         <div className="grid gap-2 h-full" style={{ gridTemplateColumns: "160px 1fr" }}>
-          <div className="text-xs text-muted-foreground">Unit</div>
+          <div className="text-xs text-muted-foreground">Hatchery</div>
           <div className="text-xs text-muted-foreground">Time buckets</div>
           {Object.entries(byUnit).map(([u, m], idx)=>(
             <div key={u} className="contents">
@@ -1043,8 +1043,8 @@ export default function EmbrexDashboard() {
                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="flock">Flocks</SelectItem>
-                      <SelectItem value="unit">Units</SelectItem>
-                      <SelectItem value="flock_unit">Flock × Unit</SelectItem>
+                      <SelectItem value="unit">Hatcheries</SelectItem>
+                      <SelectItem value="flock_unit">Flock × Hatchery</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1077,13 +1077,13 @@ export default function EmbrexDashboard() {
                   </Command>
                 </div>
 
-                {/* Units */}
+                {/* Hatcheries */}
                 <div className="rounded-md border">
-                  <div className="px-3 py-2 border-b text-sm font-medium">Units</div>
+                  <div className="px-3 py-2 border-b text-sm font-medium">Hatcheries</div>
                   <Command className="p-0">
-                    <CommandInput placeholder="Search units…" />
+                    <CommandInput placeholder="Search hatcheries…" />
                     <CommandList className="max-h-44 overflow-auto">
-                      <CommandEmpty>No units.</CommandEmpty>
+                      <CommandEmpty>No hatcheries.</CommandEmpty>
                       <CommandGroup>
                         {units.map(u=>{
                           const checked = selectedUnits.includes(u);
@@ -1324,7 +1324,7 @@ export default function EmbrexDashboard() {
                 <tr className="border-b">
                   <th className="py-2 pr-2">Batch</th>
                   <th className="py-2 pr-2">Flock</th>
-                  <th className="py-2 pr-2">Unit</th>
+                  <th className="py-2 pr-2">Hatchery</th>
                   <th className="py-2 pr-2">Set date</th>
                   <th className="py-2 pr-2 text-right">Eggs set</th>
                   <th className="py-2 pr-2 text-right">Clears</th>

@@ -262,12 +262,12 @@ const calculateHatchDate = (setDate: string) => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline">
-                    {`Filter Units${selectedUnitIds.length ? ` (${selectedUnitIds.length})` : ''}`}
+                    {`Filter Hatcheries${selectedUnitIds.length ? ` (${selectedUnitIds.length})` : ''}`}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-64" align="end">
                   <div className="space-y-2">
-                    <div className="text-sm font-medium">Show units</div>
+                    <div className="text-sm font-medium">Show hatcheries</div>
                     <div className="max-h-48 overflow-auto space-y-2">
                       {units.map((u) => (
                         <label key={u.id} className="flex items-center gap-2">
@@ -299,10 +299,10 @@ const calculateHatchDate = (setDate: string) => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Select Unit *</Label>
+                <Label>Select Hatchery *</Label>
                 <Select value={formData.unitId} onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a unit" />
+                    <SelectValue placeholder="Choose a hatchery" />
                   </SelectTrigger>
                   <SelectContent>
                     {units.map((u) => (
