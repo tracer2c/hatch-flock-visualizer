@@ -6,10 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Download, FileSpreadsheet, AlertTriangle, BarChart3, Users } from "lucide-react";
+import { Search, Download, FileSpreadsheet, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface EmbrexData {
   batch_id: string;
@@ -29,8 +27,6 @@ export const EmbrexDataTable = () => {
   const [filteredData, setFilteredData] = useState<EmbrexData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedHouses, setSelectedHouses] = useState<string[]>([]);
-  const [comparisonMode, setComparisonMode] = useState<'all' | 'selected' | 'compare'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -128,22 +124,6 @@ export const EmbrexDataTable = () => {
     }
     return acc;
   }, { invalidCount: 0, exceedsTotalCount: 0, exceedsPercentageCount: 0 });
-
-  const comparisonData = selectedHouses.length > 0 ? 
-    filteredData.filter(item => selectedHouses.includes(item.batch_id)) : 
-    filteredData;
-
-  const generateComparisonChart = () => {
-    if (comparisonData.length === 0) return [];
-    
-    return comparisonData.map(item => ({
-      batch: item.batch_number,
-      flock: item.flock_name,
-      clearPct: item.eggs_cleared ? (item.eggs_cleared / item.total_eggs_set) * 100 : 0,
-      injectedPct: item.eggs_injected ? (item.eggs_injected / item.total_eggs_set) * 100 : 0,
-      totalEggs: item.total_eggs_set
-    }));
-  };
 
   const exportToCSV = () => {
     const headers = [
@@ -244,241 +224,96 @@ export const EmbrexDataTable = () => {
         </Card>
       )}
 
-      <Tabs value={comparisonMode} onValueChange={(v) => setComparisonMode(v as any)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            All Data
-          </TabsTrigger>
-          <TabsTrigger value="selected" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Selected Houses
-          </TabsTrigger>
-          <TabsTrigger value="compare" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Compare
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <FileSpreadsheet className="h-5 w-5" />
-                  Data Summary ({filteredData.length} records)
-                </CardTitle>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search flock name, house number..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Select</TableHead>
-                      <TableHead>Flock #</TableHead>
-                      <TableHead>Flock Name</TableHead>
-                      <TableHead>Age (weeks)</TableHead>
-                      <TableHead>House #</TableHead>
-                      <TableHead>Set Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total Eggs</TableHead>
-                      <TableHead className="text-right">Clears</TableHead>
-                      <TableHead className="text-right">Clear %</TableHead>
-                      <TableHead className="text-right">Injected</TableHead>
-                      <TableHead className="text-right">Injected %</TableHead>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Data Summary ({filteredData.length} records)
+            </CardTitle>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search flock name, house number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Flock #</TableHead>
+                  <TableHead>Flock Name</TableHead>
+                  <TableHead>Age (weeks)</TableHead>
+                  <TableHead>House #</TableHead>
+                  <TableHead>Set Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total Eggs</TableHead>
+                  <TableHead className="text-right">Clears</TableHead>
+                  <TableHead className="text-right">Clear %</TableHead>
+                  <TableHead className="text-right">Injected</TableHead>
+                  <TableHead className="text-right">Injected %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item) => {
+                  const validation = validateEmbrexData(item);
+                  return (
+                    <TableRow key={item.batch_id} className={`hover:bg-muted/50 ${!validation.isValid ? 'bg-red-50' : ''}`}>
+                      <TableCell className="font-medium">{item.flock_number}</TableCell>
+                      <TableCell>{item.flock_name}</TableCell>
+                      <TableCell>{item.age_weeks}</TableCell>
+                      <TableCell>{item.batch_number}</TableCell>
+                      <TableCell>{new Date(item.set_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            item.status === 'completed' ? 'default' :
+                            item.status === 'in_progress' ? 'secondary' :
+                            item.status === 'planned' ? 'outline' : 'secondary'
+                          }>
+                            {item.status.replace('_', ' ')}
+                          </Badge>
+                          {!validation.isValid && (
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {item.total_eggs_set.toLocaleString()}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${validation.exceedsTotal ? 'text-red-600 bg-red-100' : ''}`}>
+                        {item.eggs_cleared?.toLocaleString() ?? "—"}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${validation.exceedsPercentage ? 'text-red-600 bg-red-100' : ''}`}>
+                        {calculatePercentage(item.eggs_cleared, item.total_eggs_set)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${validation.exceedsTotal ? 'text-red-600 bg-red-100' : ''}`}>
+                        {item.eggs_injected?.toLocaleString() ?? "—"}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${validation.exceedsPercentage ? 'text-red-600 bg-red-100' : ''}`}>
+                        {calculatePercentage(item.eggs_injected, item.total_eggs_set)}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredData.map((item) => {
-                      const validation = validateEmbrexData(item);
-                      return (
-                        <TableRow key={item.batch_id} className={`hover:bg-muted/50 ${!validation.isValid ? 'bg-red-50' : ''}`}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedHouses.includes(item.batch_id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedHouses([...selectedHouses, item.batch_id]);
-                                } else {
-                                  setSelectedHouses(selectedHouses.filter(id => id !== item.batch_id));
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{item.flock_number}</TableCell>
-                          <TableCell>{item.flock_name}</TableCell>
-                          <TableCell>{item.age_weeks}</TableCell>
-                          <TableCell>{item.batch_number}</TableCell>
-                          <TableCell>{new Date(item.set_date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={
-                                item.status === 'completed' ? 'default' :
-                                item.status === 'in_progress' ? 'secondary' :
-                                item.status === 'planned' ? 'outline' : 'secondary'
-                              }>
-                                {item.status.replace('_', ' ')}
-                              </Badge>
-                              {!validation.isValid && (
-                                <AlertTriangle className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {item.total_eggs_set.toLocaleString()}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono ${validation.exceedsTotal ? 'text-red-600 bg-red-100' : ''}`}>
-                            {item.eggs_cleared?.toLocaleString() ?? "—"}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono ${validation.exceedsPercentage ? 'text-red-600 bg-red-100' : ''}`}>
-                            {calculatePercentage(item.eggs_cleared, item.total_eggs_set)}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono ${validation.exceedsTotal ? 'text-red-600 bg-red-100' : ''}`}>
-                            {item.eggs_injected?.toLocaleString() ?? "—"}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono ${validation.exceedsPercentage ? 'text-red-600 bg-red-100' : ''}`}>
-                            {calculatePercentage(item.eggs_injected, item.total_eggs_set)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {filteredData.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                          {searchTerm ? "No results found for your search." : "No data available."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="selected" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Selected Houses ({selectedHouses.length} selected)</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {selectedHouses.length === 0 ? "Select houses from the All Data tab to view here." : "Viewing only selected houses."}
-              </p>
-            </CardHeader>
-            <CardContent>
-              {selectedHouses.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Flock Name</TableHead>
-                        <TableHead>House #</TableHead>
-                        <TableHead className="text-right">Total Eggs</TableHead>
-                        <TableHead className="text-right">Clears</TableHead>
-                        <TableHead className="text-right">Clear %</TableHead>
-                        <TableHead className="text-right">Injected</TableHead>
-                        <TableHead className="text-right">Injected %</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {comparisonData.map((item) => (
-                        <TableRow key={item.batch_id}>
-                          <TableCell className="font-medium">{item.flock_name}</TableCell>
-                          <TableCell>{item.batch_number}</TableCell>
-                          <TableCell className="text-right font-mono">{item.total_eggs_set.toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-mono">{item.eggs_cleared?.toLocaleString() ?? "—"}</TableCell>
-                          <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_cleared, item.total_eggs_set)}</TableCell>
-                          <TableCell className="text-right font-mono">{item.eggs_injected?.toLocaleString() ?? "—"}</TableCell>
-                          <TableCell className="text-right font-mono">{calculatePercentage(item.eggs_injected, item.total_eggs_set)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No houses selected. Use the checkboxes in the All Data tab to select houses for comparison.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="compare" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>House Performance Comparison</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {selectedHouses.length === 0 ? "Select houses to compare their clear vs injected rates." : `Comparing ${selectedHouses.length} houses.`}
-              </p>
-            </CardHeader>
-            <CardContent>
-              {selectedHouses.length > 0 ? (
-                <div className="space-y-6">
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={generateComparisonChart()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="batch" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        fontSize={11}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                      <Tooltip 
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                                <p className="font-medium mb-2">{label}</p>
-                                <p className="text-sm text-muted-foreground mb-2">{data.flock}</p>
-                                <div className="space-y-1">
-                                  <div className="flex justify-between">
-                                    <span>Clear %:</span>
-                                    <span className="font-medium">{data.clearPct.toFixed(1)}%</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Injected %:</span>
-                                    <span className="font-medium">{data.injectedPct.toFixed(1)}%</span>
-                                  </div>
-                                  <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>Total Eggs:</span>
-                                    <span>{data.totalEggs.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="clearPct" fill="hsl(348 100% 67%)" name="Clear %" />
-                      <Bar dataKey="injectedPct" fill="hsl(142 76% 36%)" name="Injected %" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Select houses from the All Data tab to see performance comparison charts.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  );
+                })}
+                {filteredData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      {searchTerm ? "No results found for your search." : "No data available."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

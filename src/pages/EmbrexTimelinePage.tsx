@@ -834,64 +834,63 @@ export default function EmbrexDashboard() {
       });
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
       
-      // Helper to get color based on value intensity
+      // Helper to get color based on value intensity using theme colors
       const getHeatColor = (value: number, max: number) => {
-        if (!value || !max) return 'hsl(var(--muted))';
+        if (!value || !max) return 'hsl(var(--muted)/0.3)';
         const intensity = value / max;
-        // Blue to red gradient based on intensity
-        const hue = 200 - (intensity * 200); // 200 (blue) to 0 (red)
-        const saturation = 50 + (intensity * 40); // 50% to 90%
-        const lightness = 85 - (intensity * 35); // 85% to 50%
-        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        // Use primary color with varying opacity for consistency
+        return `hsl(var(--primary)/${0.15 + intensity * 0.7})`;
       };
 
       return (
-        <div className="space-y-1 h-full overflow-auto p-4">
-          <div className="grid gap-1" style={{ gridTemplateColumns: `140px repeat(${months.length}, 40px)` }}>
-            <div className="text-xs font-medium text-muted-foreground">Hatchery</div>
-            {months.map((mo) => (
-              <div key={mo} className="text-xs text-muted-foreground text-center truncate" title={mo}>
-                {mo}
-              </div>
-            ))}
-            
-            {Object.entries(byUnit).map(([u, m])=>(
-              <>
-                <div key={`${u}-label`} className="text-xs py-2 font-medium truncate" title={u}>
-                  {u || "—"}
+        <div className="space-y-3 h-full overflow-auto">
+          <div className="inline-block min-w-full">
+            <div className="grid gap-2" style={{ gridTemplateColumns: `160px repeat(${months.length}, minmax(60px, 1fr))` }}>
+              <div className="text-sm font-semibold text-foreground sticky left-0 bg-background py-2">Unit</div>
+              {months.map((mo) => (
+                <div key={mo} className="text-xs font-medium text-muted-foreground text-center py-2" title={mo}>
+                  {mo}
                 </div>
-                {months.map((mo)=> {
-                  const v = m[mo] || 0;
-                  const bgColor = getHeatColor(v, maxVal);
-                  return (
-                    <div 
-                      key={`${u}-${mo}`} 
-                      className="aspect-square rounded border border-border/50 flex items-center justify-center transition-all hover:scale-110 hover:z-10 hover:shadow-md cursor-pointer"
-                      style={{ backgroundColor: bgColor }}
-                      title={`${u} • ${mo}: ${v.toLocaleString()} eggs`}
-                    >
-                      <span className="text-[10px] font-medium" style={{ color: v > maxVal * 0.5 ? '#fff' : '#000' }}>
-                        {v > 0 ? (v >= 1000 ? `${(v/1000).toFixed(1)}k` : v) : ''}
-                      </span>
-                    </div>
-                  );
-                })}
-              </>
-            ))}
+              ))}
+              
+              {Object.entries(byUnit).map(([u, m])=>(
+                <>
+                  <div key={`${u}-label`} className="text-sm py-3 font-medium sticky left-0 bg-background" title={u}>
+                    {u || "—"}
+                  </div>
+                  {months.map((mo)=> {
+                    const v = m[mo] || 0;
+                    const bgColor = getHeatColor(v, maxVal);
+                    return (
+                      <div 
+                        key={`${u}-${mo}`} 
+                        className="h-16 rounded-md border border-border flex items-center justify-center transition-all hover:scale-105 hover:shadow-lg cursor-pointer"
+                        style={{ backgroundColor: bgColor }}
+                        title={`${u} • ${mo}: ${v.toLocaleString()} eggs`}
+                      >
+                        <span className="text-xs font-semibold text-foreground">
+                          {v > 0 ? (v >= 1000 ? `${(v/1000).toFixed(1)}k` : v.toLocaleString()) : '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
+              ))}
+            </div>
           </div>
           
           {/* Legend */}
-          <div className="flex items-center gap-4 pt-4 mt-4 border-t">
-            <span className="text-xs text-muted-foreground">Intensity:</span>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-4 pt-3 border-t bg-background">
+            <span className="text-sm font-medium text-foreground">Intensity:</span>
+            <div className="flex items-center gap-2">
               {[0, 0.25, 0.5, 0.75, 1].map((intensity) => (
-                <div key={intensity} className="flex flex-col items-center gap-1">
+                <div key={intensity} className="flex items-center gap-1.5">
                   <div 
-                    className="w-8 h-8 rounded border border-border/50"
+                    className="w-10 h-6 rounded border border-border"
                     style={{ backgroundColor: getHeatColor(intensity * maxVal, maxVal) }}
                   />
-                  <span className="text-[10px] text-muted-foreground">
-                    {intensity === 0 ? 'Low' : intensity === 1 ? 'High' : ''}
+                  <span className="text-xs text-muted-foreground min-w-[40px]">
+                    {intensity === 0 ? 'Low' : intensity === 1 ? 'High' : `${(intensity*100).toFixed(0)}%`}
                   </span>
                 </div>
               ))}
