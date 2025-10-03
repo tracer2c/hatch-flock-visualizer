@@ -125,23 +125,23 @@ const BatchOverviewDashboard = () => {
 
   const avgFert = useMemo(() => {
     const validBatches = performanceMetrics?.filter((batch: any) => 
-      batch.fertility_rate && !isNaN(batch.fertility_rate)
+      batch.fertility != null && !isNaN(batch.fertility)
     ) || [];
     
     if (validBatches.length === 0) return 0;
     
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.fertility_rate, 0);
+    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.fertility, 0);
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics]);
 
   const avgHatch = useMemo(() => {
     const validBatches = performanceMetrics?.filter((batch: any) => 
-      batch.hatch_rate && !isNaN(batch.hatch_rate)
+      batch.hatch != null && !isNaN(batch.hatch)
     ) || [];
     
     if (validBatches.length === 0) return 0;
     
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hatch_rate, 0);
+    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hatch, 0);
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics]);
 
