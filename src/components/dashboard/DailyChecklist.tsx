@@ -82,10 +82,10 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
         <CardContent>
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1">
-              <label className="text-sm font-medium">Select Batch:</label>
+              <label className="text-sm font-medium">Select House:</label>
               <Select value={currentBatchId} onValueChange={setCurrentBatchId}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Choose a batch" />
+                  <SelectValue placeholder="Choose a house" />
                 </SelectTrigger>
                 <SelectContent>
                   {activeBatches?.map((batch) => (
@@ -120,7 +120,7 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
           {!currentBatchId && (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Select a batch to view today's checklist</p>
+              <p>Select a house to view today's checklist</p>
             </div>
           )}
         </CardContent>

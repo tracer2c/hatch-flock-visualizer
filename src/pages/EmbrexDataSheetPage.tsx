@@ -166,7 +166,7 @@ const EmbrexDataSheetPage = () => {
       "Flock #",
       "Flock Name", 
       "Age (weeks)",
-      "Batch #",
+      "House #",
       "Set Date",
       "Status",
       "Total Eggs",
@@ -288,7 +288,7 @@ const EmbrexDataSheetPage = () => {
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search flock name, batch number..."
+                    placeholder="Search flock name, house number..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -305,7 +305,7 @@ const EmbrexDataSheetPage = () => {
                       <TableHead>Flock #</TableHead>
                       <TableHead>Flock Name</TableHead>
                       <TableHead>Age (weeks)</TableHead>
-                      <TableHead>Batch #</TableHead>
+                      <TableHead>House #</TableHead>
                       <TableHead>Set Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Total Eggs</TableHead>
@@ -398,7 +398,7 @@ const EmbrexDataSheetPage = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Flock Name</TableHead>
-                        <TableHead>Batch #</TableHead>
+                        <TableHead>House #</TableHead>
                         <TableHead className="text-right">Total Eggs</TableHead>
                         <TableHead className="text-right">Clears</TableHead>
                         <TableHead className="text-right">Clear %</TableHead>
