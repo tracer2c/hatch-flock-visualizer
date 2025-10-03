@@ -383,7 +383,7 @@ export default function EmbrexDashboard() {
           if (eggsInjected > 0) {
             hatch_vs_injected_percent = (chicksHatched / eggsInjected) * 100;
           }
-          hatch_vs_injected_diff = chicksHatched - eggsInjected;
+          hatch_vs_injected_diff = eggsInjected - chicksHatched;
 
           return {
             batch_id: b.id,
