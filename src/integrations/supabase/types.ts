@@ -905,6 +905,7 @@ export type Database = {
           lab_technician: string | null
           malformed_chicks: number
           microscopy_results: string | null
+          mid_dead: number
           notes: string | null
           pathology_findings: string | null
           pip_number: number
@@ -928,6 +929,7 @@ export type Database = {
           lab_technician?: string | null
           malformed_chicks?: number
           microscopy_results?: string | null
+          mid_dead?: number
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number
@@ -951,6 +953,7 @@ export type Database = {
           lab_technician?: string | null
           malformed_chicks?: number
           microscopy_results?: string | null
+          mid_dead?: number
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number

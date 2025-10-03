@@ -91,15 +91,43 @@ const ResidueEntryPage = () => {
   };
 
   const handleResidueDataUpdate = async (newData: any[]) => {
-    const dataWithBatchId = newData.map(record => ({
-      ...record,
-      batch_id: houseId
-    }));
+    // Save each record to database
+    for (const record of newData) {
+      try {
+        const residueData = {
+          batch_id: houseId,
+          infertile_eggs: record.infertile,
+          contaminated_eggs: record.contamination,
+          pipped_not_hatched: record.pipNumber,
+          unhatched_fertile: record.earlyDeath + record.lateDeath,
+          malformed_chicks: record.cullChicks,
+          total_residue_count: record.totalEggs,
+          sample_size: record.sampleSize,
+          hatch_percent: record.hatchPercent,
+          hof_percent: record.hofPercent,
+          hoi_percent: record.hoiPercent,
+          if_dev_percent: record.ifDevPercent,
+          fertile_eggs: record.fertileEggs,
+          mid_dead: record.midDeath || 0,
+          analysis_date: new Date().toISOString().split('T')[0],
+        };
+
+        const { error } = await supabase
+          .from('residue_analysis')
+          .upsert(residueData, {
+            onConflict: 'batch_id,analysis_date'
+          });
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error saving residue data:', error);
+      }
+    }
     
-    setResidueData(dataWithBatchId);
+    setResidueData(newData);
     toast({
       title: "Residue Data Updated",
-      description: "Data linked to current house"
+      description: "Data saved successfully"
     });
   };
 
