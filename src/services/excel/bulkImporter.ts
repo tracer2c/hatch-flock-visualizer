@@ -3,6 +3,63 @@ import { ImportRecord, ImportType, ImportResult, ImportConfig } from '@/types/im
 
 export class BulkImporter {
   private companyId: string | null = null;
+  
+  // Column variations for flexible matching
+  private columnVariations: Record<string, string[]> = {
+    'FLOCK': ['FLOCK#', 'FLOCK #', 'Flock#', 'Flock #', 'FLOCK NUMBER', 'Flock Number', 'FLOCK', 'Flock'],
+    'SIZE': ['SIZE', 'SAMPLE SIZE', 'Sample Size', 'SAMPLE_SIZE'],
+    'INFERTILE': ['INFERTILE', 'INFERTILE EGGS', 'Infertile'],
+    'DEAD': ['DEAD', 'ED', 'Early Dead'],
+    'FERTILITY': ['FERTILITY', 'FERTILITY%', 'Fertility %'],
+    'HATCH': ['HATCH%', 'HATCH', 'Hatch %'],
+    'HOF': ['HOF%', 'HOF', 'Hof %'],
+    'TOTAL_EGGS_PULLED': ['Total Eggs Pulled', 'TOTAL EGGS PULLED', 'Total Pulled'],
+    'STAINED': ['Stained', 'STAINED'],
+    'DIRTY': ['Dirty', 'DIRTY'],
+    'CRACKED': ['Cracked', 'CRACKED'],
+    'SMALL': ['Small', 'SMALL'],
+    'TOTAL_WEIGHT': ['TOTAL WEIGHT', 'Total Weight'],
+    'PERCENT_LOSS': ['% LOSS', '%LOSS', 'PERCENT LOSS'],
+    'DATE_CHECK': ['DATE CHECK', 'Date Check'],
+    'TOP_WEIGHT': ['TOP WEIGHT', 'Top Weight'],
+    'MIDDLE_WEIGHT': ['MIDDLE WEIGHT', 'Middle Weight'],
+    'BOTTOM_WEIGHT': ['BOTTOM WEIGHT', 'Bottom Weight'],
+    'AGE': ['Age', 'AGE', 'Age Weeks'],
+    'CONC': ['Conc', 'CONC', 'Concentration'],
+    'FLOAT': ['Float', 'FLOAT'],
+    'PERCENT': ['%', 'PERCENT', 'Percent'],
+    'DIFFERENCE': ['Difference', 'DIFFERENCE', 'Diff']
+  };
+  
+  private findColumn(row: ImportRecord, fieldName: string): any {
+    const variations = this.columnVariations[fieldName.toUpperCase()] || [fieldName];
+    
+    for (const variant of variations) {
+      if (row[variant] !== undefined) {
+        return row[variant];
+      }
+    }
+    
+    // Try normalized matching
+    const normalizedField = fieldName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const columnMap = (row as any).__columnMap;
+    
+    if (columnMap && columnMap[normalizedField]) {
+      const actualKey = columnMap[normalizedField];
+      return row[actualKey];
+    }
+    
+    // Try all variations with normalized matching
+    for (const variant of variations) {
+      const normalizedVariant = variant.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (columnMap && columnMap[normalizedVariant]) {
+        const actualKey = columnMap[normalizedVariant];
+        return row[actualKey];
+      }
+    }
+    
+    return undefined;
+  }
 
   async initialize() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -76,20 +133,23 @@ export class BulkImporter {
   }
 
   private async importFertility(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(row['FLOCK#']);
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const batchId = await this.findOrCreateBatch(flockNumber, config);
+
+    const size = this.parseNumber(this.findColumn(row, 'SIZE')) || 648;
+    const infertile = this.parseNumber(this.findColumn(row, 'INFERTILE')) || 0;
 
     const data = {
       batch_id: batchId,
       analysis_date: config.defaultValues?.analysisDate || new Date().toISOString().split('T')[0],
-      sample_size: this.parseNumber(row['SIZE']) || 648,
-      infertile_eggs: this.parseNumber(row['INFERTILE']) || 0,
-      fertile_eggs: this.parseNumber(row['SIZE']) - this.parseNumber(row['INFERTILE']) || 0,
-      early_dead: this.parseNumber(row['DEAD']) || 0,
+      sample_size: size,
+      infertile_eggs: infertile,
+      fertile_eggs: size - infertile,
+      early_dead: this.parseNumber(this.findColumn(row, 'DEAD')) || 0,
       late_dead: 0,
-      fertility_percent: this.parseNumber(row['FERTILITY']),
-      hatch_percent: this.parseNumber(row['HATCH%']),
-      hof_percent: this.parseNumber(row['HOF%']),
+      fertility_percent: this.parseNumber(this.findColumn(row, 'FERTILITY')),
+      hatch_percent: this.parseNumber(this.findColumn(row, 'HATCH')),
+      hof_percent: this.parseNumber(this.findColumn(row, 'HOF')),
       cull_chicks: 0
     };
 
@@ -104,20 +164,20 @@ export class BulkImporter {
   }
 
   private async importResidue(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(row['FLOCK#']);
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const batchId = await this.findOrCreateBatch(flockNumber, config);
 
     const data = {
       batch_id: batchId,
       analysis_date: config.defaultValues?.analysisDate || new Date().toISOString().split('T')[0],
       sample_size: 648,
-      total_residue_count: (this.parseNumber(row['Infertile']) || 0) + 
-                           (this.parseNumber(row['ED']) || 0) + 
-                           (this.parseNumber(row['MD']) || 0),
-      contaminated_eggs: this.parseNumber(row['Cont']) || 0,
-      malformed_chicks: this.parseNumber(row['Abnormal']) || 0,
-      mid_dead: this.parseNumber(row['MD']) || 0,
-      pip_number: this.parseNumber(row['DY egg']) || 0,
+      total_residue_count: (this.parseNumber(this.findColumn(row, 'INFERTILE')) || 0) + 
+                           (this.parseNumber(this.findColumn(row, 'ED')) || 0) + 
+                           (this.parseNumber(this.findColumn(row, 'MD')) || 0),
+      contaminated_eggs: this.parseNumber(this.findColumn(row, 'Cont')) || 0,
+      malformed_chicks: this.parseNumber(this.findColumn(row, 'Abnormal')) || 0,
+      mid_dead: this.parseNumber(this.findColumn(row, 'MD')) || 0,
+      pip_number: this.parseNumber(this.findColumn(row, 'DY egg')) || 0,
       pipped_not_hatched: 0,
       unhatched_fertile: 0
     };
@@ -133,22 +193,24 @@ export class BulkImporter {
   }
 
   private async importEggPack(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(row['Flock#']);
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const batchId = await this.findOrCreateBatch(flockNumber, config);
 
-    const totalPulled = this.parseNumber(row['Total Eggs Pulled']) || 0;
+    const totalPulled = this.parseNumber(this.findColumn(row, 'TOTAL_EGGS_PULLED')) || 0;
+    const stained = this.parseNumber(this.findColumn(row, 'STAINED')) || 0;
+    const dirty = this.parseNumber(this.findColumn(row, 'DIRTY')) || 0;
+    const cracked = this.parseNumber(this.findColumn(row, 'CRACKED')) || 0;
 
     const data = {
       batch_id: batchId,
       inspection_date: config.defaultValues?.inspectionDate || new Date().toISOString().split('T')[0],
       sample_size: totalPulled,
-      grade_a: totalPulled - (this.parseNumber(row['Stained']) || 0) - 
-               (this.parseNumber(row['Dirty']) || 0) - (this.parseNumber(row['Cracked']) || 0),
+      grade_a: totalPulled - stained - dirty - cracked,
       grade_b: 0,
       grade_c: 0,
-      cracked: this.parseNumber(row['Cracked']) || 0,
-      dirty: this.parseNumber(row['Dirty']) || 0,
-      small: this.parseNumber(row['Small']) || 0,
+      cracked,
+      dirty,
+      small: this.parseNumber(this.findColumn(row, 'SMALL')) || 0,
       large: 0
     };
 
@@ -163,21 +225,23 @@ export class BulkImporter {
   }
 
   private async importWeightLoss(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(row['FLOCK#']);
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const batchId = await this.findOrCreateBatch(flockNumber, config);
     const flockId = await this.findFlockId(flockNumber);
+
+    const dateCheck = this.findColumn(row, 'DATE_CHECK');
 
     const data = {
       batch_id: batchId,
       flock_id: flockId,
       check_date: config.defaultValues?.checkDate || new Date().toISOString().split('T')[0],
-      day_of_incubation: row['DATE CHECK']?.includes('18') ? 18 : 1,
-      check_day: row['DATE CHECK'],
-      top_weight: this.parseNumber(row['TOP WEIGHT']),
-      middle_weight: this.parseNumber(row['MIDDLE WEIGHT']),
-      bottom_weight: this.parseNumber(row['BOTTOM WEIGHT']),
-      total_weight: this.parseNumber(row['TOTAL WEIGHT']),
-      percent_loss: this.parseNumber(row['% LOSS']),
+      day_of_incubation: dateCheck?.includes('18') ? 18 : 1,
+      check_day: dateCheck,
+      top_weight: this.parseNumber(this.findColumn(row, 'TOP_WEIGHT')),
+      middle_weight: this.parseNumber(this.findColumn(row, 'MIDDLE_WEIGHT')),
+      bottom_weight: this.parseNumber(this.findColumn(row, 'BOTTOM_WEIGHT')),
+      total_weight: this.parseNumber(this.findColumn(row, 'TOTAL_WEIGHT')),
+      percent_loss: this.parseNumber(this.findColumn(row, 'PERCENT_LOSS')),
       company_id: this.companyId
     };
 
@@ -192,18 +256,18 @@ export class BulkImporter {
   }
 
   private async importSpecificGravity(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(row['Flock#']);
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const flockId = await this.findFlockId(flockNumber);
 
     const data = {
       flock_id: flockId,
       test_date: config.defaultValues?.testDate || new Date().toISOString().split('T')[0],
-      age_weeks: this.parseNumber(row['Age']) || 0,
-      concentration: row['Conc'],
-      float_count: this.parseNumber(row['Float']) || 0,
+      age_weeks: this.parseNumber(this.findColumn(row, 'AGE')) || 0,
+      concentration: this.findColumn(row, 'CONC'),
+      float_count: this.parseNumber(this.findColumn(row, 'FLOAT')) || 0,
       sample_size: 100,
-      float_percentage: this.parseNumber(row['%']) || 0,
-      difference: this.parseNumber(row['Difference']),
+      float_percentage: this.parseNumber(this.findColumn(row, 'PERCENT')) || 0,
+      difference: this.parseNumber(this.findColumn(row, 'DIFFERENCE')),
       company_id: this.companyId
     };
 

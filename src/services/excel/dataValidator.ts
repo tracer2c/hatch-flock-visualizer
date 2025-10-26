@@ -2,6 +2,24 @@ import { ValidationError, ImportRecord, ImportType } from '@/types/import';
 
 export class DataValidator {
   private errors: ValidationError[] = [];
+  
+  // Common column name variations
+  private columnVariations: Record<string, string[]> = {
+    'FLOCK': ['FLOCK#', 'FLOCK #', 'Flock#', 'Flock #', 'FLOCK NUMBER', 'Flock Number', 'FLOCK', 'Flock'],
+    'SIZE': ['SIZE', 'SAMPLE SIZE', 'Sample Size', 'SAMPLE_SIZE', 'Sample'],
+    'INFERTILE': ['INFERTILE', 'INFERTILE EGGS', 'Infertile', 'Infert'],
+    'DEAD': ['DEAD', 'ED', 'Early Dead', 'EARLY DEAD'],
+    'FERTILITY': ['FERTILITY', 'FERTILITY%', 'Fertility %', 'FERT%'],
+    'TOTAL_EGGS_PULLED': ['Total Eggs Pulled', 'TOTAL EGGS PULLED', 'Total Pulled', 'Eggs Pulled'],
+    'STAINED': ['Stained', 'STAINED', 'Stain'],
+    'DIRTY': ['Dirty', 'DIRTY'],
+    'CRACKED': ['Cracked', 'CRACKED', 'Crack'],
+    'SMALL': ['Small', 'SMALL'],
+    'TOTAL_WEIGHT': ['TOTAL WEIGHT', 'Total Weight', 'TOTAL_WEIGHT'],
+    'PERCENT_LOSS': ['% LOSS', '%LOSS', 'PERCENT LOSS', 'Percent Loss'],
+    'FLOAT': ['Float', 'FLOAT'],
+    'PERCENT': ['%', 'PERCENT', 'Percent', 'PCT']
+  };
 
   validate(rows: ImportRecord[], type: ImportType): ValidationError[] {
     this.errors = [];
@@ -35,12 +53,12 @@ export class DataValidator {
   }
 
   private validateFertility(row: ImportRecord, rowNum: number) {
-    this.requireField(row, 'FLOCK#', rowNum);
+    this.requireField(row, 'FLOCK', rowNum);
     this.requireNumeric(row, 'SIZE', rowNum);
     this.requireNumeric(row, 'INFERTILE', rowNum);
     
-    const size = this.parseNumber(row['SIZE']);
-    const infertile = this.parseNumber(row['INFERTILE']);
+    const size = this.parseNumber(this.findColumn(row, 'SIZE'));
+    const infertile = this.parseNumber(this.findColumn(row, 'INFERTILE'));
     
     if (size && infertile && infertile > size) {
       this.addError(rowNum, 'INFERTILE', infertile, 
@@ -48,7 +66,7 @@ export class DataValidator {
     }
 
     // Warn if fertility seems low
-    const fertility = this.parseNumber(row['FERTILITY']);
+    const fertility = this.parseNumber(this.findColumn(row, 'FERTILITY'));
     if (fertility && fertility < 70) {
       this.addError(rowNum, 'FERTILITY', fertility, 
         `Low fertility: ${fertility}%`, 'warning', 'Verify this is correct');
@@ -56,16 +74,16 @@ export class DataValidator {
   }
 
   private validateResidue(row: ImportRecord, rowNum: number) {
-    this.requireField(row, 'FLOCK#', rowNum);
-    this.requireNumeric(row, 'Infertile', rowNum);
+    this.requireField(row, 'FLOCK', rowNum);
+    this.requireNumeric(row, 'INFERTILE', rowNum);
   }
 
   private validateEggPack(row: ImportRecord, rowNum: number) {
-    this.requireField(row, 'Flock#', rowNum);
-    this.requireNumeric(row, 'Total Eggs Pulled', rowNum);
+    this.requireField(row, 'FLOCK', rowNum);
+    this.requireNumeric(row, 'TOTAL_EGGS_PULLED', rowNum);
     
-    const totalPulled = this.parseNumber(row['Total Eggs Pulled']);
-    const stained = this.parseNumber(row['Stained']);
+    const totalPulled = this.parseNumber(this.findColumn(row, 'TOTAL_EGGS_PULLED'));
+    const stained = this.parseNumber(this.findColumn(row, 'STAINED'));
     
     if (stained && totalPulled && stained > totalPulled) {
       this.addError(rowNum, 'Stained', stained, 
@@ -74,10 +92,10 @@ export class DataValidator {
   }
 
   private validateWeightLoss(row: ImportRecord, rowNum: number) {
-    this.requireField(row, 'FLOCK#', rowNum);
-    this.requireNumeric(row, 'TOTAL WEIGHT', rowNum);
+    this.requireField(row, 'FLOCK', rowNum);
+    this.requireNumeric(row, 'TOTAL_WEIGHT', rowNum);
     
-    const percentLoss = this.parseNumber(row['% LOSS']);
+    const percentLoss = this.parseNumber(this.findColumn(row, 'PERCENT_LOSS'));
     if (percentLoss) {
       if (percentLoss < 0) {
         this.addError(rowNum, '% LOSS', percentLoss, 
@@ -90,10 +108,10 @@ export class DataValidator {
   }
 
   private validateSpecificGravity(row: ImportRecord, rowNum: number) {
-    this.requireField(row, 'Flock#', rowNum);
-    this.requireNumeric(row, 'Float', rowNum);
+    this.requireField(row, 'FLOCK', rowNum);
+    this.requireNumeric(row, 'FLOAT', rowNum);
     
-    const floatPct = this.parseNumber(row['%']);
+    const floatPct = this.parseNumber(this.findColumn(row, 'PERCENT'));
     if (floatPct && (floatPct < 0 || floatPct > 100)) {
       this.addError(rowNum, '%', floatPct, 
         'Percentage must be between 0-100', 'error');
@@ -115,15 +133,59 @@ export class DataValidator {
     });
   }
 
+  private findColumn(row: ImportRecord, fieldName: string): any {
+    // Try exact match first
+    if (row[fieldName] !== undefined) {
+      return row[fieldName];
+    }
+    
+    // Try variations
+    const variations = this.columnVariations[fieldName.toUpperCase()] || [fieldName];
+    for (const variant of variations) {
+      if (row[variant] !== undefined) {
+        return row[variant];
+      }
+    }
+    
+    // Try normalized matching using the columnMap metadata
+    const normalizedField = fieldName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const columnMap = (row as any).__columnMap;
+    
+    if (columnMap && columnMap[normalizedField]) {
+      const actualKey = columnMap[normalizedField];
+      return row[actualKey];
+    }
+    
+    // Try all variations with normalized matching
+    for (const variant of variations) {
+      const normalizedVariant = variant.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (columnMap && columnMap[normalizedVariant]) {
+        const actualKey = columnMap[normalizedVariant];
+        return row[actualKey];
+      }
+    }
+    
+    // Last resort: fuzzy match all keys
+    for (const [key, value] of Object.entries(row)) {
+      if (key === '__columnMap') continue;
+      const normalizedKey = key.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (normalizedKey === normalizedField) {
+        return value;
+      }
+    }
+    
+    return undefined;
+  }
+
   private requireField(row: ImportRecord, field: string, rowNum: number) {
-    const value = row[field];
+    const value = this.findColumn(row, field);
     if (value === null || value === undefined || value === '') {
       this.addError(rowNum, field, value, 'Required field is missing', 'error');
     }
   }
 
   private requireNumeric(row: ImportRecord, field: string, rowNum: number) {
-    const value = row[field];
+    const value = this.findColumn(row, field);
     if (value !== null && value !== undefined && value !== '') {
       const num = this.parseNumber(value);
       if (num === null) {

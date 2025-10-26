@@ -55,6 +55,13 @@ export class ExcelParser {
     return null;
   }
 
+  private normalizeColumnName(name: string): string {
+    return name
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .trim();
+  }
+
   private parseSheet(sheet: XLSX.WorkSheet): ImportRecord[] {
     // Get all rows as array of objects
     const data = XLSX.utils.sheet_to_json(sheet, { 
@@ -62,13 +69,23 @@ export class ExcelParser {
       raw: false 
     }) as ImportRecord[];
 
-    // Clean up column names (remove extra spaces, special chars)
+    // Clean up column names and create normalized lookup
     return data.map(row => {
       const cleaned: ImportRecord = {};
+      const normalizedMap: Record<string, string> = {};
+      
       for (const [key, value] of Object.entries(row)) {
         const cleanKey = key.trim().replace(/\s+/g, ' ');
+        const normalized = this.normalizeColumnName(key);
+        
+        // Store with original key
         cleaned[cleanKey] = value;
+        // Store normalized mapping
+        normalizedMap[normalized] = cleanKey;
       }
+      
+      // Add normalized lookup as metadata
+      (cleaned as any).__columnMap = normalizedMap;
       return cleaned;
     }).filter(row => {
       // Filter out empty rows
