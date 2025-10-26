@@ -922,7 +922,10 @@ export default function EmbrexDashboard() {
   const totalEggs = activeData.reduce((a,c)=>a+(c.total_eggs_set||0),0);
   const avgClear = activeData.length ? (activeData.reduce((a,c)=>a+(c.clear_pct||0),0)/activeData.length) : 0;
   const avgInj = activeData.length ? (activeData.reduce((a,c)=>a+(c.injected_pct||0),0)/activeData.length) : 0;
-  const avgAge = activeData.length ? (activeData.reduce((a,c)=>a+(c.age_weeks||0),0)/activeData.length) : 0;
+  const avgAge = (() => {
+    const allRawRows = activeFacetObj?.rows || [];
+    return allRawRows.length ? (allRawRows.reduce((a,c)=>a+(c.age_weeks||0),0)/allRawRows.length) : 0;
+  })();
   const avgFertility = activeData.length ? (activeData.reduce((a,c)=>a+(c.fertility_percent||0),0)/activeData.length) : 0;
   const avgHatch = activeData.length ? (activeData.reduce((a,c)=>a+(c.hatch_percent||0),0)/activeData.length) : 0;
   const avgMortality = activeData.length ? (activeData.reduce((a,c)=>a+(c.total_mortality_percent||0),0)/activeData.length) : 0;
