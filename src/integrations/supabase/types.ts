@@ -1084,6 +1084,95 @@ export type Database = {
           },
         ]
       }
+      specific_gravity_tests: {
+        Row: {
+          age_weeks: number
+          batch_id: string | null
+          company_id: string
+          concentration: string | null
+          created_at: string
+          difference: number | null
+          float_count: number
+          float_percentage: number
+          flock_id: string
+          id: string
+          meets_standard: boolean | null
+          notes: string | null
+          sample_size: number | null
+          sink_count: number | null
+          standard_max: number | null
+          standard_min: number | null
+          test_date: string
+        }
+        Insert: {
+          age_weeks: number
+          batch_id?: string | null
+          company_id?: string
+          concentration?: string | null
+          created_at?: string
+          difference?: number | null
+          float_count: number
+          float_percentage: number
+          flock_id: string
+          id?: string
+          meets_standard?: boolean | null
+          notes?: string | null
+          sample_size?: number | null
+          sink_count?: number | null
+          standard_max?: number | null
+          standard_min?: number | null
+          test_date?: string
+        }
+        Update: {
+          age_weeks?: number
+          batch_id?: string | null
+          company_id?: string
+          concentration?: string | null
+          created_at?: string
+          difference?: number | null
+          float_count?: number
+          float_percentage?: number
+          flock_id?: string
+          id?: string
+          meets_standard?: boolean | null
+          notes?: string | null
+          sample_size?: number | null
+          sink_count?: number | null
+          standard_max?: number | null
+          standard_min?: number | null
+          test_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specific_gravity_tests_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specific_gravity_tests_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specific_gravity_tests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specific_gravity_tests_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           code: string | null
@@ -1196,6 +1285,102 @@ export type Database = {
           },
         ]
       }
+      weight_tracking: {
+        Row: {
+          batch_id: string
+          bottom_weight: number | null
+          check_date: string
+          check_day: string | null
+          company_id: string
+          created_at: string
+          day_of_incubation: number
+          flock_id: string | null
+          id: string
+          machine_id: string | null
+          middle_weight: number | null
+          notes: string | null
+          percent_loss: number | null
+          target_loss_max: number | null
+          target_loss_min: number | null
+          top_weight: number | null
+          total_weight: number
+        }
+        Insert: {
+          batch_id: string
+          bottom_weight?: number | null
+          check_date?: string
+          check_day?: string | null
+          company_id?: string
+          created_at?: string
+          day_of_incubation: number
+          flock_id?: string | null
+          id?: string
+          machine_id?: string | null
+          middle_weight?: number | null
+          notes?: string | null
+          percent_loss?: number | null
+          target_loss_max?: number | null
+          target_loss_min?: number | null
+          top_weight?: number | null
+          total_weight: number
+        }
+        Update: {
+          batch_id?: string
+          bottom_weight?: number | null
+          check_date?: string
+          check_day?: string | null
+          company_id?: string
+          created_at?: string
+          day_of_incubation?: number
+          flock_id?: string | null
+          id?: string
+          machine_id?: string | null
+          middle_weight?: number | null
+          notes?: string | null
+          percent_loss?: number | null
+          target_loss_max?: number | null
+          target_loss_min?: number | null
+          top_weight?: number | null
+          total_weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weight_tracking_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weight_tracking_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weight_tracking_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weight_tracking_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weight_tracking_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       batches_with_fertility: {
@@ -1258,14 +1443,8 @@ export type Database = {
       }
     }
     Functions: {
-      get_next_house_number: {
-        Args: { flock_uuid: string }
-        Returns: number
-      }
-      get_user_company: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      get_next_house_number: { Args: { flock_uuid: string }; Returns: number }
+      get_user_company: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]

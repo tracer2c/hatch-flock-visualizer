@@ -29,6 +29,7 @@ import HouseFlowPage from "./pages/HouseFlowPage";
 import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
 import ResidueBreakoutPage from "./pages/ResidueBreakoutPage";
+import BulkDataImportPage from "./pages/BulkDataImportPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -77,6 +78,7 @@ const App = () => (
                             <Route path="/checklist" element={<ChecklistPage />} />
                             <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
                             <Route path="/management" element={<ManagementPage />} />
+                            <Route path="/bulk-import" element={<BulkDataImportPage />} />
                             <Route path="/report" element={<ProjectReport />} />
                             <Route path="/chat" element={<ChatPage />} />
                             <Route path="*" element={<NotFound />} />

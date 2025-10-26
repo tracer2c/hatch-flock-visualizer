@@ -12,7 +12,8 @@ import {
   ChevronDown,
   TrendingUp,
   BarChart3,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Upload
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,12 @@ const navigationItems = [
     path: '/data-entry',
     label: 'Data Entry',
     icon: FileInput,
+    requiresAuth: true
+  },
+  {
+    path: '/bulk-import',
+    label: 'Bulk Import',
+    icon: Upload,
     requiresAuth: true
   },
   {
