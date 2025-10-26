@@ -13,7 +13,7 @@ export class ExcelParser {
     for (const sheetName of this.workbook.SheetNames) {
       const sheet = this.workbook.Sheets[sheetName];
       const type = this.detectSheetType(sheetName, sheet);
-      const rows = this.parseSheet(sheet);
+      const rows = this.parseSheet(sheet, type);
       const dateContext = this.extractDateContext(sheet);
 
       sheets.push({
@@ -62,7 +62,7 @@ export class ExcelParser {
       .trim();
   }
 
-  private parseSheet(sheet: XLSX.WorkSheet): ImportRecord[] {
+  private parseSheet(sheet: XLSX.WorkSheet, type: ImportType | null = null): ImportRecord[] {
     // Get all rows as array of objects
     const data = XLSX.utils.sheet_to_json(sheet, { 
       defval: null,
@@ -87,10 +87,78 @@ export class ExcelParser {
       // Add normalized lookup as metadata
       (cleaned as any).__columnMap = normalizedMap;
       return cleaned;
-    }).filter(row => {
-      // Filter out empty rows
-      return Object.values(row).some(v => v !== null && v !== '');
-    });
+    }).filter(row => this.isDataRow(row, type));
+  }
+
+  private isDataRow(row: ImportRecord, type: ImportType | null): boolean {
+    // Check if row has any actual values (excluding metadata)
+    const values = Object.entries(row)
+      .filter(([key]) => key !== '__columnMap')
+      .filter(([, value]) => value !== null && value !== '');
+    
+    if (values.length === 0) return false;
+    
+    // Get first column value (usually NAME or identifier)
+    const firstValue = String(values[0]?.[1] || '').toLowerCase();
+    
+    // Skip known non-data patterns
+    const skipPatterns = [
+      'overall average',
+      'total',
+      'candle date',
+      'candelle date',
+      'embrex date',
+      'residue week',
+      'troy flocks',
+      'enterprise flocks',
+      'hatch week',
+      'set week',
+      '---',
+      '===',
+    ];
+    
+    for (const pattern of skipPatterns) {
+      if (firstValue.includes(pattern)) {
+        return false;
+      }
+    }
+    
+    // For fertility/residue/egg_pack types, require FLOCK column to have a numeric value
+    if (type === 'fertility' || type === 'residue' || type === 'egg_pack') {
+      const flockValue = this.findFlockValue(row);
+      if (!flockValue || isNaN(Number(flockValue))) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  private findFlockValue(row: ImportRecord): any {
+    const flockVariations = ['FLOCK#', 'FLOCK #', 'Flock#', 'Flock #', 'FLOCK NUMBER', 'Flock Number', 'FLOCK'];
+    
+    // Try direct match first
+    for (const variant of flockVariations) {
+      if (row[variant] !== undefined && row[variant] !== null && row[variant] !== '') {
+        return row[variant];
+      }
+    }
+    
+    // Try normalized search
+    const columnMap = (row as any).__columnMap;
+    if (columnMap) {
+      const normalizedVariants = ['FLOCK', 'FLOCKNUMBER'];
+      for (const variant of normalizedVariants) {
+        if (columnMap[variant]) {
+          const value = row[columnMap[variant]];
+          if (value !== undefined && value !== null && value !== '') {
+            return value;
+          }
+        }
+      }
+    }
+    
+    return null;
   }
 
   private extractDateContext(sheet: XLSX.WorkSheet): any {
