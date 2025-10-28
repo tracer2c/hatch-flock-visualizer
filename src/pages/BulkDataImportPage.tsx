@@ -23,6 +23,7 @@ export default function BulkDataImportPage() {
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
+  const [sampleSize, setSampleSize] = useState(648);
   const [currentProgress, setCurrentProgress] = useState({
     currentSheet: '',
     currentRow: 0,
@@ -128,7 +129,8 @@ export default function BulkDataImportPage() {
             analysisDate: sheet.dateContext?.candleDate || new Date().toISOString().split('T')[0],
             inspectionDate: sheet.dateContext?.setDate || new Date().toISOString().split('T')[0],
             checkDate: new Date().toISOString().split('T')[0],
-            testDate: new Date().toISOString().split('T')[0]
+            testDate: new Date().toISOString().split('T')[0],
+            sampleSize: sampleSize
           }
         };
 
@@ -296,6 +298,25 @@ export default function BulkDataImportPage() {
                 )}
               </div>
             )}
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Import Settings</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Default Sample Size</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Used to calculate egg counts from percentages when sample size is not in the data
+                </p>
+                <input
+                  type="number"
+                  value={sampleSize}
+                  onChange={(e) => setSampleSize(Number(e.target.value))}
+                  className="w-32 px-3 py-2 border rounded-md bg-background"
+                  min="1"
+                />
+              </div>
+            </div>
           </Card>
 
           <div className="flex justify-between">

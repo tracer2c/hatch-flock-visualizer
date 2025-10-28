@@ -33,6 +33,14 @@ export class ExcelParser {
     const firstRow = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
     const headerText = firstRow?.join(' ').toLowerCase() || '';
 
+    // Check for hatchery-based fertility sheet (unit + fertility metrics)
+    if (
+      (headerText.includes('hatchery') || headerText.includes('unit')) &&
+      (headerText.includes('fertility') || headerText.includes('hatch') || headerText.includes('hof'))
+    ) {
+      return 'fertility';
+    }
+
     if (name.includes('fertility') || headerText.includes('fertility') || headerText.includes('infertile')) {
       return 'fertility';
     }

@@ -12,7 +12,13 @@ export class BulkImporter {
     'DEAD': ['DEAD', 'ED', 'Early Dead'],
     'FERTILITY': ['FERTILITY', 'FERTILITY%', 'Fertility %'],
     'HATCH': ['HATCH%', 'HATCH', 'Hatch %'],
-    'HOF': ['HOF%', 'HOF', 'Hof %'],
+    'HOF': ['HOF%', 'HOF', 'Hof %', 'HOF %'],
+    'HOI': ['HOI', 'HOI%', 'Hoi %', 'HOI %'],
+    'IF_DEV': ['I/F DEV.', 'I/F dev.', 'IF DEV', 'IF_DEV', 'I/F DEV', 'IF DEV %', 'I/F DEV %'],
+    'EARLY_DEAD': ['EARLY DEAD', 'Early Dead', 'ED', 'E.D.', 'Early Dead %'],
+    'HATCHERY': ['HATCHERY', 'Hatchery', 'UNIT', 'Unit', 'Site'],
+    'NAME': ['NAME', 'Name', 'FLOCK NAME', 'Flock Name'],
+    'AGE': ['AGE', 'Age', 'Age Weeks', 'AGE WEEKS'],
     'TOTAL_EGGS_PULLED': ['Total Eggs Pulled', 'TOTAL EGGS PULLED', 'Total Pulled'],
     'STAINED': ['Stained', 'STAINED'],
     'DIRTY': ['Dirty', 'DIRTY'],
@@ -24,7 +30,6 @@ export class BulkImporter {
     'TOP_WEIGHT': ['TOP WEIGHT', 'Top Weight'],
     'MIDDLE_WEIGHT': ['MIDDLE WEIGHT', 'Middle Weight'],
     'BOTTOM_WEIGHT': ['BOTTOM WEIGHT', 'Bottom Weight'],
-    'AGE': ['Age', 'AGE', 'Age Weeks'],
     'CONC': ['Conc', 'CONC', 'Concentration'],
     'FLOAT': ['Float', 'FLOAT'],
     'PERCENT': ['%', 'PERCENT', 'Percent'],
@@ -133,24 +138,67 @@ export class BulkImporter {
   }
 
   private async importFertility(row: ImportRecord, config: ImportConfig) {
-    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
-    const batchId = await this.findOrCreateBatch(flockNumber, config);
+    // Extract hatchery/unit information
+    const hatcheryName = this.findColumn(row, 'HATCHERY');
+    let unitId: string | null = null;
+    
+    if (hatcheryName && config.createMissingEntities) {
+      unitId = await this.findOrCreateUnit(String(hatcheryName));
+    }
 
-    const size = this.parseNumber(this.findColumn(row, 'SIZE')) || 648;
-    const infertile = this.parseNumber(this.findColumn(row, 'INFERTILE')) || 0;
+    // Extract flock information
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
+    const flockName = String(this.findColumn(row, 'NAME') || `Flock ${flockNumber}`);
+    const ageWeeks = this.parseNumber(this.findColumn(row, 'AGE'));
+
+    // Find or create batch with unit_id
+    const batchId = await this.findOrCreateBatch(
+      flockNumber, 
+      config,
+      {
+        flockName,
+        ageWeeks,
+        unitId
+      }
+    );
+
+    // Extract fertility metrics (check if they're percentages or counts)
+    const fertilityPercent = this.parseNumber(this.findColumn(row, 'FERTILITY'));
+    const ifDevPercent = this.parseNumber(this.findColumn(row, 'IF_DEV'));
+    const hatchPercent = this.parseNumber(this.findColumn(row, 'HATCH'));
+    const hoiPercent = this.parseNumber(this.findColumn(row, 'HOI'));
+    const hofPercent = this.parseNumber(this.findColumn(row, 'HOF'));
+    const earlyDeadPercent = this.parseNumber(this.findColumn(row, 'EARLY_DEAD'));
+
+    // Determine sample size
+    const sampleSize = this.parseNumber(this.findColumn(row, 'SIZE')) || 
+                       config.defaultValues?.sampleSize || 
+                       648;
+
+    // Calculate counts from percentages if needed
+    const fertileEggs = fertilityPercent 
+      ? Math.round((fertilityPercent / 100) * sampleSize)
+      : sampleSize - (this.parseNumber(this.findColumn(row, 'INFERTILE')) || 0);
+    
+    const infertileEggs = sampleSize - fertileEggs;
+    const earlyDead = earlyDeadPercent 
+      ? Math.round((earlyDeadPercent / 100) * sampleSize)
+      : this.parseNumber(this.findColumn(row, 'DEAD')) || 0;
 
     const data = {
       batch_id: batchId,
       analysis_date: config.defaultValues?.analysisDate || new Date().toISOString().split('T')[0],
-      sample_size: size,
-      infertile_eggs: infertile,
-      fertile_eggs: size - infertile,
-      early_dead: this.parseNumber(this.findColumn(row, 'DEAD')) || 0,
+      sample_size: sampleSize,
+      fertile_eggs: fertileEggs,
+      infertile_eggs: infertileEggs,
+      early_dead: earlyDead,
       late_dead: 0,
-      fertility_percent: this.parseNumber(this.findColumn(row, 'FERTILITY')),
-      hatch_percent: this.parseNumber(this.findColumn(row, 'HATCH')),
-      hof_percent: this.parseNumber(this.findColumn(row, 'HOF')),
-      cull_chicks: 0
+      cull_chicks: 0,
+      fertility_percent: fertilityPercent,
+      hatch_percent: hatchPercent,
+      hof_percent: hofPercent,
+      hoi_percent: hoiPercent,
+      if_dev_percent: ifDevPercent,
     };
 
     const { data: inserted, error } = await supabase
@@ -159,7 +207,13 @@ export class BulkImporter {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (config.skipDuplicates && error.code === '23505') {
+        return null; // Skip duplicate
+      }
+      throw error;
+    }
+
     return inserted;
   }
 
@@ -281,39 +335,16 @@ export class BulkImporter {
     return inserted;
   }
 
-  private async findOrCreateBatch(flockNumber: number, config: ImportConfig): Promise<string> {
-    // First try to find existing flock
-    const { data: flock } = await supabase
-      .from('flocks')
-      .select('id')
-      .eq('flock_number', flockNumber)
-      .eq('company_id', this.companyId)
-      .maybeSingle();
-
-    if (!flock && !config.createMissingEntities) {
-      throw new Error(`Flock #${flockNumber} not found`);
+  private async findOrCreateBatch(
+    flockNumber: number, 
+    config: ImportConfig,
+    flockMetadata?: {
+      flockName?: string;
+      ageWeeks?: number;
+      unitId?: string | null;
     }
-
-    let flockId = flock?.id;
-
-    // Create flock if needed
-    if (!flockId && config.createMissingEntities) {
-      const { data: newFlock, error } = await supabase
-        .from('flocks')
-        .insert({
-          flock_number: flockNumber,
-          flock_name: `Flock ${flockNumber}`,
-          breed: 'cobb' as any,
-          age_weeks: 30,
-          arrival_date: new Date().toISOString().split('T')[0],
-          company_id: this.companyId
-        } as any)
-        .select()
-        .single();
-
-      if (error) throw error;
-      flockId = newFlock.id;
-    }
+  ): Promise<string> {
+    const flockId = await this.findOrCreateFlock(flockNumber, config, flockMetadata);
 
     // Find most recent batch for this flock
     const { data: batch } = await supabase
@@ -340,11 +371,12 @@ export class BulkImporter {
           batch_number: `Batch-${flockNumber}`,
           flock_id: flockId,
           machine_id: machines?.[0]?.id,
-          set_date: new Date().toISOString().split('T')[0],
+          set_date: config.defaultValues?.analysisDate || new Date().toISOString().split('T')[0],
           expected_hatch_date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          total_eggs_set: 0,
+          total_eggs_set: config.defaultValues?.sampleSize || 0,
           status: 'completed',
-          company_id: this.companyId
+          company_id: this.companyId,
+          unit_id: flockMetadata?.unitId || null
         })
         .select()
         .single();
@@ -354,6 +386,81 @@ export class BulkImporter {
     }
 
     throw new Error(`No batch found for flock #${flockNumber}`);
+  }
+
+  private async findOrCreateFlock(
+    flockNumber: number,
+    config: ImportConfig,
+    metadata?: {
+      flockName?: string;
+      ageWeeks?: number;
+      unitId?: string | null;
+    }
+  ): Promise<string> {
+    // Try to find existing flock
+    const { data: existingFlock } = await supabase
+      .from('flocks')
+      .select('id')
+      .eq('flock_number', flockNumber)
+      .eq('company_id', this.companyId)
+      .maybeSingle();
+
+    if (existingFlock) {
+      return existingFlock.id;
+    }
+
+    if (!config.createMissingEntities) {
+      throw new Error(`Flock ${flockNumber} not found`);
+    }
+
+    // Create new flock with metadata
+    const { data: newFlock, error } = await supabase
+      .from('flocks')
+      .insert({
+        flock_number: flockNumber,
+        flock_name: metadata?.flockName || `Flock ${flockNumber}`,
+        age_weeks: metadata?.ageWeeks || 30,
+        breed: 'broiler_breeder' as any,
+        arrival_date: new Date().toISOString().split('T')[0],
+        company_id: this.companyId,
+        unit_id: metadata?.unitId || null,
+      } as any)
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return newFlock.id;
+  }
+
+  private async findOrCreateUnit(unitName: string): Promise<string | null> {
+    if (!unitName || !this.companyId) return null;
+
+    // Try to find existing unit by name or code
+    const { data: existingUnit } = await supabase
+      .from('units')
+      .select('id')
+      .eq('company_id', this.companyId)
+      .or(`name.ilike.%${unitName}%,code.ilike.%${unitName}%`)
+      .maybeSingle();
+
+    if (existingUnit) {
+      return existingUnit.id;
+    }
+
+    // Create new unit
+    const { data: newUnit, error } = await supabase
+      .from('units')
+      .insert({
+        name: unitName,
+        code: unitName.substring(0, 10).toUpperCase(),
+        company_id: this.companyId,
+        status: 'active'
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return newUnit.id;
   }
 
   private async findFlockId(flockNumber: number): Promise<string> {

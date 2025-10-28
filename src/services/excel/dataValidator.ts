@@ -10,6 +10,14 @@ export class DataValidator {
     'INFERTILE': ['INFERTILE', 'INFERTILE EGGS', 'Infertile', 'Infert'],
     'DEAD': ['DEAD', 'ED', 'Early Dead', 'EARLY DEAD'],
     'FERTILITY': ['FERTILITY', 'FERTILITY%', 'Fertility %', 'FERT%'],
+    'HATCHERY': ['HATCHERY', 'Hatchery', 'UNIT', 'Unit', 'Site'],
+    'NAME': ['NAME', 'Name', 'FLOCK NAME', 'Flock Name'],
+    'AGE': ['AGE', 'Age', 'Age Weeks', 'AGE WEEKS'],
+    'HOI': ['HOI', 'HOI%', 'Hoi %', 'HOI %'],
+    'HOF': ['HOF', 'HOF%', 'Hof %', 'HOF %'],
+    'IF_DEV': ['I/F DEV.', 'I/F dev.', 'IF DEV', 'IF_DEV', 'I/F DEV'],
+    'EARLY_DEAD': ['EARLY DEAD', 'Early Dead', 'ED', 'E.D.', 'Early Dead %'],
+    'HATCH': ['HATCH', 'HATCH%', 'Hatch %'],
     'TOTAL_EGGS_PULLED': ['Total Eggs Pulled', 'TOTAL EGGS PULLED', 'Total Pulled', 'Eggs Pulled'],
     'STAINED': ['Stained', 'STAINED', 'Stain'],
     'DIRTY': ['Dirty', 'DIRTY'],
@@ -54,9 +62,35 @@ export class DataValidator {
 
   private validateFertility(row: ImportRecord, rowNum: number) {
     this.requireField(row, 'FLOCK', rowNum);
-    this.requireNumeric(row, 'SIZE', rowNum);
-    this.requireNumeric(row, 'INFERTILE', rowNum);
     
+    // Check for hatchery/unit (optional but recommended)
+    const hatchery = this.findColumn(row, 'HATCHERY');
+    if (!hatchery) {
+      this.addError(rowNum, 'HATCHERY', null, 
+        'Hatchery/Unit not specified', 'warning',
+        'Data will be imported without unit assignment');
+    }
+
+    // Validate percentage ranges if percentages are provided
+    const percentFields = ['FERTILITY', 'HATCH', 'HOI', 'HOF', 'IF_DEV', 'EARLY_DEAD'];
+    percentFields.forEach(field => {
+      const value = this.findColumn(row, field);
+      if (value !== null && value !== undefined && value !== '') {
+        const num = Number(value);
+        // Allow negative values for IF_DEV
+        if (field === 'IF_DEV') {
+          if (num < -100 || num > 100) {
+            this.addError(rowNum, field, value,
+              `${field} must be between -100 and 100`, 'error');
+          }
+        } else if (num < 0 || num > 100) {
+          this.addError(rowNum, field, value,
+            `${field} must be between 0 and 100`, 'error');
+        }
+      }
+    });
+
+    // Validate sample size or infertile count
     const size = this.parseNumber(this.findColumn(row, 'SIZE'));
     const infertile = this.parseNumber(this.findColumn(row, 'INFERTILE'));
     
