@@ -47,7 +47,14 @@ type MetricKey =
   | "hatch_percent"
   | "if_dev_percent"
   | "hatch_vs_injected_percent"
-  | "hatch_vs_injected_diff";
+  | "hatch_vs_injected_diff"
+  | "fertile_eggs"
+  | "infertile_eggs"
+  | "early_dead"
+  | "mid_dead"
+  | "late_dead"
+  | "hatch_count"
+  | "sample_size";
 type PercentAgg = "weighted" | "unweighted";
 type FacetMode = "flock" | "unit" | "flock_unit";
 
@@ -72,11 +79,30 @@ interface RawRow {
   if_dev_percent?: number;
   hatch_vs_injected_percent?: number;
   hatch_vs_injected_diff?: number;
+  fertile_eggs?: number;
+  infertile_eggs?: number;
+  early_dead?: number;
+  mid_dead?: number;
+  late_dead?: number;
+  hatch_count?: number;
+  sample_size?: number;
 }
 interface BucketRow {
   bucketKey: string;
   date: Date;
-  count: { age_weeks?: number; total_eggs_set?: number; eggs_cleared?: number; eggs_injected?: number };
+  count: { 
+    age_weeks?: number; 
+    total_eggs_set?: number; 
+    eggs_cleared?: number; 
+    eggs_injected?: number;
+    fertile_eggs?: number;
+    infertile_eggs?: number;
+    early_dead?: number;
+    mid_dead?: number;
+    late_dead?: number;
+    hatch_count?: number;
+    sample_size?: number;
+  };
   pct: { 
     clear_pct?: number; 
     injected_pct?: number;
@@ -109,6 +135,13 @@ const metricLabel: Record<MetricKey, string> = {
   if_dev_percent: "I/F %",
   hatch_vs_injected_percent: "Hatch vs Injected %",
   hatch_vs_injected_diff: "Hatch vs Injected (Diff)",
+  fertile_eggs: "Fertile Eggs",
+  infertile_eggs: "Infertile Eggs",
+  early_dead: "Early Dead",
+  mid_dead: "Mid Dead",
+  late_dead: "Late Dead",
+  hatch_count: "Hatched",
+  sample_size: "Sample Size",
 };
 const BASIC_METRICS = [
   "total_eggs_set",
@@ -219,11 +252,19 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="text-xs font-semibold text-slate-800 mb-1.5">{label}</p>
         {payload.map((entry: any, index: number) => {
           if (entry.dataKey === '_raw' || entry.dataKey === 'rolling' && entry.value === undefined) return null;
+          
+          // Check if it's a count metric
+          const countMetrics = ['fertile_eggs', 'infertile_eggs', 'early_dead', 'mid_dead', 'late_dead', 'hatch_count', 'sample_size'];
+          const isCount = countMetrics.includes(entry.dataKey);
+          
+          // Check if it's a percentage metric
           const isPercent = entry.dataKey === 'clear_pct' || entry.dataKey === 'injected_pct' || 
+                           entry.dataKey.includes('percent') || entry.dataKey.includes('pct') ||
                            (entry.dataKey === 'rolling' && (payload[0].dataKey === 'clear_pct' || payload[0].dataKey === 'injected_pct'));
+          
           const formattedValue = isPercent 
             ? `${formatNumber(entry.value, true)}%`
-            : formatNumber(entry.value);
+            : entry.value.toLocaleString();
           
           return (
             <div key={`item-${index}`} className="flex items-center gap-2 text-xs">
@@ -287,6 +328,9 @@ export default function EmbrexDashboard() {
       ? (searchParams.get("viz") as VizKind)
       : DEFAULTS.viz
   );
+  const [showFertilityCounts, setShowFertilityCounts] = useState<boolean>(() => 
+    searchParams.get("fertCount") === "1"
+  );
 
   /* Compare Mode & Sidebar state (URL-synced) */
   const [compareMode, setCompareMode] = useState<boolean>(() => searchParams.get("cmp") === "1");
@@ -337,7 +381,10 @@ export default function EmbrexDashboard() {
               hoi_percent,
               if_dev_percent,
               early_dead,
-              late_dead
+              late_dead,
+              fertile_eggs,
+              infertile_eggs,
+              sample_size
             ),
             residue_analysis (
               residue_percent,
@@ -406,6 +453,13 @@ export default function EmbrexDashboard() {
             if_dev_percent: fertility?.if_dev_percent ?? residue?.if_dev_percent,
             hatch_vs_injected_percent,
             hatch_vs_injected_diff,
+            fertile_eggs: fertility?.fertile_eggs,
+            infertile_eggs: fertility?.infertile_eggs,
+            early_dead: fertility?.early_dead,
+            mid_dead: residue?.mid_dead,
+            late_dead: fertility?.late_dead,
+            hatch_count: chicksHatched,
+            sample_size: fertility?.sample_size,
           };
         });
         setRows(formatted);
@@ -434,11 +488,12 @@ export default function EmbrexDashboard() {
     if (compareCols !== 2) sp.set("cols", String(compareCols)); else sp.delete("cols");
     sp.set("nav", sidebarOpen ? "1" : "0");
     if (showFertilityMetrics) sp.set("fertility", "1"); else sp.delete("fertility");
+    if (showFertilityCounts) sp.set("fertCount", "1"); else sp.delete("fertCount");
     setSearchParams(sp, { replace: true });
   }, [
     granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo,
     percentAgg, rollingAvg, benchmark, viz, compareMode, compareCols, sidebarOpen, 
-    showFertilityMetrics, setSearchParams
+    showFertilityMetrics, showFertilityCounts, setSearchParams
   ]);
 
   /* Derived lists */
@@ -511,6 +566,13 @@ export default function EmbrexDashboard() {
       b.count.eggs_cleared   = (b.count.eggs_cleared   ?? 0) + (r.eggs_cleared   ?? 0);
       b.count.eggs_injected  = (b.count.eggs_injected  ?? 0) + (r.eggs_injected  ?? 0);
       b.count.age_weeks      = (b.count.age_weeks      ?? 0) + (r.age_weeks      ?? 0);
+      b.count.fertile_eggs   = (b.count.fertile_eggs   ?? 0) + (r.fertile_eggs   ?? 0);
+      b.count.infertile_eggs = (b.count.infertile_eggs ?? 0) + (r.infertile_eggs ?? 0);
+      b.count.early_dead     = (b.count.early_dead     ?? 0) + (r.early_dead     ?? 0);
+      b.count.mid_dead       = (b.count.mid_dead       ?? 0) + (r.mid_dead       ?? 0);
+      b.count.late_dead      = (b.count.late_dead      ?? 0) + (r.late_dead      ?? 0);
+      b.count.hatch_count    = (b.count.hatch_count    ?? 0) + (r.hatch_count    ?? 0);
+      b.count.sample_size    = (b.count.sample_size    ?? 0) + (r.sample_size    ?? 0);
       b.raw.push(r);
     }
     const out: BucketRow[] = [];
@@ -613,6 +675,13 @@ export default function EmbrexDashboard() {
       if_dev_percent: b.pct.if_dev_percent ?? 0,
       hatch_vs_injected_percent: b.pct.hatch_vs_injected_percent ?? 0,
       hatch_vs_injected_diff: b.pct.hatch_vs_injected_diff ?? 0,
+      fertile_eggs: b.count.fertile_eggs ?? 0,
+      infertile_eggs: b.count.infertile_eggs ?? 0,
+      early_dead: b.count.early_dead ?? 0,
+      mid_dead: b.count.mid_dead ?? 0,
+      late_dead: b.count.late_dead ?? 0,
+      hatch_count: b.count.hatch_count ?? 0,
+      sample_size: b.count.sample_size ?? 0,
       rolling: rollingAvg ? rolling[i] : undefined,
       _raw: b.raw,
     }));
@@ -644,6 +713,13 @@ export default function EmbrexDashboard() {
         if_dev_percent: parseFloat((r.if_dev_percent || 0).toFixed(2)),
         hatch_vs_injected_percent: parseFloat((r.hatch_vs_injected_percent || 0).toFixed(2)),
         hatch_vs_injected_diff: parseFloat((r.hatch_vs_injected_diff || 0).toFixed(2)),
+        fertile_eggs: r.fertile_eggs || 0,
+        infertile_eggs: r.infertile_eggs || 0,
+        early_dead: r.early_dead || 0,
+        mid_dead: r.mid_dead || 0,
+        late_dead: r.late_dead || 0,
+        hatch_count: r.hatch_count || 0,
+        sample_size: r.sample_size || 0,
         rolling: r.rolling ? parseFloat(r.rolling.toFixed(2)) : ""
       }));
     });
@@ -670,7 +746,7 @@ export default function EmbrexDashboard() {
     { value: "age_weeks",      label: "Age (w)",    color: PALETTE[5] },
   ] as const;
 
-  const fertilityMetricOptions = [
+  const fertilityPercentMetricOptions = [
     { value: "fertility_percent", label: "Fertility %", color: PALETTE[0] },
     { value: "early_dead_percent", label: "Early Dead %", color: PALETTE[1] },
     { value: "mid_dead_percent", label: "Mid Dead %", color: PALETTE[2] },
@@ -680,7 +756,19 @@ export default function EmbrexDashboard() {
     { value: "if_dev_percent", label: "I/F %", color: PALETTE[6] },
   ] as const;
 
-  const metricOptions = showFertilityMetrics ? fertilityMetricOptions : basicMetricOptions;
+  const fertilityCountMetricOptions = [
+    { value: "fertile_eggs", label: "Fertile Eggs", color: PALETTE[0] },
+    { value: "infertile_eggs", label: "Infertile Eggs", color: PALETTE[1] },
+    { value: "early_dead", label: "Early Dead", color: PALETTE[2] },
+    { value: "mid_dead", label: "Mid Dead", color: PALETTE[3] },
+    { value: "late_dead", label: "Late Dead", color: PALETTE[4] },
+    { value: "hatch_count", label: "Hatch Count", color: PALETTE[5] },
+    { value: "sample_size", label: "Sample Size", color: PALETTE[6] },
+  ] as const;
+
+  const metricOptions = showFertilityMetrics 
+    ? (showFertilityCounts ? fertilityCountMetricOptions : fertilityPercentMetricOptions)
+    : basicMetricOptions;
 
   /* Facet tabs state */
   const [activeFacet, setActiveFacet] = useState<string>("ALL");
@@ -720,7 +808,7 @@ export default function EmbrexDashboard() {
                 />
               )}
               {metrics.map((m, i) => {
-                const allOptions = [...basicMetricOptions, ...fertilityMetricOptions];
+                const allOptions = [...basicMetricOptions, ...fertilityPercentMetricOptions, ...fertilityCountMetricOptions];
                 const color = allOptions.find(mm => mm.value === m)?.color || PALETTE[i % PALETTE.length];
                 const yAxis = isPercentMetric(m) ? "right" : "left";
                 return isBar
@@ -1120,6 +1208,32 @@ export default function EmbrexDashboard() {
                       Switch to {showFertilityMetrics ? "Basic" : "Fertility"}
                     </Button>
                   </div>
+
+                  {/* Count/Percentage Toggle for Fertility Metrics */}
+                  {showFertilityMetrics && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-600" />
+                        <span className="text-sm font-medium">
+                          {showFertilityCounts ? "Showing Counts" : "Showing Percentages"}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowFertilityCounts(!showFertilityCounts);
+                          // Reset metrics when toggling
+                          setMetrics(showFertilityCounts 
+                            ? ["fertility_percent", "hatch_percent"] 
+                            : ["fertile_eggs", "early_dead"]);
+                        }}
+                        className="h-8 text-xs"
+                      >
+                        Show {showFertilityCounts ? "%" : "Counts"}
+                      </Button>
+                    </div>
+                  )}
                   
                   {metricOptions.map((metric) => (
                     <div key={metric.value} className="flex items-center space-x-2">
