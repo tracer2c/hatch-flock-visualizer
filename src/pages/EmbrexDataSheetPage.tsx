@@ -1,52 +1,101 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileSpreadsheet, Table as TableIcon } from "lucide-react";
-import { EmbrexDataTable } from "@/components/dashboard/EmbrexDataTable";
-import ResidueBreakoutPage from "./ResidueBreakoutPage";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Download, TrendingUp } from "lucide-react";
+import { CompleteDataView } from "@/components/dashboard/CompleteDataView";
+import { usePercentageToggle } from "@/hooks/usePercentageToggle";
+import { toast } from "sonner";
 
 const EmbrexDataSheetPage = () => {
-  const [activeTab, setActiveTab] = useState("embrex");
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const { showPercentages, setShowPercentages } = usePercentageToggle();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Embrex Data Sheet | Hatchery Dashboard";
+    document.title = "Complete Data | Hatchery Dashboard";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Comprehensive overview of all flock data including clears, injected statistics, and residue analysis."
+        "Complete datasheet with comprehensive flock data, fertility analysis, egg pack quality, and hatch performance metrics."
       );
     } else {
       const m = document.createElement("meta");
       m.name = "description";
-      m.content = "Comprehensive overview of all flock data including clears, injected statistics, and residue analysis.";
+      m.content = "Complete datasheet with comprehensive flock data, fertility analysis, egg pack quality, and hatch performance metrics.";
       document.head.appendChild(m);
     }
   }, []);
 
+  const handleExportCSV = () => {
+    toast.success("CSV export started");
+    // Export functionality will be implemented based on active tab
+  };
+
+  const handleTimelineView = () => {
+    navigate("/embrex-timeline");
+  };
+
   return (
-    <div className="h-screen w-full overflow-hidden bg-background">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        <div className="border-b bg-card px-6 py-3">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="embrex" className="gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Embrex Sheet
-            </TabsTrigger>
-            <TabsTrigger value="residue" className="gap-2">
-              <TableIcon className="h-4 w-4" />
-              Residue Breakout
-            </TabsTrigger>
-          </TabsList>
+    <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
+      {/* Header Section */}
+      <div className="border-b bg-card px-6 py-4">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold">Complete Data</h1>
+            <p className="text-sm text-muted-foreground mt-1">Complete Datasheet.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="percentage-toggle"
+                checked={showPercentages}
+                onCheckedChange={setShowPercentages}
+              />
+              <Label htmlFor="percentage-toggle" className="text-sm cursor-pointer">
+                Show percentages
+              </Label>
+            </div>
+            <Button variant="outline" onClick={handleTimelineView} className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Timeline View
+            </Button>
+            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
-        <TabsContent value="embrex" className="flex-1 m-0 overflow-auto">
-          <EmbrexDataTable />
-        </TabsContent>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="embrex">Embrex Data</TabsTrigger>
+              <TabsTrigger value="residue">Residue Breakout</TabsTrigger>
+              <TabsTrigger value="egg-pack">Egg Pack Quality</TabsTrigger>
+              <TabsTrigger value="hatch">Hatch Performance</TabsTrigger>
+            </TabsList>
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+        </Tabs>
+      </div>
 
-        <TabsContent value="residue" className="flex-1 m-0 overflow-auto">
-          <ResidueBreakoutPage />
-        </TabsContent>
-      </Tabs>
+      {/* Content Section */}
+      <div className="flex-1 overflow-auto p-6">
+        <CompleteDataView activeTab={activeTab} searchTerm={searchTerm} />
+      </div>
     </div>
   );
 };
