@@ -61,7 +61,7 @@ const navigationItems = [
   },
   {
     path: '/embrex-data-sheet',
-    label: 'Embrex Data Sheet',
+    label: 'Data Sheet',
     icon: FileSpreadsheet,
     requiresAuth: true
   },

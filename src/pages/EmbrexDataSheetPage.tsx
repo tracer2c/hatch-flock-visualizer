@@ -17,17 +17,17 @@ const EmbrexDataSheetPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Complete Data | Hatchery Dashboard";
+    document.title = "Data Sheet | Hatchery Dashboard";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Complete datasheet with comprehensive flock data, fertility analysis, egg pack quality, and hatch performance metrics."
+        "View and analyze all hatchery data including flock information, fertility analysis, egg pack quality, and hatch performance metrics."
       );
     } else {
       const m = document.createElement("meta");
       m.name = "description";
-      m.content = "Complete datasheet with comprehensive flock data, fertility analysis, egg pack quality, and hatch performance metrics.";
+      m.content = "View and analyze all hatchery data including flock information, fertility analysis, egg pack quality, and hatch performance metrics.";
       document.head.appendChild(m);
     }
   }, []);
@@ -47,8 +47,8 @@ const EmbrexDataSheetPage = () => {
       <div className="border-b bg-card px-6 py-4">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Complete Data</h1>
-            <p className="text-sm text-muted-foreground mt-1">Complete Datasheet.</p>
+            <h1 className="text-2xl font-bold">Data Sheet</h1>
+            <p className="text-sm text-muted-foreground mt-1">View and analyze all hatchery data in one place.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -76,11 +76,11 @@ const EmbrexDataSheetPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="embrex">Embrex Data</TabsTrigger>
-              <TabsTrigger value="residue">Residue Breakout</TabsTrigger>
-              <TabsTrigger value="egg-pack">Egg Pack Quality</TabsTrigger>
-              <TabsTrigger value="hatch">Hatch Performance</TabsTrigger>
+              <TabsTrigger value="all">All Data</TabsTrigger>
+              <TabsTrigger value="embrex">Embrex/HOI</TabsTrigger>
+              <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
+              <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
+              <TabsTrigger value="hatch">Hatch Results</TabsTrigger>
             </TabsList>
             <Input
               placeholder="Search..."

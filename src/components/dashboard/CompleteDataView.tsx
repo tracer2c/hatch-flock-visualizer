@@ -6,7 +6,6 @@ import { EmbrexTab } from "./EmbrexTab";
 import { ResidueBreakoutTab } from "./ResidueBreakoutTab";
 import { EggPackQualityTab } from "./EggPackQualityTab";
 import { HatchPerformanceTab } from "./HatchPerformanceTab";
-import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -136,8 +135,6 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
       return <EggPackQualityTab data={data} searchTerm={searchTerm} />;
     case "hatch":
       return <HatchPerformanceTab data={data} searchTerm={searchTerm} />;
-    case "fertility":
-      return <FertilityAnalysisTab data={data} searchTerm={searchTerm} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} />;
   }

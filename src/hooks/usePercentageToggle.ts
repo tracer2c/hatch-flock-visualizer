@@ -18,7 +18,7 @@ export const usePercentageToggle = () => {
       return `${percentage.toFixed(decimals)}%`;
     }
     
-    return value.toString();
+    return value.toLocaleString();
   };
 
   const formatPercentage = (value: number | null, decimals = 1): string => {

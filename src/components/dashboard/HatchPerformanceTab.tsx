@@ -7,7 +7,7 @@ interface HatchPerformanceTabProps {
 }
 
 export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabProps) => {
-  const { formatPercentage } = usePercentageToggle();
+  const { formatPercentage, formatValue } = usePercentageToggle();
 
   const filteredData = data.filter((item) =>
     Object.values(item).some((val) =>
@@ -56,7 +56,9 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                 <TableCell>{item.set_date ? new Date(item.set_date).toLocaleDateString() : "-"}</TableCell>
                 <TableCell className="text-right">{item.set_date ? calculateWeek(item.set_date) : "-"}</TableCell>
                 <TableCell className="text-right">{item.sample_size || "-"}</TableCell>
-                <TableCell className="text-right">{item.chicks_hatched || "-"}</TableCell>
+                <TableCell className="text-right">
+                  {item.chicks_hatched ? formatValue(item.chicks_hatched, item.sample_size) : "-"}
+                </TableCell>
                 <TableCell className="text-right">
                   {item.hatch_percent ? formatPercentage(item.hatch_percent) : "-"}
                 </TableCell>
