@@ -141,6 +141,15 @@ export default function BulkDataImportPage() {
     setStep('validate');
   };
 
+  const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number = 60000): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => 
+        setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  };
+
   const handleImport = async () => {
     setStep('import');
     const importer = new BulkImporter();
@@ -180,11 +189,21 @@ export default function BulkDataImportPage() {
             checkDate: new Date().toISOString().split('T')[0],
             testDate: new Date().toISOString().split('T')[0],
             sampleSize: sampleSize
+          },
+          onProgress: (current, total) => {
+            setCurrentProgress(prev => ({
+              ...prev,
+              currentRow: current,
+              totalRows: total
+            }));
           }
         };
 
         try {
-          const result = await importer.import(sheet.rows, sheet.type, config);
+          const result = await withTimeout(
+            importer.import(sheet.rows, sheet.type, config),
+            60000
+          );
           results.push(result);
           completedSheets.push(sheetName);
           

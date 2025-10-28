@@ -52,4 +52,5 @@ export interface ImportConfig {
   createMissingEntities: boolean;
   dateFormat?: string;
   defaultValues?: Record<string, any>;
+  onProgress?: (current: number, total: number) => void;
 }

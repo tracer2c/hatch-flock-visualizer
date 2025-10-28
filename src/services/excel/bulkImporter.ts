@@ -3,6 +3,7 @@ import { ImportRecord, ImportType, ImportResult, ImportConfig } from '@/types/im
 
 export class BulkImporter {
   private companyId: string | null = null;
+  private unitCache: Map<string, string> = new Map();
   
   // Column variations for flexible matching
   private columnVariations: Record<string, string[]> = {
@@ -77,6 +78,22 @@ export class BulkImporter {
       .single();
 
     this.companyId = profile?.company_id || null;
+
+    // Pre-load units into cache
+    const { data: units } = await supabase
+      .from('units')
+      .select('id, name, code')
+      .eq('company_id', this.companyId);
+      
+    if (units) {
+      units.forEach(unit => {
+        this.unitCache.set(unit.name.toLowerCase(), unit.id);
+        if (unit.code) {
+          this.unitCache.set(unit.code.toLowerCase(), unit.id);
+        }
+      });
+      console.log(`📋 Cached ${units.length} units`);
+    }
   }
 
   async import(
@@ -95,6 +112,11 @@ export class BulkImporter {
     };
 
     for (let i = 0; i < rows.length; i++) {
+      // Report progress
+      if (config.onProgress) {
+        config.onProgress(i, rows.length);
+      }
+
       try {
         const record = await this.importRow(rows[i], type, config);
         if (record) {
@@ -102,6 +124,7 @@ export class BulkImporter {
           result.createdRecords.push(record);
         }
       } catch (error: any) {
+        console.error(`❌ Import error at row ${i + 2}:`, error.message);
         result.failed++;
         result.errors.push({
           row: i + 2,
@@ -111,6 +134,11 @@ export class BulkImporter {
           severity: 'error'
         });
       }
+    }
+
+    // Final progress update
+    if (config.onProgress) {
+      config.onProgress(rows.length, rows.length);
     }
 
     return result;
@@ -140,6 +168,10 @@ export class BulkImporter {
   private async importFertility(row: ImportRecord, config: ImportConfig) {
     // Extract hatchery/unit information
     const hatcheryName = this.findColumn(row, 'HATCHERY');
+    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
+    
+    console.log(`📊 Importing fertility for Flock ${flockNumber} (Hatchery: ${hatcheryName || 'N/A'})`);
+    
     let unitId: string | null = null;
     
     if (hatcheryName && config.createMissingEntities) {
@@ -147,7 +179,6 @@ export class BulkImporter {
     }
 
     // Extract flock information
-    const flockNumber = this.parseNumber(this.findColumn(row, 'FLOCK'));
     const flockName = String(this.findColumn(row, 'NAME') || `Flock ${flockNumber}`);
     const ageWeeks = this.parseNumber(this.findColumn(row, 'AGE'));
 
@@ -344,6 +375,7 @@ export class BulkImporter {
       unitId?: string | null;
     }
   ): Promise<string> {
+    console.log(`📦 Finding/creating batch for flock ${flockNumber}`);
     const flockId = await this.findOrCreateFlock(flockNumber, config, flockMetadata);
 
     // Find most recent batch for this flock
@@ -397,6 +429,8 @@ export class BulkImporter {
       unitId?: string | null;
     }
   ): Promise<string> {
+    console.log(`🐔 Finding/creating flock ${flockNumber}`);
+    
     // Try to find existing flock
     const { data: existingFlock } = await supabase
       .from('flocks')
@@ -435,17 +469,44 @@ export class BulkImporter {
   private async findOrCreateUnit(unitName: string): Promise<string | null> {
     if (!unitName || !this.companyId) return null;
 
-    // Try to find existing unit by name or code
-    const { data: existingUnit } = await supabase
+    console.log(`🏢 Looking up unit: "${unitName}"`);
+
+    // Check cache first
+    const cachedId = this.unitCache.get(unitName.toLowerCase());
+    if (cachedId) {
+      console.log(`   ✅ Found in cache (${cachedId})`);
+      return cachedId;
+    }
+
+    // First try exact match
+    const { data: exactMatch } = await supabase
       .from('units')
-      .select('id')
+      .select('id, name')
       .eq('company_id', this.companyId)
-      .or(`name.ilike.%${unitName}%,code.ilike.%${unitName}%`)
+      .or(`name.eq.${unitName},code.eq.${unitName}`)
       .maybeSingle();
 
-    if (existingUnit) {
-      return existingUnit.id;
+    if (exactMatch) {
+      console.log(`   ✅ Found existing unit: ${exactMatch.name} (${exactMatch.id})`);
+      this.unitCache.set(unitName.toLowerCase(), exactMatch.id);
+      return exactMatch.id;
     }
+
+    // Try case-insensitive match
+    const { data: fuzzyMatch } = await supabase
+      .from('units')
+      .select('id, name')
+      .eq('company_id', this.companyId)
+      .ilike('name', unitName)
+      .maybeSingle();
+
+    if (fuzzyMatch) {
+      console.log(`   ✅ Found existing unit (fuzzy): ${fuzzyMatch.name} (${fuzzyMatch.id})`);
+      this.unitCache.set(unitName.toLowerCase(), fuzzyMatch.id);
+      return fuzzyMatch.id;
+    }
+
+    console.log(`   ➕ Creating new unit: "${unitName}"`);
 
     // Create new unit
     const { data: newUnit, error } = await supabase
@@ -456,10 +517,16 @@ export class BulkImporter {
         company_id: this.companyId,
         status: 'active'
       })
-      .select('id')
+      .select('id, name')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error(`   ❌ Failed to create unit:`, error);
+      throw error;
+    }
+    
+    console.log(`   ✅ Created unit: ${newUnit.name} (${newUnit.id})`);
+    this.unitCache.set(unitName.toLowerCase(), newUnit.id);
     return newUnit.id;
   }
 
