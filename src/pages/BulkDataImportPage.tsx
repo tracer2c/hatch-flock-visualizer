@@ -58,13 +58,24 @@ export default function BulkDataImportPage() {
   };
 
   const handleValidate = () => {
+    console.log('🔍 Starting validation...');
     const validator = new DataValidator();
     const allErrors: any[] = [];
 
     selectedSheets.forEach(sheetName => {
       const sheet = sheets.find(s => s.sheetName === sheetName);
       if (sheet && sheet.type) {
+        console.log(`📋 Validating sheet: "${sheetName}" (Type: ${sheet.type})`);
+        console.log(`   Rows to validate: ${sheet.rows.length}`);
+        
+        // Log first row as sample
+        if (sheet.rows.length > 0) {
+          console.log('   Sample row (first row):', sheet.rows[0]);
+        }
+        
         const errors = validator.validate(sheet.rows, sheet.type);
+        
+        console.log(`   Found ${errors.length} issues in this sheet`);
         allErrors.push(...errors);
       }
     });
@@ -73,6 +84,44 @@ export default function BulkDataImportPage() {
     
     const errorCount = allErrors.filter(e => e.severity === 'error').length;
     const warningCount = allErrors.filter(e => e.severity === 'warning').length;
+
+    console.log('\n📊 VALIDATION SUMMARY:');
+    console.log(`   Total Issues: ${allErrors.length}`);
+    console.log(`   ❌ Errors: ${errorCount}`);
+    console.log(`   ⚠️  Warnings: ${warningCount}`);
+
+    // Log all errors first
+    if (errorCount > 0) {
+      console.log('\n❌ ERRORS (Critical - must fix):');
+      const errors = allErrors.filter(e => e.severity === 'error');
+      errors.forEach((err, idx) => {
+        console.log(`   ${idx + 1}. Row ${err.row}, Column "${err.column}"`);
+        console.log(`      Value: ${JSON.stringify(err.value)}`);
+        console.log(`      Error: ${err.error}`);
+        if (err.suggestion) {
+          console.log(`      💡 Suggestion: ${err.suggestion}`);
+        }
+      });
+    }
+
+    // Log warnings
+    if (warningCount > 0) {
+      console.log('\n⚠️  WARNINGS (Non-critical):');
+      const warnings = allErrors.filter(e => e.severity === 'warning');
+      // Only log first 10 warnings to avoid console spam
+      warnings.slice(0, 10).forEach((warn, idx) => {
+        console.log(`   ${idx + 1}. Row ${warn.row}, Column "${warn.column}"`);
+        console.log(`      Value: ${JSON.stringify(warn.value)}`);
+        console.log(`      Warning: ${warn.error}`);
+      });
+      if (warnings.length > 10) {
+        console.log(`   ... and ${warnings.length - 10} more warnings`);
+      }
+    }
+
+    // Create a downloadable summary
+    console.log('\n📥 Full validation results available in validationErrors state');
+    console.log('   Use: console.table(validationErrors) to see formatted table');
 
     if (errorCount > 0) {
       toast({

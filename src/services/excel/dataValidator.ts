@@ -30,6 +30,7 @@ export class DataValidator {
   };
 
   validate(rows: ImportRecord[], type: ImportType): ValidationError[] {
+    console.log(`🔎 DataValidator: Validating ${rows.length} rows as type "${type}"`);
     this.errors = [];
 
     rows.forEach((row, index) => {
