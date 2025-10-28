@@ -678,8 +678,6 @@ export default function EmbrexDashboard() {
     { value: "total_mortality_percent", label: "Total Mortality %", color: PALETTE[4] },
     { value: "hatch_percent", label: "Hatch %", color: PALETTE[5] },
     { value: "if_dev_percent", label: "I/F %", color: PALETTE[6] },
-    { value: "hatch_vs_injected_percent", label: "Hatch vs Injected %", color: PALETTE[7] },
-    { value: "hatch_vs_injected_diff", label: "Hatch vs Injected (Diff)", color: PALETTE[8] },
   ] as const;
 
   const metricOptions = showFertilityMetrics ? fertilityMetricOptions : basicMetricOptions;
