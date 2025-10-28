@@ -759,11 +759,12 @@ export default function EmbrexDashboard() {
   const fertilityCountMetricOptions = [
     { value: "fertile_eggs", label: "Fertile Eggs", color: PALETTE[0] },
     { value: "infertile_eggs", label: "Infertile Eggs", color: PALETTE[1] },
-    { value: "early_dead", label: "Early Dead", color: PALETTE[2] },
-    { value: "mid_dead", label: "Mid Dead", color: PALETTE[3] },
-    { value: "late_dead", label: "Late Dead", color: PALETTE[4] },
-    { value: "hatch_count", label: "Hatch Count", color: PALETTE[5] },
-    { value: "sample_size", label: "Sample Size", color: PALETTE[6] },
+    { value: "eggs_injected", label: "Injected", color: PALETTE[2] },
+    { value: "early_dead", label: "Early Dead", color: PALETTE[3] },
+    { value: "mid_dead", label: "Mid Dead", color: PALETTE[4] },
+    { value: "late_dead", label: "Late Dead", color: PALETTE[5] },
+    { value: "hatch_count", label: "Hatch Count", color: PALETTE[6] },
+    { value: "sample_size", label: "Sample Size", color: PALETTE[7] },
   ] as const;
 
   const metricOptions = showFertilityMetrics 
