@@ -33,10 +33,10 @@ export const EggPackQualityTab = ({ data, searchTerm }: EggPackQualityTabProps) 
             <TableHead>House#</TableHead>
             <TableHead>Set Date</TableHead>
             <TableHead className="text-right">Week</TableHead>
-            <TableHead className="text-right">Cracked</TableHead>
-            <TableHead className="text-right">Dirty</TableHead>
-            <TableHead className="text-right">Small</TableHead>
-            <TableHead className="text-right">Large</TableHead>
+            <TableHead className="text-right">{showPercentages ? "Cracked %" : "Cracked"}</TableHead>
+            <TableHead className="text-right">{showPercentages ? "Dirty %" : "Dirty"}</TableHead>
+            <TableHead className="text-right">{showPercentages ? "Small %" : "Small"}</TableHead>
+            <TableHead className="text-right">{showPercentages ? "Large %" : "Large"}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

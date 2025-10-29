@@ -68,6 +68,13 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
 
       if (residueError) throw residueError;
 
+      // Fetch fertility analysis with mid_dead for residue tab
+      const { data: fertilityWithMidDead, error: fertilityMidDeadError } = await supabase
+        .from("fertility_analysis")
+        .select("*");
+
+      if (fertilityMidDeadError) throw fertilityMidDeadError;
+
       // Combine all data
       const combinedData = (batchesData || []).map((batch) => {
         const fertility = fertilityData?.find((f) => f.batch_id === batch.id);
@@ -104,6 +111,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
           epq_sample_size: eggPack?.sample_size,
           // Residue/hatch data
           residue_sample_size: residue?.sample_size,
+          mid_dead: residue?.mid_dead,
         };
       });
 
@@ -130,7 +138,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     case "embrex":
       return <EmbrexTab data={data} searchTerm={searchTerm} />;
     case "residue":
-      return <ResidueBreakoutTab />;
+      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} />;
     case "egg-pack":
       return <EggPackQualityTab data={data} searchTerm={searchTerm} />;
     case "hatch":

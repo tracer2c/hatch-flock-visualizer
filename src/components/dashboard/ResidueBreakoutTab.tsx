@@ -1,5 +1,10 @@
-import ResidueBreakoutPage from "@/pages/ResidueBreakoutPage";
+import { ResidueBreakoutTable } from "./ResidueBreakoutTable";
 
-export const ResidueBreakoutTab = () => {
-  return <ResidueBreakoutPage />;
+interface ResidueBreakoutTabProps {
+  data: any[];
+  searchTerm: string;
+}
+
+export const ResidueBreakoutTab = ({ data, searchTerm }: ResidueBreakoutTabProps) => {
+  return <ResidueBreakoutTable data={data} searchTerm={searchTerm} />;
 };
