@@ -158,8 +158,10 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                 <div className="flex items-center gap-1">
                   HOF %
                   <Tooltip>
-                    <TooltipTrigger>
-                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    <TooltipTrigger asChild>
+                      <button className="inline-flex" type="button">
+                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="font-semibold">Hatch of Fertile (HOF)</p>
@@ -172,8 +174,10 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                 <div className="flex items-center gap-1">
                   HOI %
                   <Tooltip>
-                    <TooltipTrigger>
-                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    <TooltipTrigger asChild>
+                      <button className="inline-flex" type="button">
+                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="font-semibold">Hatch of Incubated (HOI)</p>
@@ -186,8 +190,10 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                 <div className="flex items-center gap-1">
                   I/F %
                   <Tooltip>
-                    <TooltipTrigger>
-                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    <TooltipTrigger asChild>
+                      <button className="inline-flex" type="button">
+                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="font-semibold">Infertile/Fertile Development</p>

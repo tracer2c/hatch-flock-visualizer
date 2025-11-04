@@ -79,7 +79,7 @@ export const AllDataTab = ({ data, searchTerm, onDataUpdate }: AllDataTabProps) 
 
   return (
     <div className="overflow-x-auto">
-      <Table>
+      <Table key={showPercentages ? 'percentage' : 'count'}>
         <TableHeader>
           <TableRow>
             <TableHead>Data Type</TableHead>
@@ -96,78 +96,120 @@ export const AllDataTab = ({ data, searchTerm, onDataUpdate }: AllDataTabProps) 
             <TableHead>{showPercentages ? "Infertile %" : "Infertile"}</TableHead>
             <TableHead>{showPercentages ? "Fertile %" : "Fertile"}</TableHead>
             <TableHead>{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
+            <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
             <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
+            <TableHead>Chicks</TableHead>
+            <TableHead>{showPercentages ? "Pipped %" : "Pipped"}</TableHead>
+            <TableHead>{showPercentages ? "Contaminated %" : "Contaminated"}</TableHead>
+            <TableHead>{showPercentages ? "Malformed %" : "Malformed"}</TableHead>
             <TableHead>HOF %</TableHead>
             <TableHead>HOI %</TableHead>
+            <TableHead>I/F %</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={18} className="text-center text-muted-foreground">
+              <TableCell colSpan={24} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
           ) : (
-            filteredData.map((item, index) => (
-              <TableRow key={`${item.batch_id || item.id}-${index}`}>
-                <TableCell className="capitalize">{item.data_type || "Batch"}</TableCell>
-                <TableCell>{item.flock_number || "-"}</TableCell>
-                <TableCell>{item.flock_name || "-"}</TableCell>
-                <TableCell>{item.house_number || "-"}</TableCell>
-                <TableCell>{item.age_weeks || "-"}</TableCell>
-                <TableCell>
-                  {item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}
-                </TableCell>
-                <TableCell>{item.set_date ? calculateWeek(item.set_date) : "-"}</TableCell>
-                <TableCell>{item.total_eggs_set || "-"}</TableCell>
-                <TableCell>
-                  {formatValue(item.eggs_cleared, item.total_eggs_set)}
-                </TableCell>
-                <TableCell>
-                  {formatValue(item.eggs_injected, item.total_eggs_set)}
-                </TableCell>
-                <TableCell>{item.sample_size || "-"}</TableCell>
-                <TableCell>
-                  {formatValue(item.infertile_eggs, item.sample_size)}
-                </TableCell>
-                <TableCell>
-                  {formatValue(item.fertile_eggs, item.sample_size)}
-                </TableCell>
-                <TableCell>
-                  {formatValue(item.early_dead, item.sample_size)}
-                </TableCell>
-                <TableCell>
-                  {formatValue(item.late_dead, item.sample_size)}
-                </TableCell>
-                <TableCell>
-                  {item.hof_percent ? `${item.hof_percent.toFixed(1)}%` : "-"}
-                </TableCell>
-                <TableCell>
-                  {item.hoi_percent ? `${item.hoi_percent.toFixed(1)}%` : "-"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(item)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
+            filteredData.map((item, index) => {
+              const sampleSize = item.sample_size || item.total_eggs_set || 648;
+              return (
+                <TableRow key={`${item.batch_id || item.id}-${index}`}>
+                  <TableCell className="capitalize font-medium">
+                    {item.data_type === 'batch' ? 'Embrex/HOI' : 
+                     item.data_type === 'fertility' ? 'Hatch Results' :
+                     item.data_type === 'egg_pack' ? 'Egg Quality' :
+                     item.data_type === 'residue' ? 'Residue' :
+                     item.data_type === 'qa' ? 'QA' : item.data_type || "-"}
+                  </TableCell>
+                  <TableCell>{item.flock_number || "-"}</TableCell>
+                  <TableCell>{item.flock_name || "-"}</TableCell>
+                  <TableCell>{item.house_number || "-"}</TableCell>
+                  <TableCell>{item.age_weeks || "-"}</TableCell>
+                  <TableCell>
+                    {item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}
+                  </TableCell>
+                  <TableCell>{item.set_date ? calculateWeek(item.set_date) : "-"}</TableCell>
+                  <TableCell>{item.total_eggs_set || "-"}</TableCell>
+                  <TableCell>
+                    {item.eggs_cleared ? formatValue(item.eggs_cleared, item.total_eggs_set) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.eggs_injected ? formatValue(item.eggs_injected, item.total_eggs_set) : "-"}
+                  </TableCell>
+                  <TableCell>{sampleSize || "-"}</TableCell>
+                  <TableCell>
+                    {item.infertile_eggs !== null && item.infertile_eggs !== undefined ? 
+                      formatValue(item.infertile_eggs, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.fertile_eggs !== null && item.fertile_eggs !== undefined ? 
+                      formatValue(item.fertile_eggs, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.early_dead !== null && item.early_dead !== undefined ? 
+                      formatValue(item.early_dead, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.mid_dead !== null && item.mid_dead !== undefined ? 
+                      formatValue(item.mid_dead, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.late_dead !== null && item.late_dead !== undefined ? 
+                      formatValue(item.late_dead, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>{item.chicks_hatched || item.chicks || "-"}</TableCell>
+                  <TableCell>
+                    {item.pipped_not_hatched !== null && item.pipped_not_hatched !== undefined ? 
+                      formatValue(item.pipped_not_hatched, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.contaminated_eggs !== null && item.contaminated_eggs !== undefined ? 
+                      formatValue(item.contaminated_eggs, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.malformed_chicks !== null && item.malformed_chicks !== undefined ? 
+                      formatValue(item.malformed_chicks, sampleSize) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.hof_percent !== null && item.hof_percent !== undefined ? 
+                      `${item.hof_percent.toFixed(1)}%` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.hoi_percent !== null && item.hoi_percent !== undefined ? 
+                      `${item.hoi_percent.toFixed(1)}%` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {item.if_dev_percent !== null && item.if_dev_percent !== undefined ? 
+                      `${item.if_dev_percent.toFixed(1)}%` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(item)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
