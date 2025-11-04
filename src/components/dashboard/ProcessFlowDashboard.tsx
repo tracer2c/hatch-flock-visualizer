@@ -142,18 +142,41 @@ const ProcessFlowDashboard = () => {
           </p>
         </CardHeader>
         <CardContent id="process-flow-chart">
-          <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={flowData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={flowData} margin={{ top: 10, right: 30, left: 0, bottom: 80 }}>
+              <defs>
+                <linearGradient id="colorHof" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(217 91% 60%)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="hsl(217 91% 60%)" stopOpacity={0.3}/>
+                </linearGradient>
+                <linearGradient id="colorHoi" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(271 81% 56%)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="hsl(271 81% 56%)" stopOpacity={0.3}/>
+                </linearGradient>
+                <linearGradient id="colorFertility" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(142 71% 45%)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="hsl(142 71% 45%)" stopOpacity={0.3}/>
+                </linearGradient>
+                <linearGradient id="colorHatch" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(25 95% 53%)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="hsl(25 95% 53%)" stopOpacity={0.3}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="batch" 
                 angle={-45}
                 textAnchor="end"
-                height={60}
-                fontSize={11}
+                height={100}
+                fontSize={10}
                 stroke="hsl(var(--muted-foreground))"
+                interval={0}
               />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }}
+              />
               <Tooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
@@ -167,7 +190,7 @@ const ProcessFlowDashboard = () => {
                         <div>
                           <p className="font-medium mb-2">{label}</p>
                           {payload.map((entry, index) => (
-                            <div key={index} className="flex justify-between items-center">
+                            <div key={index} className="flex justify-between items-center gap-3">
                               <span style={{ color: entry.color }}>{entry.name}: </span>
                               <span className="font-medium">{entry.value}%</span>
                             </div>
@@ -179,11 +202,46 @@ const ProcessFlowDashboard = () => {
                   return null;
                 }}
               />
-              <Legend />
-              <Area type="monotone" dataKey="hof" stackId="1" stroke="hsl(217 91% 60%)" fill="hsl(217 91% 60%)" fillOpacity={0.7} name="HOF %" />
-              <Area type="monotone" dataKey="hoi" stackId="2" stroke="hsl(271 81% 56%)" fill="hsl(271 81% 56%)" fillOpacity={0.7} name="HOI %" />
-              <Area type="monotone" dataKey="fertility" stackId="3" stroke="hsl(142 71% 45%)" fill="hsl(142 71% 45%)" fillOpacity={0.7} name="Fertility %" />
-              <Area type="monotone" dataKey="hatch" stackId="4" stroke="hsl(25 95% 53%)" fill="hsl(25 95% 53%)" fillOpacity={0.7} name="Hatch %" />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="circle"
+              />
+              <Area 
+                type="monotone" 
+                dataKey="hof" 
+                stackId="1" 
+                stroke="hsl(217 91% 60%)" 
+                fill="url(#colorHof)" 
+                strokeWidth={2}
+                name="HOF %" 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="hoi" 
+                stackId="2" 
+                stroke="hsl(271 81% 56%)" 
+                fill="url(#colorHoi)" 
+                strokeWidth={2}
+                name="HOI %" 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="fertility" 
+                stackId="3" 
+                stroke="hsl(142 71% 45%)" 
+                fill="url(#colorFertility)" 
+                strokeWidth={2}
+                name="Fertility %" 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="hatch" 
+                stackId="4" 
+                stroke="hsl(25 95% 53%)" 
+                fill="url(#colorHatch)" 
+                strokeWidth={2}
+                name="Hatch %" 
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>

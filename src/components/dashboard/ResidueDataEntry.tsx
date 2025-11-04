@@ -428,7 +428,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
             {/* Death Categories */}
             <div className="space-y-2">
-              <Label htmlFor="lateDeath">Late Death (15-21 days)</Label>
+              <Label htmlFor="lateDeath">Late Dead (15-21 days)</Label>
               <Input
                 id="lateDeath"
                 type="number"
