@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Package2, Factory, Calendar, AlertCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,12 +63,20 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [flockMode, setFlockMode] = useState<'existing' | 'new'>('existing');
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
     unitId: '',
     setDate: new Date().toISOString().split('T')[0],
-    totalEggs: ''
+    totalEggs: '',
+    newFlock: {
+      flockNumber: '',
+      flockName: '',
+      houseNumber: '',
+      ageWeeks: '',
+      breed: 'breeder' as 'breeder' | 'broiler' | 'layer'
+    }
   });
   const { toast } = useToast();
 
@@ -175,7 +184,7 @@ const calculateHatchDate = (setDate: string) => {
   };
 
   const createHouse = async () => {
-    if (!formData.flockId || !formData.machineId || !formData.totalEggs || !formData.unitId) {
+    if (!formData.machineId || !formData.totalEggs || !formData.unitId) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -184,11 +193,64 @@ const calculateHatchDate = (setDate: string) => {
       return;
     }
 
-    const selectedFlock = flocks.find(f => f.id === formData.flockId);
+    let flockId = formData.flockId;
+
+    // If creating new flock, create it first
+    if (flockMode === 'new') {
+      const { flockNumber, flockName, houseNumber, ageWeeks, breed } = formData.newFlock;
+      
+      if (!flockNumber || !flockName || !houseNumber || !ageWeeks) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all flock details",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data: newFlockData, error: flockError } = await supabase
+        .from('flocks')
+        .insert([{
+          flock_number: parseInt(flockNumber),
+          flock_name: flockName,
+          house_number: houseNumber,
+          age_weeks: parseInt(ageWeeks),
+          breed: breed,
+          unit_id: formData.unitId,
+          arrival_date: formData.setDate
+        }])
+        .select()
+        .single();
+
+      if (flockError) {
+        toast({
+          title: "Error creating flock",
+          description: flockError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      flockId = newFlockData.id;
+      await loadFlocks(); // Reload flocks list
+    }
+
+    if (!flockId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select or create a flock",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedFlock = flocks.find(f => f.id === flockId) || {
+      flock_name: formData.newFlock.flockName
+    };
     
     // Get the next sequential house number for this flock
     const { data: nextNumber, error: numberError } = await supabase
-      .rpc('get_next_house_number', { flock_uuid: formData.flockId });
+      .rpc('get_next_house_number', { flock_uuid: flockId });
     
     if (numberError) {
       toast({
@@ -206,7 +268,7 @@ const calculateHatchDate = (setDate: string) => {
       .from('batches')
       .insert({
         batch_number: houseNumber,
-        flock_id: formData.flockId,
+        flock_id: flockId,
         machine_id: formData.machineId,
         unit_id: formData.unitId,
         set_date: formData.setDate,
@@ -229,7 +291,21 @@ const calculateHatchDate = (setDate: string) => {
         description: `House ${houseNumber} created successfully`
       });
       setShowCreateForm(false);
-      setFormData({ flockId: '', machineId: '', unitId: '', setDate: new Date().toISOString().split('T')[0], totalEggs: '' });
+      setFlockMode('existing');
+      setFormData({ 
+        flockId: '', 
+        machineId: '', 
+        unitId: '', 
+        setDate: new Date().toISOString().split('T')[0], 
+        totalEggs: '',
+        newFlock: {
+          flockNumber: '',
+          flockName: '',
+          houseNumber: '',
+          ageWeeks: '',
+          breed: 'breeder'
+        }
+      });
       loadHouses();
       onHouseSelect(data.id);
     }
@@ -326,21 +402,109 @@ const calculateHatchDate = (setDate: string) => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Select Flock *</Label>
-                <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a flock" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {flocks.map((flock) => (
-                      <SelectItem key={flock.id} value={flock.id}>
-                        {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4 md:col-span-2">
+                <Label>Flock Selection *</Label>
+                <RadioGroup value={flockMode} onValueChange={(value: 'existing' | 'new') => setFlockMode(value)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="existing" id="existing" />
+                    <Label htmlFor="existing" className="font-normal cursor-pointer">Select Existing Flock</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="new" id="new" />
+                    <Label htmlFor="new" className="font-normal cursor-pointer">Create New Flock</Label>
+                  </div>
+                </RadioGroup>
               </div>
+
+              {flockMode === 'existing' ? (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Select Flock *</Label>
+                  <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a flock" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {flocks.map((flock) => (
+                        <SelectItem key={flock.id} value={flock.id}>
+                          {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Flock Number *</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 6422"
+                      value={formData.newFlock.flockNumber}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        newFlock: { ...prev.newFlock, flockNumber: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Flock Name *</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., Troy"
+                      value={formData.newFlock.flockName}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        newFlock: { ...prev.newFlock, flockName: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>House Number *</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., H-123 or 456A"
+                      value={formData.newFlock.houseNumber}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        newFlock: { ...prev.newFlock, houseNumber: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Age (Weeks) *</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 31"
+                      value={formData.newFlock.ageWeeks}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        newFlock: { ...prev.newFlock, ageWeeks: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Breed *</Label>
+                    <Select 
+                      value={formData.newFlock.breed} 
+                      onValueChange={(value: 'breeder' | 'broiler' | 'layer') => 
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          newFlock: { ...prev.newFlock, breed: value }
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="breeder">Breeder</SelectItem>
+                        <SelectItem value="broiler">Broiler</SelectItem>
+                        <SelectItem value="layer">Layer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label>Select Machine *</Label>
                 <Select value={formData.machineId} onValueChange={(value) => setFormData(prev => ({ ...prev, machineId: value }))}>
