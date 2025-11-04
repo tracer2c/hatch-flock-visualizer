@@ -180,10 +180,10 @@ const ProcessFlowDashboard = () => {
                 }}
               />
               <Legend />
-              <Area type="monotone" dataKey="hof" stackId="1" stroke="hsl(220 70% 50%)" fill="hsl(220 70% 50%)" fillOpacity={0.6} name="HOF %" />
-              <Area type="monotone" dataKey="hoi" stackId="2" stroke="hsl(280 70% 50%)" fill="hsl(280 70% 50%)" fillOpacity={0.6} name="HOI %" />
-              <Area type="monotone" dataKey="fertility" stackId="3" stroke="hsl(142 76% 36%)" fill="hsl(142 76% 36%)" fillOpacity={0.6} name="Fertility %" />
-              <Area type="monotone" dataKey="hatch" stackId="4" stroke="hsl(48 96% 53%)" fill="hsl(48 96% 53%)" fillOpacity={0.6} name="Hatch %" />
+              <Area type="monotone" dataKey="hof" stackId="1" stroke="hsl(217 91% 60%)" fill="hsl(217 91% 60%)" fillOpacity={0.7} name="HOF %" />
+              <Area type="monotone" dataKey="hoi" stackId="2" stroke="hsl(271 81% 56%)" fill="hsl(271 81% 56%)" fillOpacity={0.7} name="HOI %" />
+              <Area type="monotone" dataKey="fertility" stackId="3" stroke="hsl(142 71% 45%)" fill="hsl(142 71% 45%)" fillOpacity={0.7} name="Fertility %" />
+              <Area type="monotone" dataKey="hatch" stackId="4" stroke="hsl(25 95% 53%)" fill="hsl(25 95% 53%)" fillOpacity={0.7} name="Hatch %" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -237,8 +237,8 @@ const ProcessFlowDashboard = () => {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="fertility" stroke="hsl(142 76% 36%)" strokeWidth={2} name="Fertility %" />
-                <Line type="monotone" dataKey="hatch" stroke="hsl(48 96% 53%)" strokeWidth={2} name="Hatch %" />
+                <Line type="monotone" dataKey="fertility" stroke="hsl(142 71% 45%)" strokeWidth={3} name="Fertility %" />
+                <Line type="monotone" dataKey="hatch" stroke="hsl(25 95% 53%)" strokeWidth={3} name="Hatch %" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -293,10 +293,10 @@ const ProcessFlowDashboard = () => {
                   }}
                 />
                 <Legend />
-                <Bar dataKey="hof" fill="hsl(220 70% 50%)" name="HOF %" />
-                <Bar dataKey="hoi" fill="hsl(280 70% 50%)" name="HOI %" />
-                <Bar dataKey="fertility" fill="hsl(142 76% 36%)" name="Fertility %" />
-                <Bar dataKey="hatch" fill="hsl(48 96% 53%)" name="Hatch %" />
+                <Bar dataKey="hof" fill="hsl(217 91% 60%)" name="HOF %" />
+                <Bar dataKey="hoi" fill="hsl(271 81% 56%)" name="HOI %" />
+                <Bar dataKey="fertility" fill="hsl(142 71% 45%)" name="Fertility %" />
+                <Bar dataKey="hatch" fill="hsl(25 95% 53%)" name="Hatch %" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

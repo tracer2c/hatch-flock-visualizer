@@ -85,7 +85,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
               <TableHead>Flock Name</TableHead>
               <TableHead>House #</TableHead>
               <TableHead>Age (weeks)</TableHead>
-              <TableHead>Batch Number</TableHead>
               <TableHead>Set Date</TableHead>
               <TableHead>Total Eggs Set</TableHead>
               <TableHead>Sample Size</TableHead>
@@ -101,7 +100,7 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center text-muted-foreground">
+                <TableCell colSpan={14} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -120,7 +119,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
                     <TableCell>{item.flock_name || "-"}</TableCell>
                     <TableCell>{item.house_number || "-"}</TableCell>
                     <TableCell>{item.age_weeks || "-"}</TableCell>
-                    <TableCell>{item.batch_number || "-"}</TableCell>
                     <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>
                     <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>
                     <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>
