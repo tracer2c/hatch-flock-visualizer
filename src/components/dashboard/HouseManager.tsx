@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Package2, Factory, Calendar, AlertCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +62,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [flockMode, setFlockMode] = useState<'existing' | 'new'>('existing');
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
@@ -71,13 +69,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setDate: new Date().toISOString().split('T')[0],
     totalEggs: '',
     customHouseNumber: '',
-    newFlock: {
-      flockNumber: '',
-      flockName: '',
-      houseNumber: '',
-      ageWeeks: '',
-      breed: 'breeder' as 'breeder' | 'broiler' | 'layer'
-    }
   });
   const { toast } = useToast();
 
@@ -185,7 +176,7 @@ const calculateHatchDate = (setDate: string) => {
   };
 
   const createHouse = async () => {
-    if (!formData.machineId || !formData.totalEggs || !formData.unitId) {
+    if (!formData.machineId || !formData.totalEggs || !formData.unitId || !formData.flockId) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -194,121 +185,54 @@ const calculateHatchDate = (setDate: string) => {
       return;
     }
 
-    let flockId = formData.flockId;
-
-    // If creating new flock, create it first
-    if (flockMode === 'new') {
-      const { flockNumber, flockName, houseNumber, ageWeeks, breed } = formData.newFlock;
-      
-      if (!flockNumber || !flockName || !houseNumber || !ageWeeks) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all flock details",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { data: newFlockData, error: flockError } = await supabase
-        .from('flocks')
-        .insert([{
-          flock_number: parseInt(flockNumber),
-          flock_name: flockName,
-          house_number: houseNumber,
-          age_weeks: parseInt(ageWeeks),
-          breed: breed,
-          unit_id: formData.unitId,
-          arrival_date: formData.setDate
-        }])
-        .select()
-        .single();
-
-      if (flockError) {
-        toast({
-          title: "Error creating flock",
-          description: flockError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      flockId = newFlockData.id;
-      await loadFlocks(); // Reload flocks list
-    }
-
-    if (!flockId) {
+    if (!formData.customHouseNumber || formData.customHouseNumber.trim() === '') {
       toast({
         title: "Validation Error",
-        description: "Please select or create a flock",
+        description: "Please enter a house number",
         variant: "destructive"
       });
       return;
     }
 
-    // For existing flocks, validate custom house number
-    if (flockMode === 'existing') {
-      if (!formData.customHouseNumber || formData.customHouseNumber.trim() === '') {
-        toast({
-          title: "Validation Error",
-          description: "Please enter a house number",
-          variant: "destructive"
-        });
-        return;
-      }
+    const selectedFlock = flocks.find(f => f.id === formData.flockId);
+    
+    if (!selectedFlock) {
+      toast({
+        title: "Validation Error",
+        description: "Selected flock not found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const customNumber = formData.customHouseNumber.trim();
+    const houseNumber = `${selectedFlock.flock_name} #${customNumber}`;
+    
+    // Check if this house number already exists for this flock
+    const { data: existingBatch, error: checkError } = await supabase
+      .from('batches')
+      .select('id')
+      .eq('flock_id', formData.flockId)
+      .eq('batch_number', houseNumber)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking for duplicate:', checkError);
+      toast({
+        title: "Validation Error",
+        description: "Failed to validate house number",
+        variant: "destructive"
+      });
+      return;
     }
 
-    const selectedFlock = flocks.find(f => f.id === flockId) || {
-      flock_name: formData.newFlock.flockName
-    };
-    
-    let houseNumber: string;
-    
-    // For existing flocks, use custom house number with duplicate check
-    if (flockMode === 'existing') {
-      const customNumber = formData.customHouseNumber.trim();
-      houseNumber = `${selectedFlock?.flock_name} #${customNumber}`;
-      
-      // Check if this house number already exists for this flock
-      const { data: existingBatch, error: checkError } = await supabase
-        .from('batches')
-        .select('id')
-        .eq('flock_id', flockId)
-        .eq('batch_number', houseNumber)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking for duplicate:', checkError);
-        toast({
-          title: "Validation Error",
-          description: "Failed to validate house number",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (existingBatch) {
-        toast({
-          title: "House Already Exists",
-          description: `House #${customNumber} already exists for ${selectedFlock?.flock_name}`,
-          variant: "destructive"
-        });
-        return;
-      }
-    } else {
-      // For new flocks, get the next sequential house number
-      const { data: nextNumber, error: numberError } = await supabase
-        .rpc('get_next_house_number', { flock_uuid: flockId });
-      
-      if (numberError) {
-        toast({
-          title: "Error generating house number",
-          description: numberError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      houseNumber = `${selectedFlock?.flock_name} #${nextNumber}`;
+    if (existingBatch) {
+      toast({
+        title: "House Already Exists",
+        description: `House #${customNumber} already exists for ${selectedFlock.flock_name}`,
+        variant: "destructive"
+      });
+      return;
     }
 
     const expectedHatchDate = calculateHatchDate(formData.setDate);
@@ -317,7 +241,7 @@ const calculateHatchDate = (setDate: string) => {
       .from('batches')
       .insert({
         batch_number: houseNumber,
-        flock_id: flockId,
+        flock_id: formData.flockId,
         machine_id: formData.machineId,
         unit_id: formData.unitId,
         set_date: formData.setDate,
@@ -340,7 +264,6 @@ const calculateHatchDate = (setDate: string) => {
         description: `House ${houseNumber} created successfully`
       });
       setShowCreateForm(false);
-      setFlockMode('existing');
       setFormData({ 
         flockId: '', 
         machineId: '', 
@@ -348,13 +271,6 @@ const calculateHatchDate = (setDate: string) => {
         setDate: new Date().toISOString().split('T')[0], 
         totalEggs: '',
         customHouseNumber: '',
-        newFlock: {
-          flockNumber: '',
-          flockName: '',
-          houseNumber: '',
-          ageWeeks: '',
-          breed: 'breeder'
-        }
       });
       loadHouses();
       onHouseSelect(data.id);
@@ -452,121 +368,31 @@ const calculateHatchDate = (setDate: string) => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-4 md:col-span-2">
-                <Label>Flock Selection *</Label>
-                <RadioGroup value={flockMode} onValueChange={(value: 'existing' | 'new') => setFlockMode(value)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="existing" id="existing" />
-                    <Label htmlFor="existing" className="font-normal cursor-pointer">Select Existing Flock</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="new" id="new" />
-                    <Label htmlFor="new" className="font-normal cursor-pointer">Create New Flock</Label>
-                  </div>
-                </RadioGroup>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Select Flock *</Label>
+                <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a flock" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {flocks.map((flock) => (
+                      <SelectItem key={flock.id} value={flock.id}>
+                        {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {flockMode === 'existing' ? (
-                <>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Select Flock *</Label>
-                    <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a flock" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {flocks.map((flock) => (
-                          <SelectItem key={flock.id} value={flock.id}>
-                            {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>House Number *</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., 5, 10A, #12-B"
-                      value={formData.customHouseNumber}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customHouseNumber: e.target.value }))}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>Flock Number *</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 6422"
-                      value={formData.newFlock.flockNumber}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        newFlock: { ...prev.newFlock, flockNumber: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Flock Name *</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., Troy"
-                      value={formData.newFlock.flockName}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        newFlock: { ...prev.newFlock, flockName: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>House Number *</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., H-123 or 456A"
-                      value={formData.newFlock.houseNumber}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        newFlock: { ...prev.newFlock, houseNumber: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Age (Weeks) *</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 31"
-                      value={formData.newFlock.ageWeeks}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        newFlock: { ...prev.newFlock, ageWeeks: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Breed *</Label>
-                    <Select 
-                      value={formData.newFlock.breed} 
-                      onValueChange={(value: 'breeder' | 'broiler' | 'layer') => 
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          newFlock: { ...prev.newFlock, breed: value }
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="breeder">Breeder</SelectItem>
-                        <SelectItem value="broiler">Broiler</SelectItem>
-                        <SelectItem value="layer">Layer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+              
+              <div className="space-y-2 md:col-span-2">
+                <Label>House Number *</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., 5, 10A, #12-B"
+                  value={formData.customHouseNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customHouseNumber: e.target.value }))}
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Select Machine *</Label>
                 <Select value={formData.machineId} onValueChange={(value) => setFormData(prev => ({ ...prev, machineId: value }))}>
