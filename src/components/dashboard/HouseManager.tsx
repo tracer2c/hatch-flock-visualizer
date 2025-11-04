@@ -70,6 +70,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     unitId: '',
     setDate: new Date().toISOString().split('T')[0],
     totalEggs: '',
+    customHouseNumber: '',
     newFlock: {
       flockNumber: '',
       flockName: '',
@@ -244,24 +245,72 @@ const calculateHatchDate = (setDate: string) => {
       return;
     }
 
+    // For existing flocks, validate custom house number
+    if (flockMode === 'existing') {
+      if (!formData.customHouseNumber || formData.customHouseNumber.trim() === '') {
+        toast({
+          title: "Validation Error",
+          description: "Please enter a house number",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const selectedFlock = flocks.find(f => f.id === flockId) || {
       flock_name: formData.newFlock.flockName
     };
     
-    // Get the next sequential house number for this flock
-    const { data: nextNumber, error: numberError } = await supabase
-      .rpc('get_next_house_number', { flock_uuid: flockId });
+    let houseNumber: string;
     
-    if (numberError) {
-      toast({
-        title: "Error generating house number",
-        description: numberError.message,
-        variant: "destructive"
-      });
-      return;
+    // For existing flocks, use custom house number with duplicate check
+    if (flockMode === 'existing') {
+      const customNumber = formData.customHouseNumber.trim();
+      houseNumber = `${selectedFlock?.flock_name} #${customNumber}`;
+      
+      // Check if this house number already exists for this flock
+      const { data: existingBatch, error: checkError } = await supabase
+        .from('batches')
+        .select('id')
+        .eq('flock_id', flockId)
+        .eq('batch_number', houseNumber)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking for duplicate:', checkError);
+        toast({
+          title: "Validation Error",
+          description: "Failed to validate house number",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (existingBatch) {
+        toast({
+          title: "House Already Exists",
+          description: `House #${customNumber} already exists for ${selectedFlock?.flock_name}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    } else {
+      // For new flocks, get the next sequential house number
+      const { data: nextNumber, error: numberError } = await supabase
+        .rpc('get_next_house_number', { flock_uuid: flockId });
+      
+      if (numberError) {
+        toast({
+          title: "Error generating house number",
+          description: numberError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      houseNumber = `${selectedFlock?.flock_name} #${nextNumber}`;
     }
 
-    const houseNumber = `${selectedFlock?.flock_name} #${nextNumber}`;
     const expectedHatchDate = calculateHatchDate(formData.setDate);
 
     const { data, error } = await supabase
@@ -298,6 +347,7 @@ const calculateHatchDate = (setDate: string) => {
         unitId: '', 
         setDate: new Date().toISOString().split('T')[0], 
         totalEggs: '',
+        customHouseNumber: '',
         newFlock: {
           flockNumber: '',
           flockName: '',
@@ -417,21 +467,33 @@ const calculateHatchDate = (setDate: string) => {
               </div>
 
               {flockMode === 'existing' ? (
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Select Flock *</Label>
-                  <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a flock" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {flocks.map((flock) => (
-                        <SelectItem key={flock.id} value={flock.id}>
-                          {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Select Flock *</Label>
+                    <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a flock" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {flocks.map((flock) => (
+                          <SelectItem key={flock.id} value={flock.id}>
+                            {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>House Number *</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., 5, 10A, #12-B"
+                      value={formData.customHouseNumber}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customHouseNumber: e.target.value }))}
+                    />
+                  </div>
+                </>
               ) : (
                 <>
                   <div className="space-y-2">
