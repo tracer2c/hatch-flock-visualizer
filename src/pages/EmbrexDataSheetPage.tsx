@@ -81,6 +81,7 @@ const EmbrexDataSheetPage = () => {
               <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
               <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
               <TabsTrigger value="hatch">Hatch Results</TabsTrigger>
+              <TabsTrigger value="qa">Quality Assurance</TabsTrigger>
             </TabsList>
             <Input
               placeholder="Search..."

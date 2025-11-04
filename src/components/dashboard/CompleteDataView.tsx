@@ -6,6 +6,7 @@ import { EmbrexHOITab } from "./EmbrexHOITab";
 import { ResidueBreakoutTab } from "./ResidueBreakoutTab";
 import { EggPackQualityTab } from "./EggPackQualityTab";
 import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
+import { QAMonitoringTab } from "./QAMonitoringTab";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -53,7 +54,11 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
         .from("residue_analysis")
         .select("*");
 
-      if (batchesError || fertilityError || eggPackError || residueError) {
+      const { data: qaData, error: qaError } = await supabase
+        .from("qa_monitoring")
+        .select("*");
+
+      if (batchesError || fertilityError || eggPackError || residueError || qaError) {
         throw new Error("Error fetching data");
       }
 
@@ -62,6 +67,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
         const fertility = fertilityData?.find((f: any) => f.batch_id === batch.id);
         const eggPack = eggPackData?.find((e: any) => e.batch_id === batch.id);
         const residue = residueData?.find((r: any) => r.batch_id === batch.id);
+        const qa = qaData?.find((q: any) => q.batch_id === batch.id);
 
         return {
           ...batch,
@@ -81,9 +87,11 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
           weight_avg: eggPack?.weight_avg,
           shell_thickness_avg: eggPack?.shell_thickness_avg,
           inspector_name: eggPack?.inspector_name,
+          notes: eggPack?.notes,
           epq_sample_size: eggPack?.sample_size,
           ...residue,
           residue_sample_size: residue?.sample_size,
+          ...qa,
         };
       });
 
@@ -118,6 +126,8 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
       return <EggPackQualityTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
       return <FertilityAnalysisTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+    case "qa":
+      return <QAMonitoringTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} />;
   }

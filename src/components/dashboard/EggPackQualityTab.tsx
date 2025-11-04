@@ -28,13 +28,37 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
     );
   });
 
+  // Helper functions to extract values from notes
+  const extractFromNotes = (notes: string | null, field: string): number => {
+    if (!notes) return 0;
+    const match = notes.match(new RegExp(`${field}:\\s*(\\d+)`));
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  const extractStringFromNotes = (notes: string | null, field: string): string => {
+    if (!notes) return '';
+    const match = notes.match(new RegExp(`${field}:\\s*([^,]+)`));
+    return match ? match[1].trim() : '';
+  };
+
   const handleEdit = (record: any) => {
     setEditingRecord(record);
+    const stained = extractFromNotes(record.notes, 'Stained');
+    const abnormal = extractFromNotes(record.notes, 'Abnormal');
+    const contaminated = extractFromNotes(record.notes, 'Contaminated');
+    const usd = extractFromNotes(record.notes, 'USD');
+    const setWeek = extractStringFromNotes(record.notes, 'Set Week');
+    
     setFormData({
-      sample_size: record.epq_sample_size || 100,
+      sample_size: record.epq_sample_size || 648,
+      stained: stained,
       cracked: record.cracked || 0,
       dirty: record.dirty || 0,
       small: record.small || 0,
+      abnormal: abnormal,
+      contaminated: contaminated,
+      usd: usd,
+      set_week: setWeek,
       large: record.large || 0,
       grade_a: record.grade_a || 0,
       grade_b: record.grade_b || 0,
@@ -42,16 +66,25 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
       weight_avg: record.weight_avg || "",
       shell_thickness_avg: record.shell_thickness_avg || "",
       inspector_name: record.inspector_name || "",
-      notes: record.notes || "",
     });
   };
 
   const handleSave = async () => {
     try {
+      const sampleSize = parseInt(formData.sample_size) || 648;
+      const stained = parseInt(formData.stained) || 0;
+      const abnormal = parseInt(formData.abnormal) || 0;
+      const contaminated = parseInt(formData.contaminated) || 0;
+      const usd = parseInt(formData.usd) || 0;
+      const setWeek = formData.set_week || '';
+
+      // Build notes string with all extra fields
+      const notes = `Stained: ${stained}, Abnormal: ${abnormal}, Contaminated: ${contaminated}, USD: ${usd}${setWeek ? `, Set Week: ${setWeek}` : ''}`;
+
       const { error } = await supabase
         .from("egg_pack_quality")
         .update({
-          sample_size: parseInt(formData.sample_size) || 100,
+          sample_size: sampleSize,
           cracked: parseInt(formData.cracked) || 0,
           dirty: parseInt(formData.dirty) || 0,
           small: parseInt(formData.small) || 0,
@@ -62,7 +95,7 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
           weight_avg: formData.weight_avg ? parseFloat(formData.weight_avg) : null,
           shell_thickness_avg: formData.shell_thickness_avg ? parseFloat(formData.shell_thickness_avg) : null,
           inspector_name: formData.inspector_name,
-          notes: formData.notes,
+          notes: notes,
         })
         .eq("batch_id", editingRecord.batch_id);
 
@@ -100,67 +133,57 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Flock #</TableHead>
               <TableHead>Flock Name</TableHead>
+              <TableHead>Flock #</TableHead>
               <TableHead>House #</TableHead>
-              <TableHead>Age (weeks)</TableHead>
+              <TableHead>Age (wks)</TableHead>
               <TableHead>Set Date</TableHead>
               <TableHead>Sample Size</TableHead>
-              <TableHead>{showPercentages ? "Cracked %" : "Cracked"}</TableHead>
+              <TableHead>Total Pulled</TableHead>
+              <TableHead>{showPercentages ? "Stained %" : "Stained"}</TableHead>
               <TableHead>{showPercentages ? "Dirty %" : "Dirty"}</TableHead>
               <TableHead>{showPercentages ? "Small %" : "Small"}</TableHead>
-              <TableHead>{showPercentages ? "Large %" : "Large"}</TableHead>
-              <TableHead>Grade A</TableHead>
-              <TableHead>Grade B</TableHead>
-              <TableHead>Grade C</TableHead>
-              <TableHead>Weight Avg (g)</TableHead>
-              <TableHead>Shell Thickness (mm)</TableHead>
-              <TableHead>Quality Score</TableHead>
-              <TableHead>Inspector</TableHead>
+              <TableHead>{showPercentages ? "Cracked %" : "Cracked"}</TableHead>
+              <TableHead>{showPercentages ? "Abnormal %" : "Abnormal"}</TableHead>
+              <TableHead>{showPercentages ? "Contaminated %" : "Contaminated"}</TableHead>
+              <TableHead>{showPercentages ? "USD %" : "USD"}</TableHead>
+              <TableHead>Set Week</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={18} className="text-center text-muted-foreground">
+                <TableCell colSpan={16} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
               filteredData.map((item) => {
-                const sampleSize = item.epq_sample_size || 100;
-                const qualityScore = sampleSize > 0
-                  ? ((sampleSize - (item.grade_c || 0) - (item.cracked || 0) - (item.dirty || 0)) / sampleSize * 100).toFixed(1)
-                  : "0";
+                const sampleSize = item.epq_sample_size || 648;
+                const stained = extractFromNotes(item.notes, 'Stained');
+                const abnormal = extractFromNotes(item.notes, 'Abnormal');
+                const contaminated = extractFromNotes(item.notes, 'Contaminated');
+                const usd = extractFromNotes(item.notes, 'USD');
+                const setWeek = extractStringFromNotes(item.notes, 'Set Week');
 
                 return (
                   <TableRow key={item.batch_id}>
-                    <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>{item.flock_name || "-"}</TableCell>
+                    <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>{item.house_number || "-"}</TableCell>
                     <TableCell>{item.age_weeks || "-"}</TableCell>
-                    <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>
+                    <TableCell>{item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}</TableCell>
                     <TableCell>{sampleSize}</TableCell>
-                    <TableCell>{formatValue(item.cracked, sampleSize)}</TableCell>
+                    <TableCell>{sampleSize}</TableCell>
+                    <TableCell>{formatValue(stained, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.dirty, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.small, sampleSize)}</TableCell>
-                    <TableCell>{formatValue(item.large, sampleSize)}</TableCell>
-                    <TableCell>{item.grade_a || "0"}</TableCell>
-                    <TableCell>{item.grade_b || "0"}</TableCell>
-                    <TableCell>{item.grade_c || "0"}</TableCell>
-                    <TableCell>{item.weight_avg ? item.weight_avg.toFixed(1) : "-"}</TableCell>
-                    <TableCell>{item.shell_thickness_avg ? item.shell_thickness_avg.toFixed(2) : "-"}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        parseFloat(qualityScore) >= 95 ? 'bg-green-100 text-green-800' :
-                        parseFloat(qualityScore) >= 90 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {qualityScore}%
-                      </span>
-                    </TableCell>
-                    <TableCell>{item.inspector_name || "-"}</TableCell>
+                    <TableCell>{formatValue(item.cracked, sampleSize)}</TableCell>
+                    <TableCell>{formatValue(abnormal, sampleSize)}</TableCell>
+                    <TableCell>{formatValue(contaminated, sampleSize)}</TableCell>
+                    <TableCell>{formatValue(usd, sampleSize)}</TableCell>
+                    <TableCell>{setWeek || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -201,7 +224,7 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sample_size">Sample Size</Label>
+                <Label htmlFor="sample_size">Sample Size / Total Pulled</Label>
                 <Input
                   id="sample_size"
                   type="number"
@@ -210,12 +233,12 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cracked">Cracked</Label>
+                <Label htmlFor="stained">Stained</Label>
                 <Input
-                  id="cracked"
+                  id="stained"
                   type="number"
-                  value={formData.cracked || ""}
-                  onChange={(e) => setFormData({ ...formData, cracked: e.target.value })}
+                  value={formData.stained || ""}
+                  onChange={(e) => setFormData({ ...formData, stained: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -234,6 +257,51 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
                   type="number"
                   value={formData.small || ""}
                   onChange={(e) => setFormData({ ...formData, small: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cracked">Cracked</Label>
+                <Input
+                  id="cracked"
+                  type="number"
+                  value={formData.cracked || ""}
+                  onChange={(e) => setFormData({ ...formData, cracked: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="abnormal">Abnormal</Label>
+                <Input
+                  id="abnormal"
+                  type="number"
+                  value={formData.abnormal || ""}
+                  onChange={(e) => setFormData({ ...formData, abnormal: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contaminated">Contaminated</Label>
+                <Input
+                  id="contaminated"
+                  type="number"
+                  value={formData.contaminated || ""}
+                  onChange={(e) => setFormData({ ...formData, contaminated: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="usd">USD (Unsettable)</Label>
+                <Input
+                  id="usd"
+                  type="number"
+                  value={formData.usd || ""}
+                  onChange={(e) => setFormData({ ...formData, usd: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="set_week">Set Week</Label>
+                <Input
+                  id="set_week"
+                  value={formData.set_week || ""}
+                  onChange={(e) => setFormData({ ...formData, set_week: e.target.value })}
+                  placeholder="Week 1"
                 />
               </div>
               <div className="space-y-2">
