@@ -60,6 +60,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [houses, setHouses] = useState<House[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     flockId: '',
@@ -246,7 +247,19 @@ const calculateHatchDate = (setDate: string) => {
     }
   };
 
-  const filteredHouses = selectedUnitIds.length ? houses.filter((h) => h.unit_id && selectedUnitIds.includes(h.unit_id)) : houses;
+  const filteredHouses = houses
+    .filter((h) => !selectedUnitIds.length || (h.unit_id && selectedUnitIds.includes(h.unit_id)))
+    .filter((h) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        h.flock_name.toLowerCase().includes(search) ||
+        h.house_number.toLowerCase().includes(search) ||
+        h.batch_number.toLowerCase().includes(search) ||
+        h.flock_number.toString().includes(search) ||
+        h.machine_number.toLowerCase().includes(search)
+      );
+    });
 
   return (
     <div className="space-y-6">
@@ -372,7 +385,18 @@ const calculateHatchDate = (setDate: string) => {
       {/* Existing Houses */}
       <Card>
         <CardHeader>
-          <CardTitle>Active Houses</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Active Houses</CardTitle>
+            <div className="w-64">
+              <Input
+                type="text"
+                placeholder="Search houses..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

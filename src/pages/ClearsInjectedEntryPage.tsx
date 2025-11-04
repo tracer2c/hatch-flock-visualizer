@@ -130,7 +130,7 @@ const ClearsInjectedEntryPage = () => {
   };
 
   const handleBack = () => {
-    navigate('/data-entry');
+    navigate(`/data-entry/house/${houseId}`);
   };
 
   if (!houseInfo) {
