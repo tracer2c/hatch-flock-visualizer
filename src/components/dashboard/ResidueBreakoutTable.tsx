@@ -5,6 +5,7 @@ import { format } from "date-fns";
 interface ResidueBreakoutTableProps {
   data: any[];
   searchTerm: string;
+  onDataUpdate: () => void;
 }
 
 export const ResidueBreakoutTable = ({ data, searchTerm }: ResidueBreakoutTableProps) => {
@@ -17,25 +18,25 @@ export const ResidueBreakoutTable = ({ data, searchTerm }: ResidueBreakoutTableP
   );
 
   return (
-    <div className="rounded-md border">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Flock#</TableHead>
+            <TableHead>Flock #</TableHead>
             <TableHead>Flock Name</TableHead>
-            <TableHead className="text-right">Age (wks)</TableHead>
-            <TableHead>House#</TableHead>
+            <TableHead>House #</TableHead>
+            <TableHead>Age (wks)</TableHead>
             <TableHead>Set Date</TableHead>
-            <TableHead className="text-right">Sample</TableHead>
-            <TableHead className="text-right">Infertile</TableHead>
-            <TableHead className="text-right">Fertile</TableHead>
-            <TableHead className="text-right">{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
-            <TableHead className="text-right">{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
-            <TableHead className="text-right">{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
-            <TableHead className="text-right">Fert. %</TableHead>
-            <TableHead className="text-right">Hatch</TableHead>
-            <TableHead className="text-right">Hatch %</TableHead>
-            <TableHead className="text-right">HOF %</TableHead>
+            <TableHead>Sample</TableHead>
+            <TableHead>Infertile</TableHead>
+            <TableHead>Fertile</TableHead>
+            <TableHead>Fert. %</TableHead>
+            <TableHead>{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
+            <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
+            <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
+            <TableHead>Hatch</TableHead>
+            <TableHead>Hatch %</TableHead>
+            <TableHead>HOF %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,34 +48,34 @@ export const ResidueBreakoutTable = ({ data, searchTerm }: ResidueBreakoutTableP
             </TableRow>
           ) : (
             filteredData.map((item) => (
-              <TableRow key={item.batch_id} className="hover:bg-muted/50">
+              <TableRow key={item.batch_id}>
                 <TableCell>{item.flock_number || "-"}</TableCell>
                 <TableCell>{item.flock_name || "-"}</TableCell>
-                <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>
                 <TableCell>{item.house_number || "-"}</TableCell>
+                <TableCell>{item.age_weeks || "-"}</TableCell>
                 <TableCell>
                   {item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}
                 </TableCell>
-                <TableCell className="text-right">{item.residue_sample_size || "-"}</TableCell>
-                <TableCell className="text-right">{item.infertile_eggs || "-"}</TableCell>
-                <TableCell className="text-right">{item.fertile_eggs || "-"}</TableCell>
-                <TableCell className="text-right">
-                  {formatValue(item.early_dead, item.residue_sample_size)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatValue(item.mid_dead, item.residue_sample_size)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatValue(item.late_dead, item.residue_sample_size)}
-                </TableCell>
-                <TableCell className="text-right">
+                <TableCell>{item.residue_sample_size || item.sample_size || "-"}</TableCell>
+                <TableCell>{item.infertile_eggs || "-"}</TableCell>
+                <TableCell>{item.fertile_eggs || "-"}</TableCell>
+                <TableCell>
                   {item.fertility_percent ? `${item.fertility_percent.toFixed(1)}%` : "-"}
                 </TableCell>
-                <TableCell className="text-right">{item.chicks_hatched || "-"}</TableCell>
-                <TableCell className="text-right">
+                <TableCell>
+                  {formatValue(item.early_dead, item.residue_sample_size || item.sample_size)}
+                </TableCell>
+                <TableCell>
+                  {formatValue(item.mid_dead, item.residue_sample_size || item.sample_size)}
+                </TableCell>
+                <TableCell>
+                  {formatValue(item.late_dead, item.residue_sample_size || item.sample_size)}
+                </TableCell>
+                <TableCell>{item.chicks_hatched || "-"}</TableCell>
+                <TableCell>
                   {item.hatch_percent ? `${item.hatch_percent.toFixed(1)}%` : "-"}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell>
                   {item.hof_percent ? `${item.hof_percent.toFixed(1)}%` : "-"}
                 </TableCell>
               </TableRow>

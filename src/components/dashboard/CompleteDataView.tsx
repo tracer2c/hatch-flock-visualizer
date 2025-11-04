@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AllDataTab } from "./AllDataTab";
-import { EmbrexTab } from "./EmbrexTab";
+import { EmbrexHOITab } from "./EmbrexHOITab";
 import { ResidueBreakoutTab } from "./ResidueBreakoutTab";
 import { EggPackQualityTab } from "./EggPackQualityTab";
-import { HatchPerformanceTab } from "./HatchPerformanceTab";
+import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -24,94 +24,66 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     try {
       setLoading(true);
 
-      // Fetch batches with related data
+      // Fetch all data with necessary joins
       const { data: batchesData, error: batchesError } = await supabase
         .from("batches")
         .select(`
-          id,
-          batch_number,
-          total_eggs_set,
-          eggs_cleared,
-          eggs_injected,
-          set_date,
-          status,
-          chicks_hatched,
+          *,
           flocks (
             flock_number,
             flock_name,
             age_weeks,
             house_number
+          ),
+          machines (
+            machine_number
           )
         `)
         .order("set_date", { ascending: false });
 
-      if (batchesError) throw batchesError;
-
-      // Fetch fertility analysis data
       const { data: fertilityData, error: fertilityError } = await supabase
         .from("fertility_analysis")
         .select("*");
 
-      if (fertilityError) throw fertilityError;
-
-      // Fetch egg pack quality data
       const { data: eggPackData, error: eggPackError } = await supabase
         .from("egg_pack_quality")
         .select("*");
 
-      if (eggPackError) throw eggPackError;
-
-      // Fetch residue analysis for hatch performance
       const { data: residueData, error: residueError } = await supabase
         .from("residue_analysis")
         .select("*");
 
-      if (residueError) throw residueError;
-
-      // Fetch fertility analysis with mid_dead for residue tab
-      const { data: fertilityWithMidDead, error: fertilityMidDeadError } = await supabase
-        .from("fertility_analysis")
-        .select("*");
-
-      if (fertilityMidDeadError) throw fertilityMidDeadError;
+      if (batchesError || fertilityError || eggPackError || residueError) {
+        throw new Error("Error fetching data");
+      }
 
       // Combine all data
-      const combinedData = (batchesData || []).map((batch) => {
-        const fertility = fertilityData?.find((f) => f.batch_id === batch.id);
-        const eggPack = eggPackData?.find((e) => e.batch_id === batch.id);
-        const residue = residueData?.find((r) => r.batch_id === batch.id);
+      const combinedData = (batchesData || []).map((batch: any) => {
+        const fertility = fertilityData?.find((f: any) => f.batch_id === batch.id);
+        const eggPack = eggPackData?.find((e: any) => e.batch_id === batch.id);
+        const residue = residueData?.find((r: any) => r.batch_id === batch.id);
 
         return {
-          batch_id: batch.id,
-          batch_number: batch.batch_number,
+          ...batch,
           flock_number: batch.flocks?.flock_number,
           flock_name: batch.flocks?.flock_name,
           age_weeks: batch.flocks?.age_weeks,
           house_number: batch.flocks?.house_number,
-          set_date: batch.set_date,
-          status: batch.status,
-          total_eggs_set: batch.total_eggs_set,
-          eggs_cleared: batch.eggs_cleared,
-          eggs_injected: batch.eggs_injected,
-          chicks_hatched: batch.chicks_hatched,
-          // Fertility data
-          sample_size: fertility?.sample_size,
-          fertile_eggs: fertility?.fertile_eggs,
-          infertile_eggs: fertility?.infertile_eggs,
-          early_dead: fertility?.early_dead,
-          late_dead: fertility?.late_dead,
-          fertility_percent: fertility?.fertility_percent,
-          hatch_percent: fertility?.hatch_percent,
-          hof_percent: fertility?.hof_percent,
-          // Egg pack quality data
+          machine_number: batch.machines?.machine_number,
+          ...fertility,
           cracked: eggPack?.cracked,
           dirty: eggPack?.dirty,
           small: eggPack?.small,
           large: eggPack?.large,
+          grade_a: eggPack?.grade_a,
+          grade_b: eggPack?.grade_b,
+          grade_c: eggPack?.grade_c,
+          weight_avg: eggPack?.weight_avg,
+          shell_thickness_avg: eggPack?.shell_thickness_avg,
+          inspector_name: eggPack?.inspector_name,
           epq_sample_size: eggPack?.sample_size,
-          // Residue/hatch data
+          ...residue,
           residue_sample_size: residue?.sample_size,
-          mid_dead: residue?.mid_dead,
         };
       });
 
@@ -127,7 +99,10 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading data...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading data...</p>
+        </div>
       </div>
     );
   }
@@ -136,13 +111,13 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     case "all":
       return <AllDataTab data={data} searchTerm={searchTerm} />;
     case "embrex":
-      return <EmbrexTab data={data} searchTerm={searchTerm} />;
+      return <EmbrexHOITab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "residue":
-      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} />;
+      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data} searchTerm={searchTerm} />;
+      return <EggPackQualityTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <HatchPerformanceTab data={data} searchTerm={searchTerm} />;
+      return <FertilityAnalysisTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} />;
   }
