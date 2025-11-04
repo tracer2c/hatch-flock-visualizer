@@ -11,7 +11,7 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { toast } from "sonner";
 
 const EmbrexDataSheetPage = () => {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("embrex");
   const [searchTerm, setSearchTerm] = useState("");
   const { showPercentages, setShowPercentages } = usePercentageToggle();
   const navigate = useNavigate();
@@ -76,7 +76,6 @@ const EmbrexDataSheetPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="all">All Data</TabsTrigger>
               <TabsTrigger value="embrex">Embrex/HOI</TabsTrigger>
               <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
               <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
@@ -95,7 +94,11 @@ const EmbrexDataSheetPage = () => {
 
       {/* Content Section */}
       <div className="flex-1 overflow-auto p-6">
-        <CompleteDataView activeTab={activeTab} searchTerm={searchTerm} />
+        <CompleteDataView 
+          key={showPercentages ? 'percentage' : 'count'}
+          activeTab={activeTab} 
+          searchTerm={searchTerm} 
+        />
       </div>
     </div>
   );

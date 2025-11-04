@@ -201,9 +201,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
   }
 
   switch (activeTab) {
-    case "all":
-      return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
-    case "embrex":
+      case "embrex":
       return <EmbrexHOITab data={data.filter(d => d.data_type === 'batch')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "residue":
       return <ResidueBreakoutTab data={data.filter(d => d.data_type === 'residue')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
