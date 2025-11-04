@@ -27,8 +27,9 @@ const ProcessFlowDashboard = () => {
   const batches = meaningfulBatches.length > 0 ? meaningfulBatches : performanceMetrics;
 
 
-  // Data flow analysis - use meaningful data
-  const flowData = batches.map(batch => ({
+  // Data flow analysis - show only last 25 batches for readability
+  const recentBatches = batches.slice(-25);
+  const flowData = recentBatches.map(batch => ({
     batch: batch.batchNumber,
     hof: typeof batch.hof === 'number' ? batch.hof : 0,
     hoi: typeof batch.hoi === 'number' ? batch.hoi : 0,
@@ -138,65 +139,43 @@ const ProcessFlowDashboard = () => {
             />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Tracking HOF and HOI alongside fertility and hatch performance
+            Showing most recent 25 batches for clarity • Tracking HOF and HOI alongside fertility and hatch performance
           </p>
         </CardHeader>
         <CardContent id="process-flow-chart">
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={flowData} margin={{ top: 10, right: 30, left: 0, bottom: 80 }}>
-              <defs>
-                <linearGradient id="colorHof" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(217 91% 60%)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="hsl(217 91% 60%)" stopOpacity={0.3}/>
-                </linearGradient>
-                <linearGradient id="colorHoi" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(271 81% 56%)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="hsl(271 81% 56%)" stopOpacity={0.3}/>
-                </linearGradient>
-                <linearGradient id="colorFertility" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(142 71% 45%)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="hsl(142 71% 45%)" stopOpacity={0.3}/>
-                </linearGradient>
-                <linearGradient id="colorHatch" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(25 95% 53%)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="hsl(25 95% 53%)" stopOpacity={0.3}/>
-                </linearGradient>
-              </defs>
+          <ResponsiveContainer width="100%" height={450}>
+            <LineChart data={flowData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
                 dataKey="batch" 
-                angle={-45}
+                angle={-35}
                 textAnchor="end"
                 height={100}
-                fontSize={10}
+                fontSize={11}
                 stroke="hsl(var(--muted-foreground))"
-                interval={0}
+                interval="preserveStartEnd"
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))" 
                 fontSize={12}
-                label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }}
+                domain={[0, 100]}
+                label={{ value: 'Performance (%)', angle: -90, position: 'insideLeft', style: { fontSize: 14 } }}
               />
               <Tooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <AITooltip 
-                        chartType="process-flow" 
-                        data={payload} 
-                        chartConfig={{ label, type: 'area' }}
-                        className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                      >
-                        <div>
-                          <p className="font-medium mb-2">{label}</p>
+                      <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+                        <p className="font-semibold mb-2 text-sm">{label}</p>
+                        <div className="space-y-1">
                           {payload.map((entry, index) => (
-                            <div key={index} className="flex justify-between items-center gap-3">
-                              <span style={{ color: entry.color }}>{entry.name}: </span>
-                              <span className="font-medium">{entry.value}%</span>
+                            <div key={index} className="flex justify-between items-center gap-4 text-sm">
+                              <span style={{ color: entry.color }} className="font-medium">{entry.name}</span>
+                              <span className="font-bold">{Number(entry.value).toFixed(1)}%</span>
                             </div>
                           ))}
                         </div>
-                      </AITooltip>
+                      </div>
                     );
                   }
                   return null;
@@ -204,45 +183,46 @@ const ProcessFlowDashboard = () => {
               />
               <Legend 
                 wrapperStyle={{ paddingTop: '20px' }}
-                iconType="circle"
+                iconType="line"
+                iconSize={20}
               />
-              <Area 
+              <Line 
                 type="monotone" 
                 dataKey="hof" 
-                stackId="1" 
                 stroke="hsl(217 91% 60%)" 
-                fill="url(#colorHof)" 
-                strokeWidth={2}
+                strokeWidth={3}
+                dot={{ r: 4, fill: 'hsl(217 91% 60%)' }}
+                activeDot={{ r: 6 }}
                 name="HOF %" 
               />
-              <Area 
+              <Line 
                 type="monotone" 
                 dataKey="hoi" 
-                stackId="2" 
                 stroke="hsl(271 81% 56%)" 
-                fill="url(#colorHoi)" 
-                strokeWidth={2}
+                strokeWidth={3}
+                dot={{ r: 4, fill: 'hsl(271 81% 56%)' }}
+                activeDot={{ r: 6 }}
                 name="HOI %" 
               />
-              <Area 
+              <Line 
                 type="monotone" 
                 dataKey="fertility" 
-                stackId="3" 
                 stroke="hsl(142 71% 45%)" 
-                fill="url(#colorFertility)" 
-                strokeWidth={2}
+                strokeWidth={3}
+                dot={{ r: 4, fill: 'hsl(142 71% 45%)' }}
+                activeDot={{ r: 6 }}
                 name="Fertility %" 
               />
-              <Area 
+              <Line 
                 type="monotone" 
                 dataKey="hatch" 
-                stackId="4" 
                 stroke="hsl(25 95% 53%)" 
-                fill="url(#colorHatch)" 
-                strokeWidth={2}
+                strokeWidth={3}
+                dot={{ r: 4, fill: 'hsl(25 95% 53%)' }}
+                activeDot={{ r: 6 }}
                 name="Hatch %" 
               />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
