@@ -17,6 +17,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useHelpContext } from "@/contexts/HelpContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useActiveBatches();
@@ -27,6 +28,7 @@ const BatchOverviewDashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { updateContext } = useHelpContext();
+  const [totalBatchesCount, setTotalBatchesCount] = useState(0);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -144,6 +146,20 @@ const BatchOverviewDashboard = () => {
     const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hatch, 0);
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics]);
+
+  useEffect(() => {
+    const fetchTotalBatchesCount = async () => {
+      const { count, error } = await supabase
+        .from('batches')
+        .select('*', { count: 'exact', head: true });
+      
+      if (!error && count !== null) {
+        setTotalBatchesCount(count);
+      }
+    };
+    
+    fetchTotalBatchesCount();
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
@@ -271,7 +287,7 @@ const BatchOverviewDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="All Batches"
-              value={listForDisplay.length.toString()}
+              value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
               trendLabel="vs last week"
               trendDirection="up"
