@@ -154,41 +154,47 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>{showPercentages ? "Malpositioned %" : "Malpositioned"}</TableHead>
               <TableHead>{showPercentages ? "Upside Down %" : "Upside Down"}</TableHead>
               <TableHead>PIP Number</TableHead>
-              <TableHead className="flex items-center gap-1">
-                HOF %
-                <Tooltip>
-                  <TooltipTrigger>
-                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Hatch of Fertile (HOF)</p>
-                    <p className="text-sm">Formula: (Chicks Hatched / Fertile Eggs) × 100</p>
-                  </TooltipContent>
-                </Tooltip>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  HOF %
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">Hatch of Fertile (HOF)</p>
+                      <p className="text-sm">Formula: (Chicks Hatched / Fertile Eggs) × 100</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </TableHead>
-              <TableHead className="flex items-center gap-1">
-                HOI %
-                <Tooltip>
-                  <TooltipTrigger>
-                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Hatch of Incubated (HOI)</p>
-                    <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
-                  </TooltipContent>
-                </Tooltip>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  HOI %
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">Hatch of Incubated (HOI)</p>
+                      <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </TableHead>
-              <TableHead className="flex items-center gap-1">
-                I/F %
-                <Tooltip>
-                  <TooltipTrigger>
-                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Infertile/Fertile Development</p>
-                    <p className="text-sm">Formula: HOI % - HOF %</p>
-                  </TooltipContent>
-                </Tooltip>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  I/F %
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">Infertile/Fertile Development</p>
+                      <p className="text-sm">Formula: HOI % - HOF %</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>

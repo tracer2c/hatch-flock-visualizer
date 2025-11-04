@@ -44,56 +44,141 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
 
       const { data: fertilityData, error: fertilityError } = await supabase
         .from("fertility_analysis")
-        .select("*");
+        .select(`
+          *,
+          batches!inner (
+            id,
+            batch_number,
+            set_date,
+            total_eggs_set,
+            flocks (
+              flock_number,
+              flock_name,
+              age_weeks,
+              house_number
+            )
+          )
+        `);
 
       const { data: eggPackData, error: eggPackError } = await supabase
         .from("egg_pack_quality")
-        .select("*");
+        .select(`
+          *,
+          batches!inner (
+            id,
+            batch_number,
+            set_date,
+            total_eggs_set,
+            flocks (
+              flock_number,
+              flock_name,
+              age_weeks,
+              house_number
+            )
+          )
+        `);
 
       const { data: residueData, error: residueError } = await supabase
         .from("residue_analysis")
-        .select("*");
+        .select(`
+          *,
+          batches!inner (
+            id,
+            batch_number,
+            set_date,
+            total_eggs_set,
+            flocks (
+              flock_number,
+              flock_name,
+              age_weeks,
+              house_number
+            )
+          )
+        `);
 
       const { data: qaData, error: qaError } = await supabase
         .from("qa_monitoring")
-        .select("*");
+        .select(`
+          *,
+          batches!inner (
+            id,
+            batch_number,
+            set_date,
+            total_eggs_set,
+            flocks (
+              flock_number,
+              flock_name,
+              age_weeks,
+              house_number
+            )
+          )
+        `);
 
       if (batchesError || fertilityError || eggPackError || residueError || qaError) {
         throw new Error("Error fetching data");
       }
 
       // Combine all data
-      const combinedData = (batchesData || []).map((batch: any) => {
-        const fertility = fertilityData?.find((f: any) => f.batch_id === batch.id);
-        const eggPack = eggPackData?.find((e: any) => e.batch_id === batch.id);
-        const residue = residueData?.find((r: any) => r.batch_id === batch.id);
-        const qa = qaData?.find((q: any) => q.batch_id === batch.id);
-
-        return {
+      const combinedData = [
+        ...(batchesData || []).map((batch: any) => ({
           ...batch,
+          data_type: 'batch',
           flock_number: batch.flocks?.flock_number,
           flock_name: batch.flocks?.flock_name,
           age_weeks: batch.flocks?.age_weeks,
           house_number: batch.flocks?.house_number,
           machine_number: batch.machines?.machine_number,
-          ...fertility,
-          cracked: eggPack?.cracked,
-          dirty: eggPack?.dirty,
-          small: eggPack?.small,
-          large: eggPack?.large,
-          grade_a: eggPack?.grade_a,
-          grade_b: eggPack?.grade_b,
-          grade_c: eggPack?.grade_c,
-          weight_avg: eggPack?.weight_avg,
-          shell_thickness_avg: eggPack?.shell_thickness_avg,
-          inspector_name: eggPack?.inspector_name,
-          notes: eggPack?.notes,
-          epq_sample_size: eggPack?.sample_size,
-          ...residue,
-          residue_sample_size: residue?.sample_size,
-          ...qa,
-        };
-      });
+          batch_id: batch.id,
+        })),
+        ...(fertilityData || []).map((f: any) => ({
+          ...f,
+          data_type: 'fertility',
+          batch_id: f.batches.id,
+          batch_number: f.batches.batch_number,
+          set_date: f.batches.set_date,
+          total_eggs_set: f.batches.total_eggs_set,
+          flock_number: f.batches.flocks?.flock_number,
+          flock_name: f.batches.flocks?.flock_name,
+          age_weeks: f.batches.flocks?.age_weeks,
+          house_number: f.batches.flocks?.house_number,
+        })),
+        ...(eggPackData || []).map((e: any) => ({
+          ...e,
+          data_type: 'egg_pack',
+          batch_id: e.batches.id,
+          batch_number: e.batches.batch_number,
+          set_date: e.batches.set_date,
+          total_eggs_set: e.batches.total_eggs_set,
+          flock_number: e.batches.flocks?.flock_number,
+          flock_name: e.batches.flocks?.flock_name,
+          age_weeks: e.batches.flocks?.age_weeks,
+          house_number: e.batches.flocks?.house_number,
+        })),
+        ...(residueData || []).map((r: any) => ({
+          ...r,
+          data_type: 'residue',
+          batch_id: r.batches.id,
+          batch_number: r.batches.batch_number,
+          set_date: r.batches.set_date,
+          total_eggs_set: r.batches.total_eggs_set,
+          flock_number: r.batches.flocks?.flock_number,
+          flock_name: r.batches.flocks?.flock_name,
+          age_weeks: r.batches.flocks?.age_weeks,
+          house_number: r.batches.flocks?.house_number,
+        })),
+        ...(qaData || []).map((q: any) => ({
+          ...q,
+          data_type: 'qa',
+          batch_id: q.batches.id,
+          batch_number: q.batches.batch_number,
+          set_date: q.batches.set_date,
+          total_eggs_set: q.batches.total_eggs_set,
+          flock_number: q.batches.flocks?.flock_number,
+          flock_name: q.batches.flocks?.flock_name,
+          age_weeks: q.batches.flocks?.age_weeks,
+          house_number: q.batches.flocks?.house_number,
+        })),
+      ];
 
       setData(combinedData);
     } catch (error) {
@@ -117,18 +202,18 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
 
   switch (activeTab) {
     case "all":
-      return <AllDataTab data={data} searchTerm={searchTerm} />;
+      return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "embrex":
-      return <EmbrexHOITab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <EmbrexHOITab data={data.filter(d => d.data_type === 'batch')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "residue":
-      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <ResidueBreakoutTab data={data.filter(d => d.data_type === 'residue')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <EggPackQualityTab data={data.filter(d => d.data_type === 'egg_pack')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <FertilityAnalysisTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <FertilityAnalysisTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "qa":
-      return <QAMonitoringTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <QAMonitoringTab data={data.filter(d => d.data_type === 'qa')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
-      return <AllDataTab data={data} searchTerm={searchTerm} />;
+      return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
   }
 };
