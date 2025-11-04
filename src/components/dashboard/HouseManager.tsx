@@ -8,9 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { format, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Flock {
   id: string;
@@ -59,9 +64,9 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [houses, setHouses] = useState<House[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
@@ -70,6 +75,16 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     totalEggs: '',
     customHouseNumber: '',
   });
+  
+  // Advanced filters state
+  const [filters, setFilters] = useState({
+    dateRange: { from: subDays(new Date(), 30), to: new Date() },
+    statuses: ['setting', 'incubating', 'hatching'] as string[],
+    flockIds: [] as string[],
+    machineTypes: [] as string[],
+    unitIds: [] as string[],
+  });
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -165,9 +180,65 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setUnits(data || []);
   };
 
-const toggleFilterUnit = (id: string, checked: boolean) => {
-  setSelectedUnitIds((prev) => (checked ? Array.from(new Set([...prev, id])) : prev.filter((u) => u !== id)));
-};
+  // Filter toggle helpers
+  const toggleFilterUnit = (id: string, checked: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      unitIds: checked ? [...prev.unitIds, id] : prev.unitIds.filter(u => u !== id)
+    }));
+  };
+
+  const toggleFilterStatus = (status: string, checked: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      statuses: checked ? [...prev.statuses, status] : prev.statuses.filter(s => s !== status)
+    }));
+  };
+
+  const toggleFilterFlock = (id: string, checked: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      flockIds: checked ? [...prev.flockIds, id] : prev.flockIds.filter(f => f !== id)
+    }));
+  };
+
+  const toggleFilterMachineType = (type: string, checked: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      machineTypes: checked ? [...prev.machineTypes, type] : prev.machineTypes.filter(m => m !== type)
+    }));
+  };
+
+  const handleQuickDateRange = (days: number) => {
+    setFilters(prev => ({
+      ...prev,
+      dateRange: { from: subDays(new Date(), days), to: new Date() }
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      dateRange: { from: subDays(new Date(), 30), to: new Date() },
+      statuses: ['setting', 'incubating', 'hatching'],
+      flockIds: [],
+      machineTypes: [],
+      unitIds: [],
+    });
+  };
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.unitIds.length > 0) count++;
+    if (filters.statuses.length < 6) count++;
+    if (filters.flockIds.length > 0) count++;
+    if (filters.machineTypes.length > 0) count++;
+    const defaultFrom = subDays(new Date(), 30);
+    if (filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
+        filters.dateRange.to.getTime() < new Date().getTime() - 86400000) count++;
+    return count;
+  };
+
+  const uniqueMachineTypes = Array.from(new Set(machines.map(m => m.machine_type)));
 
 const calculateHatchDate = (setDate: string) => {
     const date = new Date(setDate);
@@ -290,7 +361,28 @@ const calculateHatchDate = (setDate: string) => {
   };
 
   const filteredHouses = houses
-    .filter((h) => !selectedUnitIds.length || (h.unit_id && selectedUnitIds.includes(h.unit_id)))
+    // Date range filter
+    .filter((h) => {
+      const setDate = new Date(h.set_date);
+      return setDate >= filters.dateRange.from && setDate <= filters.dateRange.to;
+    })
+    // Status filter
+    .filter((h) => filters.statuses.length === 0 || filters.statuses.includes(h.status))
+    // Unit filter
+    .filter((h) => filters.unitIds.length === 0 || (h.unit_id && filters.unitIds.includes(h.unit_id)))
+    // Flock filter
+    .filter((h) => {
+      if (filters.flockIds.length === 0) return true;
+      const flock = flocks.find(f => f.flock_name === h.flock_name);
+      return flock && filters.flockIds.includes(flock.id);
+    })
+    // Machine type filter
+    .filter((h) => {
+      if (filters.machineTypes.length === 0) return true;
+      const machine = machines.find(m => m.machine_number === h.machine_number);
+      return machine && filters.machineTypes.includes(machine.machine_type);
+    })
+    // Search filter
     .filter((h) => {
       if (!searchTerm) return true;
       const search = searchTerm.toLowerCase();
@@ -313,41 +405,12 @@ const calculateHatchDate = (setDate: string) => {
               <Plus className="h-5 w-5" />
               House Management
             </span>
-            <div className="flex items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline">
-                    {`Filter Hatcheries${selectedUnitIds.length ? ` (${selectedUnitIds.length})` : ''}`}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Show hatcheries</div>
-                    <div className="max-h-48 overflow-auto space-y-2">
-                      {units.map((u) => (
-                        <label key={u.id} className="flex items-center gap-2">
-                          <Checkbox
-                            checked={selectedUnitIds.includes(u.id)}
-                            onCheckedChange={(c) => toggleFilterUnit(u.id, Boolean(c))}
-                          />
-                          <span className="text-sm">{u.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedUnitIds([])}>Clear</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedUnitIds(units.map(u => u.id))}>All</Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <Button 
-                onClick={() => setShowCreateForm(!showCreateForm)}
-                variant={showCreateForm ? "outline" : "default"}
-              >
-                {showCreateForm ? "Cancel" : "New House"}
-              </Button>
-            </div>
+            <Button 
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              variant={showCreateForm ? "outline" : "default"}
+            >
+              {showCreateForm ? "Cancel" : "New House"}
+            </Button>
           </CardTitle>
         </CardHeader>
         {showCreateForm && (
@@ -432,6 +495,176 @@ const calculateHatchDate = (setDate: string) => {
             </div>
           </CardContent>
         )}
+      </Card>
+
+      {/* Advanced Filters */}
+      <Card>
+        <CardHeader>
+          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  <CardTitle>Advanced Filters</CardTitle>
+                  {getActiveFilterCount() > 0 && (
+                    <Badge variant="default" className="ml-2">
+                      {getActiveFilterCount()} active
+                    </Badge>
+                  )}
+                </div>
+                <ChevronDown className={cn("h-5 w-5 transition-transform", isFilterOpen && "rotate-180")} />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Date Range Filter */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Date Range</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleQuickDateRange(7)}
+                    >
+                      Last 7 days
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleQuickDateRange(30)}
+                    >
+                      Last 30 days
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleQuickDateRange(90)}
+                    >
+                      Last 90 days
+                    </Button>
+                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {filters.dateRange.from && filters.dateRange.to ? (
+                          <>
+                            {format(filters.dateRange.from, "MMM d")} - {format(filters.dateRange.to, "MMM d, yyyy")}
+                          </>
+                        ) : (
+                          <span>Pick a date range</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="range"
+                        selected={{ from: filters.dateRange.from, to: filters.dateRange.to }}
+                        onSelect={(range) => {
+                          if (range?.from && range?.to) {
+                            setFilters(prev => ({ ...prev, dateRange: { from: range.from, to: range.to } }));
+                          }
+                        }}
+                        numberOfMonths={2}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Status Filter */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Batch Status</Label>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {['planned', 'setting', 'incubating', 'hatching', 'completed', 'cancelled'].map((status) => (
+                        <label key={status} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={filters.statuses.includes(status)}
+                            onCheckedChange={(c) => toggleFilterStatus(status, Boolean(c))}
+                          />
+                          <Badge className={getStatusColor(status)} variant="outline">
+                            {status}
+                          </Badge>
+                        </label>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Flock Filter */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Flocks</Label>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {flocks.map((flock) => (
+                        <label key={flock.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={filters.flockIds.includes(flock.id)}
+                            onCheckedChange={(c) => toggleFilterFlock(flock.id, Boolean(c))}
+                          />
+                          <span className="text-sm">
+                            {flock.flock_number} - {flock.flock_name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Machine Type & Hatchery Filter */}
+                <div className="space-y-4">
+                  {/* Machine Type */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Machine Type</Label>
+                    <div className="space-y-2">
+                      {uniqueMachineTypes.map((type) => (
+                        <label key={type} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={filters.machineTypes.includes(type)}
+                            onCheckedChange={(c) => toggleFilterMachineType(type, Boolean(c))}
+                          />
+                          <span className="text-sm capitalize">{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Hatchery/Unit */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Hatchery</Label>
+                    <ScrollArea className="h-[100px]">
+                      <div className="space-y-2">
+                        {units.map((unit) => (
+                          <label key={unit.id} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={filters.unitIds.includes(unit.id)}
+                              onCheckedChange={(c) => toggleFilterUnit(unit.id, Boolean(c))}
+                            />
+                            <span className="text-sm">{unit.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Actions */}
+              <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredHouses.length} of {houses.length} houses
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardHeader>
       </Card>
 
       {/* Existing Houses */}
