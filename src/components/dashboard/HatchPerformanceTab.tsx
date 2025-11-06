@@ -65,7 +65,7 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="font-semibold">Hatch of Incubated (HOI)</p>
+                    <p className="font-semibold">Hatch of Injection (HOI)</p>
                     <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
                   </TooltipContent>
                 </Tooltip>
