@@ -172,7 +172,7 @@ const UnitManager = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Unit Management</span>
+            <span>Hatchery Management</span>
             <Button variant={showCreate ? "outline" : "default"} onClick={() => setShowCreate((s) => !s)}>
               {showCreate ? (
                 <span className="inline-flex items-center gap-2">
@@ -180,7 +180,7 @@ const UnitManager = () => {
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-2">
-                  <Plus className="h-4 w-4" /> New Unit
+                  <Plus className="h-4 w-4" /> New Hatchery
                 </span>
               )}
             </Button>
@@ -190,7 +190,7 @@ const UnitManager = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Unit Name *</Label>
+                <Label>Hatchery Name *</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -229,7 +229,7 @@ const UnitManager = () => {
             <div className="flex gap-2 mt-4">
               <Button onClick={createUnit} disabled={creating}>
                 <Save className="h-4 w-4 mr-2" />
-                Create Unit
+                Create Hatchery
               </Button>
               <Button variant="outline" onClick={() => setShowCreate(false)}>
                 Cancel
@@ -241,11 +241,11 @@ const UnitManager = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Existing Units</CardTitle>
+          <CardTitle>Existing Hatcheries</CardTitle>
         </CardHeader>
         <CardContent>
           {units.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No units found. Create your first unit to get started.</div>
+            <div className="text-center py-8 text-gray-500">No hatcheries found. Create your first hatchery to get started.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {units.map((u) => {

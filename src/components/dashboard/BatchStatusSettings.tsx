@@ -170,7 +170,7 @@ const BatchStatusSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Batch Status Automation
+            House Status Automation
           </CardTitle>
         </CardHeader>
         <CardContent>

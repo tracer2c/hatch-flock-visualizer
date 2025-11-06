@@ -57,6 +57,22 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
             </TableHead>
             <TableHead className="text-right">
               <div className="flex items-center justify-end gap-1">
+                Hatch of Incubated %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Hatch of Incubated</p>
+                    <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
                 HOI %
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -66,22 +82,6 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-semibold">Hatch of Injection (HOI)</p>
-                    <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div className="flex items-center justify-end gap-1">
-                Hatch of Injection %
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="inline-flex" type="button">
-                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Hatch of Injection</p>
                     <p className="text-sm">Formula: (Hatch / Injected) × 100</p>
                   </TooltipContent>
                 </Tooltip>
