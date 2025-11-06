@@ -771,7 +771,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
           {/* Technician Name and Notes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="technicianName">Technician Name (Optional)</Label>
+              <Label htmlFor="technicianName">Technician Name</Label>
               <Input
                 id="technicianName"
                 value={formData.technicianName}

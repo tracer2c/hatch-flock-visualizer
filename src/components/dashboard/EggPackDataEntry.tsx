@@ -386,7 +386,7 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 />
               </div>
               <div className="md:col-span-2">
-                <Label htmlFor="technicianName">Technician Name (Optional)</Label>
+                <Label htmlFor="technicianName">Technician Name</Label>
                 <Input
                   id="technicianName"
                   value={technicianName}
