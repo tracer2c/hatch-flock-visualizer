@@ -110,6 +110,8 @@ const ResidueEntryPage = () => {
           fertile_eggs: record.fertileEggs,
           mid_dead: record.midDeath || 0,
           analysis_date: new Date().toISOString().split('T')[0],
+          lab_technician: record.technicianName || null,
+          notes: record.notes || null,
         };
 
         const { error } = await supabase

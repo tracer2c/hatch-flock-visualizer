@@ -56,6 +56,8 @@ interface ResidueRecord {
   hofPercent?: number;
   hoiPercent?: number;
   ifDevPercent?: number;
+  technicianName?: string;
+  notes?: string;
 }
 
 interface BatchInfo {
@@ -97,7 +99,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     upsideDown: '',
     pipNumber: '',
     // Hatchability metrics
-    sampleSize: '648'
+    sampleSize: '648',
+    technicianName: '',
+    notes: ''
   });
   const { toast } = useToast();
 
@@ -230,7 +234,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       hatchPercent: hatchabilityMetrics.hatchPercent,
       hofPercent: hatchabilityMetrics.hofPercent,
       hoiPercent: hatchabilityMetrics.hoiPercent,
-      ifDevPercent: hatchabilityMetrics.ifDevPercent
+      ifDevPercent: hatchabilityMetrics.ifDevPercent,
+      technicianName: formData.technicianName,
+      notes: formData.notes
     };
 
     if (editingId) {
@@ -275,7 +281,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       malpositioned: record.malpositioned.toString(),
       upsideDown: record.upsideDown.toString(),
       pipNumber: record.pipNumber.toString(),
-      sampleSize: (record.sampleSize || TOTAL_EGGS).toString()
+      sampleSize: (record.sampleSize || TOTAL_EGGS).toString(),
+      technicianName: '',
+      notes: ''
     });
   };
 
@@ -312,7 +320,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       malpositioned: '',
       upsideDown: '',
       pipNumber: '',
-      sampleSize: '648'
+      sampleSize: '648',
+      technicianName: '',
+      notes: ''
     });
   };
 
@@ -756,6 +766,28 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
             <p className="text-xs text-muted-foreground mt-2">
               Core mortality includes: Infertile + Early Dead + Mid Dead + Late Dead + Culls
             </p>
+          </div>
+
+          {/* Technician Name and Notes */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="technicianName">Technician Name (Optional)</Label>
+              <Input
+                id="technicianName"
+                value={formData.technicianName}
+                onChange={(e) => handleInputChange('technicianName', e.target.value)}
+                placeholder="Enter technician name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Input
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Additional observations"
+              />
+            </div>
           </div>
 
           {/* Image Upload Section */}

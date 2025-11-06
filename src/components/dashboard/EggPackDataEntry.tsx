@@ -61,6 +61,8 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
     setWeek: '',
     hatchWeek: ''
   });
+  const [technicianName, setTechnicianName] = useState('');
+  const [notes, setNotes] = useState('');
   const { toast } = useToast();
 
   const calculatePercentage = (value: number, total: number): number => {
@@ -79,7 +81,8 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       grade_b: 0,
       grade_c: 0,
       inspection_date: new Date().toISOString().split('T')[0],
-      notes: `Stained: ${newEntry.stained}, Abnormal: ${newEntry.abnormal}, Contaminated: ${newEntry.contaminated}, USD: ${newEntry.usd}${newEntry.setWeek ? `, Set Week: ${newEntry.setWeek}` : ''}`
+      inspector_name: technicianName || null,
+      notes: notes || `Stained: ${newEntry.stained}, Abnormal: ${newEntry.abnormal}, Contaminated: ${newEntry.contaminated}, USD: ${newEntry.usd}${newEntry.setWeek ? `, Set Week: ${newEntry.setWeek}` : ''}`
     };
 
     const { error } = await supabase
@@ -382,6 +385,24 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                   placeholder="Week 1"
                 />
               </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="technicianName">Technician Name (Optional)</Label>
+                <Input
+                  id="technicianName"
+                  value={technicianName}
+                  onChange={(e) => setTechnicianName(e.target.value)}
+                  placeholder="Enter technician name"
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Input
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional notes or observations"
+              />
             </div>
             <div className="flex gap-2 mt-4">
               <Button onClick={addEntry} className="flex items-center gap-2">

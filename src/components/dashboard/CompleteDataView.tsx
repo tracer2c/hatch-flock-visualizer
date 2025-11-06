@@ -6,6 +6,7 @@ import { EmbrexHOITab } from "./EmbrexHOITab";
 import { ResidueBreakoutTab } from "./ResidueBreakoutTab";
 import { EggPackQualityTab } from "./EggPackQualityTab";
 import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
+import { HatchPerformanceTab } from "./HatchPerformanceTab";
 import { QAMonitoringTab } from "./QAMonitoringTab";
 
 interface CompleteDataViewProps {
@@ -208,7 +209,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     case "egg-pack":
       return <EggPackQualityTab data={data.filter(d => d.data_type === 'egg_pack')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <FertilityAnalysisTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <HatchPerformanceTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} />;
     case "qa":
       return <QAMonitoringTab data={data.filter(d => d.data_type === 'qa')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
