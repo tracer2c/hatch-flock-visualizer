@@ -65,8 +65,24 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="font-semibold">Hatch of Injection (HOI)</p>
+                    <p className="font-semibold">Hatch of Incubated (HOI)</p>
                     <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                Hatch of Injection %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Hatch of Injection</p>
+                    <p className="text-sm">Formula: (Hatch / Injected) × 100</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -92,7 +108,7 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={13} className="text-center text-muted-foreground">
+              <TableCell colSpan={14} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -117,6 +133,11 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                 </TableCell>
                 <TableCell className="text-right">
                   {item.hoi_percent ? formatPercentage(item.hoi_percent) : "-"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {item.chicks_hatched && item.eggs_injected 
+                    ? formatPercentage((item.chicks_hatched / item.eggs_injected) * 100)
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-right">
                   {item.if_dev_percent ? formatPercentage(item.if_dev_percent) : "-"}
