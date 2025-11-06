@@ -108,9 +108,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   };
 
   // Calculate hatchability metrics
-  const calculateHatchabilityMetrics = (sampleSize: number, infertile: number, earlyDead: number, lateDead: number, cullChicks: number) => {
+  const calculateHatchabilityMetrics = (sampleSize: number, infertile: number, earlyDead: number, midDead: number, lateDead: number, cullChicks: number) => {
     const fertileEggs = Math.max(0, sampleSize - infertile);
-    const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - lateDead - cullChicks);
+    const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - midDead - lateDead - cullChicks);
     const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
     const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
     const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
@@ -125,18 +125,21 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     };
   };
 
+  // Calculate only the core mortality categories that count toward sample size
   const calculateTotalUsed = () => {
-    const values = [
-      'infertile', 'chicks', 'earlyDeath', 'live', 'dead', 'midDeath', 
-      'lateDeath', 'cullChicks', 'handlingCracks', 'transferCrack', 
-      'contamination', 'mold', 'abnormal', 'brain', 'dryEgg', 
-      'malpositioned', 'upsideDown'
-    ];
+    const coreValues = ['infertile', 'earlyDeath', 'midDeath', 'lateDeath', 'cullChicks'];
     
-    return values.reduce((sum, field) => {
+    return coreValues.reduce((sum, field) => {
       const value = Number(formData[field as keyof typeof formData]) || 0;
       return sum + value;
     }, 0);
+  };
+
+  // Auto-calculate chicks based on sample size minus core mortality
+  const calculateChicks = () => {
+    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
+    const totalUsed = calculateTotalUsed();
+    return Math.max(0, sampleSize - totalUsed);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -144,12 +147,13 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   };
 
   const validateForm = () => {
+    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
     const totalUsed = calculateTotalUsed();
     
-    if (totalUsed > TOTAL_EGGS) {
+    if (totalUsed > sampleSize) {
       toast({
         title: "Validation Error",
-        description: `Total eggs used (${totalUsed}) exceeds ${TOTAL_EGGS}`,
+        description: `Total mortality (${totalUsed}) exceeds sample size (${sampleSize})`,
         variant: "destructive"
       });
       return false;
@@ -174,10 +178,12 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
     const infertile = Number(formData.infertile) || 0;
     const earlyDead = Number(formData.earlyDeath) || 0;
+    const midDead = Number(formData.midDeath) || 0;
     const lateDead = Number(formData.lateDeath) || 0;
     const cullChicks = Number(formData.cullChicks) || 0;
+    const calculatedChicks = calculateChicks();
     
-    const hatchabilityMetrics = calculateHatchabilityMetrics(sampleSize, infertile, earlyDead, lateDead, cullChicks);
+    const hatchabilityMetrics = calculateHatchabilityMetrics(sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks);
     
     const newRecord: ResidueRecord = {
       id: editingId || Date.now().toString(),
@@ -186,7 +192,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       houseNumber: Number(formData.houseNumber),
       infertile: Number(formData.infertile) || 0,
       infertilePercent: calculatePercentage(Number(formData.infertile) || 0),
-      chicks: Number(formData.chicks) || 0,
+      chicks: calculatedChicks,
       earlyDeath: Number(formData.earlyDeath) || 0,
       earlyDeathPercent: calculatePercentage(Number(formData.earlyDeath) || 0),
       live: Number(formData.live) || 0,
@@ -362,7 +368,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
 
-            {/* Core Metrics */}
+            {/* Core Metrics - These count toward sample size */}
             <div className="space-y-2">
               <Label htmlFor="infertile">Infertile</Label>
               <Input
@@ -374,16 +380,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="chicks">Chicks</Label>
-              <Input
-                id="chicks"
-                type="number"
-                placeholder="e.g., 496"
-                value={formData.chicks}
-                onChange={(e) => handleInputChange('chicks', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="earlyDeath">Early Dead (1-7 days)</Label>
               <Input
                 id="earlyDeath"
@@ -392,6 +388,64 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 value={formData.earlyDeath}
                 onChange={(e) => handleInputChange('earlyDeath', e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="midDeath">Mid Dead (7-14 days)</Label>
+              <Input
+                id="midDeath"
+                type="number"
+                placeholder="e.g., 8"
+                value={formData.midDeath}
+                onChange={(e) => handleInputChange('midDeath', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lateDeath">Late Dead (15-21 days)</Label>
+              <Input
+                id="lateDeath"
+                type="number"
+                placeholder="e.g., 22"
+                value={formData.lateDeath}
+                onChange={(e) => handleInputChange('lateDeath', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cullChicks">Cull Chicks</Label>
+              <Input
+                id="cullChicks"
+                type="number"
+                placeholder="e.g., 5"
+                value={formData.cullChicks}
+                onChange={(e) => handleInputChange('cullChicks', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="chicks" className="flex items-center gap-1">
+                Chicks Hatched
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Auto-calculated: Sample Size - (Infertile + Early + Mid + Late Dead + Culls)
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="chicks"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={calculateChicks()}
+              />
+            </div>
+
+            {/* Characteristics - These don't count toward sample size */}
+            <div className="col-span-3 mt-4 mb-2">
+              <h4 className="text-sm font-semibold text-muted-foreground border-b pb-2">
+                Characteristics (descriptive categories of the above)
+              </h4>
             </div>
 
             {/* Transfer Data */}
@@ -413,38 +467,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 placeholder="e.g., 12"
                 value={formData.dead}
                 onChange={(e) => handleInputChange('dead', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="midDeath">Mid Dead (7-14 days)</Label>
-              <Input
-                id="midDeath"
-                type="number"
-                placeholder="e.g., 8"
-                value={formData.midDeath}
-                onChange={(e) => handleInputChange('midDeath', e.target.value)}
-              />
-            </div>
-
-            {/* Death Categories */}
-            <div className="space-y-2">
-              <Label htmlFor="lateDeath">Late Dead (15-21 days)</Label>
-              <Input
-                id="lateDeath"
-                type="number"
-                placeholder="e.g., 22"
-                value={formData.lateDeath}
-                onChange={(e) => handleInputChange('lateDeath', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cullChicks">Cull Chicks</Label>
-              <Input
-                id="cullChicks"
-                type="number"
-                placeholder="e.g., 5"
-                value={formData.cullChicks}
-                onChange={(e) => handleInputChange('cullChicks', e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -596,9 +618,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
+                    const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hatchPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hatchPercent;
                   })()}
                 />
               </div>
@@ -622,9 +645,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
+                    const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hofPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hofPercent;
                   })()}
                 />
               </div>
@@ -648,9 +672,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
+                    const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).ifDevPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).ifDevPercent;
                   })()}
                 />
               </div>
@@ -674,9 +699,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
+                    const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).fertileEggs;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).fertileEggs;
                   })()}
                 />
               </div>
@@ -700,9 +726,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
+                    const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, ld, cc).hoiPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hoiPercent;
                   })()}
                 />
               </div>
@@ -710,22 +737,25 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
           </div>
 
           {/* Validation Display */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <span className="font-medium">Total Used: {totalUsed}</span>
+                <span className="font-medium">Core Mortality: {totalUsed}</span>
                 <span className="mx-2">|</span>
-                <span className="font-medium">Remaining: {remaining}</span>
+                <span className="font-medium text-green-600">Chicks: {calculateChicks()}</span>
                 <span className="mx-2">|</span>
-                <span className="font-medium">Target: {TOTAL_EGGS}</span>
+                <span className="font-medium">Sample Size: {Number(formData.sampleSize) || TOTAL_EGGS}</span>
               </div>
               {remaining < 0 && (
                 <div className="flex items-center gap-2 text-red-600">
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Exceeds total eggs!</span>
+                  <span className="text-sm font-medium">Exceeds sample size!</span>
                 </div>
               )}
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Core mortality includes: Infertile + Early Dead + Mid Dead + Late Dead + Culls
+            </p>
           </div>
 
           {/* Image Upload Section */}
