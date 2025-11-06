@@ -286,7 +286,7 @@ const BatchOverviewDashboard = () => {
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              title="All Batches"
+              title="All Houses"
               value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
               trendLabel="vs last week"

@@ -1,4 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertCircle } from "lucide-react";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 
 interface HatchPerformanceTabProps {
@@ -23,8 +25,9 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
   };
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <TooltipProvider>
+      <div className="rounded-md border">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Flock#</TableHead>
@@ -36,13 +39,60 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
             <TableHead className="text-right">Sample Size</TableHead>
             <TableHead className="text-right">Hatch</TableHead>
             <TableHead className="text-right">Hatch %</TableHead>
-            <TableHead className="text-right">Hatch Over Fertile %</TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                HOF %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Hatch of Fertile (HOF)</p>
+                    <p className="text-sm">Formula: (Chicks Hatched / Fertile Eggs) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                HOI %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Hatch of Incubated (HOI)</p>
+                    <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                I/F %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Infertile/Fertile Development</p>
+                    <p className="text-sm">Formula: HOI % - HOF %</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center text-muted-foreground">
+              <TableCell colSpan={13} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -65,11 +115,18 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                 <TableCell className="text-right">
                   {item.hof_percent ? formatPercentage(item.hof_percent) : "-"}
                 </TableCell>
+                <TableCell className="text-right">
+                  {item.hoi_percent ? formatPercentage(item.hoi_percent) : "-"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {item.if_dev_percent ? formatPercentage(item.if_dev_percent) : "-"}
+                </TableCell>
               </TableRow>
             ))
           )}
         </TableBody>
       </Table>
     </div>
+    </TooltipProvider>
   );
 };

@@ -154,61 +154,13 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>{showPercentages ? "Malpositioned %" : "Malpositioned"}</TableHead>
               <TableHead>{showPercentages ? "Upside Down %" : "Upside Down"}</TableHead>
               <TableHead>PIP Number</TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  HOF %
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="inline-flex" type="button">
-                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-semibold">Hatch of Fertile (HOF)</p>
-                      <p className="text-sm">Formula: (Chicks Hatched / Fertile Eggs) × 100</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  HOI %
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="inline-flex" type="button">
-                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-semibold">Hatch of Incubated (HOI)</p>
-                      <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  I/F %
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="inline-flex" type="button">
-                        <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-semibold">Infertile/Fertile Development</p>
-                      <p className="text-sm">Formula: HOI % - HOF %</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={27} className="text-center text-muted-foreground">
+                <TableCell colSpan={24} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -242,15 +194,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                     <TableCell>{formatValue(item.malpositioned, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.upside_down, sampleSize)}</TableCell>
                     <TableCell>{item.pip_number || "-"}</TableCell>
-                    <TableCell>
-                      {item.hof_percent ? `${item.hof_percent.toFixed(1)}%` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {item.hoi_percent ? `${item.hoi_percent.toFixed(1)}%` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {item.if_dev_percent ? `${item.if_dev_percent.toFixed(1)}%` : "-"}
-                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

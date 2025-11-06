@@ -86,7 +86,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
               <TableHead>House #</TableHead>
               <TableHead>Age (weeks)</TableHead>
               <TableHead>Set Date</TableHead>
-              <TableHead>Total Eggs Set</TableHead>
               <TableHead>Sample Size</TableHead>
               <TableHead>Clears</TableHead>
               <TableHead>Clear %</TableHead>
@@ -100,7 +99,7 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center text-muted-foreground">
+                <TableCell colSpan={13} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -120,7 +119,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
                     <TableCell>{item.house_number || "-"}</TableCell>
                     <TableCell>{item.age_weeks || "-"}</TableCell>
                     <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>
-                    <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>
                     <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>
                     <TableCell>{item.eggs_cleared?.toLocaleString() || "0"}</TableCell>
                     <TableCell>{clearPercent}%</TableCell>
