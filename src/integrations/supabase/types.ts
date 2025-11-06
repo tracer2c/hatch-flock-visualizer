@@ -717,6 +717,7 @@ export type Database = {
           machine_type: Database["public"]["Enums"]["machine_type"]
           notes: string | null
           status: string | null
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
@@ -730,6 +731,7 @@ export type Database = {
           machine_type: Database["public"]["Enums"]["machine_type"]
           notes?: string | null
           status?: string | null
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -743,6 +745,7 @@ export type Database = {
           machine_type?: Database["public"]["Enums"]["machine_type"]
           notes?: string | null
           status?: string | null
+          unit_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -751,6 +754,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machines_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -892,20 +902,27 @@ export type Database = {
       }
       residue_analysis: {
         Row: {
+          abnormal: number | null
           analysis_date: string
           batch_id: string
+          brain_defects: number | null
           contaminated_eggs: number
           created_at: string
+          dry_egg: number | null
           fertile_eggs: number | null
+          handling_cracks: number | null
           hatch_percent: number | null
           hof_percent: number | null
           hoi_percent: number | null
           id: string
           if_dev_percent: number | null
+          infertile_eggs: number | null
           lab_technician: string | null
           malformed_chicks: number
+          malpositioned: number | null
           microscopy_results: string | null
           mid_dead: number
+          mold: number | null
           notes: string | null
           pathology_findings: string | null
           pip_number: number
@@ -913,23 +930,32 @@ export type Database = {
           residue_percent: number | null
           sample_size: number | null
           total_residue_count: number
+          transfer_crack: number | null
           unhatched_fertile: number
+          upside_down: number | null
         }
         Insert: {
+          abnormal?: number | null
           analysis_date?: string
           batch_id: string
+          brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          dry_egg?: number | null
           fertile_eggs?: number | null
+          handling_cracks?: number | null
           hatch_percent?: number | null
           hof_percent?: number | null
           hoi_percent?: number | null
           id?: string
           if_dev_percent?: number | null
+          infertile_eggs?: number | null
           lab_technician?: string | null
           malformed_chicks?: number
+          malpositioned?: number | null
           microscopy_results?: string | null
           mid_dead?: number
+          mold?: number | null
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number
@@ -937,23 +963,32 @@ export type Database = {
           residue_percent?: number | null
           sample_size?: number | null
           total_residue_count: number
+          transfer_crack?: number | null
           unhatched_fertile?: number
+          upside_down?: number | null
         }
         Update: {
+          abnormal?: number | null
           analysis_date?: string
           batch_id?: string
+          brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          dry_egg?: number | null
           fertile_eggs?: number | null
+          handling_cracks?: number | null
           hatch_percent?: number | null
           hof_percent?: number | null
           hoi_percent?: number | null
           id?: string
           if_dev_percent?: number | null
+          infertile_eggs?: number | null
           lab_technician?: string | null
           malformed_chicks?: number
+          malpositioned?: number | null
           microscopy_results?: string | null
           mid_dead?: number
+          mold?: number | null
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number
@@ -961,7 +996,9 @@ export type Database = {
           residue_percent?: number | null
           sample_size?: number | null
           total_residue_count?: number
+          transfer_crack?: number | null
           unhatched_fertile?: number
+          upside_down?: number | null
         }
         Relationships: [
           {

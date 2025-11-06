@@ -20,10 +20,12 @@ interface Machine {
   status: string | null;
   last_maintenance: string | null;
   notes: string | null;
+  unit_id: string | null;
 }
 
 const MachineManager = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -32,6 +34,7 @@ const MachineManager = () => {
     machineType: [] as string[],
     status: [] as string[],
     location: '',
+    hatchery: [] as string[],
     minCapacity: '',
     maxCapacity: ''
   });
@@ -40,6 +43,7 @@ const MachineManager = () => {
     machine_type: '',
     capacity: '',
     location: '',
+    unit_id: '',
     status: 'available',
     last_maintenance: '',
     notes: ''
@@ -48,7 +52,22 @@ const MachineManager = () => {
 
   useEffect(() => {
     loadMachines();
+    loadUnits();
   }, []);
+
+  const loadUnits = async () => {
+    const { data, error } = await supabase
+      .from('units')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name', { ascending: true });
+    
+    if (error) {
+      console.error('Error loading units:', error);
+    } else {
+      setUnits(data || []);
+    }
+  };
 
   const loadMachines = async () => {
     const { data, error } = await supabase
@@ -73,6 +92,7 @@ const MachineManager = () => {
       machine_type: '',
       capacity: '',
       location: '',
+      unit_id: '',
       status: 'available',
       last_maintenance: '',
       notes: ''
@@ -95,6 +115,7 @@ const MachineManager = () => {
       machine_type: formData.machine_type as 'setter' | 'hatcher' | 'combo',
       capacity: parseInt(formData.capacity),
       location: formData.location || null,
+      unit_id: formData.unit_id || null,
       status: formData.status || 'available',
       last_maintenance: formData.last_maintenance || null,
       notes: formData.notes || null
@@ -145,6 +166,7 @@ const MachineManager = () => {
       machine_type: machine.machine_type,
       capacity: machine.capacity.toString(),
       location: machine.location || '',
+      unit_id: machine.unit_id || '',
       status: machine.status || 'available',
       last_maintenance: machine.last_maintenance || '',
       notes: machine.notes || ''
@@ -201,6 +223,11 @@ const MachineManager = () => {
         return false;
       }
       
+      // Hatchery filter
+      if (filters.hatchery.length > 0 && !filters.hatchery.includes(machine.unit_id || '')) {
+        return false;
+      }
+      
       // Location filter
       if (filters.location && (!machine.location || !machine.location.toLowerCase().includes(filters.location.toLowerCase()))) {
         return false;
@@ -227,6 +254,7 @@ const MachineManager = () => {
     if (filters.machineNumber) count++;
     if (filters.machineType.length > 0) count++;
     if (filters.status.length > 0) count++;
+    if (filters.hatchery.length > 0) count++;
     if (filters.location) count++;
     if (filters.minCapacity) count++;
     if (filters.maxCapacity) count++;
@@ -238,6 +266,7 @@ const MachineManager = () => {
       machineNumber: '',
       machineType: [],
       status: [],
+      hatchery: [],
       location: '',
       minCapacity: '',
       maxCapacity: ''
@@ -247,11 +276,11 @@ const MachineManager = () => {
   const clearFilter = (filterKey: string) => {
     setFilters(prev => ({
       ...prev,
-      [filterKey]: ['machineType', 'status'].includes(filterKey) ? [] : ''
+      [filterKey]: ['machineType', 'status', 'hatchery'].includes(filterKey) ? [] : ''
     }));
   };
 
-  const handleArrayToggle = (filterKey: 'machineType' | 'status', value: string) => {
+  const handleArrayToggle = (filterKey: 'machineType' | 'status' | 'hatchery', value: string) => {
     setFilters(prev => ({
       ...prev,
       [filterKey]: prev[filterKey].includes(value) 
@@ -336,6 +365,19 @@ const MachineManager = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
                     placeholder="e.g., 50000"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hatchery</Label>
+                  <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select hatchery" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map(unit => (
+                        <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Location</Label>
@@ -444,6 +486,22 @@ const MachineManager = () => {
                         className="capitalize"
                       >
                         {status.replace('-', ' ')}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Hatchery</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {units.map((unit) => (
+                      <Button
+                        key={unit.id}
+                        variant={filters.hatchery.includes(unit.id) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleArrayToggle('hatchery', unit.id)}
+                      >
+                        {unit.name}
                       </Button>
                     ))}
                   </div>
