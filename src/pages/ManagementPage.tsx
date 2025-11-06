@@ -20,8 +20,8 @@ const ManagementPage = () => {
             <div className="flex items-center gap-3">
               <Home className="h-5 w-5 text-teal-600" />
               <div className="text-left">
-                <h3 className="font-semibold text-lg">Unit Manager</h3>
-                <p className="text-gray-600 text-sm">Create and manage your operational units</p>
+                <h3 className="font-semibold text-lg">Hatchery Manager</h3>
+                <p className="text-gray-600 text-sm">Hatchery Management</p>
               </div>
             </div>
           </AccordionTrigger>
@@ -35,7 +35,7 @@ const ManagementPage = () => {
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-blue-600" />
               <div className="text-left">
-                <h3 className="font-semibold text-lg">Batch Status Automation</h3>
+                <h3 className="font-semibold text-lg">House Status Automation</h3>
                 <p className="text-gray-600 text-sm">Configure automatic batch progression rules</p>
               </div>
             </div>

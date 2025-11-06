@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface CustomTarget {
   id: string;
-  target_type: 'unit' | 'flock' | 'batch' | 'global';
+  target_type: 'hatchery' | 'flock' | 'house' | 'global';
   entity_id?: string;
   metric_name: string;
   target_value: number;
@@ -22,7 +22,7 @@ interface CustomTarget {
 }
 
 interface TargetFormData {
-  target_type: 'unit' | 'flock' | 'batch' | 'global';
+  target_type: 'hatchery' | 'flock' | 'house' | 'global';
   entity_id?: string;
   metric_name: string;
   target_value: string;
@@ -31,12 +31,12 @@ interface TargetFormData {
 }
 
 const METRIC_OPTIONS = [
-  { value: 'fertility_rate', label: 'Fertility Rate (%)' },
-  { value: 'hatch_rate', label: 'Hatch Rate (%)' },
-  { value: 'hof_rate', label: 'Hatch of Fertile (%)' },
-  { value: 'mortality_rate', label: 'Mortality Rate (%)' },
-  { value: 'clear_rate', label: 'Clear Rate (%)' },
-  { value: 'injection_rate', label: 'Injection Rate (%)' }
+  { value: 'fertility', label: 'Fertility (%)' },
+  { value: 'hatch', label: 'Hatch (%)' },
+  { value: 'hof', label: 'Hatch of Fertile (%)' },
+  { value: 'embryonic_mortality', label: 'Embryonic Mortality (%)' },
+  { value: 'clear', label: 'Clear (%)' },
+  { value: 'injection', label: 'Injection (%)' }
 ];
 
 export const TargetManager = () => {
@@ -50,7 +50,7 @@ export const TargetManager = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<TargetFormData>({
     target_type: 'global',
-    metric_name: 'fertility_rate',
+    metric_name: 'fertility',
     target_value: '',
     effective_from: new Date().toISOString().split('T')[0]
   });
@@ -76,13 +76,13 @@ export const TargetManager = () => {
         
         if (target.entity_id && target.target_type !== 'global') {
           try {
-            if (target.target_type === 'unit') {
+            if (target.target_type === 'hatchery') {
               const { data: unitData } = await supabase
                 .from('units')
                 .select('name')
                 .eq('id', target.entity_id)
                 .single();
-              entity_name = unitData?.name || 'Unknown Unit';
+              entity_name = unitData?.name || 'Unknown Hatchery';
             } else if (target.target_type === 'flock') {
               const { data: flockData } = await supabase
                 .from('flocks')
@@ -90,13 +90,13 @@ export const TargetManager = () => {
                 .eq('id', target.entity_id)
                 .single();
               entity_name = flockData?.flock_name || 'Unknown Flock';
-            } else if (target.target_type === 'batch') {
+            } else if (target.target_type === 'house') {
               const { data: batchData } = await supabase
                 .from('batches')
                 .select('batch_number')
                 .eq('id', target.entity_id)
                 .single();
-              entity_name = batchData?.batch_number || 'Unknown Batch';
+              entity_name = batchData?.batch_number || 'Unknown House';
             }
           } catch (entityError) {
             console.error('Error loading entity name:', entityError);
@@ -166,7 +166,7 @@ export const TargetManager = () => {
       setShowForm(false);
       setFormData({
         target_type: 'global',
-        metric_name: 'fertility_rate',
+        metric_name: 'fertility',
         target_value: '',
         effective_from: new Date().toISOString().split('T')[0]
       });
@@ -233,11 +233,11 @@ export const TargetManager = () => {
 
   const getEntityOptions = () => {
     switch (formData.target_type) {
-      case 'unit':
+      case 'hatchery':
         return entities.units.map(unit => ({ value: unit.id, label: unit.name }));
       case 'flock':
         return entities.flocks.map(flock => ({ value: flock.id, label: flock.flock_name }));
-      case 'batch':
+      case 'house':
         return entities.batches.map(batch => ({ value: batch.id, label: batch.batch_number }));
       default:
         return [];
@@ -280,9 +280,9 @@ export const TargetManager = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="global">Global</SelectItem>
-                      <SelectItem value="unit">Unit</SelectItem>
+                      <SelectItem value="hatchery">Hatchery</SelectItem>
                       <SelectItem value="flock">Flock</SelectItem>
-                      <SelectItem value="batch">Batch</SelectItem>
+                      <SelectItem value="house">House</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
