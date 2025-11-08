@@ -14,25 +14,48 @@ const DataCleanup = () => {
     setIsDeleting(true);
     try {
       // Delete in correct order due to foreign key constraints
-      await supabase.from('weight_tracking').delete().neq('id', '');
-      await supabase.from('checklist_completions').delete().neq('id', '');
-      await supabase.from('residue_analysis_schedule').delete().neq('id', '');
-      await supabase.from('residue_analysis').delete().neq('id', '');
-      await supabase.from('qa_monitoring').delete().neq('id', '');
-      await supabase.from('fertility_analysis').delete().neq('id', '');
-      await supabase.from('egg_pack_quality').delete().neq('id', '');
-      await supabase.from('specific_gravity_tests').delete().neq('id', '');
-      await supabase.from('batches').delete().neq('id', '');
-      await supabase.from('flocks').delete().neq('id', '');
+      const { error: wtError } = await supabase.from('weight_tracking').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (wtError) throw new Error(`Failed to delete weight tracking: ${wtError.message}`);
+
+      const { error: ccError } = await supabase.from('checklist_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (ccError) throw new Error(`Failed to delete checklist completions: ${ccError.message}`);
+
+      const { error: rasError } = await supabase.from('residue_analysis_schedule').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (rasError) throw new Error(`Failed to delete residue analysis schedule: ${rasError.message}`);
+
+      const { error: raError } = await supabase.from('residue_analysis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (raError) throw new Error(`Failed to delete residue analysis: ${raError.message}`);
+
+      const { error: qaError } = await supabase.from('qa_monitoring').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (qaError) throw new Error(`Failed to delete QA monitoring: ${qaError.message}`);
+
+      const { error: faError } = await supabase.from('fertility_analysis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (faError) throw new Error(`Failed to delete fertility analysis: ${faError.message}`);
+
+      const { error: epqError } = await supabase.from('egg_pack_quality').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (epqError) throw new Error(`Failed to delete egg pack quality: ${epqError.message}`);
+
+      const { error: sgtError } = await supabase.from('specific_gravity_tests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (sgtError) throw new Error(`Failed to delete specific gravity tests: ${sgtError.message}`);
+
+      const { error: batchError } = await supabase.from('batches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (batchError) throw new Error(`Failed to delete batches: ${batchError.message}`);
+
+      const { error: flockError } = await supabase.from('flocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (flockError) throw new Error(`Failed to delete flocks: ${flockError.message}`);
 
       toast({
         title: "Flock & house data cleared",
         description: "All flock and house data has been removed (machines and settings preserved)"
       });
-    } catch (error) {
+
+      // Reload the page to refresh all data
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error clearing data:', error);
       toast({
         title: "Error clearing data",
-        description: "There was an error clearing the flock and house data",
+        description: error.message || "There was an error clearing the flock and house data",
         variant: "destructive"
       });
     } finally {
@@ -44,26 +67,51 @@ const DataCleanup = () => {
     setIsDeleting(true);
     try {
       // Delete in correct order due to foreign key constraints
-      await supabase.from('weight_tracking').delete().neq('id', '');
-      await supabase.from('checklist_completions').delete().neq('id', '');
-      await supabase.from('residue_analysis_schedule').delete().neq('id', '');
-      await supabase.from('residue_analysis').delete().neq('id', '');
-      await supabase.from('qa_monitoring').delete().neq('id', '');
-      await supabase.from('fertility_analysis').delete().neq('id', '');
-      await supabase.from('egg_pack_quality').delete().neq('id', '');
-      await supabase.from('specific_gravity_tests').delete().neq('id', '');
-      await supabase.from('batches').delete().neq('id', '');
-      await supabase.from('machines').delete().neq('id', '');
-      await supabase.from('flocks').delete().neq('id', '');
+      const { error: wtError } = await supabase.from('weight_tracking').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (wtError) throw new Error(`Failed to delete weight tracking: ${wtError.message}`);
+
+      const { error: ccError } = await supabase.from('checklist_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (ccError) throw new Error(`Failed to delete checklist completions: ${ccError.message}`);
+
+      const { error: rasError } = await supabase.from('residue_analysis_schedule').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (rasError) throw new Error(`Failed to delete residue analysis schedule: ${rasError.message}`);
+
+      const { error: raError } = await supabase.from('residue_analysis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (raError) throw new Error(`Failed to delete residue analysis: ${raError.message}`);
+
+      const { error: qaError } = await supabase.from('qa_monitoring').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (qaError) throw new Error(`Failed to delete QA monitoring: ${qaError.message}`);
+
+      const { error: faError } = await supabase.from('fertility_analysis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (faError) throw new Error(`Failed to delete fertility analysis: ${faError.message}`);
+
+      const { error: epqError } = await supabase.from('egg_pack_quality').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (epqError) throw new Error(`Failed to delete egg pack quality: ${epqError.message}`);
+
+      const { error: sgtError } = await supabase.from('specific_gravity_tests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (sgtError) throw new Error(`Failed to delete specific gravity tests: ${sgtError.message}`);
+
+      const { error: batchError } = await supabase.from('batches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (batchError) throw new Error(`Failed to delete batches: ${batchError.message}`);
+
+      const { error: machineError } = await supabase.from('machines').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (machineError) throw new Error(`Failed to delete machines: ${machineError.message}`);
+
+      const { error: flockError } = await supabase.from('flocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (flockError) throw new Error(`Failed to delete flocks: ${flockError.message}`);
 
       toast({
         title: "Data cleared successfully",
         description: "All sample data has been removed from the system"
       });
-    } catch (error) {
+
+      // Reload the page to refresh all data
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error clearing data:', error);
       toast({
         title: "Error clearing data",
-        description: "There was an error clearing the sample data",
+        description: error.message || "There was an error clearing the sample data",
         variant: "destructive"
       });
     } finally {
