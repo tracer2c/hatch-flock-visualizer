@@ -147,6 +147,16 @@ const BatchOverviewDashboard = () => {
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics]);
 
+  const systemUtilization = useMemo(() => {
+    if (!machineUtilization || machineUtilization.length === 0) return 0;
+    
+    // Calculate average machine utilization
+    const sum = machineUtilization.reduce((acc: number, machine: any) => 
+      acc + (machine.utilization || 0), 0
+    );
+    return Math.round(sum / machineUtilization.length);
+  }, [machineUtilization]);
+
   useEffect(() => {
     const fetchTotalBatchesCount = async () => {
       const { count, error } = await supabase
@@ -308,7 +318,7 @@ const BatchOverviewDashboard = () => {
             />
             <StatCard
               title="System Utilization"
-              value="92%"
+              value={`${systemUtilization}%`}
               icon={<Gauge className="h-5 w-5" />}
               trendLabel="machine efficiency"
               trendDirection="up"
