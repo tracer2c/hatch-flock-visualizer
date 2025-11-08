@@ -10,14 +10,48 @@ const DataCleanup = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  const clearSampleData = async () => {
+  const clearFlockAndHouseData = async () => {
     setIsDeleting(true);
     try {
       // Delete in correct order due to foreign key constraints
+      await supabase.from('weight_tracking').delete().neq('id', '');
+      await supabase.from('checklist_completions').delete().neq('id', '');
+      await supabase.from('residue_analysis_schedule').delete().neq('id', '');
       await supabase.from('residue_analysis').delete().neq('id', '');
       await supabase.from('qa_monitoring').delete().neq('id', '');
       await supabase.from('fertility_analysis').delete().neq('id', '');
       await supabase.from('egg_pack_quality').delete().neq('id', '');
+      await supabase.from('specific_gravity_tests').delete().neq('id', '');
+      await supabase.from('batches').delete().neq('id', '');
+      await supabase.from('flocks').delete().neq('id', '');
+
+      toast({
+        title: "Flock & house data cleared",
+        description: "All flock and house data has been removed (machines and settings preserved)"
+      });
+    } catch (error) {
+      toast({
+        title: "Error clearing data",
+        description: "There was an error clearing the flock and house data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const clearSampleData = async () => {
+    setIsDeleting(true);
+    try {
+      // Delete in correct order due to foreign key constraints
+      await supabase.from('weight_tracking').delete().neq('id', '');
+      await supabase.from('checklist_completions').delete().neq('id', '');
+      await supabase.from('residue_analysis_schedule').delete().neq('id', '');
+      await supabase.from('residue_analysis').delete().neq('id', '');
+      await supabase.from('qa_monitoring').delete().neq('id', '');
+      await supabase.from('fertility_analysis').delete().neq('id', '');
+      await supabase.from('egg_pack_quality').delete().neq('id', '');
+      await supabase.from('specific_gravity_tests').delete().neq('id', '');
       await supabase.from('batches').delete().neq('id', '');
       await supabase.from('machines').delete().neq('id', '');
       await supabase.from('flocks').delete().neq('id', '');
@@ -133,13 +167,56 @@ const DataCleanup = () => {
             </div>
           </div>
 
+          <div className="p-4 border border-orange-500/20 rounded-lg bg-orange-500/5">
+            <h3 className="font-semibold mb-2 flex items-center gap-2 text-orange-600">
+              <Trash2 className="h-4 w-4" />
+              Clear Flock & House Data
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Remove all flock and house (batch) data while preserving machines and settings.
+            </p>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10" disabled={isDeleting}>
+                  {isDeleting ? 'Clearing...' : 'Clear Flock & House Data'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear flock and house data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>All flocks and their information</li>
+                      <li>All houses (batches) and their data</li>
+                      <li>Egg pack quality records</li>
+                      <li>Fertility analysis data</li>
+                      <li>QA monitoring records</li>
+                      <li>Residue analysis results</li>
+                      <li>Weight tracking data</li>
+                      <li>Specific gravity tests</li>
+                    </ul>
+                    <p className="mt-2 font-semibold">Machines, hatcheries, and system settings will be preserved.</p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearFlockAndHouseData} className="bg-orange-600 text-white hover:bg-orange-700">
+                    Yes, clear flock & house data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
           <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
             <h3 className="font-semibold mb-2 flex items-center gap-2 text-destructive">
               <Trash2 className="h-4 w-4" />
-              Danger Zone
+              Danger Zone - Clear Everything
             </h3>
             <p className="text-sm text-muted-foreground mb-3">
-              Clear all sample data from the system. This action cannot be undone.
+              Clear ALL data including machines and configurations. This action cannot be undone.
             </p>
             
             <AlertDialog>
@@ -152,15 +229,16 @@ const DataCleanup = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all:
+                    This action cannot be undone. This will permanently delete ALL:
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Flocks and their information</li>
                       <li>Machines and their configurations</li>
-                      <li>All batches and their data</li>
+                      <li>All houses (batches) and their data</li>
                       <li>Egg pack quality records</li>
                       <li>Fertility analysis data</li>
                       <li>QA monitoring records</li>
                       <li>Residue analysis results</li>
+                      <li>Weight tracking and all related data</li>
                     </ul>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
