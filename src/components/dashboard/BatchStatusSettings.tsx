@@ -1,300 +1,252 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, RefreshCw, Play, Pause } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { useBatchStatusRules, useBatchStatusHistory } from "@/hooks/useBatchStatusRules";
+import { Play, Settings, History, Clock } from "lucide-react";
+import { format } from "date-fns";
 
-interface BatchStatusRule {
-  id: string;
-  name: string;
-  fromStatus: string;
-  toStatus: string;
-  daysAfterSet: number;
-  requiresData: boolean;
-  enabled: boolean;
-}
-
-const BatchStatusSettings = () => {
-  const [autoProgressEnabled, setAutoProgressEnabled] = useState(true);
-  const [statusRules, setStatusRules] = useState<BatchStatusRule[]>([
-    {
-      id: '1',
-      name: 'Start Incubation',
-      fromStatus: 'setting',
-      toStatus: 'incubating',
-      daysAfterSet: 1,
-      requiresData: false,
-      enabled: true
-    },
-    {
-      id: '2',
-      name: 'Start Hatching',
-      fromStatus: 'incubating',
-      toStatus: 'hatching',
-      daysAfterSet: 18,
-      requiresData: false,
-      enabled: true
-    },
-    {
-      id: '3',
-      name: 'Complete Batch',
-      fromStatus: 'hatching',
-      toStatus: 'completed',
-      daysAfterSet: 21,
-      requiresData: true,
-      enabled: true
-    }
-  ]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+export const BatchStatusSettings = () => {
+  const { rules, isLoading, updateRule, runAutomation } = useBatchStatusRules();
+  const { data: history } = useBatchStatusHistory();
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'setting': return 'bg-blue-100 text-blue-800';
-      case 'incubating': return 'bg-yellow-100 text-yellow-800';
-      case 'hatching': return 'bg-orange-100 text-orange-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    const colors: Record<string, string> = {
+      planned: "bg-gray-500",
+      setting: "bg-blue-500",
+      incubating: "bg-yellow-500",
+      hatching: "bg-orange-500",
+      completed: "bg-green-500",
+    };
+    return colors[status] || "bg-gray-500";
   };
 
-  const handleRuleUpdate = (ruleId: string, field: string, value: any) => {
-    setStatusRules(prev => prev.map(rule => 
-      rule.id === ruleId ? { ...rule, [field]: value } : rule
-    ));
+  const handleRuleUpdate = (ruleId: string, updates: any) => {
+    updateRule.mutate({ id: ruleId, ...updates });
   };
 
-  const runBatchStatusUpdate = async () => {
-    if (!autoProgressEnabled) {
-      toast({
-        title: "Auto-progression disabled",
-        description: "Enable auto-progression to run batch status updates",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Get all active batches
-      const { data: batches, error: batchesError } = await supabase
-        .from('batches')
-        .select(`
-          id, 
-          batch_number, 
-          set_date, 
-          status,
-          fertility_analysis(id)
-        `)
-        .in('status', ['setting', 'incubating', 'hatching']);
-
-      if (batchesError) throw batchesError;
-
-      let updatedCount = 0;
-      const today = new Date();
-
-      for (const batch of batches || []) {
-        const setDate = new Date(batch.set_date);
-        const daysSinceSet = Math.floor((today.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
-
-        // Find applicable rule
-        const applicableRule = statusRules.find(rule => 
-          rule.enabled && 
-          rule.fromStatus === batch.status && 
-          daysSinceSet >= rule.daysAfterSet &&
-          (!rule.requiresData || (rule.requiresData && batch.fertility_analysis?.length > 0))
-        );
-
-        if (applicableRule) {
-          const { error: updateError } = await supabase
-            .from('batches')
-            .update({ status: applicableRule.toStatus as any })
-            .eq('id', batch.id);
-
-          if (!updateError) {
-            updatedCount++;
-          }
-        }
-      }
-
-      toast({
-        title: "Batch Status Update Complete",
-        description: `Updated ${updatedCount} batches based on automation rules`,
-      });
-
-    } catch (error) {
-      console.error('Error updating batch statuses:', error);
-      toast({
-        title: "Error updating batuses",
-        description: "Failed to run batch status automation",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleRunAutomation = () => {
+    runAutomation.mutate();
   };
 
-  const saveSettings = () => {
-    // In a real app, you'd save these settings to a database or config
-    localStorage.setItem('batchStatusSettings', JSON.stringify({
-      autoProgressEnabled,
-      statusRules
-    }));
-    
-    toast({
-      title: "Settings Saved",
-      description: "Batch status automation settings have been saved"
-    });
-  };
-
-  // Load settings on mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('batchStatusSettings');
-    if (savedSettings) {
-      const parsed = JSON.parse(savedSettings);
-      setAutoProgressEnabled(parsed.autoProgressEnabled ?? true);
-      setStatusRules(parsed.statusRules || statusRules);
-    }
-  }, []);
-
-  return (
-    <div className="space-y-6">
-      {/* Header Card */}
+  if (isLoading) {
+    return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <Settings className="h-5 w-5" />
             House Status Automation
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="auto-progress">Enable Auto-Progression</Label>
-              <p className="text-sm text-gray-600">
-                Automatically advance batch statuses based on time and data completion
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Switch
-                id="auto-progress"
-                checked={autoProgressEnabled}
-                onCheckedChange={setAutoProgressEnabled}
-              />
-              <Button
-                onClick={runBatchStatusUpdate}
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Running...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    Run Now
-                  </>
-                )}
-              </Button>
-            </div>
+          <p className="text-muted-foreground">Loading automation settings...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            House Status Automation
+          </CardTitle>
+          <CardDescription>
+            Batches automatically progress based on time and data requirements. Automation runs hourly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button 
+            onClick={handleRunAutomation} 
+            disabled={runAutomation.isPending}
+            className="w-full"
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {runAutomation.isPending ? "Running..." : "Run Automation Now"}
+          </Button>
+
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>Scheduled to run automatically every hour</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Status Rules */}
       <Card>
         <CardHeader>
           <CardTitle>Automation Rules</CardTitle>
+          <CardDescription>Configure when batches should automatically progress to the next status</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rule Name</TableHead>
-                  <TableHead>From Status</TableHead>
-                  <TableHead>To Status</TableHead>
-                  <TableHead>Days After Set</TableHead>
-                  <TableHead>Requires Data</TableHead>
-                  <TableHead>Enabled</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Rule</TableHead>
+                <TableHead>From → To Status</TableHead>
+                <TableHead>Min Days</TableHead>
+                <TableHead>Data Requirements</TableHead>
+                <TableHead>Enabled</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rules?.map((rule) => (
+                <TableRow key={rule.id}>
+                  <TableCell className="font-medium">{rule.rule_name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={getStatusColor(rule.from_status)}>
+                        {rule.from_status}
+                      </Badge>
+                      <span>→</span>
+                      <Badge variant="outline" className={getStatusColor(rule.to_status)}>
+                        {rule.to_status}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      value={rule.min_days_after_set}
+                      onChange={(e) => handleRuleUpdate(rule.id, { min_days_after_set: parseInt(e.target.value) })}
+                      className="w-20"
+                      min="0"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`fertility-${rule.id}`}
+                          checked={rule.requires_fertility_data}
+                          onCheckedChange={(checked) => 
+                            handleRuleUpdate(rule.id, { requires_fertility_data: checked })
+                          }
+                        />
+                        <label htmlFor={`fertility-${rule.id}`} className="text-sm cursor-pointer">Fertility</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`residue-${rule.id}`}
+                          checked={rule.requires_residue_data}
+                          onCheckedChange={(checked) => 
+                            handleRuleUpdate(rule.id, { requires_residue_data: checked })
+                          }
+                        />
+                        <label htmlFor={`residue-${rule.id}`} className="text-sm cursor-pointer">Residue</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`qa-${rule.id}`}
+                          checked={rule.requires_qa_data}
+                          onCheckedChange={(checked) => 
+                            handleRuleUpdate(rule.id, { requires_qa_data: checked })
+                          }
+                        />
+                        <label htmlFor={`qa-${rule.id}`} className="text-sm cursor-pointer">
+                          QA ({rule.min_qa_checks_required}+ checks)
+                        </label>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={rule.is_enabled}
+                      onCheckedChange={(checked) => handleRuleUpdate(rule.id, { is_enabled: checked })}
+                    />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {statusRules.map((rule) => (
-                  <TableRow key={rule.id}>
-                    <TableCell className="font-medium">{rule.name}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(rule.fromStatus)}>
-                        {rule.fromStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(rule.toStatus)}>
-                        {rule.toStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={rule.daysAfterSet}
-                        onChange={(e) => handleRuleUpdate(rule.id, 'daysAfterSet', Number(e.target.value))}
-                        className="w-20"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={rule.requiresData}
-                        onCheckedChange={(checked) => handleRuleUpdate(rule.id, 'requiresData', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={rule.enabled}
-                        onCheckedChange={(checked) => handleRuleUpdate(rule.id, 'enabled', checked)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          <div className="flex justify-end mt-4">
-            <Button onClick={saveSettings} variant="outline">
-              Save Settings
-            </Button>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {/* Status Flow Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Recent Status Changes
+          </CardTitle>
+          <CardDescription>Audit log of automatic and manual status changes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Batch</TableHead>
+                <TableHead>Change</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Rule/User</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {history?.slice(0, 10).map((entry: any) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="font-medium">{entry.batches.batch_number}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={getStatusColor(entry.from_status)}>
+                        {entry.from_status}
+                      </Badge>
+                      <span>→</span>
+                      <Badge variant="outline" className={getStatusColor(entry.to_status)}>
+                        {entry.to_status}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={entry.change_type === 'automatic' ? 'default' : 'secondary'}>
+                      {entry.change_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {entry.change_type === 'automatic' 
+                      ? entry.rule_applied 
+                      : entry.user_profiles 
+                        ? `${entry.user_profiles.first_name} ${entry.user_profiles.last_name}`
+                        : 'Manual'}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {format(new Date(entry.created_at), 'MMM d, yyyy HH:mm')}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(!history || history.length === 0) && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No status changes recorded yet
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Status Flow</CardTitle>
+          <CardDescription>Visual representation of batch progression</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Badge className="bg-blue-100 text-blue-800">setting</Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className="bg-gray-500">Planned</Badge>
             <span>→</span>
-            <Badge className="bg-yellow-100 text-yellow-800">incubating</Badge>
+            <Badge className="bg-blue-500">Setting</Badge>
             <span>→</span>
-            <Badge className="bg-orange-100 text-orange-800">hatching</Badge>
+            <Badge className="bg-yellow-500">Incubating</Badge>
             <span>→</span>
-            <Badge className="bg-green-100 text-green-800">completed</Badge>
+            <Badge className="bg-orange-500">Hatching</Badge>
+            <span>→</span>
+            <Badge className="bg-green-500">Completed</Badge>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Batches automatically progress through statuses based on days elapsed and data availability.
-            The "Complete Batch" rule requires fertility analysis data to be recorded.
-          </p>
         </CardContent>
       </Card>
     </div>

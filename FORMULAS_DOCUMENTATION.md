@@ -293,6 +293,66 @@ Default Sample Size: 100 eggs
 Validation: grade_a + grade_b + grade_c + cracked + dirty + small + large = sample_size
 ```
 
+## Batch Status Automation
+
+### Automation Rules
+The system automatically progresses batches through statuses based on configurable rules:
+
+**Default Rules:**
+1. **Start Incubation**: setting → incubating (Day 1+, no data required)
+2. **Start Hatching**: incubating → hatching (Day 18+, no data required)
+3. **Complete Batch**: hatching → completed (Day 21+, requires fertility + residue data)
+
+### Days Calculation
+```
+Days Since Set = FLOOR((Current Date - Set Date) / (1000 * 60 * 60 * 24))
+```
+- Calculated as total calendar days elapsed since the batch was set
+- Multiple data entries on the same day do not affect the calculation
+- Each day is only counted once, regardless of how many times data is entered
+
+### Data Requirements
+Each rule can be configured to require specific data types before status progression:
+
+- **Fertility Data**: At least 1 fertility_analysis record must exist
+- **Residue Data**: At least 1 residue_analysis record must exist  
+- **QA Data**: Minimum number of qa_monitoring records must exist
+- **No Data Required**: Status progresses based on time alone
+
+**What "Requires Data" Means:**
+- The system checks for the **existence** of at least one record, not comprehensive data for all days
+- For example, "Complete Batch" requires both fertility AND residue analysis records to exist
+- It doesn't matter which day the data was entered, only that it exists
+- You can enter data multiple times on the same day - the system only checks if records exist
+
+### Automation Triggers
+- **Scheduled**: Runs automatically every hour via cron job (requires pg_cron extension)
+- **Manual**: Can be triggered manually via "Run Automation Now" button
+- **Validation**: Each rule validates required data before applying status change
+- **Audit**: All changes are logged in batch_status_history table
+
+### Status Change Audit
+All status changes are logged in `batch_status_history`:
+- **Automatic Changes**: `change_type = 'automatic'`, includes rule name
+- **Manual Changes**: `change_type = 'manual'`, includes user who made the change
+- **Data Validation**: Records whether all required data was present
+- **Days Tracking**: Logs how many days since set when status changed
+
+### Configuration
+Rules are stored in `batch_status_automation_rules` table and can be customized per company:
+- Enable/disable individual rules
+- Adjust minimum days required
+- Configure data requirements (fertility, residue, QA)
+- Set minimum QA check counts
+- Customize rules with effective dates
+
+### Edge Function
+The automation is powered by a Supabase Edge Function:
+- **Location**: `supabase/functions/batch-status-automation/index.ts`
+- **Execution**: Scheduled hourly via pg_cron
+- **Logic**: Fetches active batches, applies rules based on time and data validation
+- **Response**: Returns summary of batches processed and updated
+
 ## Notes
 
 1. **Rounding**: Most percentages are rounded to whole numbers (0 decimal places)
@@ -300,8 +360,11 @@ Validation: grade_a + grade_b + grade_c + cracked + dirty + small + large = samp
 3. **Date Calculations**: All date differences use UTC to avoid timezone issues
 4. **Capacity Limits**: Machine utilization can exceed 100% (over-capacity alert)
 5. **Zero Division**: All formulas handle division by zero by returning 0 or N/A
+6. **Status Automation**: Runs hourly but can be manually triggered anytime
+7. **Data Requirements**: Validated before any status change occurs
+8. **Multiple Entries**: Entering data multiple times on the same day doesn't affect automation logic
 
 ---
 
-*Last Updated: 2025-01-08*
+*Last Updated: 2025-01-11*
 *For code locations, see inline comments in respective files*
