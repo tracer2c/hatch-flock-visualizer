@@ -154,6 +154,13 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     const hoiPercent = fertileEggs > 0 ? ((chicksHatched + malformedChicks) / fertileEggs) * 100 : 0;
     const ifDevPercent = hoiPercent - hofPercent;
 
+    console.log("Residue - Attempting save:", {
+      hasResidueId: !!editingRecord.residue_id,
+      residueId: editingRecord.residue_id,
+      batchId: editingRecord.batch_id,
+      operation: editingRecord.residue_id ? "UPDATE" : "INSERT"
+    });
+
     // Check if record exists (has residue_id) or needs to be created
     let error;
     if (editingRecord.residue_id) {
@@ -188,6 +195,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
         })
         .eq('id', editingRecord.residue_id);
       error = result.error;
+      console.log("Residue - UPDATE result:", { error, data: result.data });
     } else {
       // Insert new record
       // Calculate total residue count
@@ -226,11 +234,15 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           if_dev_percent: ifDevPercent,
         } as any]);
       error = result.error;
+      console.log("Residue - INSERT result:", { error, data: result.data });
     }
 
     if (error) {
-      toast.error("Failed to update record");
-      console.error(error);
+      const errorMessage = error.message || "Unknown error";
+      const errorDetails = error.details || "";
+      const errorHint = error.hint || "";
+      toast.error(`Failed to update record: ${errorMessage}`);
+      console.error("Residue - Full error:", { error, errorMessage, errorDetails, errorHint });
     } else {
       toast.success("Record updated successfully");
       setEditingRecord(null);

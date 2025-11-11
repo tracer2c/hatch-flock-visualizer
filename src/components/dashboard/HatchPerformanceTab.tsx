@@ -140,6 +140,13 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const hoiPercent = fertileEggs > 0 ? ((chicksHatched + cullChicks) / fertileEggs) * 100 : 0;
     const ifDevPercent = hoiPercent - hofPercent;
 
+    console.log("Hatch Performance - Attempting save:", {
+      hasFertilityId: !!editingRecord.fertility_id,
+      fertilityId: editingRecord.fertility_id,
+      batchId: editingRecord.batch_id,
+      operation: editingRecord.fertility_id ? "UPDATE" : "INSERT"
+    });
+
     // Check if record exists (has fertility_id) or needs to be created
     let error;
     
@@ -164,6 +171,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
         })
         .eq("id", editingRecord.fertility_id);
       error = result.error;
+      console.log("Hatch Performance - UPDATE result:", { error, data: result.data });
     } else {
       // Insert new record
       const result = await supabase
@@ -185,11 +193,15 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
           notes: formData.notes,
         } as any]);
       error = result.error;
+      console.log("Hatch Performance - INSERT result:", { error, data: result.data });
     }
 
     if (error) {
-      toast.error("Failed to update record");
-      console.error(error);
+      const errorMessage = error.message || "Unknown error";
+      const errorDetails = error.details || "";
+      const errorHint = error.hint || "";
+      toast.error(`Failed to update record: ${errorMessage}`);
+      console.error("Hatch Performance - Full error:", { error, errorMessage, errorDetails, errorHint });
     } else {
       toast.success("Record updated successfully");
       setEditingRecord(null);

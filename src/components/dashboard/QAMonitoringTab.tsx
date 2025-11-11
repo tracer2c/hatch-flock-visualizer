@@ -131,6 +131,13 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
   const handleSave = async () => {
     if (!editingRecord) return;
 
+    console.log("QA Monitoring - Attempting save:", {
+      hasQaId: !!editingRecord.qa_id,
+      qaId: editingRecord.qa_id,
+      batchId: editingRecord.batch_id,
+      operation: editingRecord.qa_id ? "UPDATE" : "INSERT"
+    });
+
     // Check if record exists (has qa_id) or needs to be created
     let error;
     if (editingRecord.qa_id) {
@@ -156,6 +163,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
         })
         .eq('id', editingRecord.qa_id);
       error = result.error;
+      console.log("QA Monitoring - UPDATE result:", { error, data: result.data });
     } else {
       // Insert new record
       const result = await supabase
@@ -179,11 +187,15 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
           notes: formData.notes,
         } as any]);
       error = result.error;
+      console.log("QA Monitoring - INSERT result:", { error, data: result.data });
     }
 
     if (error) {
-      toast.error("Failed to update record");
-      console.error(error);
+      const errorMessage = error.message || "Unknown error";
+      const errorDetails = error.details || "";
+      const errorHint = error.hint || "";
+      toast.error(`Failed to update record: ${errorMessage}`);
+      console.error("QA Monitoring - Full error:", { error, errorMessage, errorDetails, errorHint });
     } else {
       toast.success("Record updated successfully");
       setEditingRecord(null);

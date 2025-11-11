@@ -162,6 +162,13 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
       // Build notes string with all extra fields
       const notes = `Stained: ${stained}, Abnormal: ${abnormal}, Contaminated: ${contaminated}, USD: ${usd}${setWeek ? `, Set Week: ${setWeek}` : ''}`;
 
+      console.log("Egg Pack - Attempting save:", {
+        hasEggPackId: !!editingRecord.egg_pack_id,
+        eggPackId: editingRecord.egg_pack_id,
+        batchId: editingRecord.batch_id,
+        operation: editingRecord.egg_pack_id ? "UPDATE" : "INSERT"
+      });
+
       // Check if record exists (has egg_pack_id) or needs to be created
       let error;
       if (editingRecord.egg_pack_id) {
@@ -184,6 +191,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
           })
           .eq("id", editingRecord.egg_pack_id);
         error = result.error;
+        console.log("Egg Pack - UPDATE result:", { error, data: result.data });
       } else {
         // Insert new record
         const result = await supabase
@@ -204,6 +212,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
             notes: notes,
           } as any]);
         error = result.error;
+        console.log("Egg Pack - INSERT result:", { error, data: result.data });
       }
 
       if (error) throw error;
@@ -212,7 +221,11 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
       setEditingRecord(null);
       onDataUpdate();
     } catch (error: any) {
-      toast.error("Failed to update record: " + error.message);
+      const errorMessage = error.message || "Unknown error";
+      const errorDetails = error.details || "";
+      const errorHint = error.hint || "";
+      console.error("Egg Pack - Full error:", { error, errorMessage, errorDetails, errorHint });
+      toast.error(`Failed to update record: ${errorMessage}`);
     }
   };
 
