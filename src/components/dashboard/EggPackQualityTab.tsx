@@ -495,7 +495,7 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Hatchery: {editingRecord?.batch_number}</Label>
+              <Label>House: {editingRecord?.batch_number}</Label>
               <p className="text-sm text-muted-foreground">
                 {editingRecord?.flock_name} (Flock #{editingRecord?.flock_number})
               </p>

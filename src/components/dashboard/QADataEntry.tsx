@@ -953,7 +953,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         className="bg-muted cursor-not-allowed"
                       />
                       <p className="text-xs text-muted-foreground">
-                        From hatchery: {batchInfo.flock_name}
+                        From house: {batchInfo.flock_name}
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -1027,7 +1027,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         className="bg-muted cursor-not-allowed"
                       />
                       <p className="text-xs text-muted-foreground">
-                        From hatchery: {batchInfo.flock_name}
+                        From house: {batchInfo.flock_name}
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -1210,7 +1210,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         className="bg-muted cursor-not-allowed"
                       />
                       <p className="text-xs text-muted-foreground">
-                        From hatchery: {batchInfo.flock_name}
+                        From house: {batchInfo.flock_name}
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -1291,7 +1291,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         className="bg-muted cursor-not-allowed"
                       />
                       <p className="text-xs text-muted-foreground">
-                        From hatchery: {batchInfo.flock_name}
+                        From house: {batchInfo.flock_name}
                       </p>
                     </div>
                     <div className="space-y-2">
