@@ -308,6 +308,7 @@ export type Database = {
           machine_id: string
           notes: string | null
           set_date: string
+          set_time: string | null
           status: Database["public"]["Enums"]["batch_status"]
           temperature_avg: number | null
           total_eggs_set: number
@@ -333,6 +334,7 @@ export type Database = {
           machine_id: string
           notes?: string | null
           set_date: string
+          set_time?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           temperature_avg?: number | null
           total_eggs_set: number
@@ -358,6 +360,7 @@ export type Database = {
           machine_id?: string
           notes?: string | null
           set_date?: string
+          set_time?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           temperature_avg?: number | null
           total_eggs_set?: number
