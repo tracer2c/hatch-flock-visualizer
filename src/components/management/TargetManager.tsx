@@ -249,7 +249,7 @@ export const TargetManager = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Custom Targets</h2>
-          <p className="text-muted-foreground">Set performance targets for different levels</p>
+          <p className="text-muted-foreground">Set performance targets for hatcheries, flocks, and houses</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -289,13 +289,15 @@ export const TargetManager = () => {
 
                 {formData.target_type !== 'global' && (
                   <div>
-                    <Label htmlFor="entity">Select {formData.target_type}</Label>
+                    <Label htmlFor="entity">
+                      Select {formData.target_type === 'hatchery' ? 'Hatchery' : formData.target_type === 'flock' ? 'Flock' : 'House'}
+                    </Label>
                     <Select
                       value={formData.entity_id}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, entity_id: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={`Choose ${formData.target_type}`} />
+                        <SelectValue placeholder={`Choose ${formData.target_type === 'hatchery' ? 'hatchery' : formData.target_type === 'flock' ? 'flock' : 'house'}`} />
                       </SelectTrigger>
                       <SelectContent>
                         {getEntityOptions().map(option => (
