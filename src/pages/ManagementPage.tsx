@@ -126,7 +126,7 @@ const ManagementPage = () => {
               <Target className="h-5 w-5 text-emerald-600" />
               <div className="text-left">
                 <h3 className="font-semibold text-lg">Custom Targets</h3>
-                <p className="text-gray-600 text-sm">Set performance targets for units, flocks, and batches</p>
+                <p className="text-gray-600 text-sm">Set performance targets for hatcheries, flocks, and houses</p>
               </div>
             </div>
           </AccordionTrigger>

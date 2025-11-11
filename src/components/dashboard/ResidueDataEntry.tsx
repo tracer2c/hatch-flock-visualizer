@@ -465,6 +465,26 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 onChange={(e) => handleInputChange('deadPipNumber', e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalPips" className="flex items-center gap-1">
+                Total Pips
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Auto-calculated: Live Pips + Dead Pips
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="totalPips"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={(Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0)}
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="totalDead" className="flex items-center gap-1">

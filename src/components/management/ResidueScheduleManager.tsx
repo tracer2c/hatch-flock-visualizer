@@ -234,7 +234,7 @@ export const ResidueScheduleManager = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Batch</TableHead>
+                <TableHead>House</TableHead>
                 <TableHead>Flock</TableHead>
                 <TableHead>Set Date</TableHead>
                 <TableHead>Scheduled Date</TableHead>
