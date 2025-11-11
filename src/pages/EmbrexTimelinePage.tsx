@@ -1052,12 +1052,10 @@ export default function EmbrexDashboard() {
               border: 'none !important'
             }}
           >
-            {/* Video - floating seamlessly on page background */}
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline
+            {/* Animated GIF - floating seamlessly on page background with true transparency */}
+            <img 
+              src="/chick-hatching.gif"
+              alt="Chick hatching animation"
               className="w-[450px] h-auto"
               style={{ 
                 background: 'transparent !important',
@@ -1068,9 +1066,7 @@ export default function EmbrexDashboard() {
                 margin: 0,
                 padding: 0
               }}
-            >
-              <source src="/chick-hatching.mp4" type="video/mp4" />
-            </video>
+            />
             
             <p className={`text-sm text-slate-600 text-center mt-6 font-medium transition-all duration-700 delay-300 ${
               welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
