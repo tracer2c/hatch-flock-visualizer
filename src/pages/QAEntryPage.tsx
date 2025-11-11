@@ -57,6 +57,13 @@ const QAEntryPage = () => {
         variant: "destructive"
       });
     } else {
+      // Extract house number from batch_number if not in flocks table
+      let houseNumber = data.flocks?.house_number || '';
+      if (!houseNumber && data.batch_number.includes('#')) {
+        const parts = data.batch_number.split('#');
+        houseNumber = parts[1]?.trim() || '1';
+      }
+      
       setHouseInfo({
         id: data.id,
         batch_number: data.batch_number,
@@ -64,7 +71,7 @@ const QAEntryPage = () => {
         flock_number: data.flocks?.flock_number || 0,
         machine_id: data.machine_id,
         machine_number: data.machines?.machine_number || '',
-        house_number: data.flocks?.house_number || '1',
+        house_number: houseNumber,
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
