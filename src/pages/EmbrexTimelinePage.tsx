@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { EggCrackingAnimation } from "@/components/animations/EggCrackingAnimation";
 
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
@@ -1040,7 +1041,7 @@ export default function EmbrexDashboard() {
         {/* Main Content Container - Flex layout with animation on left */}
         <div className="flex items-center gap-16">
           
-          {/* Left Side - Chick Hatching Video */}
+          {/* Left Side - Egg Cracking Animation */}
           <div 
             className={`flex-shrink-0 transition-all duration-1000 ease-out ${
               welcomeStep >= 1 ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-12 scale-95'
@@ -1052,51 +1053,7 @@ export default function EmbrexDashboard() {
               border: 'none !important'
             }}
           >
-            {/* Animated Video with reflection - floating seamlessly on page background */}
-            <div className="relative">
-              <video 
-                src="/chick-hatching.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-[600px] h-auto"
-                style={{ 
-                  background: 'transparent !important',
-                  backgroundColor: 'transparent !important',
-                  border: 'none !important',
-                  outline: 'none !important',
-                  boxShadow: 'none !important',
-                  margin: 0,
-                  padding: 0,
-                  animation: 'fade-in 1.2s ease-out 0.3s both, scale-in 1s ease-out 0.3s both'
-                }}
-              />
-              {/* Soft reflection effect */}
-              <video 
-                src="/chick-hatching.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-hidden="true"
-                className="w-[600px] h-auto absolute left-0 pointer-events-none"
-                style={{ 
-                  background: 'transparent !important',
-                  backgroundColor: 'transparent !important',
-                  border: 'none !important',
-                  outline: 'none !important',
-                  boxShadow: 'none !important',
-                  margin: 0,
-                  padding: 0,
-                  top: '100%',
-                  transform: 'scaleY(-1)',
-                  opacity: 0.15,
-                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 60%)',
-                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 60%)'
-                }}
-              />
-            </div>
+            <EggCrackingAnimation />
           </div>
 
           {/* Right Side - Content */}
