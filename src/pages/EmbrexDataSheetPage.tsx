@@ -108,6 +108,12 @@ const EmbrexDataSheetPage = () => {
           { value: 'cracked', label: 'Cracked' },
           { value: 'dirty', label: 'Dirty' }
         ];
+      case 'fertility':
+        return [...commonOptions,
+          { value: 'analysis_date', label: 'Analysis Date' },
+          { value: 'fertility_percent', label: 'Fertility %' },
+          { value: 'sample_size', label: 'Sample Size' }
+        ];
       case 'hatch':
         return [...commonOptions,
           { value: 'hatch_percent', label: 'Hatch %' },
@@ -186,6 +192,7 @@ const EmbrexDataSheetPage = () => {
               <TabsTrigger value="embrex">Embrex/HOI</TabsTrigger>
               <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
               <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
+              <TabsTrigger value="fertility">Fertility Analysis</TabsTrigger>
               <TabsTrigger value="hatch">Hatch Results</TabsTrigger>
               <TabsTrigger value="qa">Quality Assurance</TabsTrigger>
             </TabsList>
