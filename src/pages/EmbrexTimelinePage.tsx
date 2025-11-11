@@ -1047,23 +1047,40 @@ export default function EmbrexDashboard() {
             }`}
           >
             <div className="relative">
-              {/* Glow effect background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-200/40 via-orange-200/30 to-yellow-300/40 rounded-3xl blur-2xl scale-110 animate-pulse" />
-              
-              {/* Video container with enhanced shadow */}
+              {/* Video container */}
               <div className="relative">
                 <video 
                   autoPlay 
                   loop 
                   muted 
                   playsInline
-                  className="w-[320px] h-auto rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] relative z-10"
+                  className="w-[320px] h-auto relative z-10"
+                  style={{ filter: 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15))' }}
                 >
                   <source src="/chick-hatching.mp4" type="video/mp4" />
                 </video>
+                
+                {/* Reflection effect */}
+                <div 
+                  className="absolute top-full left-0 w-full h-24 overflow-hidden"
+                  style={{ 
+                    maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%)'
+                  }}
+                >
+                  <video 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                    className="w-[320px] h-auto transform scale-y-[-1] opacity-40 blur-[1px]"
+                  >
+                    <source src="/chick-hatching.mp4" type="video/mp4" />
+                  </video>
+                </div>
               </div>
               
-              <p className={`text-sm text-slate-600 text-center mt-4 font-medium transition-all duration-700 delay-300 ${
+              <p className={`text-sm text-slate-600 text-center mt-28 font-medium transition-all duration-700 delay-300 ${
                 welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               }`}>
                 Working hard to break free...
