@@ -12,9 +12,18 @@ import { QAMonitoringTab } from "./QAMonitoringTab";
 interface CompleteDataViewProps {
   activeTab: string;
   searchTerm: string;
+  filters: {
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+    selectedHatcheries: string[];
+    selectedMachines: string[];
+    technicianSearch: string;
+    dateFrom: string;
+    dateTo: string;
+  };
 }
 
-export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProps) => {
+export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -176,15 +185,15 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
 
   switch (activeTab) {
     case "embrex":
-      return <EmbrexHOITab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "residue":
-      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <HatchPerformanceTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "qa":
-      return <QAMonitoringTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <QAMonitoringTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
   }

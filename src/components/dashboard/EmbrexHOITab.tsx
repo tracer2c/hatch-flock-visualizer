@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
@@ -8,50 +8,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { DataSheetFilterSheet } from "./DataSheetFilterSheet";
 
 interface EmbrexHOITabProps {
   data: any[];
   searchTerm: string;
+  filters: {
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+    selectedHatcheries: string[];
+    selectedMachines: string[];
+    technicianSearch: string;
+    dateFrom: string;
+    dateTo: string;
+  };
   onDataUpdate: () => void;
 }
 
-export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabProps) => {
+export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
-  
-  // Filter state
-  const [filters, setFilters] = useState({
-    sortBy: 'set_date' as string,
-    sortOrder: 'desc' as 'asc' | 'desc',
-    selectedHatcheries: [] as string[],
-    selectedMachines: [] as string[],
-    technicianSearch: '',
-    dateFrom: '',
-    dateTo: '',
-  });
-
-  // Load unique hatcheries and machines
-  const [hatcheries, setHatcheries] = useState<{ id: string; name: string }[]>([]);
-  const [machines, setMachines] = useState<{ id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    loadFilters();
-  }, []);
-
-  const loadFilters = async () => {
-    const [hatcheriesRes, machinesRes] = await Promise.all([
-      supabase.from('units').select('id, name').order('name'),
-      supabase.from('machines').select('id, machine_number').order('machine_number'),
-    ]);
-
-    if (hatcheriesRes.data) {
-      setHatcheries(hatcheriesRes.data.map(h => ({ id: h.id, name: h.name })));
-    }
-    if (machinesRes.data) {
-      setMachines(machinesRes.data.map(m => ({ id: m.id, name: m.machine_number })));
-    }
-  };
 
   // Apply filters to data
   const filteredData = useMemo(() => {
@@ -130,57 +105,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
     return result;
   }, [data, searchTerm, filters]);
 
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.selectedHatcheries.length > 0) count++;
-    if (filters.selectedMachines.length > 0) count++;
-    if (filters.technicianSearch) count++;
-    if (filters.dateFrom || filters.dateTo) count++;
-    return count;
-  }, [filters]);
-
-  const clearAllFilters = () => {
-    setFilters({
-      sortBy: 'set_date',
-      sortOrder: 'desc',
-      selectedHatcheries: [],
-      selectedMachines: [],
-      technicianSearch: '',
-      dateFrom: '',
-      dateTo: '',
-    });
-  };
-
-  const toggleHatchery = (id: string) => {
-    setFilters(prev => ({
-      ...prev,
-      selectedHatcheries: prev.selectedHatcheries.includes(id)
-        ? prev.selectedHatcheries.filter(h => h !== id)
-        : [...prev.selectedHatcheries, id]
-    }));
-  };
-
-  const toggleMachine = (id: string) => {
-    setFilters(prev => ({
-      ...prev,
-      selectedMachines: prev.selectedMachines.includes(id)
-        ? prev.selectedMachines.filter(m => m !== id)
-        : [...prev.selectedMachines, id]
-    }));
-  };
-
-  const sortByOptions = [
-    { value: 'set_date', label: 'Set Date' },
-    { value: 'flock_number', label: 'Flock #' },
-    { value: 'flock_name', label: 'Flock Name' },
-    { value: 'house_number', label: 'House #' },
-    { value: 'age_weeks', label: 'Age (weeks)' },
-    { value: 'total_eggs_set', label: 'Total Eggs Set' },
-    { value: 'eggs_cleared', label: 'Clears' },
-    { value: 'eggs_injected', label: 'Injected' },
-    { value: 'machine_number', label: 'Machine' },
-    { value: 'status', label: 'Status' },
-  ];
 
   const handleEdit = (record: any) => {
     setEditingRecord(record);
@@ -236,21 +160,6 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
 
   return (
     <>
-      {/* Filters Section */}
-      <div className="mb-4">
-        <DataSheetFilterSheet
-          filters={filters}
-          setFilters={setFilters}
-          hatcheries={hatcheries}
-          machines={machines}
-          sortByOptions={sortByOptions}
-          activeFilterCount={activeFilterCount}
-          onClearFilters={clearAllFilters}
-          onToggleHatchery={toggleHatchery}
-          onToggleMachine={toggleMachine}
-        />
-      </div>
-
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>

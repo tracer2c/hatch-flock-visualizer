@@ -1,7 +1,7 @@
 
 import { useEffect } from "react";
 import OverviewOperations from "@/components/dashboard/OverviewOperations";
-import eggsIcon from "@/assets/eggs-icon.png";
+// No icon import needed - using animated GIF directly
 
 const Index = () => {
   useEffect(() => {
@@ -25,8 +25,8 @@ const Index = () => {
       {/* Dashboard Header with Eggs Icon */}
       <div className="mb-6 flex items-center gap-4">
         <img 
-          src={eggsIcon} 
-          alt="Eggs" 
+          src="/chick-hatching.gif" 
+          alt="Chick Hatching" 
           className="w-16 h-16 object-contain animate-fade-in"
         />
         <div>
