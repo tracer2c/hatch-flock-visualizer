@@ -26,6 +26,7 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
   
   // Filter state
   const [filters, setFilters] = useState({
+    sortBy: 'check_date' as string,
     sortOrder: 'desc' as 'asc' | 'desc',
     selectedHatcheries: [] as string[],
     selectedMachines: [] as string[],
@@ -97,11 +98,31 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
       result = result.filter(item => item.check_date <= filters.dateTo);
     }
 
-    // Apply sort order
+    // Apply sorting
     result.sort((a, b) => {
-      const dateA = new Date(a.check_date).getTime();
-      const dateB = new Date(b.check_date).getTime();
-      return filters.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      const sortBy = filters.sortBy;
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
+
+      // Handle dates
+      if (sortBy === 'check_date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      // Handle numbers
+      else if (['flock_number', 'age_weeks', 'day_of_incubation', 'temperature', 'humidity', 'co2_level', 'ventilation_rate', 'turning_frequency', 'mortality_count'].includes(sortBy)) {
+        aVal = parseFloat(aVal) || 0;
+        bVal = parseFloat(bVal) || 0;
+      }
+      // Handle strings (case insensitive)
+      else {
+        aVal = String(aVal || '').toLowerCase();
+        bVal = String(bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return filters.sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return filters.sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
 
     return result;
@@ -118,6 +139,7 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
 
   const clearAllFilters = () => {
     setFilters({
+      sortBy: 'check_date',
       sortOrder: 'desc',
       selectedHatcheries: [],
       selectedMachines: [],
@@ -238,6 +260,29 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-muted/50">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Sort By Column */}
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+                <Select value={filters.sortBy} onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="check_date">Check Date</SelectItem>
+                    <SelectItem value="flock_number">Flock #</SelectItem>
+                    <SelectItem value="flock_name">Flock Name</SelectItem>
+                    <SelectItem value="house_number">House #</SelectItem>
+                    <SelectItem value="age_weeks">Age (weeks)</SelectItem>
+                    <SelectItem value="day_of_incubation">Day of Incubation</SelectItem>
+                    <SelectItem value="temperature">Temperature</SelectItem>
+                    <SelectItem value="humidity">Humidity</SelectItem>
+                    <SelectItem value="co2_level">CO2 Level</SelectItem>
+                    <SelectItem value="mortality_count">Mortality Count</SelectItem>
+                    <SelectItem value="inspector_name">Inspector</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Sort Order */}
               <div className="space-y-2">
                 <Label>Sort Order</Label>
@@ -246,8 +291,8 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desc">Newest First</SelectItem>
-                    <SelectItem value="asc">Oldest First</SelectItem>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                    <SelectItem value="desc">Descending</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

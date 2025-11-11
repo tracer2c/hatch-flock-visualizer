@@ -29,6 +29,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
   
   // Filter state
   const [filters, setFilters] = useState({
+    sortBy: 'set_date' as string,
     sortOrder: 'desc' as 'asc' | 'desc',
     selectedHatcheries: [] as string[],
     selectedMachines: [] as string[],
@@ -100,11 +101,31 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
       result = result.filter(item => item.set_date <= filters.dateTo);
     }
 
-    // Apply sort order
+    // Apply sorting
     result.sort((a, b) => {
-      const dateA = new Date(a.set_date).getTime();
-      const dateB = new Date(b.set_date).getTime();
-      return filters.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      const sortBy = filters.sortBy;
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
+
+      // Handle dates
+      if (sortBy === 'set_date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      // Handle numbers
+      else if (['flock_number', 'age_weeks', 'residue_sample_size', 'sample_size', 'infertile_eggs', 'early_dead', 'mid_dead', 'late_dead', 'malformed_chicks'].includes(sortBy)) {
+        aVal = parseFloat(aVal) || 0;
+        bVal = parseFloat(bVal) || 0;
+      }
+      // Handle strings (case insensitive)
+      else {
+        aVal = String(aVal || '').toLowerCase();
+        bVal = String(bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return filters.sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return filters.sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
 
     return result;
@@ -121,6 +142,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
 
   const clearAllFilters = () => {
     setFilters({
+      sortBy: 'set_date',
       sortOrder: 'desc',
       selectedHatcheries: [],
       selectedMachines: [],
@@ -269,20 +291,43 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
 
           <Collapsible open={showFilters} onOpenChange={setShowFilters}>
             <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-muted/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Sort Order */}
-                <div className="space-y-2">
-                  <Label>Sort Order</Label>
-                  <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, sortOrder: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">Newest First</SelectItem>
-                      <SelectItem value="asc">Oldest First</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Sort By Column */}
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+                <Select value={filters.sortBy} onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="set_date">Set Date</SelectItem>
+                    <SelectItem value="flock_number">Flock #</SelectItem>
+                    <SelectItem value="flock_name">Flock Name</SelectItem>
+                    <SelectItem value="house_number">House #</SelectItem>
+                    <SelectItem value="age_weeks">Age (weeks)</SelectItem>
+                    <SelectItem value="residue_sample_size">Sample Size</SelectItem>
+                    <SelectItem value="infertile_eggs">Infertile</SelectItem>
+                    <SelectItem value="early_dead">Early Dead</SelectItem>
+                    <SelectItem value="mid_dead">Mid Dead</SelectItem>
+                    <SelectItem value="late_dead">Late Dead</SelectItem>
+                    <SelectItem value="malformed_chicks">Cull Chicks</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort Order */}
+              <div className="space-y-2">
+                <Label>Sort Order</Label>
+                <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, sortOrder: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                    <SelectItem value="desc">Descending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
                 {/* Technician Search */}
                 <div className="space-y-2">
