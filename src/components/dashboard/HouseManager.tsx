@@ -74,6 +74,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     machineId: '',
     unitId: '',
     setDate: new Date().toISOString().split('T')[0],
+    setTime: '09:00',
     totalEggs: '',
     customHouseNumber: '',
   });
@@ -83,6 +84,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFormData, setEditFormData] = useState({
     setDate: '',
+    setTime: '',
     totalEggs: '',
     machineId: '',
     unitId: '',
@@ -262,6 +264,7 @@ const calculateHatchDate = (setDate: string) => {
     setEditingHouse(house);
     setEditFormData({
       setDate: data.set_date,
+      setTime: data.set_time || '09:00',
       totalEggs: data.total_eggs_set.toString(),
       machineId: data.machine_id,
       unitId: data.unit_id || '',
@@ -289,6 +292,7 @@ const calculateHatchDate = (setDate: string) => {
       .from('batches')
       .update({
         set_date: editFormData.setDate,
+        set_time: editFormData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: parseInt(editFormData.totalEggs),
         machine_id: editFormData.machineId,
@@ -385,6 +389,7 @@ const calculateHatchDate = (setDate: string) => {
         machine_id: formData.machineId,
         unit_id: formData.unitId,
         set_date: formData.setDate,
+        set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: parseInt(formData.totalEggs),
         status: 'setting'
@@ -408,7 +413,8 @@ const calculateHatchDate = (setDate: string) => {
         flockId: '', 
         machineId: '', 
         unitId: '', 
-        setDate: new Date().toISOString().split('T')[0], 
+        setDate: new Date().toISOString().split('T')[0],
+        setTime: '09:00',
         totalEggs: '',
         customHouseNumber: '',
       });
@@ -538,6 +544,14 @@ const calculateHatchDate = (setDate: string) => {
                   type="date"
                   value={formData.setDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, setDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Set Time *</Label>
+                <Input
+                  type="time"
+                  value={formData.setTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, setTime: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
@@ -865,6 +879,15 @@ const calculateHatchDate = (setDate: string) => {
                     type="date"
                     value={editFormData.setDate}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, setDate: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Set Time *</Label>
+                  <Input
+                    type="time"
+                    value={editFormData.setTime}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, setTime: e.target.value }))}
                   />
                 </div>
 
