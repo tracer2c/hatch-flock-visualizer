@@ -37,6 +37,9 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       infertile_eggs: record.infertile_eggs || 0,
       early_dead: record.early_dead || 0,
       late_dead: record.late_dead || 0,
+      cull_chicks: record.cull_chicks || 0,
+      technician_name: record.technician_name || '',
+      notes: record.fertility_notes || '',
     });
   };
 
@@ -47,10 +50,13 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       const infertileEggs = parseInt(formData.infertile_eggs) || 0;
       const earlyDead = parseInt(formData.early_dead) || 0;
       const lateDead = parseInt(formData.late_dead) || 0;
+      const cullChicks = parseInt(formData.cull_chicks) || 0;
 
       const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
       const hatchPercent = sampleSize > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead) / sampleSize) * 100 : 0;
       const hofPercent = fertileEggs > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead) / fertileEggs) * 100 : 0;
+      const hoiPercent = sampleSize > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead - cullChicks) / sampleSize) * 100 : 0;
+      const ifDevPercent = fertileEggs > 0 ? ((fertileEggs - earlyDead - lateDead) / fertileEggs) * 100 : 0;
 
       const { error } = await supabase
         .from("fertility_analysis")
@@ -60,9 +66,14 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
           infertile_eggs: infertileEggs,
           early_dead: earlyDead,
           late_dead: lateDead,
+          cull_chicks: cullChicks,
           fertility_percent: Number(fertilityPercent.toFixed(2)),
           hatch_percent: Number(hatchPercent.toFixed(2)),
           hof_percent: Number(hofPercent.toFixed(2)),
+          hoi_percent: Number(hoiPercent.toFixed(2)),
+          if_dev_percent: Number(ifDevPercent.toFixed(2)),
+          technician_name: formData.technician_name || null,
+          notes: formData.notes || null,
         })
         .eq("batch_id", editingRecord.batch_id);
 
@@ -105,21 +116,27 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
               <TableHead>House #</TableHead>
               <TableHead>Age (weeks)</TableHead>
               <TableHead>Set Date</TableHead>
+              <TableHead>Analysis Date</TableHead>
               <TableHead>Sample Size</TableHead>
               <TableHead>Fertile</TableHead>
               <TableHead>Infertile</TableHead>
               <TableHead>Fertility %</TableHead>
               <TableHead>Early Dead</TableHead>
               <TableHead>Late Dead</TableHead>
+              <TableHead>Cull Chicks</TableHead>
               <TableHead>Hatch %</TableHead>
               <TableHead>HOF %</TableHead>
+              <TableHead>HOI %</TableHead>
+              <TableHead>I/F Dev %</TableHead>
+              <TableHead>Technician</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center text-muted-foreground">
+                <TableCell colSpan={20} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -131,14 +148,20 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
                   <TableCell>{item.house_number || "-"}</TableCell>
                   <TableCell>{item.age_weeks || "-"}</TableCell>
                   <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>
+                  <TableCell>{item.analysis_date ? format(new Date(item.analysis_date), "MMM dd, yyyy") : "-"}</TableCell>
                   <TableCell>{item.sample_size || "-"}</TableCell>
                   <TableCell>{item.fertile_eggs || "0"}</TableCell>
                   <TableCell>{item.infertile_eggs || "0"}</TableCell>
                   <TableCell>{item.fertility_percent?.toFixed(1) || "0"}%</TableCell>
                   <TableCell>{item.early_dead || "0"}</TableCell>
                   <TableCell>{item.late_dead || "0"}</TableCell>
+                  <TableCell>{item.cull_chicks || "0"}</TableCell>
                   <TableCell>{item.hatch_percent?.toFixed(1) || "0"}%</TableCell>
                   <TableCell>{item.hof_percent?.toFixed(1) || "0"}%</TableCell>
+                  <TableCell>{item.hoi_percent?.toFixed(1) || "0"}%</TableCell>
+                  <TableCell>{item.if_dev_percent?.toFixed(1) || "0"}%</TableCell>
+                  <TableCell>{item.technician_name || "-"}</TableCell>
+                  <TableCell>{item.fertility_notes || "-"}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
@@ -220,6 +243,33 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
                   type="number"
                   value={formData.late_dead || ""}
                   onChange={(e) => setFormData({ ...formData, late_dead: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cull_chicks">Cull Chicks</Label>
+                <Input
+                  id="cull_chicks"
+                  type="number"
+                  value={formData.cull_chicks || ""}
+                  onChange={(e) => setFormData({ ...formData, cull_chicks: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="technician_name">Technician Name</Label>
+                <Input
+                  id="technician_name"
+                  type="text"
+                  value={formData.technician_name || ""}
+                  onChange={(e) => setFormData({ ...formData, technician_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  type="text"
+                  value={formData.notes || ""}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
             </div>
