@@ -116,9 +116,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     setFormData({
       sample_size: record.residue_sample_size || record.sample_size || 648,
       infertile_eggs: record.infertile_eggs || 0,
-      early_dead: record.early_dead || 0,
       mid_dead: record.mid_dead || 0,
-      late_dead: record.late_dead || 0,
       pipped_not_hatched: record.pipped_not_hatched || 0,
       contaminated_eggs: record.contaminated_eggs || 0,
       malformed_chicks: record.malformed_chicks || 0,
@@ -132,6 +130,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
       mold: record.mold || 0,
       live_pip_number: record.live_pip_number || 0,
       dead_pip_number: record.dead_pip_number || 0,
+      lab_technician: record.lab_technician || "",
+      notes: record.residue_notes || "",
     });
   };
 
@@ -140,13 +140,14 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
 
     const sampleSize = parseInt(formData.sample_size) || 648;
     const infertileEggs = parseInt(formData.infertile_eggs) || 0;
-    const earlyDead = parseInt(formData.early_dead) || 0;
     const midDead = parseInt(formData.mid_dead) || 0;
-    const lateDead = parseInt(formData.late_dead) || 0;
     const malformedChicks = parseInt(formData.malformed_chicks) || 0;
+    const livePipNumber = parseInt(formData.live_pip_number) || 0;
+    const deadPipNumber = parseInt(formData.dead_pip_number) || 0;
 
     const fertileEggs = Math.max(0, sampleSize - infertileEggs);
-    const chicksHatched = Math.max(0, sampleSize - infertileEggs - earlyDead - midDead - lateDead - malformedChicks);
+    // Calculate chicks hatched: sample - infertile - mid_dead - culls - pips
+    const chicksHatched = Math.max(0, sampleSize - infertileEggs - midDead - malformedChicks - livePipNumber - deadPipNumber);
     
     const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
     const hatchPercent = sampleSize > 0 ? (chicksHatched / sampleSize) * 100 : 0;
@@ -171,9 +172,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           sample_size: sampleSize,
           infertile_eggs: infertileEggs,
           fertile_eggs: fertileEggs,
-          early_dead: earlyDead,
           mid_dead: midDead,
-          late_dead: lateDead,
           pipped_not_hatched: parseInt(formData.pipped_not_hatched) || 0,
           contaminated_eggs: parseInt(formData.contaminated_eggs) || 0,
           malformed_chicks: malformedChicks,
@@ -185,13 +184,15 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           handling_cracks: parseInt(formData.handling_cracks) || 0,
           abnormal: parseInt(formData.abnormal) || 0,
           mold: parseInt(formData.mold) || 0,
-          live_pip_number: parseInt(formData.live_pip_number) || 0,
-          dead_pip_number: parseInt(formData.dead_pip_number) || 0,
-          pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
+          live_pip_number: livePipNumber,
+          dead_pip_number: deadPipNumber,
+          pip_number: livePipNumber + deadPipNumber,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
           hoi_percent: hoiPercent,
           if_dev_percent: ifDevPercent,
+          lab_technician: formData.lab_technician,
+          notes: formData.notes,
         })
         .eq('id', editingRecord.residue_id);
       error = result.error;
@@ -199,7 +200,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     } else {
       // Insert new record
       // Calculate total residue count
-      const totalResidueCount = earlyDead + midDead + lateDead + malformedChicks + 
+      const totalResidueCount = midDead + malformedChicks + 
                                 (parseInt(formData.pipped_not_hatched) || 0) + 
                                 (parseInt(formData.contaminated_eggs) || 0);
       
@@ -211,9 +212,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           total_residue_count: totalResidueCount,
           infertile_eggs: infertileEggs,
           fertile_eggs: fertileEggs,
-          early_dead: earlyDead,
           mid_dead: midDead,
-          late_dead: lateDead,
           pipped_not_hatched: parseInt(formData.pipped_not_hatched) || 0,
           contaminated_eggs: parseInt(formData.contaminated_eggs) || 0,
           malformed_chicks: malformedChicks,
@@ -225,13 +224,15 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           handling_cracks: parseInt(formData.handling_cracks) || 0,
           abnormal: parseInt(formData.abnormal) || 0,
           mold: parseInt(formData.mold) || 0,
-          live_pip_number: parseInt(formData.live_pip_number) || 0,
-          dead_pip_number: parseInt(formData.dead_pip_number) || 0,
-          pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
+          live_pip_number: livePipNumber,
+          dead_pip_number: deadPipNumber,
+          pip_number: livePipNumber + deadPipNumber,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
           hoi_percent: hoiPercent,
           if_dev_percent: ifDevPercent,
+          lab_technician: formData.lab_technician,
+          notes: formData.notes,
         } as any]);
       error = result.error;
       console.log("Residue - INSERT result:", { error, data: result.data });
@@ -282,10 +283,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>Sample</TableHead>
               <TableHead>Infertile</TableHead>
               <TableHead>Chicks</TableHead>
-              <TableHead>{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
               <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
-              <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
-              <TableHead>{showPercentages ? "Total Dead %" : "Total Dead"}</TableHead>
               <TableHead>{showPercentages ? "Cull Chicks %" : "Cull Chicks"}</TableHead>
               <TableHead>{showPercentages ? "Live Pips %" : "Live Pips"}</TableHead>
               <TableHead>{showPercentages ? "Dead Pips %" : "Dead Pips"}</TableHead>
@@ -307,7 +305,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={25} className="text-center text-muted-foreground">
+                <TableCell colSpan={22} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -326,10 +324,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                     <TableCell>{sampleSize}</TableCell>
                     <TableCell>{formatValue(item.infertile_eggs, sampleSize)}</TableCell>
                     <TableCell>{item.chicks_hatched || "-"}</TableCell>
-                    <TableCell>{formatValue(item.early_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.mid_dead, sampleSize)}</TableCell>
-                    <TableCell>{formatValue(item.late_dead, sampleSize)}</TableCell>
-                    <TableCell>{formatValue((item.early_dead || 0) + (item.mid_dead || 0) + (item.late_dead || 0), sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malformed_chicks, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.live_pip_number, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.dead_pip_number, sampleSize)}</TableCell>
@@ -395,27 +390,11 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                 />
               </div>
               <div>
-                <Label>Early Dead (1-7 days)</Label>
-                <Input
-                  type="number"
-                  value={formData.early_dead || ''}
-                  onChange={(e) => setFormData({ ...formData, early_dead: e.target.value })}
-                />
-              </div>
-              <div>
                 <Label>Mid Dead (7-14 days)</Label>
                 <Input
                   type="number"
                   value={formData.mid_dead || ''}
                   onChange={(e) => setFormData({ ...formData, mid_dead: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Late Dead (15-21 days)</Label>
-                <Input
-                  type="number"
-                  value={formData.late_dead || ''}
-                  onChange={(e) => setFormData({ ...formData, late_dead: e.target.value })}
                 />
               </div>
               <div>
