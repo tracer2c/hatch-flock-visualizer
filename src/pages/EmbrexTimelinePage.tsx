@@ -1052,11 +1052,14 @@ export default function EmbrexDashboard() {
               border: 'none !important'
             }}
           >
-            {/* Animated GIF with reflection - floating seamlessly on page background */}
+            {/* Animated Video with reflection - floating seamlessly on page background */}
             <div className="relative">
-              <img 
-                src="/chick-hatching.gif"
-                alt="Chick hatching animation"
+              <video 
+                src="/chick-hatching.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
                 className="w-[600px] h-auto"
                 style={{ 
                   background: 'transparent !important',
@@ -1070,9 +1073,12 @@ export default function EmbrexDashboard() {
                 }}
               />
               {/* Soft reflection effect */}
-              <img 
-                src="/chick-hatching.gif"
-                alt=""
+              <video 
+                src="/chick-hatching.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
                 aria-hidden="true"
                 className="w-[600px] h-auto absolute left-0 pointer-events-none"
                 style={{ 
