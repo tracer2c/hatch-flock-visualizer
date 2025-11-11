@@ -1047,41 +1047,39 @@ export default function EmbrexDashboard() {
             }`}
           >
             <div className="relative">
-              {/* Video container - blended with background */}
-              <div className="relative">
+              {/* Video - floating seamlessly on page background */}
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="w-[320px] h-auto relative z-10"
+                style={{ 
+                  filter: 'contrast(1.1) brightness(1.05)',
+                  opacity: 0.98
+                }}
+              >
+                <source src="/chick-hatching.mp4" type="video/mp4" />
+              </video>
+              
+              {/* Soft reflection effect */}
+              <div 
+                className="absolute top-full left-0 w-full h-28 overflow-hidden pointer-events-none"
+                style={{ 
+                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)'
+                }}
+              >
                 <video 
                   autoPlay 
                   loop 
                   muted 
                   playsInline
-                  className="w-[320px] h-auto relative z-10 mix-blend-normal"
-                  style={{ 
-                    filter: 'contrast(1.1) brightness(1.05) drop-shadow(0 15px 35px rgba(0, 0, 0, 0.2))',
-                    opacity: 0.98
-                  }}
+                  className="w-[320px] h-auto transform scale-y-[-1] opacity-30 blur-[2px]"
+                  style={{ filter: 'contrast(1.1) brightness(1.05)' }}
                 >
                   <source src="/chick-hatching.mp4" type="video/mp4" />
                 </video>
-                
-                {/* Soft reflection effect */}
-                <div 
-                  className="absolute top-full left-0 w-full h-28 overflow-hidden pointer-events-none"
-                  style={{ 
-                    maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)'
-                  }}
-                >
-                  <video 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                    className="w-[320px] h-auto transform scale-y-[-1] opacity-30 blur-[2px]"
-                    style={{ filter: 'contrast(1.1) brightness(1.05)' }}
-                  >
-                    <source src="/chick-hatching.mp4" type="video/mp4" />
-                  </video>
-                </div>
               </div>
               
               <p className={`text-sm text-slate-600 text-center mt-28 font-medium transition-all duration-700 delay-300 ${
