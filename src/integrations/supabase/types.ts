@@ -293,12 +293,16 @@ export type Database = {
           actual_hatch_date: string | null
           batch_number: string
           chicks_hatched: number
+          clears_notes: string | null
+          clears_technician_name: string | null
           company_id: string
           created_at: string
           eggs_cleared: number | null
           eggs_injected: number
           expected_hatch_date: string
           flock_id: string
+          hoi_notes: string | null
+          hoi_technician_name: string | null
           humidity_avg: number | null
           id: string
           machine_id: string
@@ -314,12 +318,16 @@ export type Database = {
           actual_hatch_date?: string | null
           batch_number: string
           chicks_hatched?: number
+          clears_notes?: string | null
+          clears_technician_name?: string | null
           company_id?: string
           created_at?: string
           eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date: string
           flock_id: string
+          hoi_notes?: string | null
+          hoi_technician_name?: string | null
           humidity_avg?: number | null
           id?: string
           machine_id: string
@@ -335,12 +343,16 @@ export type Database = {
           actual_hatch_date?: string | null
           batch_number?: string
           chicks_hatched?: number
+          clears_notes?: string | null
+          clears_technician_name?: string | null
           company_id?: string
           created_at?: string
           eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date?: string
           flock_id?: string
+          hoi_notes?: string | null
+          hoi_technician_name?: string | null
           humidity_avg?: number | null
           id?: string
           machine_id?: string
@@ -1013,6 +1025,7 @@ export type Database = {
           brain_defects: number | null
           contaminated_eggs: number
           created_at: string
+          dead_pip_number: number | null
           dry_egg: number | null
           fertile_eggs: number | null
           handling_cracks: number | null
@@ -1023,6 +1036,7 @@ export type Database = {
           if_dev_percent: number | null
           infertile_eggs: number | null
           lab_technician: string | null
+          live_pip_number: number | null
           malformed_chicks: number
           malpositioned: number | null
           microscopy_results: string | null
@@ -1046,6 +1060,7 @@ export type Database = {
           brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          dead_pip_number?: number | null
           dry_egg?: number | null
           fertile_eggs?: number | null
           handling_cracks?: number | null
@@ -1056,6 +1071,7 @@ export type Database = {
           if_dev_percent?: number | null
           infertile_eggs?: number | null
           lab_technician?: string | null
+          live_pip_number?: number | null
           malformed_chicks?: number
           malpositioned?: number | null
           microscopy_results?: string | null
@@ -1079,6 +1095,7 @@ export type Database = {
           brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          dead_pip_number?: number | null
           dry_egg?: number | null
           fertile_eggs?: number | null
           handling_cracks?: number | null
@@ -1089,6 +1106,7 @@ export type Database = {
           if_dev_percent?: number | null
           infertile_eggs?: number | null
           lab_technician?: string | null
+          live_pip_number?: number | null
           malformed_chicks?: number
           malpositioned?: number | null
           microscopy_results?: string | null

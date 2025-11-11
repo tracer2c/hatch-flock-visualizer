@@ -35,6 +35,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   const { toast } = useToast();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [currentMachine, setCurrentMachine] = useState<Machine | null>(null);
+  const [globalTechnicianName, setGlobalTechnicianName] = useState<string>('');
+  const [globalNotes, setGlobalNotes] = useState<string>('');
 
   useEffect(() => {
     loadMachines();
@@ -166,6 +168,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   }, [currentMachine]);
 
   const handleAddSetterTemp = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const leftAvg = ((parseFloat(setterTemps.leftTopTemp) + parseFloat(setterTemps.leftMiddleTemp) + parseFloat(setterTemps.leftBottomTemp)) / 3).toFixed(1);
     const rightAvg = ((parseFloat(setterTemps.rightTopTemp) + parseFloat(setterTemps.rightMiddleTemp) + parseFloat(setterTemps.rightBottomTemp)) / 3).toFixed(1);
     
@@ -187,6 +198,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       },
       isWithinRange: parseFloat(leftAvg) >= 99.5 && parseFloat(leftAvg) <= 100.5 && parseFloat(rightAvg) >= 99.5 && parseFloat(rightAvg) <= 100.5,
       checkDate: setterTemps.checkDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -211,6 +224,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddRectalTemp = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const temp = parseFloat(rectalTemps.temperature);
     let isWithinRange = false;
     
@@ -234,6 +256,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       isWithinRange: isWithinRange,
       checkTime: rectalTemps.checkTime,
       checkDate: rectalTemps.checkDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -254,6 +278,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddTrayWash = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const first = parseFloat(trayWashTemps.firstCheck);
     const second = parseFloat(trayWashTemps.secondCheck);
     const third = parseFloat(trayWashTemps.thirdCheck);
@@ -266,6 +299,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       thirdCheck: third,
       allPassed: first >= 140 && second >= 140 && third >= 140,
       washDate: trayWashTemps.washDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -286,6 +321,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddCullCheck = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const newEntry = {
       id: Date.now(),
       type: 'cull_check',
@@ -295,6 +339,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       totalCulls: (parseInt(cullChecks.maleCount) || 0) + (parseInt(cullChecks.femaleCount) || 0),
       defectType: cullChecks.defectType,
       checkDate: cullChecks.checkDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -316,6 +362,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddSpecificGravity = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const floatPct = parseFloat(specificGravity.floatPercentage);
     const age = parseInt(specificGravity.age);
     const isGoodQuality = (age >= 25 && age <= 40) ? floatPct < 10 : floatPct < 15;
@@ -328,6 +383,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       floatPercentage: floatPct,
       isGoodQuality: isGoodQuality,
       testDate: specificGravity.testDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -348,6 +405,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddSetterAngle = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const angles = {
       topLeft: parseFloat(setterAngles.topLeft) || 0,
       midLeft: parseFloat(setterAngles.midLeft) || 0,
@@ -370,6 +436,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       rightAverage: rightAvg,
       isBalanced: isBalanced,
       checkDate: setterAngles.checkDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -394,6 +462,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddHatchProgression = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const pctOut = parseFloat(hatchProgression.percentageOut);
     const totalCount = parseInt(hatchProgression.totalCount);
     const hatchedCount = parseInt(hatchProgression.hatchedCount);
@@ -409,6 +486,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       hatchedCount: hatchedCount,
       checkHour: parseInt(hatchProgression.checkHour),
       hatchDate: hatchProgression.hatchDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -432,6 +511,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   };
 
   const handleAddMoistureLoss = () => {
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const day1 = parseFloat(moistureLoss.day1Weight);
     const day18 = parseFloat(moistureLoss.day18Weight);
     const lossPct = moistureLoss.lossPercentage ? parseFloat(moistureLoss.lossPercentage) : ((day1 - day18) / day1 * 100);
@@ -446,6 +534,8 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       lossPercentage: parseFloat(lossPct.toFixed(2)),
       isOptimal: isOptimal,
       testDate: moistureLoss.testDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
       timestamp: new Date().toISOString()
     };
 
@@ -477,6 +567,40 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
 
   return (
     <div className="space-y-6">
+      {/* Global Technician Name and Notes */}
+      <Card className="bg-muted/30">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="globalTechnicianName" className="flex items-center gap-2">
+                Technician Name *
+                <span className="text-xs text-muted-foreground">(applies to all QA entries below)</span>
+              </Label>
+              <Input
+                id="globalTechnicianName"
+                value={globalTechnicianName}
+                onChange={(e) => setGlobalTechnicianName(e.target.value)}
+                placeholder="Enter technician name"
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="globalNotes" className="flex items-center gap-2">
+                Notes (Optional)
+                <span className="text-xs text-muted-foreground">(applies to all QA entries below)</span>
+              </Label>
+              <Input
+                id="globalNotes"
+                value={globalNotes}
+                onChange={(e) => setGlobalNotes(e.target.value)}
+                placeholder="Additional notes"
+                className="bg-background"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

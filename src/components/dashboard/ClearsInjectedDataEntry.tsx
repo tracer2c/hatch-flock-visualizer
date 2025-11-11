@@ -10,7 +10,12 @@ type Props = {
   initialClear?: number | null;
   initialInjected?: number | null;
   totalEggs?: number | null;
-  onSave: (vals: { clear_number: number; injected_number: number }) => Promise<void> | void;
+  onSave: (vals: { 
+    clear_number: number; 
+    injected_number: number;
+    clears_technician_name: string;
+    clears_notes: string | null;
+  }) => Promise<void> | void;
   saving?: boolean;
   context?: {
     flockNumber?: number;
@@ -29,6 +34,8 @@ export default function ClearsInjectedDataEntry({
 }: Props) {
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
   const [injNum, setInjNum] = useState<string>(initialInjected?.toString() ?? "");
+  const [technicianName, setTechnicianName] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
 
   useEffect(() => {
     setClearNum(initialClear?.toString() ?? "");
@@ -38,12 +45,12 @@ export default function ClearsInjectedDataEntry({
   const clear = Number.isFinite(Number(clearNum)) ? Number(clearNum) : NaN;
   const injected = Number.isFinite(Number(injNum)) ? Number(injNum) : NaN;
 
-  const valid = Number.isInteger(clear) && clear >= 0 && Number.isInteger(injected) && injected >= 0;
+  const valid = Number.isInteger(clear) && clear >= 0 && Number.isInteger(injected) && injected >= 0 && technicianName.trim().length > 0;
 
   const clearPct =
-    valid && totalEggs && totalEggs > 0 ? ((clear / totalEggs) * 100).toFixed(2) : null;
+    Number.isInteger(clear) && totalEggs && totalEggs > 0 ? ((clear / totalEggs) * 100).toFixed(2) : null;
   const injPct =
-    valid && totalEggs && totalEggs > 0 ? ((injected / totalEggs) * 100).toFixed(2) : null;
+    Number.isInteger(injected) && totalEggs && totalEggs > 0 ? ((injected / totalEggs) * 100).toFixed(2) : null;
 
   return (
     <>
@@ -85,15 +92,41 @@ export default function ClearsInjectedDataEntry({
               <div className="text-xs text-gray-600">Injected %: {injPct}%</div>
             )}
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="technicianName">Technician Name *</Label>
+            <Input
+              id="technicianName"
+              value={technicianName}
+              onChange={(e) => setTechnicianName(e.target.value)}
+              placeholder="Enter technician name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Input
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes"
+            />
+          </div>
 
           <div className="flex items-end">
             <Button
-              onClick={() =>
+              onClick={() => {
                 onSave({
                   clear_number: Number(clearNum || 0),
                   injected_number: Number(injNum || 0),
-                })
-              }
+                  clears_technician_name: technicianName.trim(),
+                  clears_notes: notes.trim() || null,
+                });
+                setTechnicianName('');
+                setNotes('');
+              }}
               disabled={!valid || saving}
               className="w-full"
             >

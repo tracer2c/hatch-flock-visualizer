@@ -47,7 +47,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
       handling_cracks: record.handling_cracks || 0,
       abnormal: record.abnormal || 0,
       mold: record.mold || 0,
-      pip_number: record.pip_number || 0,
+      live_pip_number: record.live_pip_number || 0,
+      dead_pip_number: record.dead_pip_number || 0,
     });
   };
 
@@ -90,7 +91,9 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
         handling_cracks: parseInt(formData.handling_cracks) || 0,
         abnormal: parseInt(formData.abnormal) || 0,
         mold: parseInt(formData.mold) || 0,
-        pip_number: parseInt(formData.pip_number) || 0,
+        live_pip_number: parseInt(formData.live_pip_number) || 0,
+        dead_pip_number: parseInt(formData.dead_pip_number) || 0,
+        pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
         hatch_percent: hatchPercent,
         hof_percent: hofPercent,
         hoi_percent: hoiPercent,
@@ -144,6 +147,9 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
               <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
               <TableHead>{showPercentages ? "Cull Chicks %" : "Cull Chicks"}</TableHead>
+              <TableHead>{showPercentages ? "Live Pips %" : "Live Pips"}</TableHead>
+              <TableHead>{showPercentages ? "Dead Pips %" : "Dead Pips"}</TableHead>
+              <TableHead>Total Pips</TableHead>
               <TableHead>{showPercentages ? "Handling Cracks %" : "Handling Cracks"}</TableHead>
               <TableHead>{showPercentages ? "Transfer Crack %" : "Transfer Crack"}</TableHead>
               <TableHead>{showPercentages ? "Contamination %" : "Contamination"}</TableHead>
@@ -184,6 +190,9 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                     <TableCell>{formatValue(item.mid_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.late_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malformed_chicks, sampleSize)}</TableCell>
+                    <TableCell>{formatValue(item.live_pip_number, sampleSize)}</TableCell>
+                    <TableCell>{formatValue(item.dead_pip_number, sampleSize)}</TableCell>
+                    <TableCell>{item.pip_number || 0}</TableCell>
                     <TableCell>{formatValue(item.handling_cracks, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.transfer_crack, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.contaminated_eggs, sampleSize)}</TableCell>
@@ -193,7 +202,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                     <TableCell>{formatValue(item.dry_egg, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malpositioned, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.upside_down, sampleSize)}</TableCell>
-                    <TableCell>{item.pip_number || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -280,6 +288,31 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                   type="number"
                   value={formData.malformed_chicks || ''}
                   onChange={(e) => setFormData({ ...formData, malformed_chicks: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Live Pips</Label>
+                <Input
+                  type="number"
+                  value={formData.live_pip_number || ''}
+                  onChange={(e) => setFormData({ ...formData, live_pip_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Dead Pips</Label>
+                <Input
+                  type="number"
+                  value={formData.dead_pip_number || ''}
+                  onChange={(e) => setFormData({ ...formData, dead_pip_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Total Pips (auto-calc)</Label>
+                <Input
+                  type="number"
+                  disabled
+                  value={(parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0)}
+                  className="bg-gray-100"
                 />
               </div>
               <div>

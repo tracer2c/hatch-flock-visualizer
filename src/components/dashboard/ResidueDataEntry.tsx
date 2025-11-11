@@ -47,6 +47,8 @@ interface ResidueRecord {
   malpositionedPercent: number;
   upsideDown: number;
   upsideDownPercent: number;
+  livePipNumber: number;
+  deadPipNumber: number;
   pipNumber: number;
   totalEggs: number;
   // Hatchability metrics from fertility analysis
@@ -97,7 +99,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     dryEgg: '',
     malpositioned: '',
     upsideDown: '',
-    pipNumber: '',
+    livePipNumber: '',
+    deadPipNumber: '',
     // Hatchability metrics
     sampleSize: '648',
     technicianName: '',
@@ -226,7 +229,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       malpositionedPercent: calculatePercentage(Number(formData.malpositioned) || 0),
       upsideDown: Number(formData.upsideDown) || 0,
       upsideDownPercent: calculatePercentage(Number(formData.upsideDown) || 0),
-      pipNumber: Number(formData.pipNumber) || 0,
+      livePipNumber: Number(formData.livePipNumber) || 0,
+      deadPipNumber: Number(formData.deadPipNumber) || 0,
+      pipNumber: (Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0),
       totalEggs: TOTAL_EGGS,
       // Include hatchability metrics
       sampleSize: sampleSize,
@@ -280,7 +285,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       dryEgg: record.dryEgg.toString(),
       malpositioned: record.malpositioned.toString(),
       upsideDown: record.upsideDown.toString(),
-      pipNumber: record.pipNumber.toString(),
+      livePipNumber: (record.livePipNumber || 0).toString(),
+      deadPipNumber: (record.deadPipNumber || 0).toString(),
       sampleSize: (record.sampleSize || TOTAL_EGGS).toString(),
       technicianName: '',
       notes: ''
@@ -319,7 +325,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       dryEgg: '',
       malpositioned: '',
       upsideDown: '',
-      pipNumber: '',
+      livePipNumber: '',
+      deadPipNumber: '',
       sampleSize: '648',
       technicianName: '',
       notes: ''
@@ -428,6 +435,46 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 placeholder="e.g., 5"
                 value={formData.cullChicks}
                 onChange={(e) => handleInputChange('cullChicks', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="livePipNumber">Live Pips</Label>
+              <Input
+                id="livePipNumber"
+                type="number"
+                placeholder="e.g., 10"
+                value={formData.livePipNumber}
+                onChange={(e) => handleInputChange('livePipNumber', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deadPipNumber">Dead Pips</Label>
+              <Input
+                id="deadPipNumber"
+                type="number"
+                placeholder="e.g., 5"
+                value={formData.deadPipNumber}
+                onChange={(e) => handleInputChange('deadPipNumber', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalPips" className="flex items-center gap-1">
+                Total Pips
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Auto-calculated: Live Pips + Dead Pips
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="totalPips"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={(Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0)}
               />
             </div>
             <div className="space-y-2">
@@ -576,17 +623,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             
-            {/* PIP Number */}
-            <div className="space-y-2">
-              <Label htmlFor="pipNumber">PIP Number</Label>
-              <Input
-                id="pipNumber"
-                type="number"
-                placeholder="e.g., 15"
-                value={formData.pipNumber}
-                onChange={(e) => handleInputChange('pipNumber', e.target.value)}
-              />
-            </div>
+            {/* PIP Numbers - moved after Cull Chicks, now removed as they're in core section */}
           </div>
 
           {/* Hatchability Metrics Section */}
