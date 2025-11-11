@@ -40,7 +40,6 @@ const FlockManager = () => {
   const [formData, setFormData] = useState({
     flock_number: '',
     flock_name: '',
-    house_number: '',
     age_weeks: '',
     arrival_date: new Date().toISOString().split('T')[0],
     total_birds: '',
@@ -97,7 +96,6 @@ const FlockManager = () => {
     setFormData({
       flock_number: '',
       flock_name: '',
-      house_number: '',
       age_weeks: '',
       arrival_date: new Date().toISOString().split('T')[0],
       total_birds: '',
@@ -123,7 +121,6 @@ const FlockManager = () => {
     const flockData = {
       flock_number: parseInt(formData.flock_number),
       flock_name: formData.flock_name,
-      house_number: formData.house_number || null,
       age_weeks: parseInt(formData.age_weeks),
       arrival_date: formData.arrival_date,
       total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
@@ -177,7 +174,6 @@ const FlockManager = () => {
     setFormData({
       flock_number: flock.flock_number.toString(),
       flock_name: flock.flock_name,
-      house_number: flock.house_number || '',
       age_weeks: flock.age_weeks.toString(),
       arrival_date: flock.arrival_date,
       total_birds: flock.total_birds?.toString() || '',
@@ -305,14 +301,6 @@ const FlockManager = () => {
                     value={formData.flock_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, flock_name: e.target.value }))}
                     placeholder="e.g., Bertha Valley"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>House Number</Label>
-                  <Input
-                    value={formData.house_number}
-                    onChange={(e) => setFormData(prev => ({ ...prev, house_number: e.target.value }))}
-                    placeholder="e.g., H1"
                   />
                 </div>
                 <div className="space-y-2">
