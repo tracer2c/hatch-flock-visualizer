@@ -42,12 +42,6 @@ const navigationItems = [
     requiresAuth: true
   },
   {
-    path: '/comparison-model',
-    label: 'Comparison Model',
-    icon: BarChart3,
-    requiresAuth: true
-  },
-  {
     path: '/data-entry',
     label: 'Data Entry',
     icon: FileInput,
@@ -93,6 +87,13 @@ const navigationItems = [
 ];
 
 const advancedAnalyticsItems = [
+  {
+    path: '/comparison-model',
+    label: 'Comparison Model',
+    icon: BarChart3,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
   {
     path: '/process-flow',
     label: 'Process Flow',

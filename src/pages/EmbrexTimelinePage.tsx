@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ChickHatchingAnimation } from "@/components/animations/ChickHatchingAnimation";
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -1045,11 +1046,9 @@ export default function EmbrexDashboard() {
               welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
           >
-            {/* Icon */}
+            {/* Chick Hatching Animation */}
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600/10 mb-6">
-                <BarChart3 className="h-10 w-10 text-blue-600" />
-              </div>
+              <ChickHatchingAnimation />
             </div>
             
             {/* Title */}
