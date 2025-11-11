@@ -5,193 +5,274 @@ export const ChickHatchingAnimation = () => {
   const [showChick, setShowChick] = useState(false);
 
   useEffect(() => {
-    const timer1 = setTimeout(() => setCrackStage(1), 1000);
-    const timer2 = setTimeout(() => setCrackStage(2), 2000);
-    const timer3 = setTimeout(() => setCrackStage(3), 3000);
-    const timer4 = setTimeout(() => {
+    const sequence = async () => {
+      // Stage 1: First crack
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCrackStage(1);
+      
+      // Stage 2: More cracks
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCrackStage(2);
+      
+      // Stage 3: Shell breaking
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCrackStage(3);
+      
+      // Stage 4: Chick starts emerging
+      await new Promise(resolve => setTimeout(resolve, 500));
       setShowChick(true);
       setCrackStage(4);
-    }, 4000);
-    
-    // Loop animation
-    const timer5 = setTimeout(() => {
+      
+      // Stage 5: Shell falls away
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCrackStage(5);
+      
+      // Reset and loop
+      await new Promise(resolve => setTimeout(resolve, 2000));
       setCrackStage(0);
       setShowChick(false);
-    }, 6000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-      clearTimeout(timer5);
     };
-  }, [crackStage]);
+    
+    sequence();
+    const interval = setInterval(sequence, 7000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="relative w-64 h-64 mx-auto">
-      {/* Egg Shell */}
       <svg
         viewBox="0 0 200 240"
         className="w-full h-full"
-        style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))' }}
+        style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.15))' }}
       >
-        {/* Bottom half of shell */}
-        <ellipse
-          cx="100"
-          cy="140"
-          rx="70"
-          ry="90"
-          fill="#f5e6d3"
-          stroke="#d4c5b0"
-          strokeWidth="3"
-          className={crackStage >= 3 ? "animate-[slide-down_0.5s_ease-out]" : ""}
-          style={{
-            transform: crackStage >= 3 ? 'translateY(20px)' : 'translateY(0)',
-            transition: 'transform 0.5s ease-out'
-          }}
-        />
+        {/* Single Egg Shell */}
+        {crackStage < 5 && (
+          <g>
+            {/* Main egg body */}
+            <ellipse
+              cx="100"
+              cy="120"
+              rx="70"
+              ry="90"
+              fill="white"
+              stroke="#e0e0e0"
+              strokeWidth="3"
+              className={crackStage >= 4 ? "animate-[shake_0.3s_ease-in-out]" : ""}
+            />
+            
+            {/* Crack lines */}
+            {crackStage >= 1 && (
+              <g className="animate-fade-in">
+                {/* First crack - center */}
+                <path
+                  d="M 100 80 Q 95 100 100 120 Q 105 140 100 160"
+                  stroke="#a0a0a0"
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+            
+            {crackStage >= 2 && (
+              <g className="animate-fade-in">
+                {/* Second crack - left side */}
+                <path
+                  d="M 70 90 Q 80 110 75 130"
+                  stroke="#a0a0a0"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                {/* Third crack - right side */}
+                <path
+                  d="M 130 90 Q 120 110 125 130"
+                  stroke="#a0a0a0"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+            
+            {crackStage >= 3 && (
+              <g className="animate-fade-in">
+                {/* More cracks spreading */}
+                <path
+                  d="M 100 120 L 85 125 L 95 135"
+                  stroke="#a0a0a0"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 100 120 L 115 125 L 105 135"
+                  stroke="#a0a0a0"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+            
+            {/* Top shell piece breaking off */}
+            {crackStage >= 4 && (
+              <g
+                className="animate-[break-top_0.8s_ease-out]"
+                style={{
+                  transformOrigin: '100px 80px',
+                  opacity: crackStage >= 5 ? 0 : 1,
+                }}
+              >
+                <path
+                  d="M 30 100 Q 50 60 100 50 Q 150 60 170 100 L 160 110 Q 150 90 100 80 Q 50 90 40 110 Z"
+                  fill="white"
+                  stroke="#e0e0e0"
+                  strokeWidth="3"
+                />
+              </g>
+            )}
+          </g>
+        )}
 
-        {/* Top half of shell with cracks */}
-        <g
-          className={crackStage >= 4 ? "opacity-0" : "opacity-100"}
-          style={{ transition: 'opacity 0.3s ease-out' }}
-        >
-          <ellipse
-            cx="100"
-            cy="100"
-            rx="70"
-            ry="90"
-            fill="#f5e6d3"
-            stroke="#d4c5b0"
-            strokeWidth="3"
-          />
-          
-          {/* Crack lines */}
-          {crackStage >= 1 && (
-            <g className="animate-fade-in">
-              <path
-                d="M 85 80 L 90 100 L 85 120"
-                stroke="#8b7355"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-              />
-            </g>
-          )}
-          
-          {crackStage >= 2 && (
-            <g className="animate-fade-in">
-              <path
-                d="M 115 80 L 110 100 L 115 120"
-                stroke="#8b7355"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 90 100 L 100 105 L 110 100"
-                stroke="#8b7355"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-              />
-            </g>
-          )}
-          
-          {crackStage >= 3 && (
-            <g className="animate-fade-in">
-              <path
-                d="M 85 120 L 100 125 L 115 120"
-                stroke="#8b7355"
-                strokeWidth="2.5"
-                fill="none"
-                strokeLinecap="round"
-              />
-            </g>
-          )}
-        </g>
-
-        {/* Baby chick emerging */}
+        {/* Baby Chick Emerging */}
         {showChick && (
-          <g className="animate-[scale-in_0.5s_ease-out]" style={{ transformOrigin: '100px 120px' }}>
+          <g 
+            className="animate-[emerge_0.8s_ease-out]"
+            style={{ 
+              transformOrigin: '100px 140px',
+            }}
+          >
             {/* Chick body */}
             <ellipse
               cx="100"
-              cy="130"
-              rx="35"
-              ry="40"
-              fill="#ffd700"
-              stroke="#f4c430"
+              cy="140"
+              rx="38"
+              ry="42"
+              fill="#FFD700"
+              stroke="#FFC700"
               strokeWidth="2"
             />
             
             {/* Chick head */}
             <circle
               cx="100"
-              cy="100"
-              r="25"
-              fill="#ffd700"
-              stroke="#f4c430"
+              cy="110"
+              r="28"
+              fill="#FFD700"
+              stroke="#FFC700"
               strokeWidth="2"
             />
             
             {/* Eyes */}
-            <circle cx="92" cy="95" r="3" fill="#000" className="animate-pulse" />
-            <circle cx="108" cy="95" r="3" fill="#000" className="animate-pulse" />
+            <circle 
+              cx="92" 
+              cy="108" 
+              r="3" 
+              fill="#000"
+              className="animate-pulse"
+            />
+            <circle 
+              cx="108" 
+              cy="108" 
+              r="3" 
+              fill="#000"
+              className="animate-pulse"
+            />
             
             {/* Beak */}
             <path
-              d="M 100 102 L 105 105 L 100 108 Z"
-              fill="#ff8c00"
+              d="M 100 115 L 108 118 L 100 121 Z"
+              fill="#FF8C00"
             />
             
-            {/* Wing */}
+            {/* Left wing */}
             <ellipse
-              cx="115"
-              cy="125"
-              rx="15"
-              ry="10"
-              fill="#f4c430"
-              className="animate-[wiggle_1s_ease-in-out_infinite]"
-              style={{
-                transformOrigin: '110px 125px'
-              }}
+              cx="75"
+              cy="138"
+              rx="16"
+              ry="12"
+              fill="#FFC700"
+              className="animate-[wing-flap_0.6s_ease-in-out_infinite]"
+              style={{ transformOrigin: '80px 138px' }}
             />
+            
+            {/* Right wing */}
+            <ellipse
+              cx="125"
+              cy="138"
+              rx="16"
+              ry="12"
+              fill="#FFC700"
+              className="animate-[wing-flap_0.6s_ease-in-out_infinite_0.3s]"
+              style={{ transformOrigin: '120px 138px' }}
+            />
+            
+            {/* Feet */}
+            <g fill="#FF8C00">
+              <path d="M 90 175 L 85 185 M 90 175 L 90 185 M 90 175 L 95 185" stroke="#FF8C00" strokeWidth="2" strokeLinecap="round" />
+              <path d="M 110 175 L 105 185 M 110 175 L 110 185 M 110 175 L 115 185" stroke="#FF8C00" strokeWidth="2" strokeLinecap="round" />
+            </g>
+          </g>
+        )}
+        
+        {/* Shell pieces on ground */}
+        {crackStage >= 5 && (
+          <g className="animate-fade-in">
+            <ellipse cx="70" cy="185" rx="25" ry="15" fill="white" stroke="#e0e0e0" strokeWidth="2" opacity="0.7" />
+            <ellipse cx="130" cy="185" rx="25" ry="15" fill="white" stroke="#e0e0e0" strokeWidth="2" opacity="0.7" />
           </g>
         )}
       </svg>
 
-      {/* Text */}
+      {/* Status Text */}
       <div className="text-center mt-4">
-        <p className="text-sm text-muted-foreground animate-fade-in">
-          {crackStage === 0 && "Getting ready..."}
-          {crackStage === 1 && "First crack appears..."}
-          {crackStage === 2 && "Breaking through..."}
-          {crackStage === 3 && "Almost there..."}
-          {crackStage >= 4 && "Welcome to the world! 🐣"}
+        <p className="text-sm text-muted-foreground font-medium animate-fade-in">
+          {crackStage === 0 && "Watch the egg..."}
+          {crackStage === 1 && "First crack appears!"}
+          {crackStage === 2 && "Cracks spreading..."}
+          {crackStage === 3 && "Breaking through..."}
+          {crackStage === 4 && "Here comes the chick!"}
+          {crackStage >= 5 && "Welcome to the world! 🐣"}
         </p>
       </div>
 
       <style>{`
-        @keyframes slide-down {
-          from {
-            transform: translateY(0);
+        @keyframes shake {
+          0%, 100% { transform: translateX(0) rotate(0deg); }
+          25% { transform: translateX(-3px) rotate(-2deg); }
+          75% { transform: translateX(3px) rotate(2deg); }
+        }
+        
+        @keyframes break-top {
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 1;
           }
-          to {
-            transform: translateY(20px);
+          100% {
+            transform: translateY(-40px) rotate(-25deg);
+            opacity: 0;
           }
         }
         
-        @keyframes wiggle {
+        @keyframes emerge {
+          0% {
+            transform: translateY(30px) scale(0.7);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes wing-flap {
           0%, 100% {
             transform: rotate(0deg);
           }
-          25% {
-            transform: rotate(-5deg);
-          }
-          75% {
-            transform: rotate(5deg);
+          50% {
+            transform: rotate(-15deg);
           }
         }
       `}</style>
