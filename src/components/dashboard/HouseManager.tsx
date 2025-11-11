@@ -80,7 +80,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [houseView, setHouseView] = useState<"all" | "active" | "completed" | "incubating">("active");
+  const [houseView, setHouseView] = useState<"all" | "active" | "completed" | "incubating">("all");
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',

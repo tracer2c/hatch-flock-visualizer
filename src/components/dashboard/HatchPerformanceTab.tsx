@@ -140,11 +140,10 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const hoiPercent = fertileEggs > 0 ? ((chicksHatched + cullChicks) / fertileEggs) * 100 : 0;
     const ifDevPercent = hoiPercent - hofPercent;
 
-    // Check if record exists or needs to be created by checking if fertility data exists
+    // Check if record exists (has fertility_id) or needs to be created
     let error;
-    const hasFertilityData = editingRecord.fertile_eggs !== undefined && editingRecord.fertile_eggs !== null;
     
-    if (hasFertilityData) {
+    if (editingRecord.fertility_id) {
       // Update existing record
       const result = await supabase
         .from("fertility_analysis")
@@ -163,7 +162,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
           technician_name: formData.technician_name,
           notes: formData.notes,
         })
-        .eq("batch_id", editingRecord.batch_id);
+        .eq("id", editingRecord.fertility_id);
       error = result.error;
     } else {
       // Insert new record

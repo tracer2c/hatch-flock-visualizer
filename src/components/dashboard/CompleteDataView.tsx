@@ -107,6 +107,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         sample_size: batch.fertility_analysis?.[0]?.sample_size,
         technician_name: batch.fertility_analysis?.[0]?.technician_name,
         fertility_notes: batch.fertility_analysis?.[0]?.notes,
+        fertility_id: batch.fertility_analysis?.[0]?.id,
         // Flatten residue data
         lab_technician: batch.residue_analysis?.[0]?.lab_technician,
         total_residue_count: batch.residue_analysis?.[0]?.total_residue_count,
