@@ -292,7 +292,7 @@ export default function EmbrexDashboard() {
   /* Data */
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RawRow[]>([]);
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [welcomeStep, setWelcomeStep] = useState(0);
 
   /* Controls state (synced to URL) */
