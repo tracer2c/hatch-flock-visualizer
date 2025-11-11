@@ -1425,15 +1425,6 @@ export default function EmbrexDashboard() {
         <main className="h-full overflow-hidden">
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
-              {/* Chick Hatching Image */}
-              <div className="flex justify-center py-4 border-b border-slate-200">
-                <img 
-                  src="/chick-hatching.gif" 
-                  alt="Chick hatching" 
-                  className="w-32 h-32 object-contain"
-                />
-              </div>
-              
               <CardHeader className="flex-none pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
