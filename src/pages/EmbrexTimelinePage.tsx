@@ -1043,6 +1043,16 @@ export default function EmbrexDashboard() {
             welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
+          {/* Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+              <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg">
+                <Activity className="h-12 w-12 text-white" strokeWidth={2.5} />
+              </div>
+            </div>
+          </div>
+          
           {/* Title */}
           <h1 className="text-6xl font-bold text-slate-900 mb-4">
             Timeline Analysis
