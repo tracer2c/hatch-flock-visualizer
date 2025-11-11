@@ -109,13 +109,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     return result;
   }, [data, searchTerm, filters]);
 
-  const calculateWeek = (setDate: string) => {
-    const date = new Date(setDate);
-    const oneJan = new Date(date.getFullYear(), 0, 1);
-    const numberOfDays = Math.floor((date.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-    return Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
-  };
-
   const handleEdit = (record: any) => {
     setEditingRecord(record);
     setFormData({
@@ -205,7 +198,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
             <TableHead className="text-right">Age (weeks)</TableHead>
             <TableHead>House#</TableHead>
             <TableHead>Set Date</TableHead>
-            <TableHead className="text-right">Week</TableHead>
             <TableHead className="text-right">Sample Size</TableHead>
             <TableHead className="text-right">Hatch</TableHead>
             <TableHead className="text-right">Hatch %</TableHead>
@@ -293,7 +285,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                 <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>
                 <TableCell>{item.house_number || "-"}</TableCell>
                 <TableCell>{item.set_date ? new Date(item.set_date).toLocaleDateString() : "-"}</TableCell>
-                <TableCell className="text-right">{item.set_date ? calculateWeek(item.set_date) : "-"}</TableCell>
                 <TableCell className="text-right">{item.sample_size || "-"}</TableCell>
                 <TableCell className="text-right">
                   {item.chicks_hatched ? formatValue(item.chicks_hatched, item.sample_size) : "-"}

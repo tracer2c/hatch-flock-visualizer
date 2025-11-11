@@ -199,8 +199,6 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
       return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
       return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
-    case "fertility":
-      return <FertilityAnalysisTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
       return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "qa":
