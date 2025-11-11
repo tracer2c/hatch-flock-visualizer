@@ -44,11 +44,13 @@ interface House {
   flock_number: number;
   house_number: string;
   machine_number: string;
+  machine_type: string;
   set_date: string;
   expected_hatch_date: string;
   total_eggs_set: number;
   status: string;
   unit_id?: string | null;
+  technician_name?: string | null;
 }
 
 interface Unit {
@@ -97,6 +99,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     dateRange: { from: subDays(new Date(), 30), to: new Date() },
     machineTypes: [] as string[],
     unitIds: [] as string[],
+    technicianName: '',
   });
   
   const { toast } = useToast();
@@ -129,7 +132,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const { data, error } = await supabase
       .from('machines')
       .select('*')
-      .eq('status', 'available')
       .order('machine_number', { ascending: true });
     
     if (error) {
@@ -148,8 +150,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       .from('batches')
       .select(`
         *,
-        flocks(flock_name, flock_number, house_number),
-        machines(machine_number)
+        flocks(flock_name, flock_number, house_number, technician_name),
+        machines(machine_number, machine_type)
       `)
       .order('set_date', { ascending: false });
     
@@ -167,11 +169,13 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         flock_number: batch.flocks?.flock_number || 0,
         house_number: batch.flocks?.house_number || '',
         machine_number: batch.machines?.machine_number || '',
+        machine_type: batch.machines?.machine_type || '',
         set_date: batch.set_date,
         expected_hatch_date: batch.expected_hatch_date,
         total_eggs_set: batch.total_eggs_set,
         status: batch.status,
         unit_id: batch.unit_id ?? null,
+        technician_name: batch.flocks?.technician_name || null,
       })) || [];
       setHouses(formattedHouses);
     }
@@ -221,6 +225,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       dateRange: { from: subDays(new Date(), 30), to: new Date() },
       machineTypes: [],
       unitIds: [],
+      technicianName: '',
     });
   };
 
@@ -228,6 +233,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     let count = 0;
     if (filters.unitIds.length > 0) count++;
     if (filters.machineTypes.length > 0) count++;
+    if (filters.technicianName) count++;
     const defaultFrom = subDays(new Date(), 30);
     if (filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
         filters.dateRange.to.getTime() < new Date().getTime() - 86400000) count++;
@@ -446,8 +452,12 @@ const calculateHatchDate = (setDate: string) => {
     // Machine type filter
     .filter((h) => {
       if (filters.machineTypes.length === 0) return true;
-      const machine = machines.find(m => m.machine_number === h.machine_number);
-      return machine && filters.machineTypes.includes(machine.machine_type);
+      return filters.machineTypes.includes(h.machine_type);
+    })
+    // Technician filter
+    .filter((h) => {
+      if (!filters.technicianName) return true;
+      return h.technician_name?.toLowerCase().includes(filters.technicianName.toLowerCase());
     })
     // Search filter
     .filter((h) => {
@@ -458,7 +468,8 @@ const calculateHatchDate = (setDate: string) => {
         h.house_number.toLowerCase().includes(search) ||
         h.batch_number.toLowerCase().includes(search) ||
         h.flock_number.toString().includes(search) ||
-        h.machine_number.toLowerCase().includes(search)
+        h.machine_number.toLowerCase().includes(search) ||
+        h.technician_name?.toLowerCase().includes(search)
       );
     });
 
@@ -530,7 +541,7 @@ const calculateHatchDate = (setDate: string) => {
                     <SelectValue placeholder="Choose a machine" />
                   </SelectTrigger>
                   <SelectContent>
-                    {machines.map((machine) => (
+                    {machines.filter(m => m.status === 'available').map((machine) => (
                       <SelectItem key={machine.id} value={machine.id}>
                         {machine.machine_number} - {machine.machine_type} (Cap: {machine.capacity.toLocaleString()})
                       </SelectItem>
@@ -603,7 +614,7 @@ const calculateHatchDate = (setDate: string) => {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
                 {/* Date Range Filter */}
                 <div className="space-y-3 p-4 rounded-lg border bg-card/50">
                   <div className="flex items-center gap-2 mb-3">
@@ -716,6 +727,24 @@ const calculateHatchDate = (setDate: string) => {
                       ))}
                     </div>
                   </ScrollArea>
+                </div>
+
+                {/* Technician Filter */}
+                <div className="space-y-3 p-4 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Factory className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-semibold">Technician Name</Label>
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Search by technician..."
+                    value={filters.technicianName}
+                    onChange={(e) => setFilters(prev => ({ ...prev, technicianName: e.target.value }))}
+                    className="h-10 border-primary/20 focus:border-primary/40"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Filter houses by the technician who created the flock
+                  </p>
                 </div>
               </div>
 
