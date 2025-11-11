@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChickHatchingAnimation } from "@/components/animations/ChickHatchingAnimation";
+
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -1036,17 +1036,30 @@ export default function EmbrexDashboard() {
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         {/* Main Content Container - Flex layout with animation on left */}
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-16">
           
-          {/* Left Side - Chick Hatching Animation */}
+          {/* Left Side - Chick Hatching Video */}
           <div 
             className={`flex-shrink-0 transition-all duration-700 ease-out ${
               welcomeStep >= 1 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'
             }`}
           >
-            <ChickHatchingAnimation />
+            <div className="relative">
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="w-[280px] h-auto rounded-2xl shadow-2xl"
+              >
+                <source src="/chick-hatching.mp4" type="video/mp4" />
+              </video>
+              <p className="text-sm text-slate-600 text-center mt-3 font-medium">
+                Working hard to break free...
+              </p>
+            </div>
           </div>
 
           {/* Right Side - Content */}
