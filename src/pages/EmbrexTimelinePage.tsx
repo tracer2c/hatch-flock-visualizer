@@ -1046,48 +1046,27 @@ export default function EmbrexDashboard() {
               welcomeStep >= 1 ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-12 scale-95'
             }`}
           >
-            <div className="relative">
-              {/* Video - floating seamlessly on page background */}
-              <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="w-[320px] h-auto relative z-10"
-                style={{ 
-                  filter: 'contrast(1.1) brightness(1.05)',
-                  opacity: 0.98
-                }}
-              >
-                <source src="/chick-hatching.mp4" type="video/mp4" />
-              </video>
-              
-              {/* Soft reflection effect */}
-              <div 
-                className="absolute top-full left-0 w-full h-28 overflow-hidden pointer-events-none"
-                style={{ 
-                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)',
-                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 100%)'
-                }}
-              >
-                <video 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline
-                  className="w-[320px] h-auto transform scale-y-[-1] opacity-30 blur-[2px]"
-                  style={{ filter: 'contrast(1.1) brightness(1.05)' }}
-                >
-                  <source src="/chick-hatching.mp4" type="video/mp4" />
-                </video>
-              </div>
-              
-              <p className={`text-sm text-slate-600 text-center mt-28 font-medium transition-all duration-700 delay-300 ${
-                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-              }`}>
-                Working hard to break free...
-              </p>
-            </div>
+            {/* Video - floating seamlessly on page background */}
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="w-[450px] h-auto"
+              style={{ 
+                backgroundColor: 'transparent',
+                border: 'none',
+                outline: 'none'
+              }}
+            >
+              <source src="/chick-hatching.mp4" type="video/mp4" />
+            </video>
+            
+            <p className={`text-sm text-slate-600 text-center mt-6 font-medium transition-all duration-700 delay-300 ${
+              welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}>
+              Working hard to break free...
+            </p>
           </div>
 
           {/* Right Side - Content */}
