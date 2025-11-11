@@ -16,6 +16,10 @@ import { useHelpContext } from "@/contexts/HelpContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import hatcheryIcon from "@/assets/hatchery-icon.png";
+import eggsIcon from "@/assets/eggs-icon.png";
+import chicksIcon from "@/assets/chicks-icon.png";
+import utilizationIcon from "@/assets/utilization-icon.png";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
@@ -366,7 +370,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
-              icon={<Building2 className="h-5 w-5" />}
+              icon={<img src={hatcheryIcon} alt="Hatchery" className="h-10 w-10 object-contain" />}
               description="Total number of houses in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
               trendLabel={
                 lastWeekBatchesCount > 0 
@@ -378,7 +382,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average Fertility"
               value={`${avgFert}%`}
-              icon={<TrendingUp className="h-5 w-5" />}
+              icon={<img src={eggsIcon} alt="Eggs" className="h-10 w-10 object-contain" />}
               description="The average fertility percentage across all analyzed houses. Fertility measures the percentage of eggs that contain viable embryos after candling analysis."
               trendLabel={
                 targets?.fertility_rate 
@@ -390,7 +394,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average Hatch Rate"
               value={`${avgHatch}%`}
-              icon={<CheckCircle className="h-5 w-5" />}
+              icon={<img src={chicksIcon} alt="Chicks" className="h-10 w-10 object-contain" />}
               description="The average hatch rate percentage across all completed houses. Hatch rate measures the percentage of set eggs that successfully hatched into healthy chicks."
               trendLabel={
                 targets?.hatch_rate 
@@ -402,7 +406,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="System Utilization"
               value={`${systemUtilization}%`}
-              icon={<Gauge className="h-5 w-5" />}
+              icon={<img src={utilizationIcon} alt="Utilization" className="h-10 w-10 object-contain" />}
               description="Average capacity utilization across all machines in the system. This represents how efficiently the available incubation and hatching equipment is being used. Higher utilization indicates better resource optimization."
               trendLabel={
                 targets?.machine_utilization 

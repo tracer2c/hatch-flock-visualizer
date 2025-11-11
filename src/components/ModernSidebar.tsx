@@ -42,9 +42,9 @@ const navigationItems = [
     requiresAuth: true
   },
   {
-    path: '/process-flow',
-    label: 'Process Flow',
-    icon: Workflow,
+    path: '/comparison-model',
+    label: 'Comparison Model',
+    icon: BarChart3,
     requiresAuth: true
   },
   {
@@ -94,9 +94,9 @@ const navigationItems = [
 
 const advancedAnalyticsItems = [
   {
-    path: '/comparison-model',
-    label: 'Comparison Model',
-    icon: BarChart3,
+    path: '/process-flow',
+    label: 'Process Flow',
+    icon: Workflow,
     requiresAuth: true,
     requiredRole: undefined
   },

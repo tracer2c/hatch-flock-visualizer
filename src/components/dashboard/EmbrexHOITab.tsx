@@ -1,17 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Edit, Trash2, Filter, ChevronDown, X } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { DataSheetFilterSheet } from "./DataSheetFilterSheet";
 
 interface EmbrexHOITabProps {
   data: any[];
@@ -22,7 +19,6 @@ interface EmbrexHOITabProps {
 export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
-  const [showFilters, setShowFilters] = useState(false);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -36,8 +32,8 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
   });
 
   // Load unique hatcheries and machines
-  const [hatcheries, setHatcheries] = useState<any[]>([]);
-  const [machines, setMachines] = useState<any[]>([]);
+  const [hatcheries, setHatcheries] = useState<{ id: string; name: string }[]>([]);
+  const [machines, setMachines] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     loadFilters();
@@ -45,12 +41,16 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
 
   const loadFilters = async () => {
     const [hatcheriesRes, machinesRes] = await Promise.all([
-      supabase.from('units').select('*').order('name'),
-      supabase.from('machines').select('*').order('machine_number'),
+      supabase.from('units').select('id, name').order('name'),
+      supabase.from('machines').select('id, machine_number').order('machine_number'),
     ]);
 
-    if (hatcheriesRes.data) setHatcheries(hatcheriesRes.data);
-    if (machinesRes.data) setMachines(machinesRes.data);
+    if (hatcheriesRes.data) {
+      setHatcheries(hatcheriesRes.data.map(h => ({ id: h.id, name: h.name })));
+    }
+    if (machinesRes.data) {
+      setMachines(machinesRes.data.map(m => ({ id: m.id, name: m.machine_number })));
+    }
   };
 
   // Apply filters to data
@@ -169,6 +169,19 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
     }));
   };
 
+  const sortByOptions = [
+    { value: 'set_date', label: 'Set Date' },
+    { value: 'flock_number', label: 'Flock #' },
+    { value: 'flock_name', label: 'Flock Name' },
+    { value: 'house_number', label: 'House #' },
+    { value: 'age_weeks', label: 'Age (weeks)' },
+    { value: 'total_eggs_set', label: 'Total Eggs Set' },
+    { value: 'eggs_cleared', label: 'Clears' },
+    { value: 'eggs_injected', label: 'Injected' },
+    { value: 'machine_number', label: 'Machine' },
+    { value: 'status', label: 'Status' },
+  ];
+
   const handleEdit = (record: any) => {
     setEditingRecord(record);
     setFormData({
@@ -225,134 +238,17 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
     <>
       {/* Filters Section */}
       <div className="mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2"
-        >
-          <Filter className="h-4 w-4" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge variant="secondary">{activeFilterCount}</Badge>
-          )}
-          <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-        </Button>
-
-        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
-          <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-muted/50">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Sort By Column */}
-              <div className="space-y-2">
-                <Label>Sort By</Label>
-                <Select value={filters.sortBy} onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set_date">Set Date</SelectItem>
-                    <SelectItem value="flock_number">Flock #</SelectItem>
-                    <SelectItem value="flock_name">Flock Name</SelectItem>
-                    <SelectItem value="house_number">House #</SelectItem>
-                    <SelectItem value="age_weeks">Age (weeks)</SelectItem>
-                    <SelectItem value="total_eggs_set">Total Eggs Set</SelectItem>
-                    <SelectItem value="eggs_cleared">Clears</SelectItem>
-                    <SelectItem value="eggs_injected">Injected</SelectItem>
-                    <SelectItem value="machine_number">Machine</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sort Order */}
-              <div className="space-y-2">
-                <Label>Sort Order</Label>
-                <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, sortOrder: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asc">Ascending</SelectItem>
-                    <SelectItem value="desc">Descending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Technician Search */}
-              <div className="space-y-2">
-                <Label>Technician Name</Label>
-                <Input
-                  placeholder="Search by technician..."
-                  value={filters.technicianSearch}
-                  onChange={(e) => setFilters(prev => ({ ...prev, technicianSearch: e.target.value }))}
-                />
-              </div>
-
-              {/* Date Range */}
-              <div className="space-y-2">
-                <Label>Date From</Label>
-                <Input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date To</Label>
-                <Input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                />
-              </div>
-
-              {/* Hatcheries */}
-              <div className="space-y-2">
-                <Label>Hatcheries</Label>
-                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
-                  {hatcheries.map(h => (
-                    <div key={h.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={filters.selectedHatcheries.includes(h.id)}
-                        onCheckedChange={() => toggleHatchery(h.id)}
-                      />
-                      <span className="text-sm">{h.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Machines */}
-              <div className="space-y-2">
-                <Label>Machines</Label>
-                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
-                  {machines.map(m => (
-                    <div key={m.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={filters.selectedMachines.includes(m.id)}
-                        onCheckedChange={() => toggleMachine(m.id)}
-                      />
-                      <span className="text-sm">{m.machine_number}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {activeFilterCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearAllFilters}
-                className="mt-4"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear All Filters
-              </Button>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
+        <DataSheetFilterSheet
+          filters={filters}
+          setFilters={setFilters}
+          hatcheries={hatcheries}
+          machines={machines}
+          sortByOptions={sortByOptions}
+          activeFilterCount={activeFilterCount}
+          onClearFilters={clearAllFilters}
+          onToggleHatchery={toggleHatchery}
+          onToggleMachine={toggleMachine}
+        />
       </div>
 
       <div className="overflow-x-auto">
