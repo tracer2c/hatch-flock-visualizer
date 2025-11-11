@@ -34,6 +34,8 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
     setFormData({
       eggs_cleared: record.eggs_cleared || 0,
       eggs_injected: record.eggs_injected || 0,
+      technician_name: record.hoi_technician_name || record.clears_technician_name || "",
+      notes: record.hoi_notes || record.clears_notes || "",
     });
   };
 
@@ -44,6 +46,10 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
         .update({
           eggs_cleared: parseInt(formData.eggs_cleared) || 0,
           eggs_injected: parseInt(formData.eggs_injected) || 0,
+          hoi_technician_name: formData.technician_name,
+          hoi_notes: formData.notes,
+          clears_technician_name: formData.technician_name,
+          clears_notes: formData.notes,
         })
         .eq("id", editingRecord.id);
 
@@ -93,13 +99,15 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
               <TableHead>Injected %</TableHead>
               <TableHead>Machine</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Technician Name</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-muted-foreground">
+                <TableCell colSpan={15} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -134,6 +142,8 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
                         {item.status}
                       </span>
                     </TableCell>
+                    <TableCell>{item.hoi_technician_name || item.clears_technician_name || "-"}</TableCell>
+                    <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -190,7 +200,23 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
                 onChange={(e) => setFormData({ ...formData, eggs_injected: e.target.value })}
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="technician_name">Technician Name</Label>
+              <Input
+                id="technician_name"
+                value={formData.technician_name || ""}
+                onChange={(e) => setFormData({ ...formData, technician_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                value={formData.notes || ""}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 col-span-2">
               <Button variant="outline" onClick={() => setEditingRecord(null)}>
                 Cancel
               </Button>

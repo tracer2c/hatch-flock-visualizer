@@ -159,14 +159,15 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>{showPercentages ? "Dry Egg %" : "Dry Egg"}</TableHead>
               <TableHead>{showPercentages ? "Malpositioned %" : "Malpositioned"}</TableHead>
               <TableHead>{showPercentages ? "Upside Down %" : "Upside Down"}</TableHead>
-              <TableHead>PIP Number</TableHead>
+              <TableHead>Technician Name</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={24} className="text-center text-muted-foreground">
+                <TableCell colSpan={25} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -202,6 +203,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                     <TableCell>{formatValue(item.dry_egg, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malpositioned, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.upside_down, sampleSize)}</TableCell>
+                    <TableCell>{item.lab_technician || "-"}</TableCell>
+                    <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -385,14 +388,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                   type="number"
                   value={formData.upside_down || ''}
                   onChange={(e) => setFormData({ ...formData, upside_down: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>PIP Number</Label>
-                <Input
-                  type="number"
-                  value={formData.pip_number || ''}
-                  onChange={(e) => setFormData({ ...formData, pip_number: e.target.value })}
                 />
               </div>
             </div>

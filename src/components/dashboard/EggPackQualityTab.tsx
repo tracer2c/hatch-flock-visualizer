@@ -148,13 +148,15 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
               <TableHead>{showPercentages ? "Contaminated %" : "Contaminated"}</TableHead>
               <TableHead>{showPercentages ? "USD %" : "USD"}</TableHead>
               <TableHead>Set Week</TableHead>
+              <TableHead>Inspector Name</TableHead>
+              <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={16} className="text-center text-muted-foreground">
+                <TableCell colSpan={18} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -184,6 +186,8 @@ export const EggPackQualityTab = ({ data, searchTerm, onDataUpdate }: EggPackQua
                     <TableCell>{formatValue(contaminated, sampleSize)}</TableCell>
                     <TableCell>{formatValue(usd, sampleSize)}</TableCell>
                     <TableCell>{setWeek || "-"}</TableCell>
+                    <TableCell>{item.inspector_name || "-"}</TableCell>
+                    <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

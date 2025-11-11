@@ -121,13 +121,14 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
             <TableHead>Angle Mid R</TableHead>
             <TableHead>Angle Bot R</TableHead>
             <TableHead>Inspector</TableHead>
+            <TableHead>Notes</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={20} className="text-center text-muted-foreground">
+              <TableCell colSpan={21} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -155,6 +156,7 @@ export const QAMonitoringTab = ({ data, searchTerm, onDataUpdate }: QAMonitoring
                 <TableCell>{item.angle_mid_right || "-"}</TableCell>
                 <TableCell>{item.angle_bottom_right || "-"}</TableCell>
                 <TableCell>{item.inspector_name || "-"}</TableCell>
+                <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button

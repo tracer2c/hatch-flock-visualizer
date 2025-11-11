@@ -103,12 +103,14 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                 </Tooltip>
               </div>
             </TableHead>
+            <TableHead>Technician Name</TableHead>
+            <TableHead>Notes</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={14} className="text-center text-muted-foreground">
+              <TableCell colSpan={16} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -142,6 +144,8 @@ export const HatchPerformanceTab = ({ data, searchTerm }: HatchPerformanceTabPro
                 <TableCell className="text-right">
                   {item.if_dev_percent ? formatPercentage(item.if_dev_percent) : "-"}
                 </TableCell>
+                <TableCell>{item.technician_name || "-"}</TableCell>
+                <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
               </TableRow>
             ))
           )}
