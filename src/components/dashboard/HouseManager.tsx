@@ -11,7 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
@@ -74,6 +76,18 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setDate: new Date().toISOString().split('T')[0],
     totalEggs: '',
     customHouseNumber: '',
+  });
+  
+  // Edit state
+  const [editingHouse, setEditingHouse] = useState<House | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    setDate: '',
+    totalEggs: '',
+    machineId: '',
+    unitId: '',
+    status: 'planned' as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled',
+    notes: '',
   });
   
   // Advanced filters state
@@ -224,6 +238,81 @@ const calculateHatchDate = (setDate: string) => {
     const date = new Date(setDate);
     date.setDate(date.getDate() + 21); // 21 days incubation period
     return date.toISOString().split('T')[0];
+  };
+
+  const handleEdit = async (house: House, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Fetch full batch data including notes
+    const { data, error } = await supabase
+      .from('batches')
+      .select('*')
+      .eq('id', house.id)
+      .single();
+    
+    if (error) {
+      toast({
+        title: "Error loading house details",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setEditingHouse(house);
+    setEditFormData({
+      setDate: data.set_date,
+      totalEggs: data.total_eggs_set.toString(),
+      machineId: data.machine_id,
+      unitId: data.unit_id || '',
+      status: data.status as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled',
+      notes: data.notes || '',
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateHouse = async () => {
+    if (!editingHouse) return;
+    
+    if (!editFormData.machineId || !editFormData.totalEggs || !editFormData.unitId) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const expectedHatchDate = calculateHatchDate(editFormData.setDate);
+
+    const { error } = await supabase
+      .from('batches')
+      .update({
+        set_date: editFormData.setDate,
+        expected_hatch_date: expectedHatchDate,
+        total_eggs_set: parseInt(editFormData.totalEggs),
+        machine_id: editFormData.machineId,
+        unit_id: editFormData.unitId,
+        status: editFormData.status,
+        notes: editFormData.notes,
+      })
+      .eq('id', editingHouse.id);
+
+    if (error) {
+      toast({
+        title: "Error updating house",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "House Updated",
+        description: `House ${editingHouse.batch_number} updated successfully`
+      });
+      setShowEditDialog(false);
+      setEditingHouse(null);
+      loadHouses();
+    }
   };
 
   const createHouse = async () => {
@@ -662,16 +751,26 @@ const calculateHatchDate = (setDate: string) => {
             {filteredHouses.map((house) => (
               <div
                 key={house.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedHouse === house.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  selectedHouse === house.id ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50 hover:shadow-sm'
                 }`}
                 onClick={() => onHouseSelect(house.id)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium">{house.flock_name} #{house.house_number}</h3>
-                  <Badge className={getStatusColor(house.status)}>
-                    {house.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 hover:bg-primary/10"
+                      onClick={(e) => handleEdit(house, e)}
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-primary" />
+                    </Button>
+                    <Badge className={getStatusColor(house.status)}>
+                      {house.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
@@ -705,6 +804,130 @@ const calculateHatchDate = (setDate: string) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit House Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit House Details</DialogTitle>
+          </DialogHeader>
+          {editingHouse && (
+            <div className="space-y-4">
+              {/* Read-only Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Flock</Label>
+                  <p className="font-medium">{editingHouse.flock_name}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">House Number</Label>
+                  <p className="font-medium">#{editingHouse.house_number}</p>
+                </div>
+              </div>
+
+              {/* Editable Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Hatchery *</Label>
+                  <Select value={editFormData.unitId} onValueChange={(value) => setEditFormData(prev => ({ ...prev, unitId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a hatchery" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Machine *</Label>
+                  <Select value={editFormData.machineId} onValueChange={(value) => setEditFormData(prev => ({ ...prev, machineId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a machine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {machines.map((machine) => (
+                        <SelectItem key={machine.id} value={machine.id}>
+                          {machine.machine_number} - {machine.machine_type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Set Date *</Label>
+                  <Input
+                    type="date"
+                    value={editFormData.setDate}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, setDate: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Expected Hatch Date</Label>
+                  <Input
+                    type="date"
+                    value={calculateHatchDate(editFormData.setDate)}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Total Eggs Set *</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 45000"
+                    value={editFormData.totalEggs}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status *</Label>
+                  <Select value={editFormData.status} onValueChange={(value: any) => setEditFormData(prev => ({ ...prev, status: value as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled' }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planned">Planned</SelectItem>
+                      <SelectItem value="setting">Setting</SelectItem>
+                      <SelectItem value="incubating">Incubating</SelectItem>
+                      <SelectItem value="hatching">Hatching</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    placeholder="Enter any notes..."
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateHouse}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
