@@ -167,8 +167,8 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
       <Card>
         <CardContent className="p-8 text-center">
           <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Batch</h3>
-          <p className="text-gray-600">Choose a batch from the list above to start entering data.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Select a House</h3>
+          <p className="text-gray-600">Choose a house from the list above to start entering data.</p>
         </CardContent>
       </Card>
     );
@@ -180,11 +180,11 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Batch Info Header */}
+      {/* House Info Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Batch: {batchInfo.batch_number}</CardTitle>
+            <CardTitle>House: {batchInfo.batch_number}</CardTitle>
             <Badge className={getStatusColor(batchInfo.status)}>
               {batchInfo.status}
             </Badge>

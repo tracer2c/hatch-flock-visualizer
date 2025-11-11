@@ -222,10 +222,10 @@ const ComparisonFiltersComponent = ({ filters, onFiltersChange, onApplyFilters }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="50">50 batches</SelectItem>
-                  <SelectItem value="100">100 batches</SelectItem>
-                  <SelectItem value="200">200 batches</SelectItem>
-                  <SelectItem value="500">500 batches</SelectItem>
+                  <SelectItem value="50">50 houses</SelectItem>
+                  <SelectItem value="100">100 houses</SelectItem>
+                  <SelectItem value="200">200 houses</SelectItem>
+                  <SelectItem value="500">500 houses</SelectItem>
                 </SelectContent>
               </Select>
             </div>

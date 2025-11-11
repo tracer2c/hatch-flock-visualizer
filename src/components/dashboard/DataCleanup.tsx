@@ -237,7 +237,7 @@ const DataCleanup = () => {
                     This will permanently delete:
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>All flocks and their information</li>
-                      <li>All houses (batches) and their data</li>
+                      <li>All houses and their data</li>
                       <li>Egg pack quality records</li>
                       <li>Fertility analysis data</li>
                       <li>QA monitoring records</li>
@@ -281,7 +281,7 @@ const DataCleanup = () => {
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Flocks and their information</li>
                       <li>Machines and their configurations</li>
-                      <li>All houses (batches) and their data</li>
+                      <li>All houses and their data</li>
                       <li>Egg pack quality records</li>
                       <li>Fertility analysis data</li>
                       <li>QA monitoring records</li>

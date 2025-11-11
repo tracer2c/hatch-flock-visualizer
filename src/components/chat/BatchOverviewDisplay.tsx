@@ -74,7 +74,7 @@ export const BatchOverviewDisplay: React.FC<BatchOverviewDisplayProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{summary.totals.count}</div>
-            <div className="text-sm text-muted-foreground">Total Batches</div>
+            <div className="text-sm text-muted-foreground">Total Houses</div>
           </CardContent>
         </Card>
         
@@ -130,19 +130,19 @@ export const BatchOverviewDisplay: React.FC<BatchOverviewDisplayProps> = ({
               {summary.upcoming_count > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 bg-amber-500 rounded-full"></div>
-                  <span className="text-sm">{summary.upcoming_count} batches expected within 7 days</span>
+                  <span className="text-sm">{summary.upcoming_count} houses expected within 7 days</span>
                 </div>
               )}
               {summary.overdue_count > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 bg-red-500 rounded-full"></div>
-                  <span className="text-sm">{summary.overdue_count} batches overdue</span>
+                  <span className="text-sm">{summary.overdue_count} houses overdue</span>
                 </div>
               )}
               {summary.upcoming_count === 0 && summary.overdue_count === 0 && (
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">All batches on schedule</span>
+                  <span className="text-sm">All houses on schedule</span>
                 </div>
               )}
             </div>
@@ -150,11 +150,11 @@ export const BatchOverviewDisplay: React.FC<BatchOverviewDisplayProps> = ({
         </Card>
       </div>
 
-      {/* Batch Table */}
+      {/* House Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Recent Batches</CardTitle>
+            <CardTitle className="text-lg">Recent Houses</CardTitle>
             <div className="flex gap-2">
               {onShowMore && (
                 <Button variant="outline" size="sm" onClick={onShowMore}>
@@ -176,7 +176,7 @@ export const BatchOverviewDisplay: React.FC<BatchOverviewDisplayProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Batch</TableHead>
+                  <TableHead>House</TableHead>
                   <TableHead>Set Date</TableHead>
                   <TableHead>Expected Hatch</TableHead>
                   <TableHead>Days</TableHead>
@@ -229,7 +229,7 @@ export const BatchOverviewDisplay: React.FC<BatchOverviewDisplayProps> = ({
           </div>
           {items.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No batch data available
+              No house data available
             </div>
           )}
         </CardContent>

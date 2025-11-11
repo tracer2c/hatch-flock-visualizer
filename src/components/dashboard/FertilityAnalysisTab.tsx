@@ -171,7 +171,7 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Batch: {editingRecord?.batch_number}</Label>
+              <Label>House: {editingRecord?.batch_number}</Label>
               <p className="text-sm text-muted-foreground">
                 {editingRecord?.flock_name} (Flock #{editingRecord?.flock_number})
               </p>

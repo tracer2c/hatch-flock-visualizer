@@ -477,7 +477,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                           <div>Fertility: <span className="font-medium">{stat.avgFertility.toFixed(1)}%</span></div>
                           <div>Hatch: <span className="font-medium">{stat.avgHatch.toFixed(1)}%</span></div>
                           <div>Quality: <span className="font-medium">{stat.avgQualityScore.toFixed(1)}%</span></div>
-                          <div>Batches: <span className="font-medium">{stat.totalBatches}</span></div>
+                          <div>Houses: <span className="font-medium">{stat.totalBatches}</span></div>
                         </div>
                       </div>
                     ))}
@@ -523,7 +523,7 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
                       <div key={stat.unit} className="p-4 border rounded-lg">
                         <div className="flex justify-between items-center mb-2">
                           <h4 className="font-medium text-lg">{stat.unit}</h4>
-                          <Badge>{stat.totalBatches} batches</Badge>
+                          <Badge>{stat.totalBatches} houses</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-3">{stat.location}</p>
                         <div className="grid grid-cols-2 gap-2 text-sm">

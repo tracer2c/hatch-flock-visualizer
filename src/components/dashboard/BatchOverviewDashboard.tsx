@@ -383,7 +383,7 @@ const BatchOverviewDashboard = () => {
                       <div className="relative">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search batches..."
+                          placeholder="Search houses..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-8 w-[180px] h-9"
@@ -449,7 +449,7 @@ const BatchOverviewDashboard = () => {
                     ) : (
                       <div className="text-center py-12">
                         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <div className="text-lg font-medium">No active batches found</div>
+                        <div className="text-lg font-medium">No active houses found</div>
                         <div className="text-muted-foreground">Try adjusting your filters or start a new batch</div>
                       </div>
                     )}

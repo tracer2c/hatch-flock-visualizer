@@ -143,7 +143,7 @@ export const ChatInterface = () => {
     if (!payload?.items) return;
     
     const headers = [
-      'Batch Number', 'Set Date', 'Expected Hatch Date', 'Days Since Set', 
+      'House Number', 'Set Date', 'Expected Hatch Date', 'Days Since Set', 
       'Days to Hatch', 'Status', 'Machine Number', 'Machine Type', 
       'Flock Name', 'Breed', 'Total Eggs Set', 'Chicks Hatched', 'Hatch Rate %'
     ];
@@ -180,7 +180,7 @@ export const ChatInterface = () => {
     if (action.type === 'download_csv' && message.payload) {
       downloadCSV(message.payload);
     } else if (action.type === 'show_more') {
-      sendMessage("Show me all batches with full details");
+      sendMessage("Show me all houses with full details");
     }
   };
 
@@ -200,12 +200,12 @@ export const ChatInterface = () => {
   };
 
   const suggestedPrompts = [
-    "Show me today's batch overview with charts",
+    "Show me today's house overview with charts",
     "Compare fertility rates between houses",
     "Generate performance trends for the last month",
     "Show machine utilization analytics",
     "Create a fertility vs hatch rate comparison",
-    "Display batch status breakdown",
+    "Display house status breakdown",
     "Analyze recent performance patterns",
     "Compare current vs historical data"
   ];
@@ -341,7 +341,7 @@ export const ChatInterface = () => {
                       )}
                      </div>
                     
-                    {/* Render structured batch data */}
+                    {/* Render structured house data */}
                     {message.payload?.type === 'batches_overview' && (
                       <div className="mt-4">
                         <BatchOverviewDisplay 

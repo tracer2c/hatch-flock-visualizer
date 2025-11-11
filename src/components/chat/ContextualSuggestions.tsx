@@ -26,12 +26,12 @@ export const ContextualSuggestions: React.FC<ContextualSuggestionsProps> = ({
         'Generate a performance report',
         'Show fertility trends',
         'Compare house performance',
-        'Analyze batch status'
+        'Analyze house status'
       ],
       '/process-flow': [
         'Explain this workflow',
         'What stages are shown?',
-        'How do batches move through?',
+        'How do houses move through?',
         'Show me bottlenecks'
       ],
       '/comparison-model': [

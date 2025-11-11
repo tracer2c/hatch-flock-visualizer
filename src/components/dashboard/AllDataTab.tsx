@@ -42,12 +42,12 @@ export const AllDataTab = ({ data, searchTerm, onDataUpdate }: AllDataTabProps) 
       toast.info("Please use the Quality Assurance tab to edit QA records");
     } else {
       // Embrex/HOI data (batches table)
-      toast.info("Please use the Embrex/HOI tab to edit batch records");
+      toast.info("Please use the Embrex/HOI tab to edit house records");
     }
   };
 
   const handleDelete = async (item: any) => {
-    if (!confirm(`Are you sure you want to delete this ${item.data_type || 'batch'} record?`)) return;
+    if (!confirm(`Are you sure you want to delete this ${item.data_type || 'house'} record?`)) return;
 
     let error;
     

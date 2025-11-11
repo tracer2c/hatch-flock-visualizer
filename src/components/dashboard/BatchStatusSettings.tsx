@@ -58,7 +58,7 @@ export const BatchStatusSettings = () => {
             House Status Automation
           </CardTitle>
           <CardDescription>
-            Batches automatically progress based on time and data requirements. Automation runs hourly.
+            Houses automatically progress based on time and data requirements. Automation runs hourly.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -81,7 +81,7 @@ export const BatchStatusSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle>Automation Rules</CardTitle>
-          <CardDescription>Configure when batches should automatically progress to the next status</CardDescription>
+          <CardDescription>Configure when houses should automatically progress to the next status</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
