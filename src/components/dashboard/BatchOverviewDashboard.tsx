@@ -329,6 +329,7 @@ const BatchOverviewDashboard = () => {
               title="All Houses"
               value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
+              description="Total number of houses (batches) in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
               trendLabel={
                 lastWeekBatchesCount > 0 
                   ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
@@ -340,6 +341,7 @@ const BatchOverviewDashboard = () => {
               title="Average Fertility"
               value={`${avgFert}%`}
               icon={<TrendingUp className="h-5 w-5" />}
+              description="The average fertility percentage across all analyzed houses. Fertility measures the percentage of eggs that contain viable embryos after candling analysis."
               trendLabel={
                 targets?.fertility_rate 
                   ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target (${targets.fertility_rate}%)`
@@ -351,6 +353,7 @@ const BatchOverviewDashboard = () => {
               title="Average Hatch Rate"
               value={`${avgHatch}%`}
               icon={<CheckCircle className="h-5 w-5" />}
+              description="The average hatch rate percentage across all completed houses. Hatch rate measures the percentage of set eggs that successfully hatched into healthy chicks."
               trendLabel={
                 targets?.hatch_rate 
                   ? `${avgHatch >= targets.hatch_rate ? '+' : ''}${(avgHatch - targets.hatch_rate).toFixed(1)}% vs target (${targets.hatch_rate}%)`
@@ -362,6 +365,7 @@ const BatchOverviewDashboard = () => {
               title="System Utilization"
               value={`${systemUtilization}%`}
               icon={<Gauge className="h-5 w-5" />}
+              description="Average capacity utilization across all machines in the system. This represents how efficiently the available incubation and hatching equipment is being used. Higher utilization indicates better resource optimization."
               trendLabel={
                 targets?.machine_utilization 
                   ? `${systemUtilization >= targets.machine_utilization ? '+' : ''}${(systemUtilization - targets.machine_utilization).toFixed(1)}% vs target (${targets.machine_utilization}%)`

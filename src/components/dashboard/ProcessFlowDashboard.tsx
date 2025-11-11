@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingUp, Info } from "lucide-react";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ProcessFlowDashboard = () => {
   const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
@@ -123,7 +124,8 @@ const ProcessFlowDashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
       {/* Main Process Flow Chart */}
       <Card>
         <CardHeader>
@@ -329,8 +331,18 @@ const ProcessFlowDashboard = () => {
       {/* Performance Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Highest Hatch Rate</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Highest Hatch Rate</CardTitle>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>The house with the best hatch rate performance. Hatch rate is calculated as the percentage of set eggs that successfully hatched into healthy chicks.</p>
+                </TooltipContent>
+              </UITooltip>
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {
@@ -357,34 +369,55 @@ const ProcessFlowDashboard = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Eggs Processed</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Total Eggs Processed</CardTitle>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>The total number of eggs that have been processed through the incubation system across all houses with recorded data.</p>
+                </TooltipContent>
+              </UITooltip>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
               {batches.reduce((sum, batch) => sum + batch.totalEggs, 0).toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">
-              Across {batches.length} batches with data
+              Across {batches.length} houses with data
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Data Coverage</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Data Coverage</CardTitle>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>The percentage of houses that have at least some analysis data entered (fertility, QA monitoring, or egg quality data). Higher coverage means more complete data tracking.</p>
+                </TooltipContent>
+              </UITooltip>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
               {Math.round((batches.length / performanceMetrics.length) * 100)}%
             </div>
             <div className="text-sm text-muted-foreground">
-              {batches.length} of {performanceMetrics.length} batches have data
+              {batches.length} of {performanceMetrics.length} houses have data
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

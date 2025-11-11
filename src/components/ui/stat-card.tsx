@@ -1,8 +1,9 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -12,9 +13,19 @@ interface StatCardProps {
   trendDirection?: "up" | "down" | null;
   sparklineData?: number[];
   className?: string;
+  description?: string;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trendLabel, trendDirection = null, sparklineData, className }) => {
+export const StatCard: React.FC<StatCardProps> = ({ 
+  title, 
+  value, 
+  icon, 
+  trendLabel, 
+  trendDirection = null, 
+  sparklineData, 
+  className,
+  description 
+}) => {
   const data = React.useMemo(() =>
     (sparklineData || []).map((v, i) => ({ i, v })),
   [sparklineData]);
@@ -22,7 +33,21 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trendLab
   return (
     <Card className={cn("transition-shadow hover:shadow-md", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          {description && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>{description}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         {icon}
       </CardHeader>
       <CardContent>
