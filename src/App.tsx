@@ -8,7 +8,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import PerformancePage from "./pages/PerformancePage";
 import ProcessFlowPage from "./pages/ProcessFlowPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
 import DataEntryPage from "./pages/DataEntryPage";
 import EggPackEntryPage from "./pages/EggPackEntryPage";
 import FertilityEntryPage from "./pages/FertilityEntryPage";
@@ -60,7 +59,6 @@ const App = () => (
                             <Route path="/" element={<Index />} />
                             <Route path="/performance" element={<PerformancePage />} />
                             <Route path="/process-flow" element={<ProcessFlowPage />} />
-                            <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
                             <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />

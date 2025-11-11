@@ -22,12 +22,6 @@ export const ContextualSuggestions: React.FC<ContextualSuggestionsProps> = ({
         'What are these alerts about?',
         'Show me system status'
       ],
-      '/analytics': [
-        'Generate a performance report',
-        'Show fertility trends',
-        'Compare house performance',
-        'Analyze house status'
-      ],
       '/process-flow': [
         'Explain this workflow',
         'What stages are shown?',
@@ -65,7 +59,6 @@ export const ContextualSuggestions: React.FC<ContextualSuggestionsProps> = ({
   const suggestions = getContextualSuggestions(location.pathname);
   const pageNames: Record<string, string> = {
     '/': 'Dashboard',
-    '/analytics': 'Analytics',
     '/process-flow': 'Process Flow',
     '/comparison-model': 'Comparison',
     '/data-entry': 'Data Entry',

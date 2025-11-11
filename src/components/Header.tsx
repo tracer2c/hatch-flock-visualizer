@@ -30,12 +30,6 @@ const Header = () => {
       requiresAuth: true
     },
     {
-      path: '/analytics',
-      label: 'Analytics',
-      icon: BarChart3,
-      requiresAuth: true
-    },
-    {
       path: '/data-entry',
       label: 'Data Entry',
       icon: FileInput,

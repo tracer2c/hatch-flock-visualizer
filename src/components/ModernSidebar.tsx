@@ -101,13 +101,6 @@ const advancedAnalyticsItems = [
     requiredRole: undefined
   },
   {
-    path: '/unit-comparison',
-    label: 'Hatcheries Weekly Comparison',
-    icon: BarChart3,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
     path: '/house-flow',
     label: 'House Flow',
     icon: Workflow,

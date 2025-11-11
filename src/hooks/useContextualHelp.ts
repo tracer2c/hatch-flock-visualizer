@@ -11,10 +11,8 @@ interface ContextualHelpHook {
 const getPageContext = (pathname: string): string => {
   const pageContexts: Record<string, string> = {
     '/': 'Dashboard Overview',
-    '/analytics': 'Smart Analytics',
     '/process-flow': 'Process Flow',
     '/comparison-model': 'Comparison Model',
-    '/unit-comparison': 'Unit Weekly Comparison',
     '/house-flow': 'House Flow Analysis',
     '/data-entry': 'Data Entry',
     '/checklist': 'Daily Checklist',
@@ -43,10 +41,8 @@ const getPageContext = (pathname: string): string => {
 const getPageDescription = (pathname: string): string => {
   const descriptions: Record<string, string> = {
     '/': 'Main dashboard showing overview of hatchery operations, system status, and key performance indicators.',
-    '/analytics': 'Smart analytics with AI-powered insights and interactive charts for comprehensive data analysis.',
     '/process-flow': 'Visual representation of the entire hatchery process flow from egg setting to chick delivery.',
     '/comparison-model': 'Advanced comparison tools for analyzing flock performance across houses, units, breeds, and time periods.',
-    '/unit-comparison': 'Weekly performance comparison across different units with trend analysis.',
     '/house-flow': 'Sankey flow diagram showing batch progression through different stages of incubation.',
     '/data-entry': 'Data input interface for recording various hatchery metrics and operational data.',
     '/checklist': 'Daily operational checklist for ensuring all routine tasks are completed.',
