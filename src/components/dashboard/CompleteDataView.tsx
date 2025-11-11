@@ -73,16 +73,24 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
       }
 
       // Map batches with all their related data
-      const enrichedBatches = (batchesData || []).map((batch: any) => ({
-        ...batch,
-        flock_number: batch.flocks?.flock_number,
-        flock_name: batch.flocks?.flock_name,
-        age_weeks: batch.flocks?.age_weeks,
-        house_number: batch.flocks?.house_number,
-        machine_number: batch.machines?.machine_number,
-        unit_id: batch.units?.id,
-        unit_name: batch.units?.name,
-        batch_id: batch.id,
+      const enrichedBatches = (batchesData || []).map((batch: any) => {
+        // Extract house number from batch_number if not in flocks table
+        let houseNumber = batch.flocks?.house_number || '';
+        if (!houseNumber && batch.batch_number?.includes('#')) {
+          const parts = batch.batch_number.split('#');
+          houseNumber = parts[1]?.trim() || '';
+        }
+        
+        return {
+          ...batch,
+          flock_number: batch.flocks?.flock_number,
+          flock_name: batch.flocks?.flock_name,
+          age_weeks: batch.flocks?.age_weeks,
+          house_number: houseNumber,
+          machine_number: batch.machines?.machine_number,
+          unit_id: batch.units?.id,
+          unit_name: batch.units?.name,
+          batch_id: batch.id,
         // Flatten fertility data
         fertility_technician_name: batch.fertility_analysis?.[0]?.technician_name,
         fertile_eggs: batch.fertility_analysis?.[0]?.fertile_eggs,
@@ -161,7 +169,8 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         candling_results: batch.qa_monitoring?.[0]?.candling_results,
         qa_notes: batch.qa_monitoring?.[0]?.notes,
         qa_id: batch.qa_monitoring?.[0]?.id,
-      }));
+        };
+      });
 
       setData(enrichedBatches);
     } catch (error) {
