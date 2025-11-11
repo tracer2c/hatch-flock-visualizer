@@ -213,7 +213,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     case "egg-pack":
       return <EggPackQualityTab data={data.filter(d => d.data_type === 'egg_pack')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <HatchPerformanceTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} />;
+      return <HatchPerformanceTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "qa":
       return <QAMonitoringTab data={data.filter(d => d.data_type === 'qa')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
