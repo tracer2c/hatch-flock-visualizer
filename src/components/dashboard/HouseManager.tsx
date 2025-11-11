@@ -469,62 +469,83 @@ const calculateHatchDate = (setDate: string) => {
         )}
       </Card>
 
-      {/* Advanced Filters */}
-      <Card>
-        <CardHeader>
+      {/* Advanced Filters - Enterprise Design */}
+      <Card className="border-primary/10 shadow-sm">
+        <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-transparent">
           <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  <CardTitle>Advanced Filters</CardTitle>
-                  {getActiveFilterCount() > 0 && (
-                    <Badge variant="default" className="ml-2">
-                      {getActiveFilterCount()} active
-                    </Badge>
-                  )}
+              <div className="flex items-center justify-between cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <Filter className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      Advanced Filters
+                      {getActiveFilterCount() > 0 && (
+                        <Badge variant="default" className="h-6 px-2 bg-primary shadow-sm">
+                          {getActiveFilterCount()} active
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Refine your search by hatchery, machine type, and date range
+                    </p>
+                  </div>
                 </div>
-                <ChevronDown className={cn("h-5 w-5 transition-transform", isFilterOpen && "rotate-180")} />
+                <ChevronDown className={cn(
+                  "h-5 w-5 text-muted-foreground transition-all duration-200",
+                  isFilterOpen && "rotate-180 text-primary"
+                )} />
               </div>
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CollapsibleContent className="mt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Date Range Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Date Range</Label>
+                <div className="space-y-3 p-4 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-semibold">Date Range</Label>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button 
                       size="sm" 
-                      variant="outline"
+                      variant={filters.dateRange.from.getTime() === subDays(new Date(), 7).getTime() ? "default" : "outline"}
                       onClick={() => handleQuickDateRange(7)}
+                      className="h-8"
                     >
                       Last 7 days
                     </Button>
                     <Button 
                       size="sm" 
-                      variant="outline"
+                      variant={filters.dateRange.from.getTime() === subDays(new Date(), 30).getTime() ? "default" : "outline"}
                       onClick={() => handleQuickDateRange(30)}
+                      className="h-8"
                     >
                       Last 30 days
                     </Button>
                     <Button 
                       size="sm" 
-                      variant="outline"
+                      variant={filters.dateRange.from.getTime() === subDays(new Date(), 90).getTime() ? "default" : "outline"}
                       onClick={() => handleQuickDateRange(90)}
+                      className="h-8"
                     >
                       Last 90 days
                     </Button>
                   </div>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <Calendar className="mr-2 h-4 w-4" />
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start text-left font-normal h-10 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                      >
+                        <Calendar className="mr-2 h-4 w-4 text-primary" />
                         {filters.dateRange.from && filters.dateRange.to ? (
-                          <>
+                          <span className="text-sm">
                             {format(filters.dateRange.from, "MMM d")} - {format(filters.dateRange.to, "MMM d, yyyy")}
-                          </>
+                          </span>
                         ) : (
-                          <span>Pick a date range</span>
+                          <span className="text-sm text-muted-foreground">Pick a date range</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -544,53 +565,74 @@ const calculateHatchDate = (setDate: string) => {
                   </Popover>
                 </div>
 
-                {/* Machine Type & Hatchery Filter */}
-                <div className="space-y-4">
-                  {/* Machine Type */}
-                  <div className="space-y-3">
+                {/* Machine Type Filter */}
+                <div className="space-y-3 p-4 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Factory className="h-4 w-4 text-primary" />
                     <Label className="text-sm font-semibold">Machine Type</Label>
-                    <div className="space-y-2">
+                  </div>
+                  <ScrollArea className="h-[140px]">
+                    <div className="space-y-2.5">
                       {uniqueMachineTypes.map((type) => (
-                        <label key={type} className="flex items-center gap-2">
+                        <label 
+                          key={type} 
+                          className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group"
+                        >
                           <Checkbox
                             checked={filters.machineTypes.includes(type)}
                             onCheckedChange={(c) => toggleFilterMachineType(type, Boolean(c))}
+                            className="border-primary/30 data-[state=checked]:bg-primary"
                           />
-                          <span className="text-sm capitalize">{type}</span>
+                          <span className="text-sm capitalize group-hover:text-foreground">{type}</span>
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </ScrollArea>
+                </div>
 
-                  {/* Hatchery/Unit */}
-                  <div className="space-y-3">
+                {/* Hatchery Filter */}
+                <div className="space-y-3 p-4 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Building2 className="h-4 w-4 text-primary" />
                     <Label className="text-sm font-semibold">Hatchery</Label>
-                    <ScrollArea className="h-[100px]">
-                      <div className="space-y-2">
-                        {units.map((unit) => (
-                          <label key={unit.id} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={filters.unitIds.includes(unit.id)}
-                              onCheckedChange={(c) => toggleFilterUnit(unit.id, Boolean(c))}
-                            />
-                            <span className="text-sm">{unit.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </ScrollArea>
                   </div>
+                  <ScrollArea className="h-[140px]">
+                    <div className="space-y-2.5">
+                      {units.map((unit) => (
+                        <label 
+                          key={unit.id} 
+                          className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group"
+                        >
+                          <Checkbox
+                            checked={filters.unitIds.includes(unit.id)}
+                            onCheckedChange={(c) => toggleFilterUnit(unit.id, Boolean(c))}
+                            className="border-primary/30 data-[state=checked]:bg-primary"
+                          />
+                          <span className="text-sm group-hover:text-foreground">{unit.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               </div>
 
               {/* Filter Actions */}
               <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Showing {filteredHouses.length} of {houses.length} houses
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="h-7 px-3 font-normal">
+                    <span className="font-semibold mr-1">{filteredHouses.length}</span>
+                    of {houses.length} houses
+                  </Badge>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearAllFilters}
+                    className="h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50"
+                  >
                     <X className="h-4 w-4 mr-2" />
-                    Clear All
+                    Clear All Filters
                   </Button>
                 </div>
               </div>

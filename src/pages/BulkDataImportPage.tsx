@@ -12,7 +12,8 @@ import FileUploadZone from '@/components/import/FileUploadZone';
 import SheetSelector from '@/components/import/SheetSelector';
 import ImportProgress from '@/components/import/ImportProgress';
 import ImportResults from '@/components/import/ImportResults';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import ImportExampleTemplates from '@/components/import/ImportExampleTemplates';
+import { ArrowLeft, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 
 type Step = 'upload' | 'select' | 'validate' | 'import' | 'results';
 
@@ -299,7 +300,10 @@ export default function BulkDataImportPage() {
       </div>
 
       {step === 'upload' && (
-        <FileUploadZone onFileSelect={handleFileSelect} />
+        <div className="space-y-6">
+          <FileUploadZone onFileSelect={handleFileSelect} />
+          <ImportExampleTemplates />
+        </div>
       )}
 
       {step === 'select' && (

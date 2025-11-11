@@ -29,6 +29,8 @@ const BatchOverviewDashboard = () => {
   const navigate = useNavigate();
   const { updateContext } = useHelpContext();
   const [totalBatchesCount, setTotalBatchesCount] = useState(0);
+  const [lastWeekBatchesCount, setLastWeekBatchesCount] = useState(0);
+  const [targets, setTargets] = useState<any>(null);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -158,7 +160,8 @@ const BatchOverviewDashboard = () => {
   }, [machineUtilization]);
 
   useEffect(() => {
-    const fetchTotalBatchesCount = async () => {
+    const fetchMetrics = async () => {
+      // Total batches
       const { count, error } = await supabase
         .from('batches')
         .select('*', { count: 'exact', head: true });
@@ -166,9 +169,36 @@ const BatchOverviewDashboard = () => {
       if (!error && count !== null) {
         setTotalBatchesCount(count);
       }
+
+      // Last week batches
+      const lastWeekDate = new Date();
+      lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+      const { count: lastWeekCount } = await supabase
+        .from('batches')
+        .select('*', { count: 'exact', head: true })
+        .lte('created_at', lastWeekDate.toISOString());
+      
+      if (lastWeekCount !== null) {
+        setLastWeekBatchesCount(lastWeekCount);
+      }
+
+      // Fetch targets
+      const { data: targetData } = await supabase
+        .from('custom_targets')
+        .select('*')
+        .eq('is_active', true)
+        .eq('target_type', 'global');
+      
+      if (targetData && targetData.length > 0) {
+        const targetsMap: any = {};
+        targetData.forEach((t: any) => {
+          targetsMap[t.metric_name] = t.target_value;
+        });
+        setTargets(targetsMap);
+      }
     };
     
-    fetchTotalBatchesCount();
+    fetchMetrics();
   }, []);
 
   useEffect(() => {
@@ -299,29 +329,41 @@ const BatchOverviewDashboard = () => {
               title="All Houses"
               value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
-              trendLabel="vs last week"
-              trendDirection="up"
+              trendLabel={lastWeekBatchesCount > 0 ? `+${totalBatchesCount - lastWeekBatchesCount} vs last week` : "No comparison data"}
+              trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
             />
             <StatCard
               title="Average Fertility"
               value={`${avgFert}%`}
               icon={<TrendingUp className="h-5 w-5" />}
-              trendLabel="vs target"
-              trendDirection="up"
+              trendLabel={
+                targets?.fertility_rate 
+                  ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target (${targets.fertility_rate}%)`
+                  : "Target: 85%"
+              }
+              trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
             />
             <StatCard
               title="Average Hatch Rate"
               value={`${avgHatch}%`}
               icon={<CheckCircle className="h-5 w-5" />}
-              trendLabel="vs target"
-              trendDirection="up"
+              trendLabel={
+                targets?.hatch_rate 
+                  ? `${avgHatch >= targets.hatch_rate ? '+' : ''}${(avgHatch - targets.hatch_rate).toFixed(1)}% vs target (${targets.hatch_rate}%)`
+                  : "Target: 80%"
+              }
+              trendDirection={targets?.hatch_rate ? (avgHatch >= targets.hatch_rate ? "up" : "down") : null}
             />
             <StatCard
               title="System Utilization"
               value={`${systemUtilization}%`}
               icon={<Gauge className="h-5 w-5" />}
-              trendLabel="machine efficiency"
-              trendDirection="up"
+              trendLabel={
+                targets?.machine_utilization 
+                  ? `${systemUtilization >= targets.machine_utilization ? '+' : ''}${(systemUtilization - targets.machine_utilization).toFixed(1)}% vs target (${targets.machine_utilization}%)`
+                  : `Avg of ${machineUtilization?.length || 0} machines`
+              }
+              trendDirection={targets?.machine_utilization ? (systemUtilization >= targets.machine_utilization ? "up" : "down") : null}
             />
           </div>
 
