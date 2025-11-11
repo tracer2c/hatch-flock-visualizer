@@ -4,7 +4,6 @@ import { Calendar, Clock, TrendingUp, Target, BarChart3 } from "lucide-react";
 import HeatmapCalendar from "./HeatmapCalendar";
 import IncubationTimeline from "./IncubationTimeline";
 import BatchFlowSankey from "./BatchFlowSankey";
-import UnitWeeklyComparison from "./UnitWeeklyComparison";
 import PredictionsPanel from "./PredictionsPanel";
 
 const AdvancedAnalytics = () => {
@@ -29,9 +28,9 @@ const AdvancedAnalytics = () => {
             <Target className="h-4 w-4" />
             Predictions & Forecasting
           </TabsTrigger>
-          <TabsTrigger value="unit-weekly" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Hatcheries Weekly Comparison
+          <TabsTrigger value="house-flow" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            House Flow Analysis
           </TabsTrigger>
         </TabsList>
 
@@ -43,8 +42,8 @@ const AdvancedAnalytics = () => {
           <PredictionsPanel />
         </TabsContent>
 
-        <TabsContent value="unit-weekly">
-          <UnitWeeklyComparison />
+        <TabsContent value="house-flow">
+          <BatchFlowSankey />
         </TabsContent>
       </Tabs>
     </div>
