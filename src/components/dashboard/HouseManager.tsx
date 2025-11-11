@@ -555,7 +555,7 @@ const calculateHatchDate = (setDate: string) => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total Eggs Set *</Label>
+                <Label>Total Eggs Set</Label>
                 <Input
                   type="number"
                   placeholder="e.g., 45000"
@@ -902,7 +902,7 @@ const calculateHatchDate = (setDate: string) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Total Eggs Set *</Label>
+                  <Label>Total Eggs Set</Label>
                   <Input
                     type="number"
                     placeholder="e.g., 45000"
