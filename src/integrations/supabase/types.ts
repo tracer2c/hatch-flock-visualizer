@@ -693,7 +693,6 @@ export type Database = {
           batch_id: string
           created_at: string
           cull_chicks: number
-          early_dead: number
           fertile_eggs: number
           fertility_percent: number | null
           hatch_percent: number | null
@@ -712,7 +711,6 @@ export type Database = {
           batch_id: string
           created_at?: string
           cull_chicks?: number
-          early_dead: number
           fertile_eggs: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -731,7 +729,6 @@ export type Database = {
           batch_id?: string
           created_at?: string
           cull_chicks?: number
-          early_dead?: number
           fertile_eggs?: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -1036,6 +1033,7 @@ export type Database = {
           created_at: string
           dead_pip_number: number | null
           dry_egg: number | null
+          early_dead: number | null
           fertile_eggs: number | null
           handling_cracks: number | null
           hatch_percent: number | null
@@ -1045,6 +1043,7 @@ export type Database = {
           if_dev_percent: number | null
           infertile_eggs: number | null
           lab_technician: string | null
+          late_dead: number | null
           live_pip_number: number | null
           malformed_chicks: number
           malpositioned: number | null
@@ -1071,6 +1070,7 @@ export type Database = {
           created_at?: string
           dead_pip_number?: number | null
           dry_egg?: number | null
+          early_dead?: number | null
           fertile_eggs?: number | null
           handling_cracks?: number | null
           hatch_percent?: number | null
@@ -1080,6 +1080,7 @@ export type Database = {
           if_dev_percent?: number | null
           infertile_eggs?: number | null
           lab_technician?: string | null
+          late_dead?: number | null
           live_pip_number?: number | null
           malformed_chicks?: number
           malpositioned?: number | null
@@ -1106,6 +1107,7 @@ export type Database = {
           created_at?: string
           dead_pip_number?: number | null
           dry_egg?: number | null
+          early_dead?: number | null
           fertile_eggs?: number | null
           handling_cracks?: number | null
           hatch_percent?: number | null
@@ -1115,6 +1117,7 @@ export type Database = {
           if_dev_percent?: number | null
           infertile_eggs?: number | null
           lab_technician?: string | null
+          late_dead?: number | null
           live_pip_number?: number | null
           malformed_chicks?: number
           malpositioned?: number | null
@@ -1557,9 +1560,10 @@ export type Database = {
           actual_hatch_date: string | null
           batch_number: string | null
           chicks_hatched: number | null
+          clears_notes: string | null
+          clears_technician_name: string | null
           company_id: string | null
           created_at: string | null
-          early_dead: number | null
           eggs_cleared: number | null
           eggs_injected: number | null
           expected_hatch_date: string | null
@@ -1567,12 +1571,15 @@ export type Database = {
           fertility_percent: number | null
           flock_id: string | null
           hatch_percent: number | null
+          hoi_notes: string | null
+          hoi_technician_name: string | null
           humidity_avg: number | null
           id: string | null
           infertile_eggs: number | null
           machine_id: string | null
           notes: string | null
           set_date: string | null
+          set_time: string | null
           status: Database["public"]["Enums"]["batch_status"] | null
           temperature_avg: number | null
           total_eggs_set: number | null

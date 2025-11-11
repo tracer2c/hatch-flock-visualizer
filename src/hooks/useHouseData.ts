@@ -258,13 +258,14 @@ export const useCompletedBatchMetrics = () => {
             fertility_percent,
             hatch_percent,
             hof_percent,
-            early_dead,
-            late_dead,
             sample_size
           ),
           residue_analysis (
             pipped_not_hatched,
-            total_residue_count
+            total_residue_count,
+            early_dead,
+            late_dead,
+            mid_dead
           )
         `)
         .eq('status', 'completed')
@@ -278,8 +279,8 @@ export const useCompletedBatchMetrics = () => {
         const residue = batch.residue_analysis?.[0];
         
         // Calculate embryonic mortality data
-        const earlyDead = fertility?.early_dead || 0;
-        const lateDead = fertility?.late_dead || 0;
+        const earlyDead = residue?.early_dead || 0;
+        const lateDead = residue?.late_dead || 0;
         const pipped = residue?.pipped_not_hatched || 0;
         
         // Calculate mid dead as remaining dead embryos
@@ -351,13 +352,14 @@ export const useActiveBatchFlowData = () => {
             fertility_percent,
             hatch_percent,
             hof_percent,
-            early_dead,
-            late_dead,
             sample_size
           ),
           residue_analysis (
             pipped_not_hatched,
-            total_residue_count
+            total_residue_count,
+            early_dead,
+            late_dead,
+            mid_dead
           )
         `)
         .in('status', ['setting', 'incubating', 'hatching'])
@@ -378,8 +380,8 @@ export const useActiveBatchFlowData = () => {
         const estimatedHatch = !fertility?.hatch_percent ? 85 : fertility.hatch_percent;
         
         // Calculate embryonic mortality data
-        const earlyDead = fertility?.early_dead || 0;
-        const lateDead = fertility?.late_dead || 0;
+        const earlyDead = residue?.early_dead || 0;
+        const lateDead = residue?.late_dead || 0;
         const pipped = residue?.pipped_not_hatched || 0;
         
         // Calculate mid dead as remaining dead embryos (estimated if no actual data)
