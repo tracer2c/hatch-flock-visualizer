@@ -1035,69 +1035,76 @@ export default function EmbrexDashboard() {
 
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
-    <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
-      <div className="max-w-4xl mx-auto px-6 text-center">
-        {/* Header Section */}
+    <div className="h-screen w-full flex items-center justify-center bg-background overflow-hidden">
+      <div className="max-w-5xl mx-auto px-8">
         <div 
           className={`transition-all duration-1000 ease-out ${
             welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
-              <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg">
-                <Activity className="h-12 w-12 text-white" strokeWidth={2.5} />
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <div className="flex justify-center mb-8">
+              <div className="p-4 rounded-lg border border-border bg-card">
+                <TrendingUp className="h-10 w-10 text-primary" strokeWidth={1.5} />
               </div>
             </div>
-          </div>
-          
-          {/* Title */}
-          <h1 className="text-6xl font-bold text-slate-900 mb-4">
-            Timeline Analysis
-          </h1>
-          <div className={`h-1 w-20 bg-blue-600 mb-6 mx-auto transition-all duration-700 delay-300 ${
-            welcomeStep >= 1 ? 'scale-x-100' : 'scale-x-0'
-          } origin-center`}></div>
-          
-          <p className="text-xl text-slate-600 leading-relaxed mb-8">
-            Discover insights from your hatchery data with powerful visualizations and analytics
-          </p>
-        </div>
-
-        {/* Call to Action */}
-        <div 
-          className={`transition-all duration-1000 ease-out delay-500 ${
-            welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6 max-w-md mx-auto">
-            <p className="text-base text-slate-700 mb-4">
-              Choose your visualization and metrics to start exploring your data
+            
+            <h1 className="text-5xl font-semibold text-foreground mb-4 tracking-tight">
+              Timeline Analysis
+            </h1>
+            
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Advanced visualization and analytics platform for comprehensive hatchery data insights
             </p>
-            
-            {/* Feature Tags */}
-            <div className="flex flex-wrap gap-2 mb-6 justify-center">
-              {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
-                <span 
-                  key={tag}
-                  className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
+          </div>
+
+          {/* Call to Action */}
+          <div 
+            className={`transition-all duration-1000 ease-out delay-300 ${
+              welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
+            <Card className="max-w-2xl mx-auto shadow-sm border">
+              <CardContent className="p-8">
+                <p className="text-sm text-muted-foreground mb-6 text-center">
+                  Select your preferred visualization method and configure metrics to begin data exploration
+                </p>
+                
+                {/* Feature Grid */}
+                <div className="grid grid-cols-4 gap-3 mb-8">
+                  {[
+                    { label: "Timeline Views", icon: CalendarIcon },
+                    { label: "Trend Analysis", icon: TrendingUp },
+                    { label: "Comparisons", icon: BarChart3 },
+                    { label: "Advanced Analytics", icon: Activity }
+                  ].map((feature) => {
+                    const Icon = feature.icon;
+                    return (
+                      <div 
+                        key={feature.label}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+                      >
+                        <Icon className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                        <span className="text-xs text-center text-muted-foreground font-medium">
+                          {feature.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Start Button */}
+                <Button 
+                  onClick={() => setShowWelcome(false)}
+                  className="w-full h-11"
+                  variant="default"
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            
-            {/* Start Button */}
-            <Button 
-              onClick={() => setShowWelcome(false)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 hover:scale-[1.02]"
-              size="lg"
-            >
-              <BarChart3 className="h-5 w-5 mr-2" />
-              Start Analyzing
-            </Button>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Access Analytics Dashboard
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
