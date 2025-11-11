@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useActiveBatches, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
+import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 const BatchOverviewDashboard = () => {
-  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useActiveBatches();
+  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
   const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics();
   const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization();
   const { data: qaAlerts, isLoading: alertsLoading } = useQAAlerts();
