@@ -154,35 +154,79 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     const hoiPercent = fertileEggs > 0 ? ((chicksHatched + malformedChicks) / fertileEggs) * 100 : 0;
     const ifDevPercent = hoiPercent - hofPercent;
 
-    const { error } = await supabase
-      .from('residue_analysis')
-      .update({
-        sample_size: sampleSize,
-        infertile_eggs: infertileEggs,
-        fertile_eggs: fertileEggs,
-        early_dead: earlyDead,
-        mid_dead: midDead,
-        late_dead: lateDead,
-        pipped_not_hatched: parseInt(formData.pipped_not_hatched) || 0,
-        contaminated_eggs: parseInt(formData.contaminated_eggs) || 0,
-        malformed_chicks: malformedChicks,
-        malpositioned: parseInt(formData.malpositioned) || 0,
-        upside_down: parseInt(formData.upside_down) || 0,
-        dry_egg: parseInt(formData.dry_egg) || 0,
-        brain_defects: parseInt(formData.brain_defects) || 0,
-        transfer_crack: parseInt(formData.transfer_crack) || 0,
-        handling_cracks: parseInt(formData.handling_cracks) || 0,
-        abnormal: parseInt(formData.abnormal) || 0,
-        mold: parseInt(formData.mold) || 0,
-        live_pip_number: parseInt(formData.live_pip_number) || 0,
-        dead_pip_number: parseInt(formData.dead_pip_number) || 0,
-        pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
-        hatch_percent: hatchPercent,
-        hof_percent: hofPercent,
-        hoi_percent: hoiPercent,
-        if_dev_percent: ifDevPercent,
-      })
-      .eq('batch_id', editingRecord.batch_id);
+    // Check if record exists (has residue_id) or needs to be created
+    let error;
+    if (editingRecord.residue_id) {
+      // Update existing record
+      const result = await supabase
+        .from('residue_analysis')
+        .update({
+          sample_size: sampleSize,
+          infertile_eggs: infertileEggs,
+          fertile_eggs: fertileEggs,
+          early_dead: earlyDead,
+          mid_dead: midDead,
+          late_dead: lateDead,
+          pipped_not_hatched: parseInt(formData.pipped_not_hatched) || 0,
+          contaminated_eggs: parseInt(formData.contaminated_eggs) || 0,
+          malformed_chicks: malformedChicks,
+          malpositioned: parseInt(formData.malpositioned) || 0,
+          upside_down: parseInt(formData.upside_down) || 0,
+          dry_egg: parseInt(formData.dry_egg) || 0,
+          brain_defects: parseInt(formData.brain_defects) || 0,
+          transfer_crack: parseInt(formData.transfer_crack) || 0,
+          handling_cracks: parseInt(formData.handling_cracks) || 0,
+          abnormal: parseInt(formData.abnormal) || 0,
+          mold: parseInt(formData.mold) || 0,
+          live_pip_number: parseInt(formData.live_pip_number) || 0,
+          dead_pip_number: parseInt(formData.dead_pip_number) || 0,
+          pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
+          hatch_percent: hatchPercent,
+          hof_percent: hofPercent,
+          hoi_percent: hoiPercent,
+          if_dev_percent: ifDevPercent,
+        })
+        .eq('id', editingRecord.residue_id);
+      error = result.error;
+    } else {
+      // Insert new record
+      // Calculate total residue count
+      const totalResidueCount = earlyDead + midDead + lateDead + malformedChicks + 
+                                (parseInt(formData.pipped_not_hatched) || 0) + 
+                                (parseInt(formData.contaminated_eggs) || 0);
+      
+      const result = await supabase
+        .from('residue_analysis')
+        .insert([{
+          batch_id: editingRecord.batch_id,
+          sample_size: sampleSize,
+          total_residue_count: totalResidueCount,
+          infertile_eggs: infertileEggs,
+          fertile_eggs: fertileEggs,
+          early_dead: earlyDead,
+          mid_dead: midDead,
+          late_dead: lateDead,
+          pipped_not_hatched: parseInt(formData.pipped_not_hatched) || 0,
+          contaminated_eggs: parseInt(formData.contaminated_eggs) || 0,
+          malformed_chicks: malformedChicks,
+          malpositioned: parseInt(formData.malpositioned) || 0,
+          upside_down: parseInt(formData.upside_down) || 0,
+          dry_egg: parseInt(formData.dry_egg) || 0,
+          brain_defects: parseInt(formData.brain_defects) || 0,
+          transfer_crack: parseInt(formData.transfer_crack) || 0,
+          handling_cracks: parseInt(formData.handling_cracks) || 0,
+          abnormal: parseInt(formData.abnormal) || 0,
+          mold: parseInt(formData.mold) || 0,
+          live_pip_number: parseInt(formData.live_pip_number) || 0,
+          dead_pip_number: parseInt(formData.dead_pip_number) || 0,
+          pip_number: (parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0),
+          hatch_percent: hatchPercent,
+          hof_percent: hofPercent,
+          hoi_percent: hoiPercent,
+          if_dev_percent: ifDevPercent,
+        } as any]);
+      error = result.error;
+    }
 
     if (error) {
       toast.error("Failed to update record");

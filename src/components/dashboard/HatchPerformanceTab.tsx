@@ -140,24 +140,53 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const hoiPercent = fertileEggs > 0 ? ((chicksHatched + cullChicks) / fertileEggs) * 100 : 0;
     const ifDevPercent = hoiPercent - hofPercent;
 
-    const { error } = await supabase
-      .from("fertility_analysis")
-      .update({
-        sample_size: sampleSize,
-        fertile_eggs: fertileEggs,
-        infertile_eggs: infertileEggs,
-        early_dead: earlyDead,
-        late_dead: lateDead,
-        cull_chicks: cullChicks,
-        fertility_percent: fertilityPercent,
-        hatch_percent: hatchPercent,
-        hof_percent: hofPercent,
-        hoi_percent: hoiPercent,
-        if_dev_percent: ifDevPercent,
-        technician_name: formData.technician_name,
-        notes: formData.notes,
-      })
-      .eq("batch_id", editingRecord.batch_id);
+    // Check if record exists or needs to be created by checking if fertility data exists
+    let error;
+    const hasFertilityData = editingRecord.fertile_eggs !== undefined && editingRecord.fertile_eggs !== null;
+    
+    if (hasFertilityData) {
+      // Update existing record
+      const result = await supabase
+        .from("fertility_analysis")
+        .update({
+          sample_size: sampleSize,
+          fertile_eggs: fertileEggs,
+          infertile_eggs: infertileEggs,
+          early_dead: earlyDead,
+          late_dead: lateDead,
+          cull_chicks: cullChicks,
+          fertility_percent: fertilityPercent,
+          hatch_percent: hatchPercent,
+          hof_percent: hofPercent,
+          hoi_percent: hoiPercent,
+          if_dev_percent: ifDevPercent,
+          technician_name: formData.technician_name,
+          notes: formData.notes,
+        })
+        .eq("batch_id", editingRecord.batch_id);
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from("fertility_analysis")
+        .insert([{
+          batch_id: editingRecord.batch_id,
+          sample_size: sampleSize,
+          fertile_eggs: fertileEggs,
+          infertile_eggs: infertileEggs,
+          early_dead: earlyDead,
+          late_dead: lateDead,
+          cull_chicks: cullChicks,
+          fertility_percent: fertilityPercent,
+          hatch_percent: hatchPercent,
+          hof_percent: hofPercent,
+          hoi_percent: hoiPercent,
+          if_dev_percent: ifDevPercent,
+          technician_name: formData.technician_name,
+          notes: formData.notes,
+        } as any]);
+      error = result.error;
+    }
 
     if (error) {
       toast.error("Failed to update record");

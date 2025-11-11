@@ -131,26 +131,55 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
   const handleSave = async () => {
     if (!editingRecord) return;
 
-    const { error } = await supabase
-      .from('qa_monitoring')
-      .update({
-        day_of_incubation: parseInt(formData.day_of_incubation) || 1,
-        temperature: parseFloat(formData.temperature) || 0,
-        humidity: parseFloat(formData.humidity) || 0,
-        co2_level: parseFloat(formData.co2_level) || 0,
-        ventilation_rate: parseFloat(formData.ventilation_rate) || 0,
-        turning_frequency: parseInt(formData.turning_frequency) || 0,
-        mortality_count: parseInt(formData.mortality_count) || 0,
-        angle_top_left: parseFloat(formData.angle_top_left) || 0,
-        angle_mid_left: parseFloat(formData.angle_mid_left) || 0,
-        angle_bottom_left: parseFloat(formData.angle_bottom_left) || 0,
-        angle_top_right: parseFloat(formData.angle_top_right) || 0,
-        angle_mid_right: parseFloat(formData.angle_mid_right) || 0,
-        angle_bottom_right: parseFloat(formData.angle_bottom_right) || 0,
-        inspector_name: formData.inspector_name,
-        notes: formData.notes,
-      })
-      .eq('id', editingRecord.id);
+    // Check if record exists (has qa_id) or needs to be created
+    let error;
+    if (editingRecord.qa_id) {
+      // Update existing record
+      const result = await supabase
+        .from('qa_monitoring')
+        .update({
+          day_of_incubation: parseInt(formData.day_of_incubation) || 1,
+          temperature: parseFloat(formData.temperature) || 0,
+          humidity: parseFloat(formData.humidity) || 0,
+          co2_level: parseFloat(formData.co2_level) || 0,
+          ventilation_rate: parseFloat(formData.ventilation_rate) || 0,
+          turning_frequency: parseInt(formData.turning_frequency) || 0,
+          mortality_count: parseInt(formData.mortality_count) || 0,
+          angle_top_left: parseFloat(formData.angle_top_left) || 0,
+          angle_mid_left: parseFloat(formData.angle_mid_left) || 0,
+          angle_bottom_left: parseFloat(formData.angle_bottom_left) || 0,
+          angle_top_right: parseFloat(formData.angle_top_right) || 0,
+          angle_mid_right: parseFloat(formData.angle_mid_right) || 0,
+          angle_bottom_right: parseFloat(formData.angle_bottom_right) || 0,
+          inspector_name: formData.inspector_name,
+          notes: formData.notes,
+        })
+        .eq('id', editingRecord.qa_id);
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('qa_monitoring')
+        .insert([{
+          batch_id: editingRecord.batch_id,
+          day_of_incubation: parseInt(formData.day_of_incubation) || 1,
+          temperature: parseFloat(formData.temperature) || 0,
+          humidity: parseFloat(formData.humidity) || 0,
+          co2_level: parseFloat(formData.co2_level) || 0,
+          ventilation_rate: parseFloat(formData.ventilation_rate) || 0,
+          turning_frequency: parseInt(formData.turning_frequency) || 0,
+          mortality_count: parseInt(formData.mortality_count) || 0,
+          angle_top_left: parseFloat(formData.angle_top_left) || 0,
+          angle_mid_left: parseFloat(formData.angle_mid_left) || 0,
+          angle_bottom_left: parseFloat(formData.angle_bottom_left) || 0,
+          angle_top_right: parseFloat(formData.angle_top_right) || 0,
+          angle_mid_right: parseFloat(formData.angle_mid_right) || 0,
+          angle_bottom_right: parseFloat(formData.angle_bottom_right) || 0,
+          inspector_name: formData.inspector_name,
+          notes: formData.notes,
+        } as any]);
+      error = result.error;
+    }
 
     if (error) {
       toast.error("Failed to update record");

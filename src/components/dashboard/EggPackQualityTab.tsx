@@ -162,23 +162,49 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
       // Build notes string with all extra fields
       const notes = `Stained: ${stained}, Abnormal: ${abnormal}, Contaminated: ${contaminated}, USD: ${usd}${setWeek ? `, Set Week: ${setWeek}` : ''}`;
 
-      const { error } = await supabase
-        .from("egg_pack_quality")
-        .update({
-          sample_size: sampleSize,
-          cracked: parseInt(formData.cracked) || 0,
-          dirty: parseInt(formData.dirty) || 0,
-          small: parseInt(formData.small) || 0,
-          large: parseInt(formData.large) || 0,
-          grade_a: parseInt(formData.grade_a) || 0,
-          grade_b: parseInt(formData.grade_b) || 0,
-          grade_c: parseInt(formData.grade_c) || 0,
-          weight_avg: formData.weight_avg ? parseFloat(formData.weight_avg) : null,
-          shell_thickness_avg: formData.shell_thickness_avg ? parseFloat(formData.shell_thickness_avg) : null,
-          inspector_name: formData.inspector_name,
-          notes: notes,
-        })
-        .eq("batch_id", editingRecord.batch_id);
+      // Check if record exists (has egg_pack_id) or needs to be created
+      let error;
+      if (editingRecord.egg_pack_id) {
+        // Update existing record
+        const result = await supabase
+          .from("egg_pack_quality")
+          .update({
+            sample_size: sampleSize,
+            cracked: parseInt(formData.cracked) || 0,
+            dirty: parseInt(formData.dirty) || 0,
+            small: parseInt(formData.small) || 0,
+            large: parseInt(formData.large) || 0,
+            grade_a: parseInt(formData.grade_a) || 0,
+            grade_b: parseInt(formData.grade_b) || 0,
+            grade_c: parseInt(formData.grade_c) || 0,
+            weight_avg: formData.weight_avg ? parseFloat(formData.weight_avg) : null,
+            shell_thickness_avg: formData.shell_thickness_avg ? parseFloat(formData.shell_thickness_avg) : null,
+            inspector_name: formData.inspector_name,
+            notes: notes,
+          })
+          .eq("id", editingRecord.egg_pack_id);
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from("egg_pack_quality")
+          .insert([{
+            batch_id: editingRecord.batch_id,
+            sample_size: sampleSize,
+            cracked: parseInt(formData.cracked) || 0,
+            dirty: parseInt(formData.dirty) || 0,
+            small: parseInt(formData.small) || 0,
+            large: parseInt(formData.large) || 0,
+            grade_a: parseInt(formData.grade_a) || 0,
+            grade_b: parseInt(formData.grade_b) || 0,
+            grade_c: parseInt(formData.grade_c) || 0,
+            weight_avg: formData.weight_avg ? parseFloat(formData.weight_avg) : null,
+            shell_thickness_avg: formData.shell_thickness_avg ? parseFloat(formData.shell_thickness_avg) : null,
+            inspector_name: formData.inspector_name,
+            notes: notes,
+          } as any]);
+        error = result.error;
+      }
 
       if (error) throw error;
 
