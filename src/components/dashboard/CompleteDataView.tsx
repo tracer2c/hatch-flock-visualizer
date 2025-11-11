@@ -26,7 +26,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
     try {
       setLoading(true);
 
-      // Fetch all data with necessary joins
+      // Fetch all batches with LEFT JOINs to related data
       const { data: batchesData, error: batchesError } = await supabase
         .from("batches")
         .select(`
@@ -40,152 +40,121 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
           machines (
             machine_number
           ),
+          units (
+            id,
+            name
+          ),
           fertility_analysis (
-            technician_name
+            *
+          ),
+          residue_analysis (
+            *
+          ),
+          egg_pack_quality (
+            *
+          ),
+          qa_monitoring (
+            *
           )
         `)
         .order("set_date", { ascending: false });
 
-      const { data: fertilityData, error: fertilityError } = await supabase
-        .from("fertility_analysis")
-        .select(`
-          *,
-          batches!inner (
-            id,
-            batch_number,
-            set_date,
-            total_eggs_set,
-            flocks (
-              flock_number,
-              flock_name,
-              age_weeks,
-              house_number
-            )
-          )
-        `);
-
-      const { data: eggPackData, error: eggPackError } = await supabase
-        .from("egg_pack_quality")
-        .select(`
-          *,
-          batches!inner (
-            id,
-            batch_number,
-            set_date,
-            total_eggs_set,
-            flocks (
-              flock_number,
-              flock_name,
-              age_weeks,
-              house_number
-            )
-          )
-        `);
-
-      const { data: residueData, error: residueError } = await supabase
-        .from("residue_analysis")
-        .select(`
-          *,
-          batches!inner (
-            id,
-            batch_number,
-            set_date,
-            total_eggs_set,
-            flocks (
-              flock_number,
-              flock_name,
-              age_weeks,
-              house_number
-            )
-          )
-        `);
-
-      const { data: qaData, error: qaError } = await supabase
-        .from("qa_monitoring")
-        .select(`
-          *,
-          batches!inner (
-            id,
-            batch_number,
-            set_date,
-            total_eggs_set,
-            flocks (
-              flock_number,
-              flock_name,
-              age_weeks,
-              house_number
-            )
-          )
-        `);
-
-      if (batchesError || fertilityError || eggPackError || residueError || qaError) {
-        throw new Error("Error fetching data");
+      if (batchesError) {
+        throw batchesError;
       }
 
-      // Combine all data
-      const combinedData = [
-        ...(batchesData || []).map((batch: any) => ({
-          ...batch,
-          data_type: 'batch',
-          flock_number: batch.flocks?.flock_number,
-          flock_name: batch.flocks?.flock_name,
-          age_weeks: batch.flocks?.age_weeks,
-          house_number: batch.flocks?.house_number,
-          machine_number: batch.machines?.machine_number,
-          batch_id: batch.id,
-          fertility_technician_name: batch.fertility_analysis?.[0]?.technician_name,
-        })),
-        ...(fertilityData || []).map((f: any) => ({
-          ...f,
-          data_type: 'fertility',
-          batch_id: f.batches.id,
-          batch_number: f.batches.batch_number,
-          set_date: f.batches.set_date,
-          total_eggs_set: f.batches.total_eggs_set,
-          flock_number: f.batches.flocks?.flock_number,
-          flock_name: f.batches.flocks?.flock_name,
-          age_weeks: f.batches.flocks?.age_weeks,
-          house_number: f.batches.flocks?.house_number,
-        })),
-        ...(eggPackData || []).map((e: any) => ({
-          ...e,
-          data_type: 'egg_pack',
-          batch_id: e.batches.id,
-          batch_number: e.batches.batch_number,
-          set_date: e.batches.set_date,
-          total_eggs_set: e.batches.total_eggs_set,
-          flock_number: e.batches.flocks?.flock_number,
-          flock_name: e.batches.flocks?.flock_name,
-          age_weeks: e.batches.flocks?.age_weeks,
-          house_number: e.batches.flocks?.house_number,
-        })),
-        ...(residueData || []).map((r: any) => ({
-          ...r,
-          data_type: 'residue',
-          batch_id: r.batches.id,
-          batch_number: r.batches.batch_number,
-          set_date: r.batches.set_date,
-          total_eggs_set: r.batches.total_eggs_set,
-          flock_number: r.batches.flocks?.flock_number,
-          flock_name: r.batches.flocks?.flock_name,
-          age_weeks: r.batches.flocks?.age_weeks,
-          house_number: r.batches.flocks?.house_number,
-        })),
-        ...(qaData || []).map((q: any) => ({
-          ...q,
-          data_type: 'qa',
-          batch_id: q.batches.id,
-          batch_number: q.batches.batch_number,
-          set_date: q.batches.set_date,
-          total_eggs_set: q.batches.total_eggs_set,
-          flock_number: q.batches.flocks?.flock_number,
-          flock_name: q.batches.flocks?.flock_name,
-          age_weeks: q.batches.flocks?.age_weeks,
-          house_number: q.batches.flocks?.house_number,
-        })),
-      ];
+      // Map batches with all their related data
+      const enrichedBatches = (batchesData || []).map((batch: any) => ({
+        ...batch,
+        flock_number: batch.flocks?.flock_number,
+        flock_name: batch.flocks?.flock_name,
+        age_weeks: batch.flocks?.age_weeks,
+        house_number: batch.flocks?.house_number,
+        machine_number: batch.machines?.machine_number,
+        unit_id: batch.units?.id,
+        unit_name: batch.units?.name,
+        batch_id: batch.id,
+        // Flatten fertility data
+        fertility_technician_name: batch.fertility_analysis?.[0]?.technician_name,
+        fertile_eggs: batch.fertility_analysis?.[0]?.fertile_eggs,
+        infertile_eggs: batch.fertility_analysis?.[0]?.infertile_eggs,
+        early_dead: batch.fertility_analysis?.[0]?.early_dead,
+        late_dead: batch.fertility_analysis?.[0]?.late_dead,
+        cull_chicks: batch.fertility_analysis?.[0]?.cull_chicks,
+        fertility_percent: batch.fertility_analysis?.[0]?.fertility_percent,
+        hatch_percent: batch.fertility_analysis?.[0]?.hatch_percent,
+        hof_percent: batch.fertility_analysis?.[0]?.hof_percent,
+        hoi_percent: batch.fertility_analysis?.[0]?.hoi_percent,
+        if_dev_percent: batch.fertility_analysis?.[0]?.if_dev_percent,
+        analysis_date: batch.fertility_analysis?.[0]?.analysis_date,
+        sample_size: batch.fertility_analysis?.[0]?.sample_size,
+        technician_name: batch.fertility_analysis?.[0]?.technician_name,
+        fertility_notes: batch.fertility_analysis?.[0]?.notes,
+        // Flatten residue data
+        lab_technician: batch.residue_analysis?.[0]?.lab_technician,
+        total_residue_count: batch.residue_analysis?.[0]?.total_residue_count,
+        unhatched_fertile: batch.residue_analysis?.[0]?.unhatched_fertile,
+        pipped_not_hatched: batch.residue_analysis?.[0]?.pipped_not_hatched,
+        malformed_chicks: batch.residue_analysis?.[0]?.malformed_chicks,
+        contaminated_eggs: batch.residue_analysis?.[0]?.contaminated_eggs,
+        pip_number: batch.residue_analysis?.[0]?.pip_number,
+        live_pip_number: batch.residue_analysis?.[0]?.live_pip_number,
+        dead_pip_number: batch.residue_analysis?.[0]?.dead_pip_number,
+        mid_dead: batch.residue_analysis?.[0]?.mid_dead,
+        residue_percent: batch.residue_analysis?.[0]?.residue_percent,
+        residue_hatch_percent: batch.residue_analysis?.[0]?.hatch_percent,
+        residue_hof_percent: batch.residue_analysis?.[0]?.hof_percent,
+        residue_hoi_percent: batch.residue_analysis?.[0]?.hoi_percent,
+        residue_if_dev_percent: batch.residue_analysis?.[0]?.if_dev_percent,
+        residue_analysis_date: batch.residue_analysis?.[0]?.analysis_date,
+        residue_fertile_eggs: batch.residue_analysis?.[0]?.fertile_eggs,
+        residue_infertile_eggs: batch.residue_analysis?.[0]?.infertile_eggs,
+        residue_notes: batch.residue_analysis?.[0]?.notes,
+        residue_sample_size: batch.residue_analysis?.[0]?.sample_size,
+        residue_id: batch.residue_analysis?.[0]?.id,
+        // Residue characteristics
+        mold: batch.residue_analysis?.[0]?.mold,
+        abnormal: batch.residue_analysis?.[0]?.abnormal,
+        malpositioned: batch.residue_analysis?.[0]?.malpositioned,
+        upside_down: batch.residue_analysis?.[0]?.upside_down,
+        dry_egg: batch.residue_analysis?.[0]?.dry_egg,
+        brain_defects: batch.residue_analysis?.[0]?.brain_defects,
+        transfer_crack: batch.residue_analysis?.[0]?.transfer_crack,
+        handling_cracks: batch.residue_analysis?.[0]?.handling_cracks,
+        microscopy_results: batch.residue_analysis?.[0]?.microscopy_results,
+        pathology_findings: batch.residue_analysis?.[0]?.pathology_findings,
+        // Flatten egg pack data
+        inspector_name: batch.egg_pack_quality?.[0]?.inspector_name,
+        inspection_date: batch.egg_pack_quality?.[0]?.inspection_date,
+        grade_a: batch.egg_pack_quality?.[0]?.grade_a,
+        grade_b: batch.egg_pack_quality?.[0]?.grade_b,
+        grade_c: batch.egg_pack_quality?.[0]?.grade_c,
+        large: batch.egg_pack_quality?.[0]?.large,
+        small: batch.egg_pack_quality?.[0]?.small,
+        dirty: batch.egg_pack_quality?.[0]?.dirty,
+        cracked: batch.egg_pack_quality?.[0]?.cracked,
+        weight_avg: batch.egg_pack_quality?.[0]?.weight_avg,
+        shell_thickness_avg: batch.egg_pack_quality?.[0]?.shell_thickness_avg,
+        egg_pack_sample_size: batch.egg_pack_quality?.[0]?.sample_size,
+        egg_pack_notes: batch.egg_pack_quality?.[0]?.notes,
+        egg_pack_id: batch.egg_pack_quality?.[0]?.id,
+        // Flatten QA data
+        qa_inspector_name: batch.qa_monitoring?.[0]?.inspector_name,
+        check_date: batch.qa_monitoring?.[0]?.check_date,
+        check_time: batch.qa_monitoring?.[0]?.check_time,
+        day_of_incubation: batch.qa_monitoring?.[0]?.day_of_incubation,
+        temperature: batch.qa_monitoring?.[0]?.temperature,
+        humidity: batch.qa_monitoring?.[0]?.humidity,
+        co2_level: batch.qa_monitoring?.[0]?.co2_level,
+        ventilation_rate: batch.qa_monitoring?.[0]?.ventilation_rate,
+        turning_frequency: batch.qa_monitoring?.[0]?.turning_frequency,
+        mortality_count: batch.qa_monitoring?.[0]?.mortality_count,
+        candling_results: batch.qa_monitoring?.[0]?.candling_results,
+        qa_notes: batch.qa_monitoring?.[0]?.notes,
+        qa_id: batch.qa_monitoring?.[0]?.id,
+      }));
 
-      setData(combinedData);
+      setData(enrichedBatches);
     } catch (error) {
       console.error("Error loading complete data:", error);
       toast.error("Failed to load data");
@@ -206,16 +175,16 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
   }
 
   switch (activeTab) {
-      case "embrex":
-      return <EmbrexHOITab data={data.filter(d => d.data_type === 'batch')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+    case "embrex":
+      return <EmbrexHOITab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "residue":
-      return <ResidueBreakoutTab data={data.filter(d => d.data_type === 'residue')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data.filter(d => d.data_type === 'egg_pack')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <EggPackQualityTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "hatch":
-      return <HatchPerformanceTab data={data.filter(d => d.data_type === 'fertility')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <HatchPerformanceTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     case "qa":
-      return <QAMonitoringTab data={data.filter(d => d.data_type === 'qa')} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
+      return <QAMonitoringTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
   }
