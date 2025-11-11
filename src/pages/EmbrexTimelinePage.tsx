@@ -1057,7 +1057,7 @@ export default function EmbrexDashboard() {
               <img 
                 src="/chick-hatching.gif"
                 alt="Chick hatching animation"
-                className="w-[450px] h-auto animate-fade-in"
+                className="w-[600px] h-auto"
                 style={{ 
                   background: 'transparent !important',
                   backgroundColor: 'transparent !important',
@@ -1066,9 +1066,7 @@ export default function EmbrexDashboard() {
                   boxShadow: 'none !important',
                   margin: 0,
                   padding: 0,
-                  animationDuration: '1.2s',
-                  animationDelay: '0.3s',
-                  animationFillMode: 'both'
+                  animation: 'fade-in 1.2s ease-out 0.3s both, scale-in 1s ease-out 0.3s both'
                 }}
               />
               {/* Soft reflection effect */}
@@ -1076,7 +1074,7 @@ export default function EmbrexDashboard() {
                 src="/chick-hatching.gif"
                 alt=""
                 aria-hidden="true"
-                className="w-[450px] h-auto absolute left-0 pointer-events-none"
+                className="w-[600px] h-auto absolute left-0 pointer-events-none"
                 style={{ 
                   background: 'transparent !important',
                   backgroundColor: 'transparent !important',
@@ -1093,12 +1091,6 @@ export default function EmbrexDashboard() {
                 }}
               />
             </div>
-            
-            <p className={`text-sm text-slate-600 text-center mt-6 font-medium transition-all duration-700 delay-300 ${
-              welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}>
-              Working hard to break free...
-            </p>
           </div>
 
           {/* Right Side - Content */}
