@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import BatchFlowSankey from "@/components/dashboard/BatchFlowSankey";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Workflow } from "lucide-react";
+import hatcheryIcon from "@/assets/hatchery-icon.png";
 
 const HouseFlowPage = () => {
   useEffect(() => {
@@ -22,6 +21,18 @@ const HouseFlowPage = () => {
 
   return (
     <div className="p-6">
+      {/* Page Header with Hatchery Icon */}
+      <div className="mb-6 flex items-center gap-4">
+        <img 
+          src={hatcheryIcon} 
+          alt="Hatchery" 
+          className="w-16 h-16 object-contain animate-fade-in"
+        />
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">House Flow Analysis</h1>
+          <p className="text-sm text-muted-foreground">Detailed house flow analysis and batch processing visualization</p>
+        </div>
+      </div>
       <BatchFlowSankey />
     </div>
   );

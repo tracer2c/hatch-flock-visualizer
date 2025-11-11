@@ -4,6 +4,7 @@ import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { ArrowRight, TrendingUp, Info } from "lucide-react";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import utilizationIcon from "@/assets/utilization-icon.png";
 
 const ProcessFlowDashboard = () => {
   const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
@@ -14,8 +15,18 @@ const ProcessFlowDashboard = () => {
 
   if (!performanceMetrics || performanceMetrics.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No batches found for analysis. Create some batches to see process flow data.
+      <div className="text-center py-12">
+        <img 
+          src={utilizationIcon} 
+          alt="System Utilization" 
+          className="w-24 h-24 mx-auto mb-4 object-contain animate-fade-in opacity-70"
+        />
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">
+          No process data available
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Create houses and enter analysis data to see process flow metrics
+        </p>
       </div>
     );
   }

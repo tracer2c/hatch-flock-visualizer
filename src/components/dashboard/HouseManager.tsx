@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import chicksIcon from "@/assets/chicks-icon.png";
 
 interface Flock {
   id: string;
@@ -878,8 +879,18 @@ const calculateHatchDate = (setDate: string) => {
             ))}
           </div>
           {houses.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No houses found. Create your first house to get started.
+            <div className="text-center py-12">
+              <img 
+                src={chicksIcon} 
+                alt="Chicks" 
+                className="w-24 h-24 mx-auto mb-4 object-contain animate-fade-in opacity-70"
+              />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                No houses found
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Create your first house to get started with hatchery operations
+              </p>
             </div>
           )}
         </CardContent>
