@@ -183,6 +183,111 @@ export type Database = {
           },
         ]
       }
+      batch_status_automation_rules: {
+        Row: {
+          company_id: string
+          created_at: string
+          from_status: Database["public"]["Enums"]["batch_status"]
+          id: string
+          is_enabled: boolean
+          min_days_after_set: number
+          min_qa_checks_required: number
+          requires_fertility_data: boolean
+          requires_qa_data: boolean
+          requires_residue_data: boolean
+          rule_name: string
+          to_status: Database["public"]["Enums"]["batch_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string
+          created_at?: string
+          from_status: Database["public"]["Enums"]["batch_status"]
+          id?: string
+          is_enabled?: boolean
+          min_days_after_set?: number
+          min_qa_checks_required?: number
+          requires_fertility_data?: boolean
+          requires_qa_data?: boolean
+          requires_residue_data?: boolean
+          rule_name: string
+          to_status: Database["public"]["Enums"]["batch_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["batch_status"]
+          id?: string
+          is_enabled?: boolean
+          min_days_after_set?: number
+          min_qa_checks_required?: number
+          requires_fertility_data?: boolean
+          requires_qa_data?: boolean
+          requires_residue_data?: boolean
+          rule_name?: string
+          to_status?: Database["public"]["Enums"]["batch_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      batch_status_history: {
+        Row: {
+          batch_id: string
+          change_type: string
+          changed_by: string | null
+          created_at: string
+          data_validation_passed: boolean | null
+          days_since_set: number | null
+          from_status: Database["public"]["Enums"]["batch_status"]
+          id: string
+          notes: string | null
+          rule_applied: string | null
+          to_status: Database["public"]["Enums"]["batch_status"]
+        }
+        Insert: {
+          batch_id: string
+          change_type: string
+          changed_by?: string | null
+          created_at?: string
+          data_validation_passed?: boolean | null
+          days_since_set?: number | null
+          from_status: Database["public"]["Enums"]["batch_status"]
+          id?: string
+          notes?: string | null
+          rule_applied?: string | null
+          to_status: Database["public"]["Enums"]["batch_status"]
+        }
+        Update: {
+          batch_id?: string
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          data_validation_passed?: boolean | null
+          days_since_set?: number | null
+          from_status?: Database["public"]["Enums"]["batch_status"]
+          id?: string
+          notes?: string | null
+          rule_applied?: string | null
+          to_status?: Database["public"]["Enums"]["batch_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_status_history_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_status_history_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           actual_hatch_date: string | null
