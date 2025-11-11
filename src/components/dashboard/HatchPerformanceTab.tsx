@@ -541,7 +541,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, onDataUpdate }: HatchPer
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>House: {editingRecord?.batch_number}</Label>
+              <Label>Hatchery: {editingRecord?.batch_number}</Label>
               <p className="text-sm text-muted-foreground">
                 {editingRecord?.flock_name} (Flock #{editingRecord?.flock_number})
               </p>

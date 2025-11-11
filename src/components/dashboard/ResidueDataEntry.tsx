@@ -349,7 +349,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
         <CardContent>
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <p className="text-sm text-gray-600 mb-2">
-              <strong>Selected House:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
+              <strong>Selected Hatchery:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
             </p>
             <p className="text-sm text-gray-600">Residue analysis data will be automatically linked to this batch.</p>
           </div>
