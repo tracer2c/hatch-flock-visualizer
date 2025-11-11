@@ -143,7 +143,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>Infertile</TableHead>
               <TableHead>Chicks</TableHead>
               <TableHead>{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
-              <TableHead>{showPercentages ? "Dead at Transfer %" : "Dead at Transfer"}</TableHead>
               <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
               <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
               <TableHead>{showPercentages ? "Cull Chicks %" : "Cull Chicks"}</TableHead>
@@ -156,7 +155,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
               <TableHead>{showPercentages ? "Mold %" : "Mold"}</TableHead>
               <TableHead>{showPercentages ? "Abnormal %" : "Abnormal"}</TableHead>
               <TableHead>{showPercentages ? "Brain Defects %" : "Brain Defects"}</TableHead>
-              <TableHead>{showPercentages ? "Dry Egg %" : "Dry Egg"}</TableHead>
+              <TableHead>{showPercentages ? "DY Egg %" : "DY Egg"}</TableHead>
               <TableHead>{showPercentages ? "Malpositioned %" : "Malpositioned"}</TableHead>
               <TableHead>{showPercentages ? "Upside Down %" : "Upside Down"}</TableHead>
               <TableHead>Technician Name</TableHead>
@@ -167,7 +166,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={25} className="text-center text-muted-foreground">
+                <TableCell colSpan={24} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -187,7 +186,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                     <TableCell>{formatValue(item.infertile_eggs, sampleSize)}</TableCell>
                     <TableCell>{item.chicks_hatched || "-"}</TableCell>
                     <TableCell>{formatValue(item.early_dead, sampleSize)}</TableCell>
-                    <TableCell>{formatValue(item.pipped_not_hatched, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.mid_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.late_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malformed_chicks, sampleSize)}</TableCell>
@@ -259,14 +257,6 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                   type="number"
                   value={formData.early_dead || ''}
                   onChange={(e) => setFormData({ ...formData, early_dead: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Dead at Transfer</Label>
-                <Input
-                  type="number"
-                  value={formData.pipped_not_hatched || ''}
-                  onChange={(e) => setFormData({ ...formData, pipped_not_hatched: e.target.value })}
                 />
               </div>
               <div>
@@ -367,7 +357,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
                 />
               </div>
               <div>
-                <Label>Dry Egg</Label>
+                <Label>DY Egg</Label>
                 <Input
                   type="number"
                   value={formData.dry_egg || ''}

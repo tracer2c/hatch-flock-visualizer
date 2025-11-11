@@ -438,6 +438,35 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="chicks" className="flex items-center gap-1">
+                Chicks Hatched
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Auto-calculated: Sample Size - (Infertile + Early + Mid + Late Dead + Culls)
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="chicks"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={calculateChicks()}
+              />
+            </div>
+
+            {/* Characteristics - These don't count toward sample size */}
+            <div className="col-span-3 mt-4 mb-2">
+              <h4 className="text-sm font-semibold text-muted-foreground border-b pb-2">
+                Characteristics (descriptive categories of the above)
+              </h4>
+            </div>
+
+            {/* PIP Numbers */}
+            <div className="space-y-2">
               <Label htmlFor="livePipNumber">Live Pips</Label>
               <Input
                 id="livePipNumber"
@@ -477,55 +506,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 value={(Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="chicks" className="flex items-center gap-1">
-                Chicks Hatched
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Auto-calculated: Sample Size - (Infertile + Early + Mid + Late Dead + Culls)
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="chicks"
-                type="number"
-                disabled
-                className="bg-gray-100 font-semibold"
-                value={calculateChicks()}
-              />
-            </div>
-
-            {/* Characteristics - These don't count toward sample size */}
-            <div className="col-span-3 mt-4 mb-2">
-              <h4 className="text-sm font-semibold text-muted-foreground border-b pb-2">
-                Characteristics (descriptive categories of the above)
-              </h4>
-            </div>
 
             {/* Transfer Data */}
-            <div className="space-y-2">
-              <Label htmlFor="live">Live (at transfer)</Label>
-              <Input
-                id="live"
-                type="number"
-                placeholder="e.g., 520"
-                value={formData.live}
-                onChange={(e) => handleInputChange('live', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dead">Dead (at transfer)</Label>
-              <Input
-                id="dead"
-                type="number"
-                placeholder="e.g., 12"
-                value={formData.dead}
-                onChange={(e) => handleInputChange('dead', e.target.value)}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="handlingCracks">Handling Cracks</Label>
               <Input
@@ -591,7 +573,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dryEgg">Dry Egg</Label>
+              <Label htmlFor="dryEgg">DY Egg</Label>
               <Input
                 id="dryEgg"
                 type="number"

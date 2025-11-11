@@ -79,8 +79,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   // Advanced filters state
   const [filters, setFilters] = useState({
     dateRange: { from: subDays(new Date(), 30), to: new Date() },
-    statuses: ['setting', 'incubating', 'hatching'] as string[],
-    flockIds: [] as string[],
     machineTypes: [] as string[],
     unitIds: [] as string[],
   });
@@ -188,20 +186,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     }));
   };
 
-  const toggleFilterStatus = (status: string, checked: boolean) => {
-    setFilters(prev => ({
-      ...prev,
-      statuses: checked ? [...prev.statuses, status] : prev.statuses.filter(s => s !== status)
-    }));
-  };
-
-  const toggleFilterFlock = (id: string, checked: boolean) => {
-    setFilters(prev => ({
-      ...prev,
-      flockIds: checked ? [...prev.flockIds, id] : prev.flockIds.filter(f => f !== id)
-    }));
-  };
-
   const toggleFilterMachineType = (type: string, checked: boolean) => {
     setFilters(prev => ({
       ...prev,
@@ -219,8 +203,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const clearAllFilters = () => {
     setFilters({
       dateRange: { from: subDays(new Date(), 30), to: new Date() },
-      statuses: ['setting', 'incubating', 'hatching'],
-      flockIds: [],
       machineTypes: [],
       unitIds: [],
     });
@@ -229,8 +211,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const getActiveFilterCount = () => {
     let count = 0;
     if (filters.unitIds.length > 0) count++;
-    if (filters.statuses.length < 6) count++;
-    if (filters.flockIds.length > 0) count++;
     if (filters.machineTypes.length > 0) count++;
     const defaultFrom = subDays(new Date(), 30);
     if (filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
@@ -366,16 +346,8 @@ const calculateHatchDate = (setDate: string) => {
       const setDate = new Date(h.set_date);
       return setDate >= filters.dateRange.from && setDate <= filters.dateRange.to;
     })
-    // Status filter
-    .filter((h) => filters.statuses.length === 0 || filters.statuses.includes(h.status))
     // Unit filter
     .filter((h) => filters.unitIds.length === 0 || (h.unit_id && filters.unitIds.includes(h.unit_id)))
-    // Flock filter
-    .filter((h) => {
-      if (filters.flockIds.length === 0) return true;
-      const flock = flocks.find(f => f.flock_name === h.flock_name);
-      return flock && filters.flockIds.includes(flock.id);
-    })
     // Machine type filter
     .filter((h) => {
       if (filters.machineTypes.length === 0) return true;
@@ -516,7 +488,7 @@ const calculateHatchDate = (setDate: string) => {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Date Range Filter */}
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">Date Range</Label>
@@ -570,46 +542,6 @@ const calculateHatchDate = (setDate: string) => {
                       />
                     </PopoverContent>
                   </Popover>
-                </div>
-
-                {/* Status Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Batch Status</Label>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2">
-                      {['planned', 'setting', 'incubating', 'hatching', 'completed', 'cancelled'].map((status) => (
-                        <label key={status} className="flex items-center gap-2">
-                          <Checkbox
-                            checked={filters.statuses.includes(status)}
-                            onCheckedChange={(c) => toggleFilterStatus(status, Boolean(c))}
-                          />
-                          <Badge className={getStatusColor(status)} variant="outline">
-                            {status}
-                          </Badge>
-                        </label>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-
-                {/* Flock Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Flocks</Label>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2">
-                      {flocks.map((flock) => (
-                        <label key={flock.id} className="flex items-center gap-2">
-                          <Checkbox
-                            checked={filters.flockIds.includes(flock.id)}
-                            onCheckedChange={(c) => toggleFilterFlock(flock.id, Boolean(c))}
-                          />
-                          <span className="text-sm">
-                            {flock.flock_number} - {flock.flock_name}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </ScrollArea>
                 </div>
 
                 {/* Machine Type & Hatchery Filter */}
