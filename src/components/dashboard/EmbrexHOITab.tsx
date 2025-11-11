@@ -142,7 +142,7 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
                         {item.status}
                       </span>
                     </TableCell>
-                    <TableCell>{item.hoi_technician_name || item.clears_technician_name || "-"}</TableCell>
+                    <TableCell>{item.hoi_technician_name || item.clears_technician_name || item.fertility_technician_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">

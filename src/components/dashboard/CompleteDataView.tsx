@@ -39,6 +39,9 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
           ),
           machines (
             machine_number
+          ),
+          fertility_analysis (
+            technician_name
           )
         `)
         .order("set_date", { ascending: false });
@@ -130,6 +133,7 @@ export const CompleteDataView = ({ activeTab, searchTerm }: CompleteDataViewProp
           house_number: batch.flocks?.house_number,
           machine_number: batch.machines?.machine_number,
           batch_id: batch.id,
+          fertility_technician_name: batch.fertility_analysis?.[0]?.technician_name,
         })),
         ...(fertilityData || []).map((f: any) => ({
           ...f,
