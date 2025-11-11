@@ -1036,71 +1036,72 @@ export default function EmbrexDashboard() {
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
-      <div className="max-w-2xl mx-auto px-6 text-center">
-        {/* Main Content Container */}
-        <div className="space-y-12">
+      <div className="max-w-4xl mx-auto px-6">
+        {/* Main Content Container - Flex layout with animation on left */}
+        <div className="flex items-center gap-12">
           
-          {/* Header Section */}
+          {/* Left Side - Chick Hatching Animation */}
           <div 
-            className={`transition-all duration-700 ease-out ${
-              welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            className={`flex-shrink-0 transition-all duration-700 ease-out ${
+              welcomeStep >= 1 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'
             }`}
           >
-            {/* Chick Hatching Animation */}
-            <div className="mb-8">
-              <ChickHatchingAnimation />
-            </div>
+            <ChickHatchingAnimation />
+          </div>
+
+          {/* Right Side - Content */}
+          <div className="flex-1 text-left space-y-8">
             
-            {/* Title */}
-            <h1 className="text-5xl font-bold text-slate-900 mb-4">
-              Timeline Analysis
-            </h1>
-            <div className="h-0.5 w-16 bg-blue-600 mx-auto mb-6"></div>
-          </div>
-
-          {/* Description */}
-          <div 
-            className={`transition-all duration-700 ease-out delay-300 ${
-              welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-          >
-            <p className="text-xl text-slate-600 leading-relaxed mb-8">
-              Discover insights from your hatchery data with powerful visualizations and analytics
-            </p>
-          </div>
-
-          {/* Call to Action */}
-          <div 
-            className={`transition-all duration-700 ease-out delay-700 ${
-              welcomeStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-          >
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-              <p className="text-lg text-slate-700 mb-6">
-                Choose your visualization and metrics to start exploring your data
+            {/* Header Section */}
+            <div 
+              className={`transition-all duration-700 ease-out delay-200 ${
+                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              }`}
+            >
+              {/* Title */}
+              <h1 className="text-6xl font-bold text-slate-900 mb-4">
+                Timeline Analysis
+              </h1>
+              <div className="h-1 w-20 bg-blue-600 mb-6"></div>
+              
+              <p className="text-xl text-slate-600 leading-relaxed">
+                Discover insights from your hatchery data with powerful visualizations and analytics
               </p>
-              
-              {/* Feature Tags */}
-              <div className="flex flex-wrap gap-3 justify-center mb-8">
-                {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
-                  <span 
-                    key={tag}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
+            </div>
+
+            {/* Call to Action */}
+            <div 
+              className={`transition-all duration-700 ease-out delay-500 ${
+                welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              }`}
+            >
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6">
+                <p className="text-base text-slate-700 mb-4">
+                  Choose your visualization and metrics to start exploring your data
+                </p>
+                
+                {/* Feature Tags */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
+                    <span 
+                      key={tag}
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                
+                {/* Start Button */}
+                <Button 
+                  onClick={() => setShowWelcome(false)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                  size="lg"
+                >
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Start Analyzing
+                </Button>
               </div>
-              
-              {/* Start Button */}
-              <Button 
-                onClick={() => setShowWelcome(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-8 rounded-xl transition-colors duration-200"
-                size="lg"
-              >
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Start Analyzing
-              </Button>
             </div>
           </div>
         </div>
