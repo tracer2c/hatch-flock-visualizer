@@ -905,6 +905,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                   <TableHead>Early Dead</TableHead>
                   <TableHead>Mid Dead</TableHead>
                   <TableHead>Late Death</TableHead>
+                  <TableHead>Total Dead</TableHead>
                   <TableHead>Contamination</TableHead>
                   <TableHead>Mold</TableHead>
                   <TableHead>Abnormal</TableHead>
@@ -924,7 +925,10 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     <TableCell>{record.earlyDeath} ({record.earlyDeathPercent}%)</TableCell>
                     <TableCell>{record.midDeath} ({record.midDeathPercent}%)</TableCell>
                     <TableCell>{record.lateDeath} ({record.lateDeathPercent}%)</TableCell>
-                    <TableCell 
+                    <TableCell className="font-medium">
+                      {record.earlyDeath + record.midDeath + record.lateDeath} ({((record.earlyDeath + record.midDeath + record.lateDeath) / record.totalEggs * 100).toFixed(2)}%)
+                    </TableCell>
+                    <TableCell
                       className={record.contaminationPercent > 1 ? "text-red-600 font-medium" : ""}
                     >
                       {record.contamination} ({record.contaminationPercent}%)

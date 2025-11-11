@@ -229,6 +229,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>{showPercentages ? "Early Dead %" : "Early Dead"}</TableHead>
               <TableHead>{showPercentages ? "Mid Dead %" : "Mid Dead"}</TableHead>
               <TableHead>{showPercentages ? "Late Dead %" : "Late Dead"}</TableHead>
+              <TableHead>{showPercentages ? "Total Dead %" : "Total Dead"}</TableHead>
               <TableHead>{showPercentages ? "Cull Chicks %" : "Cull Chicks"}</TableHead>
               <TableHead>{showPercentages ? "Live Pips %" : "Live Pips"}</TableHead>
               <TableHead>{showPercentages ? "Dead Pips %" : "Dead Pips"}</TableHead>
@@ -250,7 +251,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={24} className="text-center text-muted-foreground">
+                <TableCell colSpan={25} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -272,6 +273,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                     <TableCell>{formatValue(item.early_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.mid_dead, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.late_dead, sampleSize)}</TableCell>
+                    <TableCell>{formatValue((item.early_dead || 0) + (item.mid_dead || 0) + (item.late_dead || 0), sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malformed_chicks, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.live_pip_number, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.dead_pip_number, sampleSize)}</TableCell>
