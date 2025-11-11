@@ -3,11 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Calendar as CalendarIcon, Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +37,6 @@ const BatchOverviewDashboard = () => {
   const [selectedDateRange, setSelectedDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [selectedMachine, setSelectedMachine] = useState<string | "all">("all");
   const [showQAAlerts, setShowQAAlerts] = useState(true);
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [pipelineView, setPipelineView] = useState<"active" | "all" | "completed" | "incubating">("active");
 
   const isLoading = batchesLoading || metricsLoading || machinesLoading || alertsLoading;
@@ -303,33 +300,15 @@ const BatchOverviewDashboard = () => {
               <h1 className="text-2xl font-semibold">Operations Dashboard</h1>
             </div>
             <div className="flex items-center gap-4">
-              {/* Date Range Picker */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-start min-w-[200px] h-9">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.from && dateRange.to ? (
-                      <span className="text-sm">
-                        {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd")}
-                      </span>
-                    ) : (
-                      <span className="text-sm">Date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={dateRange as any}
-                    onSelect={(range: any) => {
-                      setDateRange(range);
-                      setSelectedDateRange(range);
-                    }}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              {/* House Flow Button */}
+              <Button 
+                variant="outline" 
+                className="h-9"
+                onClick={() => navigate('/house-flow')}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                House Flow
+              </Button>
 
               {/* Hatchery Filter */}
               <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>

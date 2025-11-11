@@ -24,7 +24,6 @@ import InitializeApp from "./components/InitializeApp";
 import ProjectReport from "./pages/ProjectReport";
 import ChatPage from "./pages/ChatPage";
 import ComparisonModelPage from "./pages/ComparisonModelPage";
-import UnitComparisonPage from "./pages/UnitComparisonPage";
 import HouseFlowPage from "./pages/HouseFlowPage";
 import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
@@ -66,7 +65,6 @@ const App = () => (
                             <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
-                            <Route path="/unit-comparison" element={<UnitComparisonPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
                             <Route path="/data-entry" element={<DataEntryPage />} />
                             <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
