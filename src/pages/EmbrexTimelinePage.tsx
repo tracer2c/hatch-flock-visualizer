@@ -1045,6 +1045,12 @@ export default function EmbrexDashboard() {
             className={`flex-shrink-0 transition-all duration-1000 ease-out ${
               welcomeStep >= 1 ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-12 scale-95'
             }`}
+            style={{
+              background: 'transparent !important',
+              backgroundColor: 'transparent !important',
+              boxShadow: 'none !important',
+              border: 'none !important'
+            }}
           >
             {/* Video - floating seamlessly on page background */}
             <video 
@@ -1054,9 +1060,13 @@ export default function EmbrexDashboard() {
               playsInline
               className="w-[450px] h-auto"
               style={{ 
-                backgroundColor: 'transparent',
-                border: 'none',
-                outline: 'none'
+                background: 'transparent !important',
+                backgroundColor: 'transparent !important',
+                border: 'none !important',
+                outline: 'none !important',
+                boxShadow: 'none !important',
+                margin: 0,
+                padding: 0
               }}
             >
               <source src="/chick-hatching.mp4" type="video/mp4" />
