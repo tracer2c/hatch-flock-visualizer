@@ -381,8 +381,6 @@ export default function EmbrexDashboard() {
               hof_percent,
               hoi_percent,
               if_dev_percent,
-              early_dead,
-              late_dead,
               fertile_eggs,
               infertile_eggs,
               sample_size
@@ -393,7 +391,9 @@ export default function EmbrexDashboard() {
               hof_percent,
               hoi_percent,
               if_dev_percent,
-              mid_dead
+              early_dead,
+              mid_dead,
+              late_dead
             )
           `)
           .order("set_date", { ascending: true });
@@ -412,14 +412,11 @@ export default function EmbrexDashboard() {
           let late_dead_percent = 0;
           let total_mortality_percent = 0;
           
-          if (fertility && totalEggs > 0) {
-            early_dead_percent = ((fertility.early_dead ?? 0) / totalEggs) * 100;
-            late_dead_percent = ((fertility.late_dead ?? 0) / totalEggs) * 100;
-          }
-          
-          // Add mid_dead from residue analysis
+          // All mortality data comes from residue analysis
           if (residue && totalEggs > 0) {
+            early_dead_percent = ((residue.early_dead ?? 0) / totalEggs) * 100;
             mid_dead_percent = ((residue.mid_dead ?? 0) / totalEggs) * 100;
+            late_dead_percent = ((residue.late_dead ?? 0) / totalEggs) * 100;
           }
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
@@ -456,9 +453,9 @@ export default function EmbrexDashboard() {
             hatch_vs_injected_diff,
             fertile_eggs: fertility?.fertile_eggs,
             infertile_eggs: fertility?.infertile_eggs,
-            early_dead: fertility?.early_dead,
+            early_dead: residue?.early_dead,
             mid_dead: residue?.mid_dead,
-            late_dead: fertility?.late_dead,
+            late_dead: residue?.late_dead,
             hatch_count: chicksHatched,
             sample_size: fertility?.sample_size,
           };
