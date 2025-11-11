@@ -117,8 +117,16 @@ const BatchOverviewDashboard = () => {
       if (pipelineView === "active" && batch.status === "completed") return false;
       if (pipelineView === "completed" && batch.status !== "completed") return false;
       if (pipelineView === "incubating" && batch.status !== "incubating") return false;
-      // "all" shows everything
       
+      // When "all" is selected, show everything without other filters
+      if (pipelineView === "all") {
+        const searchMatch = !searchTerm || 
+          batch.batch_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          batch.flocks?.flock_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        return searchMatch;
+      }
+      
+      // For other pipeline views, apply all filters
       const statusMatch = statusFilter === "all" || batch.status === statusFilter;
       const machineMatch = selectedMachine === "all" || batch.machine_id === selectedMachine;
       const dateMatch = isWithinRange(batch.set_date || batch.created_at);
