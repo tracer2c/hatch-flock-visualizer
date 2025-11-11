@@ -1042,21 +1042,30 @@ export default function EmbrexDashboard() {
           
           {/* Left Side - Chick Hatching Video */}
           <div 
-            className={`flex-shrink-0 transition-all duration-700 ease-out ${
-              welcomeStep >= 1 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'
+            className={`flex-shrink-0 transition-all duration-1000 ease-out ${
+              welcomeStep >= 1 ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-12 scale-95'
             }`}
           >
             <div className="relative">
-              <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="w-[280px] h-auto rounded-2xl shadow-2xl"
-              >
-                <source src="/chick-hatching.mp4" type="video/mp4" />
-              </video>
-              <p className="text-sm text-slate-600 text-center mt-3 font-medium">
+              {/* Glow effect background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-200/40 via-orange-200/30 to-yellow-300/40 rounded-3xl blur-2xl scale-110 animate-pulse" />
+              
+              {/* Video container with enhanced shadow */}
+              <div className="relative">
+                <video 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  className="w-[320px] h-auto rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] relative z-10"
+                >
+                  <source src="/chick-hatching.mp4" type="video/mp4" />
+                </video>
+              </div>
+              
+              <p className={`text-sm text-slate-600 text-center mt-4 font-medium transition-all duration-700 delay-300 ${
+                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}>
                 Working hard to break free...
               </p>
             </div>
@@ -1067,15 +1076,17 @@ export default function EmbrexDashboard() {
             
             {/* Header Section */}
             <div 
-              className={`transition-all duration-700 ease-out delay-200 ${
-                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              className={`transition-all duration-1000 ease-out delay-300 ${
+                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
             >
               {/* Title */}
               <h1 className="text-6xl font-bold text-slate-900 mb-4">
                 Timeline Analysis
               </h1>
-              <div className="h-1 w-20 bg-blue-600 mb-6"></div>
+              <div className={`h-1 w-20 bg-blue-600 mb-6 transition-all duration-700 delay-500 ${
+                welcomeStep >= 1 ? 'scale-x-100' : 'scale-x-0'
+              } origin-left`}></div>
               
               <p className="text-xl text-slate-600 leading-relaxed">
                 Discover insights from your hatchery data with powerful visualizations and analytics
@@ -1084,8 +1095,8 @@ export default function EmbrexDashboard() {
 
             {/* Call to Action */}
             <div 
-              className={`transition-all duration-700 ease-out delay-500 ${
-                welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              className={`transition-all duration-1000 ease-out delay-700 ${
+                welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
             >
               <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6">
