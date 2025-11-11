@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit, Trash2, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Trash2, AlertCircle, Filter, ChevronDown, X } from "lucide-react";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,12 +25,128 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    sortOrder: 'desc' as 'asc' | 'desc',
+    selectedHatcheries: [] as string[],
+    selectedMachines: [] as string[],
+    technicianSearch: '',
+    dateFrom: '',
+    dateTo: '',
+  });
 
-  const filteredData = data.filter((item) =>
-    Object.values(item).some((val) =>
-      String(val).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  // Load unique hatcheries and machines
+  const [hatcheries, setHatcheries] = useState<any[]>([]);
+  const [machines, setMachines] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadFilters();
+  }, []);
+
+  const loadFilters = async () => {
+    const [hatcheriesRes, machinesRes] = await Promise.all([
+      supabase.from('units').select('*').order('name'),
+      supabase.from('machines').select('*').order('machine_number'),
+    ]);
+
+    if (hatcheriesRes.data) setHatcheries(hatcheriesRes.data);
+    if (machinesRes.data) setMachines(machinesRes.data);
+  };
+
+  // Apply filters to data
+  const filteredData = useMemo(() => {
+    let result = [...data];
+
+    // Apply search term
+    if (searchTerm) {
+      const searchStr = searchTerm.toLowerCase();
+      result = result.filter(item =>
+        item.flock_name?.toLowerCase().includes(searchStr) ||
+        item.flock_number?.toString().includes(searchStr) ||
+        item.batch_number?.toLowerCase().includes(searchStr) ||
+        item.house_number?.toLowerCase().includes(searchStr)
+      );
+    }
+
+    // Apply hatchery filter
+    if (filters.selectedHatcheries.length > 0) {
+      result = result.filter(item => 
+        item.unit_id && filters.selectedHatcheries.includes(item.unit_id)
+      );
+    }
+
+    // Apply machine filter
+    if (filters.selectedMachines.length > 0) {
+      result = result.filter(item => 
+        item.machine_id && filters.selectedMachines.includes(item.machine_id)
+      );
+    }
+
+    // Apply technician search
+    if (filters.technicianSearch) {
+      const techSearch = filters.technicianSearch.toLowerCase();
+      result = result.filter(item => 
+        item.lab_technician?.toLowerCase().includes(techSearch)
+      );
+    }
+
+    // Apply date range filter
+    if (filters.dateFrom) {
+      result = result.filter(item => item.set_date >= filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      result = result.filter(item => item.set_date <= filters.dateTo);
+    }
+
+    // Apply sort order
+    result.sort((a, b) => {
+      const dateA = new Date(a.set_date).getTime();
+      const dateB = new Date(b.set_date).getTime();
+      return filters.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+
+    return result;
+  }, [data, searchTerm, filters]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.selectedHatcheries.length > 0) count++;
+    if (filters.selectedMachines.length > 0) count++;
+    if (filters.technicianSearch) count++;
+    if (filters.dateFrom || filters.dateTo) count++;
+    return count;
+  }, [filters]);
+
+  const clearAllFilters = () => {
+    setFilters({
+      sortOrder: 'desc',
+      selectedHatcheries: [],
+      selectedMachines: [],
+      technicianSearch: '',
+      dateFrom: '',
+      dateTo: '',
+    });
+  };
+
+  const toggleHatchery = (id: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedHatcheries: prev.selectedHatcheries.includes(id)
+        ? prev.selectedHatcheries.filter(h => h !== id)
+        : [...prev.selectedHatcheries, id]
+    }));
+  };
+
+  const toggleMachine = (id: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedMachines: prev.selectedMachines.includes(id)
+        ? prev.selectedMachines.filter(m => m !== id)
+        : [...prev.selectedMachines, id]
+    }));
+  };
 
   const handleEdit = (record: any) => {
     setEditingRecord(record);
@@ -130,7 +250,118 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
 
   return (
     <TooltipProvider>
-      <div className="overflow-x-auto">
+      <>
+        {/* Filters Section */}
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary">{activeFilterCount}</Badge>
+            )}
+            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </Button>
+
+          <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+            <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-muted/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Sort Order */}
+                <div className="space-y-2">
+                  <Label>Sort Order</Label>
+                  <Select value={filters.sortOrder} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, sortOrder: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">Newest First</SelectItem>
+                      <SelectItem value="asc">Oldest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Technician Search */}
+                <div className="space-y-2">
+                  <Label>Technician Name</Label>
+                  <Input
+                    placeholder="Search by technician..."
+                    value={filters.technicianSearch}
+                    onChange={(e) => setFilters(prev => ({ ...prev, technicianSearch: e.target.value }))}
+                  />
+                </div>
+
+                {/* Date Range - Side by Side */}
+                <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-1">
+                  <Label>Date Range</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="date"
+                      placeholder="From"
+                      value={filters.dateFrom}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="To"
+                      value={filters.dateTo}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Hatcheries */}
+                <div className="space-y-2">
+                  <Label>Hatcheries</Label>
+                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
+                    {hatcheries.map(h => (
+                      <div key={h.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={filters.selectedHatcheries.includes(h.id)}
+                          onCheckedChange={() => toggleHatchery(h.id)}
+                        />
+                        <span className="text-sm">{h.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Machines */}
+                <div className="space-y-2">
+                  <Label>Machines</Label>
+                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
+                    {machines.map(m => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={filters.selectedMachines.includes(m.id)}
+                          onCheckedChange={() => toggleMachine(m.id)}
+                        />
+                        <span className="text-sm">{m.machine_number}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="mt-4"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear All Filters
+                </Button>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -228,6 +459,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
             )}
           </TableBody>
         </Table>
+      </div>
 
         <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -391,7 +623,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, onDataUpdate }: Residue
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </>
     </TooltipProvider>
   );
 };
