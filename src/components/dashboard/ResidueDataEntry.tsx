@@ -134,12 +134,20 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
   // Calculate only the core mortality categories that count toward sample size
   const calculateTotalUsed = () => {
-    const coreValues = ['infertile', 'earlyDeath', 'midDeath', 'lateDeath', 'cullChicks'];
+    const coreValues = ['infertile', 'earlyDeath', 'midDeath', 'lateDeath', 'cullChicks', 'livePipNumber', 'deadPipNumber'];
     
     return coreValues.reduce((sum, field) => {
       const value = Number(formData[field as keyof typeof formData]) || 0;
       return sum + value;
     }, 0);
+  };
+
+  // Calculate total dead (early + mid + late)
+  const calculateTotalDead = () => {
+    const earlyDead = Number(formData.earlyDeath) || 0;
+    const midDead = Number(formData.midDeath) || 0;
+    const lateDead = Number(formData.lateDeath) || 0;
+    return earlyDead + midDead + lateDead;
   };
 
   // Auto-calculate chicks based on sample size minus core mortality
@@ -351,7 +359,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
             <p className="text-sm text-gray-600 mb-2">
               <strong>Selected House:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
             </p>
-            <p className="text-sm text-gray-600">Residue analysis data will be automatically linked to this batch.</p>
+            <p className="text-sm text-gray-600">Residue analysis data will be automatically linked to this house.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Basic Information - Auto-populated from batch */}
@@ -438,35 +446,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="chicks" className="flex items-center gap-1">
-                Chicks Hatched
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Auto-calculated: Sample Size - (Infertile + Early + Mid + Late Dead + Culls)
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="chicks"
-                type="number"
-                disabled
-                className="bg-gray-100 font-semibold"
-                value={calculateChicks()}
-              />
-            </div>
-
-            {/* Characteristics - These don't count toward sample size */}
-            <div className="col-span-3 mt-4 mb-2">
-              <h4 className="text-sm font-semibold text-muted-foreground border-b pb-2">
-                Characteristics (descriptive categories of the above)
-              </h4>
-            </div>
-
-            {/* PIP Numbers */}
-            <div className="space-y-2">
               <Label htmlFor="livePipNumber">Live Pips</Label>
               <Input
                 id="livePipNumber"
@@ -486,25 +465,73 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 onChange={(e) => handleInputChange('deadPipNumber', e.target.value)}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="totalPips" className="flex items-center gap-1">
-                Total Pips
+              <Label htmlFor="totalDead" className="flex items-center gap-1">
+                Total Dead
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 opacity-70" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    Auto-calculated: Live Pips + Dead Pips
+                    Auto-calculated: Early Dead + Mid Dead + Late Dead
                   </TooltipContent>
                 </Tooltip>
               </Label>
               <Input
-                id="totalPips"
+                id="totalDead"
                 type="number"
                 disabled
                 className="bg-gray-100 font-semibold"
-                value={(Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0)}
+                value={calculateTotalDead()}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalDeadPercent" className="flex items-center gap-1">
+                Total Dead %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Percentage of total dead out of sample size
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="totalDeadPercent"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={calculatePercentage(calculateTotalDead())}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="chicks" className="flex items-center gap-1">
+                Chicks Hatched
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Auto-calculated: Sample Size - (Infertile + Early + Mid + Late Dead + Culls + Live Pips + Dead Pips)
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="chicks"
+                type="number"
+                disabled
+                className="bg-gray-100 font-semibold"
+                value={calculateChicks()}
+              />
+            </div>
+
+            {/* Characteristics - These don't count toward sample size */}
+            <div className="col-span-3 mt-4 mb-2">
+              <h4 className="text-sm font-semibold text-muted-foreground border-b pb-2">
+                Characteristics (descriptive categories of the above)
+              </h4>
             </div>
 
             {/* Transfer Data */}
@@ -783,7 +810,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Core mortality includes: Infertile + Early Dead + Mid Dead + Late Dead + Culls
+              Core mortality includes: Infertile + Early Dead + Mid Dead + Late Dead + Culls + Live Pips + Dead Pips
             </p>
           </div>
 
