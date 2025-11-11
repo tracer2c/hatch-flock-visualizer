@@ -71,6 +71,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [houseView, setHouseView] = useState<"all" | "active" | "completed" | "incubating">("active");
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
@@ -442,8 +443,17 @@ const calculateHatchDate = (setDate: string) => {
   };
 
   const filteredHouses = houses
-    // Date range filter
+    // House view filter
     .filter((h) => {
+      if (houseView === "all") return true;
+      if (houseView === "active") return h.status !== "completed";
+      if (houseView === "completed") return h.status === "completed";
+      if (houseView === "incubating") return h.status === "incubating";
+      return true;
+    })
+    // Date range filter (only apply when not viewing "all")
+    .filter((h) => {
+      if (houseView === "all") return true;
       const setDate = new Date(h.set_date);
       return setDate >= filters.dateRange.from && setDate <= filters.dateRange.to;
     })
@@ -777,15 +787,36 @@ const calculateHatchDate = (setDate: string) => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Active Houses</CardTitle>
-            <div className="w-64">
-              <Input
-                type="text"
-                placeholder="Search houses..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
+            <div className="flex items-center gap-3">
+              <CardTitle>
+                {houseView === "all" && "All Houses"}
+                {houseView === "active" && "Active Houses"}
+                {houseView === "completed" && "Completed Houses"}
+                {houseView === "incubating" && "Incubating Houses"}
+              </CardTitle>
+              <Badge variant="secondary">{filteredHouses.length} houses</Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <Select value={houseView} onValueChange={(value: any) => setHouseView(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Houses</SelectItem>
+                  <SelectItem value="active">Active Pipeline</SelectItem>
+                  <SelectItem value="incubating">Incubating</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="w-64">
+                <Input
+                  type="text"
+                  placeholder="Search houses..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -820,9 +851,15 @@ const calculateHatchDate = (setDate: string) => {
                     <Package2 className="h-4 w-4" />
                     {house.flock_number} - {house.flock_name}
                   </div>
+                  {house.technician_name && (
+                    <div className="flex items-center gap-2">
+                      <Factory className="h-4 w-4" />
+                      <span className="font-medium text-primary">Technician: {house.technician_name}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Factory className="h-4 w-4" />
-                    {house.machine_number}
+                    {house.machine_number} ({house.machine_type})
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
