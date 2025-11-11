@@ -766,11 +766,13 @@ export type Database = {
           breed: Database["public"]["Enums"]["breed_type"]
           company_id: string
           created_at: string
+          created_by: string | null
           flock_name: string
           flock_number: number
           house_number: string | null
           id: string
           notes: string | null
+          technician_name: string | null
           total_birds: number | null
           unit_id: string | null
           updated_at: string
@@ -781,11 +783,13 @@ export type Database = {
           breed: Database["public"]["Enums"]["breed_type"]
           company_id?: string
           created_at?: string
+          created_by?: string | null
           flock_name: string
           flock_number: number
           house_number?: string | null
           id?: string
           notes?: string | null
+          technician_name?: string | null
           total_birds?: number | null
           unit_id?: string | null
           updated_at?: string
@@ -796,11 +800,13 @@ export type Database = {
           breed?: Database["public"]["Enums"]["breed_type"]
           company_id?: string
           created_at?: string
+          created_by?: string | null
           flock_name?: string
           flock_number?: number
           house_number?: string | null
           id?: string
           notes?: string | null
+          technician_name?: string | null
           total_birds?: number | null
           unit_id?: string | null
           updated_at?: string

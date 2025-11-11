@@ -17,11 +17,12 @@ interface Flock {
   flock_name: string;
   house_number: string | null;
   age_weeks: number;
-  breed: 'broiler' | 'layer' | 'breeder';
   arrival_date: string;
   total_birds: number | null;
   notes: string | null;
   unit_id?: string | null;
+  technician_name?: string | null;
+  created_by?: string | null;
 }
 
 const FlockManager = () => {
@@ -34,19 +35,18 @@ const FlockManager = () => {
     flockName: '',
     houseNumber: '',
     minAge: '',
-    maxAge: '',
-    breed: [] as string[]
+    maxAge: ''
   });
   const [formData, setFormData] = useState({
     flock_number: '',
     flock_name: '',
     house_number: '',
     age_weeks: '',
-    breed: '',
     arrival_date: new Date().toISOString().split('T')[0],
     total_birds: '',
     notes: '',
     unitId: '',
+    technician_name: '',
   });
   const { toast } = useToast();
 
@@ -99,35 +99,38 @@ const FlockManager = () => {
       flock_name: '',
       house_number: '',
       age_weeks: '',
-      breed: '',
       arrival_date: new Date().toISOString().split('T')[0],
       total_birds: '',
       notes: '',
       unitId: '',
+      technician_name: '',
     });
     setEditingFlock(null);
   };
 
   const handleSubmit = async () => {
-    if (!formData.flock_number || !formData.flock_name || !formData.age_weeks || !formData.breed || !formData.unitId) {
+    if (!formData.flock_number || !formData.flock_name || !formData.age_weeks || !formData.unitId || !formData.technician_name) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields (including Unit).",
+        description: "Please fill in all required fields (including Hatchery and Technician Name).",
         variant: "destructive"
       });
       return;
     }
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     const flockData = {
       flock_number: parseInt(formData.flock_number),
       flock_name: formData.flock_name,
       house_number: formData.house_number || null,
       age_weeks: parseInt(formData.age_weeks),
-      breed: formData.breed as 'broiler' | 'layer' | 'breeder',
       arrival_date: formData.arrival_date,
       total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
       notes: formData.notes || null,
       unit_id: formData.unitId,
+      technician_name: formData.technician_name,
+      created_by: user?.id || null,
     };
 
     if (editingFlock) {
@@ -175,11 +178,11 @@ const FlockManager = () => {
       flock_name: flock.flock_name,
       house_number: flock.house_number || '',
       age_weeks: flock.age_weeks.toString(),
-      breed: flock.breed,
       arrival_date: flock.arrival_date,
       total_birds: flock.total_birds?.toString() || '',
       notes: flock.notes || '',
       unitId: flock.unit_id || '',
+      technician_name: flock.technician_name || '',
     });
     setShowDialog(true);
   };
@@ -213,7 +216,6 @@ const FlockManager = () => {
       if ((filters as any).houseNumber && (filters as any).houseNumber !== "all" && flock.house_number !== (filters as any).houseNumber) return false;
       if ((filters as any).minAge && flock.age_weeks < parseInt((filters as any).minAge)) return false;
       if ((filters as any).maxAge && flock.age_weeks > parseInt((filters as any).maxAge)) return false;
-      if ((filters as any).breed.length > 0 && !(filters as any).breed.includes(flock.breed)) return false;
       return true;
     });
   }, [flocks, filters]);
@@ -229,7 +231,6 @@ const FlockManager = () => {
     if (filters.houseNumber && filters.houseNumber !== "all") count++;
     if (filters.minAge) count++;
     if (filters.maxAge) count++;
-    if (filters.breed.length > 0) count++;
     return count;
   }, [filters]);
 
@@ -239,34 +240,15 @@ const FlockManager = () => {
       flockName: '',
       houseNumber: '',
       minAge: '',
-      maxAge: '',
-      breed: []
+      maxAge: ''
     });
   };
 
   const clearFilter = (filterKey: string) => {
     setFilters(prev => ({
       ...prev,
-      [filterKey]: filterKey === 'breed' ? [] : filterKey === 'houseNumber' ? 'all' : ''
+      [filterKey]: filterKey === 'houseNumber' ? 'all' : ''
     }));
-  };
-
-  const handleBreedToggle = (breed: string) => {
-    setFilters(prev => ({
-      ...prev,
-      breed: prev.breed.includes(breed) 
-        ? prev.breed.filter(b => b !== breed)
-        : [...prev.breed, breed]
-    }));
-  };
-
-  const getBreedColor = (breed: string) => {
-    switch (breed) {
-      case 'broiler': return 'bg-blue-100 text-blue-800';
-      case 'layer': return 'bg-green-100 text-green-800';
-      case 'breeder': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   };
 
   return (
@@ -342,19 +324,6 @@ const FlockManager = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Breed *</Label>
-                  <Select value={formData.breed} onValueChange={(value) => setFormData(prev => ({ ...prev, breed: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select breed" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="broiler">Broiler</SelectItem>
-                      <SelectItem value="layer">Layer</SelectItem>
-                      <SelectItem value="breeder">Breeder</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label>Arrival Date *</Label>
                   <Input
                     type="date"
@@ -372,15 +341,15 @@ const FlockManager = () => {
                   />
                 </div>
 
-                {/* Unit selection */}
+                {/* Hatchery selection */}
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Unit *</Label>
+                  <Label>Hatchery *</Label>
                   <Select
                     value={formData.unitId}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue placeholder="Select hatchery" />
                     </SelectTrigger>
                     <SelectContent>
                       {units.map((u) => (
@@ -390,6 +359,15 @@ const FlockManager = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Technician Name *</Label>
+                  <Input
+                    value={formData.technician_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, technician_name: e.target.value }))}
+                    placeholder="Enter technician name"
+                  />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -519,23 +497,6 @@ const FlockManager = () => {
                     )}
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Breed</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {['broiler', 'layer', 'breeder'].map((breed) => (
-                      <Button
-                        key={breed}
-                        variant={filters.breed.includes(breed) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleBreedToggle(breed)}
-                        className="capitalize"
-                      >
-                        {breed}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {activeFilterCount > 0 && (
@@ -558,9 +519,6 @@ const FlockManager = () => {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
-                  <Badge className={getBreedColor(flock.breed)}>
-                    {flock.breed}
-                  </Badge>
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
@@ -587,6 +545,11 @@ const FlockManager = () => {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     {flock.total_birds.toLocaleString()} birds
+                  </div>
+                )}
+                {flock.technician_name && (
+                  <div className="text-xs">
+                    Technician: {flock.technician_name}
                   </div>
                 )}
                 <div className="text-xs">
