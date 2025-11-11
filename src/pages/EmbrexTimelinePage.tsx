@@ -1052,21 +1052,47 @@ export default function EmbrexDashboard() {
               border: 'none !important'
             }}
           >
-            {/* Animated GIF - floating seamlessly on page background with true transparency */}
-            <img 
-              src="/chick-hatching.gif"
-              alt="Chick hatching animation"
-              className="w-[450px] h-auto"
-              style={{ 
-                background: 'transparent !important',
-                backgroundColor: 'transparent !important',
-                border: 'none !important',
-                outline: 'none !important',
-                boxShadow: 'none !important',
-                margin: 0,
-                padding: 0
-              }}
-            />
+            {/* Animated GIF with reflection - floating seamlessly on page background */}
+            <div className="relative">
+              <img 
+                src="/chick-hatching.gif"
+                alt="Chick hatching animation"
+                className="w-[450px] h-auto animate-fade-in"
+                style={{ 
+                  background: 'transparent !important',
+                  backgroundColor: 'transparent !important',
+                  border: 'none !important',
+                  outline: 'none !important',
+                  boxShadow: 'none !important',
+                  margin: 0,
+                  padding: 0,
+                  animationDuration: '1.2s',
+                  animationDelay: '0.3s',
+                  animationFillMode: 'both'
+                }}
+              />
+              {/* Soft reflection effect */}
+              <img 
+                src="/chick-hatching.gif"
+                alt=""
+                aria-hidden="true"
+                className="w-[450px] h-auto absolute left-0 pointer-events-none"
+                style={{ 
+                  background: 'transparent !important',
+                  backgroundColor: 'transparent !important',
+                  border: 'none !important',
+                  outline: 'none !important',
+                  boxShadow: 'none !important',
+                  margin: 0,
+                  padding: 0,
+                  top: '100%',
+                  transform: 'scaleY(-1)',
+                  opacity: 0.15,
+                  maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 60%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 60%)'
+                }}
+              />
+            </div>
             
             <p className={`text-sm text-slate-600 text-center mt-6 font-medium transition-all duration-700 delay-300 ${
               welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
