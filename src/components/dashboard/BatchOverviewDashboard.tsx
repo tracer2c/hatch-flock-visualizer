@@ -38,6 +38,7 @@ const BatchOverviewDashboard = () => {
   const [selectedMachine, setSelectedMachine] = useState<string | "all">("all");
   const [showQAAlerts, setShowQAAlerts] = useState(true);
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [pipelineView, setPipelineView] = useState<"active" | "all" | "completed" | "incubating">("active");
 
   const isLoading = batchesLoading || metricsLoading || machinesLoading || alertsLoading;
 
@@ -112,6 +113,12 @@ const BatchOverviewDashboard = () => {
     if (!activeBatches) return [];
     
     return activeBatches.filter((batch: any) => {
+      // Apply pipeline view filter
+      if (pipelineView === "active" && batch.status === "completed") return false;
+      if (pipelineView === "completed" && batch.status !== "completed") return false;
+      if (pipelineView === "incubating" && batch.status !== "incubating") return false;
+      // "all" shows everything
+      
       const statusMatch = statusFilter === "all" || batch.status === statusFilter;
       const machineMatch = selectedMachine === "all" || batch.machine_id === selectedMachine;
       const dateMatch = isWithinRange(batch.set_date || batch.created_at);
@@ -121,7 +128,7 @@ const BatchOverviewDashboard = () => {
       
       return statusMatch && machineMatch && dateMatch && searchMatch;
     });
-  }, [activeBatches, statusFilter, selectedMachine, selectedDateRange, searchTerm]);
+  }, [activeBatches, pipelineView, statusFilter, selectedMachine, selectedDateRange, searchTerm]);
 
   const listForDisplay = useMemo(() => {
     return filteredActiveBatches;
@@ -329,7 +336,7 @@ const BatchOverviewDashboard = () => {
               title="All Houses"
               value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
-              description="Total number of houses (batches) in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
+              description="Total number of houses in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
               trendLabel={
                 lastWeekBatchesCount > 0 
                   ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
@@ -384,10 +391,26 @@ const BatchOverviewDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
-                      <CardTitle>Active Houses Pipeline</CardTitle>
+                      <CardTitle>
+                        {pipelineView === "all" && "All Houses"}
+                        {pipelineView === "active" && "Active Houses Pipeline"}
+                        {pipelineView === "completed" && "Completed Houses"}
+                        {pipelineView === "incubating" && "Incubating Houses"}
+                      </CardTitle>
                       <Badge variant="secondary">{listForDisplay.length} houses</Badge>
                     </div>
                     <div className="flex gap-2">
+                      <Select value={pipelineView} onValueChange={(value: any) => setPipelineView(value)}>
+                        <SelectTrigger className="w-[160px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Houses</SelectItem>
+                          <SelectItem value="active">Active Pipeline</SelectItem>
+                          <SelectItem value="incubating">Incubating</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div className="relative">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input

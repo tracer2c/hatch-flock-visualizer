@@ -37,6 +37,7 @@ interface TimelineData {
   flockName: string;
   batchNumber: string;
   setDate: string;
+  hatcheryName?: string;
 }
 
 interface FlockOption {
@@ -108,6 +109,11 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
           eggs_cleared,
           eggs_injected,
           set_date,
+          unit_id,
+          units (
+            id,
+            name
+          ),
           flocks!inner (
             id,
             flock_name,
@@ -158,21 +164,25 @@ export const EmbrexTimeline = ({ className }: EmbrexTimelineProps) => {
           flockName: batch.flocks.flock_name,
           batchNumber: batch.batch_number,
           setDate: batch.set_date,
+          hatcheryName: batch.units?.name || 'Unknown',
         };
       }) || [];
 
       // Aggregate by time period
       const aggregatedData = processedData.reduce((acc: Record<string, TimelineData>, curr) => {
-        if (!acc[curr.period]) {
-          acc[curr.period] = {
+        // Create unique key combining period and hatchery to show all hatcheries
+        const key = `${curr.period}-${curr.hatcheryName}`;
+        if (!acc[key]) {
+          acc[key] = {
             period: curr.period,
             totalEggs: 0,
             flockName: curr.flockName,
             batchNumber: curr.batchNumber,
             setDate: curr.setDate,
+            hatcheryName: curr.hatcheryName,
           };
         }
-        acc[curr.period].totalEggs += curr.totalEggs;
+        acc[key].totalEggs += curr.totalEggs;
         return acc;
       }, {});
 
