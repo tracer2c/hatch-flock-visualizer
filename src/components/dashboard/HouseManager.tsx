@@ -164,21 +164,31 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         variant: "destructive"
       });
     } else {
-      const formattedHouses = data?.map(batch => ({
-        id: batch.id,
-        batch_number: batch.batch_number,
-        flock_name: batch.flocks?.flock_name || '',
-        flock_number: batch.flocks?.flock_number || 0,
-        house_number: batch.flocks?.house_number || '',
-        machine_number: batch.machines?.machine_number || '',
-        machine_type: batch.machines?.machine_type || '',
-        set_date: batch.set_date,
-        expected_hatch_date: batch.expected_hatch_date,
-        total_eggs_set: batch.total_eggs_set,
-        status: batch.status,
-        unit_id: batch.unit_id ?? null,
-        technician_name: batch.flocks?.technician_name || null,
-      })) || [];
+      const formattedHouses = data?.map(batch => {
+        // Extract house number from batch_number if not in flocks table
+        // batch_number format: "FlockName #HouseNumber"
+        let houseNumber = batch.flocks?.house_number || '';
+        if (!houseNumber && batch.batch_number.includes('#')) {
+          const parts = batch.batch_number.split('#');
+          houseNumber = parts[1]?.trim() || '';
+        }
+        
+        return {
+          id: batch.id,
+          batch_number: batch.batch_number,
+          flock_name: batch.flocks?.flock_name || '',
+          flock_number: batch.flocks?.flock_number || 0,
+          house_number: houseNumber,
+          machine_number: batch.machines?.machine_number || '',
+          machine_type: batch.machines?.machine_type || '',
+          set_date: batch.set_date,
+          expected_hatch_date: batch.expected_hatch_date,
+          total_eggs_set: batch.total_eggs_set,
+          status: batch.status,
+          unit_id: batch.unit_id ?? null,
+          technician_name: batch.flocks?.technician_name || null,
+        };
+      }) || [];
       setHouses(formattedHouses);
     }
   };
