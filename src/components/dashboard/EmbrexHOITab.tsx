@@ -320,7 +320,7 @@ export const EmbrexHOITab = ({ data, searchTerm, onDataUpdate }: EmbrexHOITabPro
               <TableHead>House #</TableHead>
               <TableHead>Age (weeks)</TableHead>
               <TableHead>Set Date</TableHead>
-              <TableHead>Sample Size</TableHead>
+              <TableHead>Total Eggs Set</TableHead>
               <TableHead>Clears</TableHead>
               <TableHead>Clear %</TableHead>
               <TableHead>Injected</TableHead>
