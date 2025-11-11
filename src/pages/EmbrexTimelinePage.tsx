@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { EggCrackingAnimation } from "@/components/animations/EggCrackingAnimation";
 
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
@@ -1037,81 +1036,58 @@ export default function EmbrexDashboard() {
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Main Content Container - Flex layout with animation on left */}
-        <div className="flex items-center gap-16">
+      <div className="max-w-4xl mx-auto px-6 text-center">
+        {/* Header Section */}
+        <div 
+          className={`transition-all duration-1000 ease-out ${
+            welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
+          {/* Title */}
+          <h1 className="text-6xl font-bold text-slate-900 mb-4">
+            Timeline Analysis
+          </h1>
+          <div className={`h-1 w-20 bg-blue-600 mb-6 mx-auto transition-all duration-700 delay-300 ${
+            welcomeStep >= 1 ? 'scale-x-100' : 'scale-x-0'
+          } origin-center`}></div>
           
-          {/* Left Side - Egg Cracking Animation */}
-          <div 
-            className={`flex-shrink-0 transition-all duration-1000 ease-out ${
-              welcomeStep >= 1 ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-12 scale-95'
-            }`}
-            style={{
-              background: 'transparent !important',
-              backgroundColor: 'transparent !important',
-              boxShadow: 'none !important',
-              border: 'none !important'
-            }}
-          >
-            <EggCrackingAnimation />
-          </div>
+          <p className="text-xl text-slate-600 leading-relaxed mb-8">
+            Discover insights from your hatchery data with powerful visualizations and analytics
+          </p>
+        </div>
 
-          {/* Right Side - Content */}
-          <div className="flex-1 text-left space-y-8">
+        {/* Call to Action */}
+        <div 
+          className={`transition-all duration-1000 ease-out delay-500 ${
+            welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6 max-w-md mx-auto">
+            <p className="text-base text-slate-700 mb-4">
+              Choose your visualization and metrics to start exploring your data
+            </p>
             
-            {/* Header Section */}
-            <div 
-              className={`transition-all duration-1000 ease-out delay-300 ${
-                welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              }`}
-            >
-              {/* Title */}
-              <h1 className="text-6xl font-bold text-slate-900 mb-4">
-                Timeline Analysis
-              </h1>
-              <div className={`h-1 w-20 bg-blue-600 mb-6 transition-all duration-700 delay-500 ${
-                welcomeStep >= 1 ? 'scale-x-100' : 'scale-x-0'
-              } origin-left`}></div>
-              
-              <p className="text-xl text-slate-600 leading-relaxed">
-                Discover insights from your hatchery data with powerful visualizations and analytics
-              </p>
-            </div>
-
-            {/* Call to Action */}
-            <div 
-              className={`transition-all duration-1000 ease-out delay-700 ${
-                welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              }`}
-            >
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6">
-                <p className="text-base text-slate-700 mb-4">
-                  Choose your visualization and metrics to start exploring your data
-                </p>
-                
-                {/* Feature Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
-                    <span 
-                      key={tag}
-                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                
-                {/* Start Button */}
-                <Button 
-                  onClick={() => setShowWelcome(false)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 hover:scale-[1.02]"
-                  size="lg"
+            {/* Feature Tags */}
+            <div className="flex flex-wrap gap-2 mb-6 justify-center">
+              {["Timeline", "Trends", "Comparisons", "Analytics"].map((tag) => (
+                <span 
+                  key={tag}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
                 >
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  Start Analyzing
-                </Button>
-              </div>
+                  {tag}
+                </span>
+              ))}
             </div>
+            
+            {/* Start Button */}
+            <Button 
+              onClick={() => setShowWelcome(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+              size="lg"
+            >
+              <BarChart3 className="h-5 w-5 mr-2" />
+              Start Analyzing
+            </Button>
           </div>
         </div>
       </div>
@@ -1449,6 +1425,15 @@ export default function EmbrexDashboard() {
         <main className="h-full overflow-hidden">
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
+              {/* Chick Hatching Image */}
+              <div className="flex justify-center py-4 border-b border-slate-200">
+                <img 
+                  src="/chick-hatching.gif" 
+                  alt="Chick hatching" 
+                  className="w-32 h-32 object-contain"
+                />
+              </div>
+              
               <CardHeader className="flex-none pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
