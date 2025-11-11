@@ -65,6 +65,14 @@ interface HouseManagerProps {
 }
 
 const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
+  // Helper function to get current local time in HH:MM format
+  const getCurrentTime = () => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [houses, setHouses] = useState<House[]>([]);
@@ -78,7 +86,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     machineId: '',
     unitId: '',
     setDate: new Date().toISOString().split('T')[0],
-    setTime: '09:00',
+    setTime: getCurrentTime(),
     totalEggs: '',
     customHouseNumber: '',
   });
@@ -112,6 +120,16 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     loadHouses();
     loadUnits();
   }, []);
+
+  // Auto-set current time when create form is opened
+  useEffect(() => {
+    if (showCreateForm) {
+      setFormData(prev => ({
+        ...prev,
+        setTime: getCurrentTime()
+      }));
+    }
+  }, [showCreateForm]);
 
   const loadFlocks = async () => {
     const { data, error } = await supabase
@@ -432,7 +450,7 @@ const calculateHatchDate = (setDate: string) => {
         machineId: '', 
         unitId: '', 
         setDate: new Date().toISOString().split('T')[0],
-        setTime: '09:00',
+        setTime: getCurrentTime(),
         totalEggs: '',
         customHouseNumber: '',
       });
@@ -584,7 +602,11 @@ const calculateHatchDate = (setDate: string) => {
                   type="time"
                   value={formData.setTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, setTime: e.target.value }))}
+                  placeholder="Automatically set to current time"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Auto-set to your current local time. You can change it if needed.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Total Eggs Set</Label>
