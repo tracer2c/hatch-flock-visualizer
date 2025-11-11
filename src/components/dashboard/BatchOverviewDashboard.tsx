@@ -31,8 +31,10 @@ const BatchOverviewDashboard = () => {
   const [totalBatchesCount, setTotalBatchesCount] = useState(0);
   const [lastWeekBatchesCount, setLastWeekBatchesCount] = useState(0);
   const [targets, setTargets] = useState<any>(null);
+  const [units, setUnits] = useState<any[]>([]);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [hatcheryFilter, setHatcheryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedDateRange, setSelectedDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [selectedMachine, setSelectedMachine] = useState<string | "all">("all");
@@ -120,78 +122,119 @@ const BatchOverviewDashboard = () => {
       
       // When "all" is selected, show everything without other filters
       if (pipelineView === "all") {
+        // Apply hatchery filter
+        const hatcheryMatch = hatcheryFilter === "all" || batch.unit_id === hatcheryFilter;
         const searchMatch = !searchTerm || 
           batch.batch_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           batch.flocks?.flock_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        return searchMatch;
+        return hatcheryMatch && searchMatch;
       }
       
       // For other pipeline views, apply all filters
-      const statusMatch = statusFilter === "all" || batch.status === statusFilter;
+      const hatcheryMatch = hatcheryFilter === "all" || batch.unit_id === hatcheryFilter;
       const machineMatch = selectedMachine === "all" || batch.machine_id === selectedMachine;
       const dateMatch = isWithinRange(batch.set_date || batch.created_at);
       const searchMatch = !searchTerm || 
         batch.batch_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         batch.flocks?.flock_name?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return statusMatch && machineMatch && dateMatch && searchMatch;
+      return hatcheryMatch && machineMatch && dateMatch && searchMatch;
     });
-  }, [activeBatches, pipelineView, statusFilter, selectedMachine, selectedDateRange, searchTerm]);
+  }, [activeBatches, pipelineView, hatcheryFilter, selectedMachine, selectedDateRange, searchTerm]);
 
   const listForDisplay = useMemo(() => {
     return filteredActiveBatches;
   }, [filteredActiveBatches]);
 
   const avgFert = useMemo(() => {
-    const validBatches = performanceMetrics?.filter((batch: any) => 
-      batch.fertility != null && !isNaN(batch.fertility)
-    ) || [];
+    const validBatches = performanceMetrics?.filter((batch: any) => {
+      const hatcheryMatch = hatcheryFilter === "all" || 
+        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
+      return batch.fertility != null && !isNaN(batch.fertility) && hatcheryMatch;
+    }) || [];
     
     if (validBatches.length === 0) return 0;
     
     const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.fertility, 0);
     return Math.round(sum / validBatches.length);
-  }, [performanceMetrics]);
+  }, [performanceMetrics, hatcheryFilter, activeBatches]);
 
   const avgHatch = useMemo(() => {
-    const validBatches = performanceMetrics?.filter((batch: any) => 
-      batch.hatch != null && !isNaN(batch.hatch)
-    ) || [];
+    const validBatches = performanceMetrics?.filter((batch: any) => {
+      const hatcheryMatch = hatcheryFilter === "all" || 
+        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
+      return batch.hatch != null && !isNaN(batch.hatch) && hatcheryMatch;
+    }) || [];
     
     if (validBatches.length === 0) return 0;
     
     const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hatch, 0);
     return Math.round(sum / validBatches.length);
-  }, [performanceMetrics]);
+  }, [performanceMetrics, hatcheryFilter, activeBatches]);
 
   const systemUtilization = useMemo(() => {
     if (!machineUtilization || machineUtilization.length === 0) return 0;
     
+    // Filter machines by hatchery if selected
+    const filteredMachines = hatcheryFilter === "all" 
+      ? machineUtilization 
+      : machineUtilization.filter((machine: any) => machine.unit_id === hatcheryFilter);
+    
+    if (filteredMachines.length === 0) return 0;
+    
     // Calculate average machine utilization
-    const sum = machineUtilization.reduce((acc: number, machine: any) => 
+    const sum = filteredMachines.reduce((acc: number, machine: any) => 
       acc + (machine.utilization || 0), 0
     );
-    return Math.round(sum / machineUtilization.length);
-  }, [machineUtilization]);
+    return Math.round(sum / filteredMachines.length);
+  }, [machineUtilization, hatcheryFilter]);
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      // Total batches
-      const { count, error } = await supabase
+      // Fetch units/hatcheries
+      const { data: unitsData } = await supabase
+        .from('units')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (unitsData) {
+        setUnits(unitsData);
+      }
+
+      // Build hatchery filter
+      const hatcheryCondition = hatcheryFilter !== 'all' 
+        ? `.eq('unit_id', '${hatcheryFilter}')`
+        : '';
+
+      // Total batches for selected hatchery
+      let batchQuery = supabase
         .from('batches')
         .select('*', { count: 'exact', head: true });
+      
+      if (hatcheryFilter !== 'all') {
+        batchQuery = batchQuery.eq('unit_id', hatcheryFilter);
+      }
+      
+      const { count, error } = await batchQuery;
       
       if (!error && count !== null) {
         setTotalBatchesCount(count);
       }
 
-      // Last week batches
+      // Last week batches for selected hatchery
       const lastWeekDate = new Date();
       lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-      const { count: lastWeekCount } = await supabase
+      
+      let lastWeekQuery = supabase
         .from('batches')
         .select('*', { count: 'exact', head: true })
         .lte('created_at', lastWeekDate.toISOString());
+      
+      if (hatcheryFilter !== 'all') {
+        lastWeekQuery = lastWeekQuery.eq('unit_id', hatcheryFilter);
+      }
+      
+      const { count: lastWeekCount } = await lastWeekQuery;
       
       if (lastWeekCount !== null) {
         setLastWeekBatchesCount(lastWeekCount);
@@ -214,7 +257,7 @@ const BatchOverviewDashboard = () => {
     };
     
     fetchMetrics();
-  }, []);
+  }, [hatcheryFilter]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -227,10 +270,10 @@ const BatchOverviewDashboard = () => {
           avgHatch: avgHatch,
           alerts: qaAlerts?.length || 0
         },
-        selectedFilters: { status: statusFilter, machine: selectedMachine, search: searchTerm }
+        selectedFilters: { hatchery: hatcheryFilter, machine: selectedMachine, search: searchTerm }
       });
     }
-  }, [isLoading, listForDisplay, avgFert, avgHatch, qaAlerts, statusFilter, selectedMachine, searchTerm, updateContext]);
+  }, [isLoading, listForDisplay, avgFert, avgHatch, qaAlerts, hatcheryFilter, selectedMachine, searchTerm, updateContext]);
 
   return (
     <>
@@ -257,7 +300,7 @@ const BatchOverviewDashboard = () => {
           <div className="flex items-center justify-between border-b pb-4">
             <div className="flex items-center gap-3">
               <Activity className="h-6 w-6" />
-              <h1 className="text-2xl font-semibold">Overview & Operations Center</h1>
+              <h1 className="text-2xl font-semibold">Operations Dashboard</h1>
             </div>
             <div className="flex items-center gap-4">
               {/* Date Range Picker */}
@@ -288,17 +331,18 @@ const BatchOverviewDashboard = () => {
                 </PopoverContent>
               </Popover>
 
-              {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder="Status" />
+              {/* Hatchery Filter */}
+              <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue placeholder="Hatchery" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="setting">Setting</SelectItem>
-                  <SelectItem value="incubating">Incubating</SelectItem>
-                  <SelectItem value="hatching">Hatching</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="all">All Hatcheries</SelectItem>
+                  {units.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
