@@ -329,7 +329,11 @@ const BatchOverviewDashboard = () => {
               title="All Houses"
               value={totalBatchesCount.toString()}
               icon={<Building2 className="h-5 w-5" />}
-              trendLabel={lastWeekBatchesCount > 0 ? `+${totalBatchesCount - lastWeekBatchesCount} vs last week` : "No comparison data"}
+              trendLabel={
+                lastWeekBatchesCount > 0 
+                  ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
+                  : `Total houses in system`
+              }
               trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
             />
             <StatCard

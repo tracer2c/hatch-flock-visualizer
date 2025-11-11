@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
 import { ArrowRight, TrendingUp } from "lucide-react";
-import { AITooltip } from "@/components/ui/ai-tooltip";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 
 const ProcessFlowDashboard = () => {
@@ -253,22 +252,15 @@ const ProcessFlowDashboard = () => {
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <AITooltip 
-                          chartType="age-performance" 
-                          data={{ age: label, metrics: payload }} 
-                          chartConfig={{ type: 'line' }}
-                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                        >
-                          <div>
-                            <p className="font-medium mb-2">Age: {label} weeks</p>
-                            {payload.map((entry, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <span style={{ color: entry.color }}>{entry.name}: </span>
-                                <span className="font-medium">{entry.value}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        </AITooltip>
+                        <div className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg">
+                          <p className="font-medium mb-2">Age: {label} weeks</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center gap-3">
+                              <span style={{ color: entry.color }}>{entry.name}</span>
+                              <span className="font-medium">{Number(entry.value).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
                       );
                     }
                     return null;
@@ -309,22 +301,15 @@ const ProcessFlowDashboard = () => {
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <AITooltip 
-                          chartType="breed-performance" 
-                          data={{ breed: label, metrics: payload }} 
-                          chartConfig={{ type: 'bar' }}
-                          className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg"
-                        >
-                          <div>
-                            <p className="font-medium mb-2">{label}</p>
-                            {payload.map((entry, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <span style={{ color: entry.color }}>{entry.name}: </span>
-                                <span className="font-medium">{entry.value}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        </AITooltip>
+                        <div className="min-w-[200px] p-3 bg-card border border-border rounded-lg shadow-lg">
+                          <p className="font-medium mb-2">{label}</p>
+                          {payload.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center gap-3">
+                              <span style={{ color: entry.color }}>{entry.name}</span>
+                              <span className="font-medium">{Number(entry.value).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
                       );
                     }
                     return null;
