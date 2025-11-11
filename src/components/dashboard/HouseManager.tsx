@@ -277,7 +277,7 @@ const calculateHatchDate = (setDate: string) => {
   const handleUpdateHouse = async () => {
     if (!editingHouse) return;
     
-    if (!editFormData.machineId || !editFormData.totalEggs || !editFormData.unitId) {
+    if (!editFormData.machineId || !editFormData.unitId) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -294,7 +294,7 @@ const calculateHatchDate = (setDate: string) => {
         set_date: editFormData.setDate,
         set_time: editFormData.setTime,
         expected_hatch_date: expectedHatchDate,
-        total_eggs_set: parseInt(editFormData.totalEggs),
+        total_eggs_set: editFormData.totalEggs ? parseInt(editFormData.totalEggs) : 0,
         machine_id: editFormData.machineId,
         unit_id: editFormData.unitId,
         status: editFormData.status,
@@ -320,7 +320,7 @@ const calculateHatchDate = (setDate: string) => {
   };
 
   const createHouse = async () => {
-    if (!formData.machineId || !formData.totalEggs || !formData.unitId || !formData.flockId) {
+    if (!formData.machineId || !formData.unitId || !formData.flockId) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -391,7 +391,7 @@ const calculateHatchDate = (setDate: string) => {
         set_date: formData.setDate,
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
-        total_eggs_set: parseInt(formData.totalEggs),
+        total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
         status: 'setting'
       })
       .select()
