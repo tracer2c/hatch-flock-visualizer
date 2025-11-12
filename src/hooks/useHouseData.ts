@@ -4,30 +4,33 @@ import { supabase } from '@/integrations/supabase/client';
 export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
     queryKey: ['batches-with-relations', viewMode],
+    staleTime: 30000, // Keep data fresh for 30 seconds
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
         .select(`
-          *,
-          flocks (
+          id,
+          batch_number,
+          status,
+          set_date,
+          set_time,
+          expected_hatch_date,
+          total_eggs_set,
+          eggs_injected,
+          chicks_hatched,
+          unit_id,
+          machine_id,
+          created_at,
+          flocks!inner (
             flock_number,
             flock_name,
-            age_weeks,
-            breed,
-            house_number,
-            total_birds
+            age_weeks
           ),
-          machines (
+          machines!inner (
             machine_number,
             machine_type,
-            capacity,
-            location,
             status
-          ),
-          fertility_analysis (*),
-          egg_pack_quality (*),
-          qa_monitoring (*),
-          residue_analysis (*)
+          )
         `)
         .eq('data_type', viewMode)
         .order('created_at', { ascending: false });
@@ -62,6 +65,7 @@ export const useActiveBatches = (viewMode: 'original' | 'dummy' = 'original') =>
 export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
     queryKey: ['batch-performance-metrics', viewMode],
+    staleTime: 30000, // Keep data fresh for 30 seconds
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')

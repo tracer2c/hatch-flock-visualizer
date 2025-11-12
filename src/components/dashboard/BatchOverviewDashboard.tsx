@@ -195,70 +195,64 @@ const BatchOverviewDashboard = () => {
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      // Fetch units/hatcheries
-      const { data: unitsData } = await supabase
-        .from('units')
-        .select('*')
-        .order('name', { ascending: true });
-      
-      if (unitsData) {
-        setUnits(unitsData);
-      }
+      try {
+        // Fetch all queries in parallel for better performance
+        const [unitsResult, totalResult, lastWeekResult, targetsResult] = await Promise.all([
+          // Units query
+          supabase.from('units').select('id, name').order('name', { ascending: true }),
+          
+          // Total batches query
+          (async () => {
+            let query = supabase
+              .from('batches')
+              .select('*', { count: 'exact', head: true })
+              .eq('data_type', viewMode);
+            
+            if (hatcheryFilter !== 'all') {
+              query = query.eq('unit_id', hatcheryFilter);
+            }
+            return query;
+          })(),
+          
+          // Last week batches query
+          (async () => {
+            const lastWeekDate = new Date();
+            lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+            let query = supabase
+              .from('batches')
+              .select('*', { count: 'exact', head: true })
+              .eq('data_type', viewMode)
+              .gte('created_at', lastWeekDate.toISOString());
+            
+            if (hatcheryFilter !== 'all') {
+              query = query.eq('unit_id', hatcheryFilter);
+            }
+            return query;
+          })(),
+          
+          // Targets query
+          supabase
+            .from('custom_targets')
+            .select('*')
+            .eq('is_active', true)
+            .eq('target_type', 'global')
+        ]);
 
-      // Build hatchery filter
-      const hatcheryCondition = hatcheryFilter !== 'all' 
-        ? `.eq('unit_id', '${hatcheryFilter}')`
-        : '';
-
-      // Total batches for selected hatchery
-      let batchQuery = supabase
-        .from('batches')
-        .select('*', { count: 'exact', head: true })
-        .eq('data_type', viewMode);
-      
-      if (hatcheryFilter !== 'all') {
-        batchQuery = batchQuery.eq('unit_id', hatcheryFilter);
-      }
-      
-      const { count, error } = await batchQuery;
-      
-      if (!error && count !== null) {
-        setTotalBatchesCount(count);
-      }
-
-      // Last week batches for selected hatchery
-      const lastWeekDate = new Date();
-      lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-      
-      let lastWeekQuery = supabase
-        .from('batches')
-        .select('*', { count: 'exact', head: true })
-        .eq('data_type', viewMode)
-        .lte('created_at', lastWeekDate.toISOString());
-      
-      if (hatcheryFilter !== 'all') {
-        lastWeekQuery = lastWeekQuery.eq('unit_id', hatcheryFilter);
-      }
-      
-      const { count: lastWeekCount } = await lastWeekQuery;
-      
-      if (lastWeekCount !== null) {
-        setLastWeekBatchesCount(lastWeekCount);
-      }
-
-      // Fetch targets
-      const { data: targetData } = await supabase
-        .from('custom_targets')
-        .select('*')
-        .eq('is_active', true)
-        .eq('target_type', 'global');
-      
-      if (targetData && targetData.length > 0) {
-        const targetsMap: any = {};
-        targetData.forEach((t: any) => {
-          targetsMap[t.metric_name] = t.target_value;
-        });
-        setTargets(targetsMap);
+        // Process results
+        if (unitsResult.data) setUnits(unitsResult.data);
+        if (totalResult.count !== null) setTotalBatchesCount(totalResult.count);
+        if (lastWeekResult.count !== null) setLastWeekBatchesCount(lastWeekResult.count);
+        
+        if (targetsResult.data && targetsResult.data.length > 0) {
+          const targetsMap: any = {};
+          targetsResult.data.forEach((t: any) => {
+            targetsMap[t.metric_name] = t.target_value;
+          });
+          setTargets(targetsMap);
+        }
+        
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
       }
     };
     
@@ -289,14 +283,14 @@ const BatchOverviewDashboard = () => {
   return (
     <>
       {isLoading ? (
-        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-6 gap-6">
-          <Skeleton className="h-16" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-4">
+          <Skeleton className="h-14" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="h-24" />
             ))}
           </div>
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-12 gap-4">
             <div className="col-span-12 lg:col-span-8">
               <Skeleton className="h-full" />
             </div>
@@ -306,15 +300,10 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-6 gap-6">
-          {/* Integrated Header */}
-          <div className="flex items-center justify-between border-b pb-4">
+        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-4">
+          {/* Compact Header with Filters */}
+          <div className="flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-3">
-              <Activity className="h-6 w-6" />
-              <h1 className="text-2xl font-semibold">Operations Dashboard</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              {/* House Flow Button */}
               <Button 
                 variant="outline" 
                 className="h-9"
@@ -323,6 +312,8 @@ const BatchOverviewDashboard = () => {
                 <TrendingUp className="mr-2 h-4 w-4" />
                 House Flow
               </Button>
+            </div>
+            <div className="flex items-center gap-3">
 
               {/* Hatchery Filter */}
               <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
@@ -373,10 +364,10 @@ const BatchOverviewDashboard = () => {
                 <Download className="h-4 w-4 mr-2" /> Export
               </Button>
             </div>
-          </div>
+      </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
@@ -425,10 +416,10 @@ const BatchOverviewDashboard = () => {
               }
               trendDirection={targets?.machine_utilization ? (systemUtilization >= targets.machine_utilization ? "up" : "down") : null}
             />
-          </div>
+      </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-12 gap-6 min-h-0">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-12 gap-4 min-h-0">
             {/* Active Houses Pipeline */}
             <div className="col-span-12 lg:col-span-8 min-h-0">
               <Card className="h-full flex flex-col">

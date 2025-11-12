@@ -34,7 +34,16 @@ import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { HelpProvider } from "./contexts/HelpContext";
 import ContextualHelpBot from "./components/ContextualHelpBot";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // Data fresh for 30 seconds
+      gcTime: 300000, // Garbage collection time for 5 minutes
+      refetchOnWindowFocus: false, // Don't refetch on tab switch
+      retry: 1, // Only retry once on failure
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
