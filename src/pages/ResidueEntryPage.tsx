@@ -93,7 +93,64 @@ const ResidueEntryPage = () => {
         variant: "destructive"
       });
     } else {
-      setResidueData(data || []);
+      // Transform database records to display format
+      const transformedData = (data || []).map(dbRecord => {
+        const TOTAL_EGGS = dbRecord.sample_size || 648;
+        const calculatePercentage = (value: number) => Number(((value / TOTAL_EGGS) * 100).toFixed(2));
+        
+        return {
+          id: dbRecord.id,
+          name: houseInfo?.flock_name || '',
+          flockNumber: houseInfo?.flock_number || 0,
+          houseNumber: Number(houseInfo?.house_number) || 1,
+          infertile: dbRecord.infertile_eggs || 0,
+          infertilePercent: calculatePercentage(dbRecord.infertile_eggs || 0),
+          chicks: TOTAL_EGGS - (dbRecord.infertile_eggs || 0) - (dbRecord.early_dead || 0) - (dbRecord.mid_dead || 0) - (dbRecord.late_dead || 0) - (dbRecord.malformed_chicks || 0) - (dbRecord.live_pip_number || 0) - (dbRecord.dead_pip_number || 0),
+          earlyDeath: dbRecord.early_dead || 0,
+          earlyDeathPercent: calculatePercentage(dbRecord.early_dead || 0),
+          live: 0, // Not stored in DB
+          livePercent: 0,
+          dead: 0, // Not stored in DB
+          deadPercent: 0,
+          midDeath: dbRecord.mid_dead || 0,
+          midDeathPercent: calculatePercentage(dbRecord.mid_dead || 0),
+          lateDeath: dbRecord.late_dead || 0,
+          lateDeathPercent: calculatePercentage(dbRecord.late_dead || 0),
+          cullChicks: dbRecord.malformed_chicks || 0,
+          handlingCracks: dbRecord.handling_cracks || 0,
+          handlingCracksPercent: calculatePercentage(dbRecord.handling_cracks || 0),
+          transferCrack: dbRecord.transfer_crack || 0,
+          transferCrackPercent: calculatePercentage(dbRecord.transfer_crack || 0),
+          contamination: dbRecord.contaminated_eggs || 0,
+          contaminationPercent: calculatePercentage(dbRecord.contaminated_eggs || 0),
+          mold: dbRecord.mold || 0,
+          moldPercent: calculatePercentage(dbRecord.mold || 0),
+          abnormal: dbRecord.abnormal || 0,
+          abnormalPercent: calculatePercentage(dbRecord.abnormal || 0),
+          brain: dbRecord.brain_defects || 0,
+          brainPercent: calculatePercentage(dbRecord.brain_defects || 0),
+          dryEgg: dbRecord.dry_egg || 0,
+          dryEggPercent: calculatePercentage(dbRecord.dry_egg || 0),
+          malpositioned: dbRecord.malpositioned || 0,
+          malpositionedPercent: calculatePercentage(dbRecord.malpositioned || 0),
+          upsideDown: dbRecord.upside_down || 0,
+          upsideDownPercent: calculatePercentage(dbRecord.upside_down || 0),
+          livePipNumber: dbRecord.live_pip_number || 0,
+          deadPipNumber: dbRecord.dead_pip_number || 0,
+          pipNumber: dbRecord.pip_number || 0,
+          totalEggs: TOTAL_EGGS,
+          sampleSize: dbRecord.sample_size || 648,
+          fertileEggs: dbRecord.fertile_eggs || 0,
+          hatchPercent: dbRecord.hatch_percent || 0,
+          hofPercent: dbRecord.hof_percent || 0,
+          hoiPercent: dbRecord.hoi_percent || 0,
+          ifDevPercent: dbRecord.if_dev_percent || 0,
+          technicianName: dbRecord.lab_technician || '',
+          notes: dbRecord.notes || ''
+        };
+      });
+      
+      setResidueData(transformedData);
     }
   };
 
@@ -103,40 +160,66 @@ const ResidueEntryPage = () => {
       try {
         const residueData = {
           batch_id: houseId,
-          infertile_eggs: record.infertile,
-          contaminated_eggs: record.contamination,
-          pipped_not_hatched: record.pipNumber,
-          unhatched_fertile: record.earlyDeath + record.lateDeath,
-          malformed_chicks: record.cullChicks,
-          total_residue_count: record.totalEggs,
-          sample_size: record.sampleSize,
+          sample_size: record.sampleSize || 648,
+          infertile_eggs: record.infertile || 0,
+          fertile_eggs: record.fertileEggs || 0,
+          // Save mortality fields separately
+          early_dead: record.earlyDeath || 0,
+          mid_dead: record.midDeath || 0,
+          late_dead: record.lateDeath || 0,
+          // Save PIP fields separately
+          live_pip_number: record.livePipNumber || 0,
+          dead_pip_number: record.deadPipNumber || 0,
+          pip_number: record.pipNumber || 0,
+          // Save other residue attributes
+          malformed_chicks: record.cullChicks || 0,
+          contaminated_eggs: record.contamination || 0,
+          handling_cracks: record.handlingCracks || 0,
+          transfer_crack: record.transferCrack || 0,
+          mold: record.mold || 0,
+          abnormal: record.abnormal || 0,
+          brain_defects: record.brain || 0,
+          dry_egg: record.dryEgg || 0,
+          malpositioned: record.malpositioned || 0,
+          upside_down: record.upsideDown || 0,
+          // Calculate total residue count
+          total_residue_count: (record.earlyDeath || 0) + (record.midDeath || 0) + 
+                              (record.lateDeath || 0) + (record.cullChicks || 0),
+          // Save hatchability metrics
           hatch_percent: record.hatchPercent,
           hof_percent: record.hofPercent,
           hoi_percent: record.hoiPercent,
           if_dev_percent: record.ifDevPercent,
-          fertile_eggs: record.fertileEggs,
-          mid_dead: record.midDeath || 0,
-          analysis_date: new Date().toISOString().split('T')[0],
+          // Save technician and notes
           lab_technician: record.technicianName || null,
           notes: record.notes || null,
+          analysis_date: new Date().toISOString().split('T')[0],
         };
 
         const { error } = await supabase
           .from('residue_analysis')
           .upsert(residueData, {
-            onConflict: 'batch_id,analysis_date'
+            onConflict: 'batch_id'
           });
 
         if (error) throw error;
       } catch (error) {
         console.error('Error saving residue data:', error);
+        toast({
+          title: "Error",
+          description: `Failed to save residue data: ${error.message}`,
+          variant: "destructive"
+        });
+        return; // Stop processing on error
       }
     }
     
-    setResidueData(newData);
+    // Reload from database after successful save
+    await loadResidueData();
+    
     toast({
-      title: "Residue Data Updated",
-      description: "Data saved successfully"
+      title: "Success",
+      description: "Residue data saved successfully"
     });
   };
 
