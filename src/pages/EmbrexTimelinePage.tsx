@@ -404,7 +404,10 @@ export default function EmbrexDashboard() {
           const fertility = b.fertility_analysis?.[0];
           const residue = b.residue_analysis?.[0];
           const totalEggs = Number(b.total_eggs_set ?? 0);
-          const eggsInjected = Number(b.eggs_injected ?? 0);
+          
+          // Auto-calculate from fertility_analysis if not set in batches table
+          const eggsCleared = Number(b.eggs_cleared ?? fertility?.infertile_eggs ?? 0);
+          const eggsInjected = Number(b.eggs_injected ?? fertility?.fertile_eggs ?? 0);
           const chicksHatched = Number(b.chicks_hatched ?? 0);
           
           let early_dead_percent = 0;
@@ -438,7 +441,7 @@ export default function EmbrexDashboard() {
             flock_name: b.flocks.flock_name,
             age_weeks: Number(b.flocks.age_weeks ?? 0),
             total_eggs_set: totalEggs,
-            eggs_cleared: Number(b.eggs_cleared ?? 0),
+            eggs_cleared: eggsCleared,
             eggs_injected: eggsInjected,
             set_date: b.set_date,
             status: b.status ?? "",
