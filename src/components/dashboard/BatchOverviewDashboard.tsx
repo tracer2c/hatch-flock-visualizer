@@ -301,52 +301,61 @@ const BatchOverviewDashboard = () => {
         </div>
       ) : (
         <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-4">
-          {/* Compact Header with Filters */}
-          <div className="flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-3">
+          {/* Enterprise Header - Navigation & Filters */}
+          <div className="flex items-center justify-between border-b pb-4 mb-2">
+            {/* Left Section: Navigation + Primary Filters */}
+            <div className="flex items-center gap-2">
+              {/* Navigation */}
               <Button 
                 variant="outline" 
-                className="h-9"
+                className="h-9 shadow-sm hover:shadow-md transition-all duration-200"
                 onClick={() => navigate('/house-flow')}
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
                 House Flow
               </Button>
-            </div>
-            <div className="flex items-center gap-3">
-
-              {/* Hatchery Filter */}
-              <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
-                <SelectTrigger className="w-[160px] h-9">
-                  <SelectValue placeholder="Hatchery" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Hatcheries</SelectItem>
-                  {units.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Machine Filter */}
-              {machinesList && machinesList.length > 0 && (
-                <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                  <SelectTrigger className="w-[160px] h-9">
-                    <SelectValue placeholder="Machine" />
+              
+              {/* Divider */}
+              <div className="h-6 w-px bg-border mx-1" />
+              
+              {/* Filters Group */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30 border border-border/50">
+                {/* Hatchery Filter */}
+                <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
+                  <SelectTrigger className="w-[180px] h-9 bg-background">
+                    <SelectValue placeholder="All Hatcheries" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All machines</SelectItem>
-                    {machinesList.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    <SelectItem value="all">All Hatcheries</SelectItem>
+                    {units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
 
-              {/* Simple View Toggle */}
-              <div className="flex items-center gap-2">
+                {/* Machine Filter */}
+                {machinesList && machinesList.length > 0 && (
+                  <Select value={selectedMachine} onValueChange={setSelectedMachine}>
+                    <SelectTrigger className="w-[180px] h-9 bg-background">
+                      <SelectValue placeholder="All Machines" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Machines</SelectItem>
+                      {machinesList.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            {/* Right Section: View Controls + Actions */}
+            <div className="flex items-center gap-4">
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background">
                 <Badge variant={displayMode === 'simple' ? 'default' : 'secondary'} className="text-xs">
                   {displayMode === 'simple' ? 'Simple' : 'Detailed'}
                 </Badge>
@@ -356,15 +365,20 @@ const BatchOverviewDashboard = () => {
                 />
               </div>
 
+              {/* Divider */}
+              <div className="h-6 w-px bg-border" />
+
               {/* Action Buttons */}
-              <Button variant="outline" size="sm" onClick={handleRefresh}>
-                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-              </Button>
-              <Button size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" /> Export
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleRefresh} className="shadow-sm hover:shadow-md transition-all duration-200">
+                  <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+                </Button>
+                <Button size="sm" onClick={handleExport} className="shadow-sm hover:shadow-md transition-all duration-200">
+                  <Download className="h-4 w-4 mr-2" /> Export
+                </Button>
+              </div>
             </div>
-      </div>
+          </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
