@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Database } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -112,6 +112,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     machineTypes: [] as string[],
     unitIds: [] as string[],
     technicianName: '',
+    dataType: 'all' as 'all' | 'original' | 'dummy',
   });
   
   const { toast } = useToast();
@@ -260,6 +261,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       machineTypes: [],
       unitIds: [],
       technicianName: '',
+      dataType: 'all',
     });
   };
 
@@ -268,6 +270,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     if (filters.unitIds.length > 0) count++;
     if (filters.machineTypes.length > 0) count++;
     if (filters.technicianName) count++;
+    if (filters.dataType !== 'all') count++;
     const defaultFrom = subDays(new Date(), 30);
     if (filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
         filters.dateRange.to.getTime() < new Date().getTime() - 86400000) count++;
@@ -503,6 +506,11 @@ const calculateHatchDate = (setDate: string) => {
     .filter((h) => {
       if (!filters.technicianName) return true;
       return h.technician_name?.toLowerCase().includes(filters.technicianName.toLowerCase());
+    })
+    // Data type filter
+    .filter((h) => {
+      if (filters.dataType === 'all') return true;
+      return h.data_type === filters.dataType;
     })
     // Search filter
     .filter((h) => {
@@ -808,6 +816,32 @@ const calculateHatchDate = (setDate: string) => {
                       ))}
                     </div>
                   </ScrollArea>
+                </div>
+
+                {/* Data Type Filter */}
+                <div className="space-y-3 p-4 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Database className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-semibold">Data Type</Label>
+                  </div>
+                  <Select 
+                    value={filters.dataType} 
+                    onValueChange={(value: 'all' | 'original' | 'dummy') => 
+                      setFilters(prev => ({ ...prev, dataType: value }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 border-primary/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Data</SelectItem>
+                      <SelectItem value="original">✓ Original Only</SelectItem>
+                      <SelectItem value="dummy">🎓 Dummy Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Separate training data from production data
+                  </p>
                 </div>
 
                 {/* Technician Filter */}

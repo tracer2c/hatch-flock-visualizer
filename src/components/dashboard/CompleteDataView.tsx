@@ -31,7 +31,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
 
   useEffect(() => {
     loadCompleteData();
-  }, []);
+  }, [filters.dataType]);
 
   const loadCompleteData = async () => {
     try {
