@@ -8,13 +8,14 @@ import hatcheryIcon from "@/assets/hatchery-icon.png";
 
 interface HouseFlowSankeyProps {
   className?: string;
+  viewMode: 'original' | 'dummy';
 }
 
-const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
+const BatchFlowSankey = ({ className, viewMode: dataViewMode }: HouseFlowSankeyProps) => {
   const [viewMode, setViewMode] = useState<'active' | 'completed' | 'all'>('active');
   
-  const { data: completedBatches, isLoading: loadingCompleted } = useCompletedBatchMetrics();
-  const { data: activeBatches, isLoading: loadingActive } = useActiveBatchFlowData();
+  const { data: completedBatches, isLoading: loadingCompleted } = useCompletedBatchMetrics(dataViewMode);
+  const { data: activeBatches, isLoading: loadingActive } = useActiveBatchFlowData(dataViewMode);
 
   const isLoading = loadingCompleted || loadingActive;
 

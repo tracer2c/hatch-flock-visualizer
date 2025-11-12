@@ -36,7 +36,7 @@ const HouseFlowPage = () => {
           <p className="text-sm text-muted-foreground">Detailed house flow analysis and batch processing visualization</p>
         </div>
       </div>
-      <BatchFlowSankey />
+      <BatchFlowSankey viewMode={viewMode} />
     </div>
   );
 };

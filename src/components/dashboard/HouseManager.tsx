@@ -91,7 +91,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setTime: getCurrentTime(),
     totalEggs: '',
     customHouseNumber: '',
-    dataType: 'original' as 'original' | 'dummy',
   });
   
   // Edit state
@@ -123,7 +122,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     loadMachines();
     loadHouses();
     loadUnits();
-  }, []);
+  }, [viewMode]);
 
   // Auto-set current time when create form is opened
   useEffect(() => {
@@ -139,6 +138,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const { data, error } = await supabase
       .from('flocks')
       .select('*')
+      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {
@@ -178,6 +178,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         machines(machine_number, machine_type),
         data_type
       `)
+      .eq('data_type', viewMode)
       .order('set_date', { ascending: false });
     
     if (error) {
@@ -435,7 +436,7 @@ const calculateHatchDate = (setDate: string) => {
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
         status: 'setting',
-        data_type: formData.dataType
+        data_type: viewMode
       })
       .select()
       .single();
@@ -460,7 +461,6 @@ const calculateHatchDate = (setDate: string) => {
         setTime: getCurrentTime(),
         totalEggs: '',
         customHouseNumber: '',
-        dataType: 'original',
       });
       loadHouses();
       onHouseSelect(data.id);
@@ -626,38 +626,6 @@ const calculateHatchDate = (setDate: string) => {
                   value={formData.totalEggs}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
                 />
-              </div>
-              
-              {/* Data Type Selection */}
-              <div className="space-y-2 col-span-2">
-                <Label>Data Type *</Label>
-                <div className="flex gap-4 p-3 border rounded-lg bg-muted/30">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dataType"
-                      value="original"
-                      checked={formData.dataType === 'original'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dataType: e.target.value as 'original' | 'dummy' }))}
-                      className="w-4 h-4 text-primary"
-                    />
-                    <span className="text-sm font-medium">✓ Original Data</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dataType"
-                      value="dummy"
-                      checked={formData.dataType === 'dummy'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dataType: e.target.value as 'original' | 'dummy' }))}
-                      className="w-4 h-4 text-primary"
-                    />
-                    <span className="text-sm font-medium">🎓 Dummy/Training Data</span>
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Original: Real production data | Dummy: Training or test data for learning purposes
-                </p>
               </div>
             </div>
             <div className="flex gap-2 mt-4">
