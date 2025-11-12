@@ -464,8 +464,9 @@ export default function EmbrexDashboard() {
         const formatted: RawRow[] = (data ?? []).map((b: any) => {
           // Calculate mortality percentages from fertility and residue analysis
           const fertility = b.fertility_analysis?.[0];
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           const totalEggs = Number(b.total_eggs_set ?? 0);
+          const sampleSize = Number(residue?.sample_size ?? fertility?.sample_size ?? 648);
           
           // Auto-calculate from fertility_analysis if not set in batches table
           const eggsCleared = Number(b.eggs_cleared ?? fertility?.infertile_eggs ?? 0);
@@ -477,11 +478,11 @@ export default function EmbrexDashboard() {
           let late_dead_percent = 0;
           let total_mortality_percent = 0;
           
-          // All mortality data comes from residue analysis
-          if (residue && totalEggs > 0) {
-            early_dead_percent = ((residue.early_dead ?? 0) / totalEggs) * 100;
-            mid_dead_percent = ((residue.mid_dead ?? 0) / totalEggs) * 100;
-            late_dead_percent = ((residue.late_dead ?? 0) / totalEggs) * 100;
+          // All mortality data comes from residue analysis - use sample size for percentages
+          if (residue && sampleSize > 0) {
+            early_dead_percent = ((residue.early_dead ?? 0) / sampleSize) * 100;
+            mid_dead_percent = ((residue.mid_dead ?? 0) / sampleSize) * 100;
+            late_dead_percent = ((residue.late_dead ?? 0) / sampleSize) * 100;
           }
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
@@ -500,19 +501,19 @@ export default function EmbrexDashboard() {
             livePips + 
             deadPips;
 
-          // Calculate percentages
+          // Calculate percentages using sample size
           let cull_percent = 0;
           let live_pip_percent = 0;
           let dead_pip_percent = 0;
           let total_pip_percent = 0;
           let embryonic_mortality_percent = 0;
 
-          if (totalEggs > 0) {
-            cull_percent = (cullChicks / totalEggs) * 100;
-            live_pip_percent = (livePips / totalEggs) * 100;
-            dead_pip_percent = (deadPips / totalEggs) * 100;
-            total_pip_percent = (totalPips / totalEggs) * 100;
-            embryonic_mortality_percent = (embryonicMortalityCount / totalEggs) * 100;
+          if (sampleSize > 0) {
+            cull_percent = (cullChicks / sampleSize) * 100;
+            live_pip_percent = (livePips / sampleSize) * 100;
+            dead_pip_percent = (deadPips / sampleSize) * 100;
+            total_pip_percent = (totalPips / sampleSize) * 100;
+            embryonic_mortality_percent = (embryonicMortalityCount / sampleSize) * 100;
           }
           
           // Calculate Hatch vs Injected metrics using standardized formula
