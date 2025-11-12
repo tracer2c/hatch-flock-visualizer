@@ -526,13 +526,17 @@ const BatchOverviewDashboard = () => {
                                 <div className="text-right">
                                   <div className="text-sm font-medium">Fertility</div>
                                   <div className="text-sm text-muted-foreground">
-                                    Pending
+                                    {batch.fertility_analysis?.fertility_percent 
+                                      ? `${batch.fertility_analysis.fertility_percent.toFixed(1)}%`
+                                      : '-'}
                                   </div>
                                 </div>
                                 <div className="text-right">
                                   <div className="text-sm font-medium">Hatch Rate</div>
                                   <div className="text-sm text-muted-foreground">
-                                    Pending
+                                    {batch.residue_analysis?.hatch_percent 
+                                      ? `${batch.residue_analysis.hatch_percent.toFixed(1)}%`
+                                      : '-'}
                                   </div>
                                 </div>
                               </>

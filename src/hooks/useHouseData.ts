@@ -30,6 +30,12 @@ export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
             machine_number,
             machine_type,
             status
+          ),
+          fertility_analysis (
+            fertility_percent
+          ),
+          residue_analysis (
+            hatch_percent
           )
         `)
         .eq('data_type', viewMode)
