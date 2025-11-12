@@ -745,12 +745,18 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                         mode="range"
                         selected={{ from: filters.dateRange.from, to: filters.dateRange.to }}
                         onSelect={(range) => {
-                          if (range?.from && range?.to) {
-                            setFilters(prev => ({ ...prev, dateRange: { from: range.from, to: range.to } }));
+                          if (range?.from) {
+                            setFilters(prev => ({ 
+                              ...prev, 
+                              dateRange: { 
+                                from: range.from, 
+                                to: range.to || range.from 
+                              } 
+                            }));
                           }
                         }}
                         numberOfMonths={2}
-                        className="pointer-events-auto"
+                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
