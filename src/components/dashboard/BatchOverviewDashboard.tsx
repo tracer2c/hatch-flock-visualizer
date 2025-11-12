@@ -444,18 +444,6 @@ const BatchOverviewDashboard = () => {
               }
               trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
             />
-            <StatCard
-              title="System Utilization"
-              value={`${systemUtilization}%`}
-              icon={<img src={utilizationIcon} alt="Utilization" className="h-10 w-10 object-contain" />}
-              description="Average capacity utilization across all machines in the system. This represents how efficiently the available incubation and hatching equipment is being used. Higher utilization indicates better resource optimization."
-              trendLabel={
-                targets?.machine_utilization 
-                  ? `${systemUtilization >= targets.machine_utilization ? '+' : ''}${(systemUtilization - targets.machine_utilization).toFixed(1)}% vs target (${targets.machine_utilization}%)`
-                  : `Avg of ${machineUtilization?.length || 0} machines`
-              }
-              trendDirection={targets?.machine_utilization ? (systemUtilization >= targets.machine_utilization ? "up" : "down") : null}
-            />
       </div>
 
       {/* Main Content Grid */}
