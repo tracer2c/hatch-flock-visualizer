@@ -1034,6 +1034,7 @@ export type Database = {
           brain_defects: number | null
           contaminated_eggs: number
           created_at: string
+          cull_chicks: number | null
           dead_pip_number: number | null
           dry_egg: number | null
           early_dead: number | null
@@ -1071,6 +1072,7 @@ export type Database = {
           brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          cull_chicks?: number | null
           dead_pip_number?: number | null
           dry_egg?: number | null
           early_dead?: number | null
@@ -1108,6 +1110,7 @@ export type Database = {
           brain_defects?: number | null
           contaminated_eggs?: number
           created_at?: string
+          cull_chicks?: number | null
           dead_pip_number?: number | null
           dry_egg?: number | null
           early_dead?: number | null

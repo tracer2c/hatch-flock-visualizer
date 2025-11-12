@@ -43,7 +43,6 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       infertile_eggs: record.infertile_eggs || 0,
       early_dead: record.early_dead || 0,
       late_dead: record.late_dead || 0,
-      cull_chicks: record.cull_chicks || 0,
       technician_name: record.technician_name || '',
       notes: record.fertility_notes || '',
     });
@@ -56,14 +55,13 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       const infertileEggs = parseInt(formData.infertile_eggs) || 0;
       const earlyDead = parseInt(formData.early_dead) || 0;
       const lateDead = parseInt(formData.late_dead) || 0;
-      const cullChicks = parseInt(formData.cull_chicks) || 0;
 
       // Use standardized hatchery formulas
-      const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead - cullChicks);
+      const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead);
       const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
       const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
       const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-      const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+      const hoiPercent = calculateHOFPercent(chicksHatched, fertileEggs);
       const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
       const { error } = await supabase
@@ -74,7 +72,6 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
           infertile_eggs: infertileEggs,
           early_dead: earlyDead,
           late_dead: lateDead,
-          cull_chicks: cullChicks,
           fertility_percent: Number(fertilityPercent.toFixed(2)),
           hatch_percent: Number(hatchPercent.toFixed(2)),
           hof_percent: Number(hofPercent.toFixed(2)),
@@ -131,7 +128,6 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
               <TableHead>Fertility %</TableHead>
               <TableHead>Early Dead</TableHead>
               <TableHead>Late Dead</TableHead>
-              <TableHead>Cull Chicks</TableHead>
               <TableHead>Hatch %</TableHead>
               <TableHead>HOF %</TableHead>
               <TableHead>HOI %</TableHead>
@@ -163,7 +159,6 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
                   <TableCell>{item.fertility_percent?.toFixed(1) || "0"}%</TableCell>
                   <TableCell>{item.early_dead || "0"}</TableCell>
                   <TableCell>{item.late_dead || "0"}</TableCell>
-                  <TableCell>{item.cull_chicks || "0"}</TableCell>
                   <TableCell>{item.hatch_percent?.toFixed(1) || "0"}%</TableCell>
                   <TableCell>{item.hof_percent?.toFixed(1) || "0"}%</TableCell>
                   <TableCell>{item.hoi_percent?.toFixed(1) || "0"}%</TableCell>
@@ -251,15 +246,6 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
                   type="number"
                   value={formData.late_dead || ""}
                   onChange={(e) => setFormData({ ...formData, late_dead: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cull_chicks">Cull Chicks</Label>
-                <Input
-                  id="cull_chicks"
-                  type="number"
-                  value={formData.cull_chicks || ""}
-                  onChange={(e) => setFormData({ ...formData, cull_chicks: e.target.value })}
                 />
               </div>
               <div className="space-y-2 col-span-2">

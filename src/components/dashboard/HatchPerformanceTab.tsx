@@ -124,7 +124,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
       infertile_eggs: record.infertile_eggs || 0,
       early_dead: record.early_dead || 0,
       late_dead: record.late_dead || 0,
-      cull_chicks: record.cull_chicks || 0,
       technician_name: record.technician_name || "",
       notes: record.notes || "",
     });
@@ -138,14 +137,13 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const infertileEggs = parseInt(formData.infertile_eggs) || 0;
     const earlyDead = parseInt(formData.early_dead) || 0;
     const lateDead = parseInt(formData.late_dead) || 0;
-    const cullChicks = parseInt(formData.cull_chicks) || 0;
 
     // Use standardized hatchery formulas
-    const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead - cullChicks);
+    const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead);
     const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
     const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-    const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+    const hoiPercent = calculateHOFPercent(chicksHatched, fertileEggs);
     const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
     console.log("Hatch Performance - Attempting save:", {
@@ -168,7 +166,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
           infertile_eggs: infertileEggs,
           early_dead: earlyDead,
           late_dead: lateDead,
-          cull_chicks: cullChicks,
           fertility_percent: fertilityPercent,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
@@ -191,7 +188,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
           infertile_eggs: infertileEggs,
           early_dead: earlyDead,
           late_dead: lateDead,
-          cull_chicks: cullChicks,
           fertility_percent: fertilityPercent,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
@@ -417,15 +413,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                   type="number"
                   value={formData.late_dead || ""}
                   onChange={(e) => setFormData({ ...formData, late_dead: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cull_chicks">Cull Chicks</Label>
-                <Input
-                  id="cull_chicks"
-                  type="number"
-                  value={formData.cull_chicks || ""}
-                  onChange={(e) => setFormData({ ...formData, cull_chicks: e.target.value })}
                 />
               </div>
             </div>
