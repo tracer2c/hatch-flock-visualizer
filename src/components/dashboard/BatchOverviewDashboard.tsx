@@ -163,16 +163,29 @@ const BatchOverviewDashboard = () => {
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics, hatcheryFilter, activeBatches]);
 
-  const avgHatch = useMemo(() => {
+  const avgHOF = useMemo(() => {
     const validBatches = performanceMetrics?.filter((batch: any) => {
       const hatcheryMatch = hatcheryFilter === "all" || 
         activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
-      return batch.hatch != null && !isNaN(batch.hatch) && hatcheryMatch;
+      return batch.hof != null && !isNaN(batch.hof) && hatcheryMatch;
     }) || [];
     
     if (validBatches.length === 0) return 0;
     
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hatch, 0);
+    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hof, 0);
+    return Math.round(sum / validBatches.length);
+  }, [performanceMetrics, hatcheryFilter, activeBatches]);
+
+  const avgHOI = useMemo(() => {
+    const validBatches = performanceMetrics?.filter((batch: any) => {
+      const hatcheryMatch = hatcheryFilter === "all" || 
+        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
+      return batch.hoi != null && !isNaN(batch.hoi) && hatcheryMatch;
+    }) || [];
+    
+    if (validBatches.length === 0) return 0;
+    
+    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hoi, 0);
     return Math.round(sum / validBatches.length);
   }, [performanceMetrics, hatcheryFilter, activeBatches]);
 
@@ -272,13 +285,14 @@ const BatchOverviewDashboard = () => {
         currentMetrics: {
           totalBatches: listForDisplay.length,
           avgFertility: avgFert,
-          avgHatch: avgHatch,
+          avgHOF: avgHOF,
+          avgHOI: avgHOI,
           alerts: qaAlerts?.length || 0
         },
         selectedFilters: { hatchery: hatcheryFilter, machine: selectedMachine, search: searchTerm }
       });
     }
-  }, [isLoading, listForDisplay, avgFert, avgHatch, qaAlerts, hatcheryFilter, selectedMachine, searchTerm, updateContext]);
+  }, [isLoading, listForDisplay, avgFert, avgHOF, avgHOI, qaAlerts, hatcheryFilter, selectedMachine, searchTerm, updateContext]);
 
   return (
     <>
@@ -407,16 +421,28 @@ const BatchOverviewDashboard = () => {
               trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
             />
             <StatCard
-              title="Average Hatch Rate"
-              value={`${avgHatch}%`}
+              title="Average HOF%"
+              value={`${avgHOF}%`}
               icon={<img src={chicksIcon} alt="Chicks" className="h-10 w-10 object-contain" />}
-              description="The average hatch rate percentage across all completed houses. Hatch rate measures the percentage of set eggs that successfully hatched into healthy chicks."
+              description="Average Hatch of Fertile percentage across all analyzed houses. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
               trendLabel={
-                targets?.hatch_rate 
-                  ? `${avgHatch >= targets.hatch_rate ? '+' : ''}${(avgHatch - targets.hatch_rate).toFixed(1)}% vs target (${targets.hatch_rate}%)`
-                  : "Target: 80%"
+                targets?.hof_rate 
+                  ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target (${targets.hof_rate}%)`
+                  : "Target: 88%"
               }
-              trendDirection={targets?.hatch_rate ? (avgHatch >= targets.hatch_rate ? "up" : "down") : null}
+              trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
+            />
+            <StatCard
+              title="Average HOI%"
+              value={`${avgHOI}%`}
+              icon={<img src={chicksIcon} alt="Chicks" className="h-10 w-10 object-contain" />}
+              description="Average Hatch of Injection percentage across all analyzed houses. HOI% = (Chicks Hatched / Eggs Injected) × 100"
+              trendLabel={
+                targets?.hoi_rate 
+                  ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target (${targets.hoi_rate}%)`
+                  : "Target: 90%"
+              }
+              trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
             />
             <StatCard
               title="System Utilization"

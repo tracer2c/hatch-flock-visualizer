@@ -144,6 +144,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
       dead_pip_number: record.dead_pip_number || 0,
       lab_technician: record.lab_technician || "",
       notes: record.residue_notes || "",
+      hof_percent: record.hof_percent || record.residue_hof_percent || null,
+      hoi_percent: record.hoi_percent || record.residue_hoi_percent || null,
     });
   };
 
@@ -320,6 +322,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>{showPercentages ? "DY Egg %" : "DY Egg"}</TableHead>
               <TableHead>{showPercentages ? "Malpositioned %" : "Malpositioned"}</TableHead>
               <TableHead>{showPercentages ? "Upside Down %" : "Upside Down"}</TableHead>
+              <TableHead>HOF %</TableHead>
+              <TableHead>HOI %</TableHead>
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
@@ -328,7 +332,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={25} className="text-center text-muted-foreground">
+                <TableCell colSpan={27} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -375,6 +379,12 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                     <TableCell>{formatValue(item.dry_egg, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.malpositioned, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.upside_down, sampleSize)}</TableCell>
+                    <TableCell className="text-right">
+                      {item.hof_percent ? `${item.hof_percent.toFixed(2)}%` : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.hoi_percent ? `${item.hoi_percent.toFixed(2)}%` : "-"}
+                    </TableCell>
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                     <TableCell>
@@ -577,6 +587,24 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                   type="number"
                   value={formData.upside_down || ''}
                   onChange={(e) => setFormData({ ...formData, upside_down: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>HOF % (auto-calc)</Label>
+                <Input
+                  type="text"
+                  disabled
+                  value={formData.hof_percent ? `${formData.hof_percent.toFixed(2)}%` : "-"}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label>HOI % (auto-calc)</Label>
+                <Input
+                  type="text"
+                  disabled
+                  value={formData.hoi_percent ? `${formData.hoi_percent.toFixed(2)}%` : "-"}
+                  className="bg-gray-100"
                 />
               </div>
             </div>
