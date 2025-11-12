@@ -34,6 +34,18 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
     loadCompleteData();
   }, [viewMode]);
 
+  // Auto-refresh when user returns to the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadCompleteData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [viewMode]);
+
   const loadCompleteData = async () => {
     try {
       setLoading(true);

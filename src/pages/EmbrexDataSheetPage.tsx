@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Download, TrendingUp } from "lucide-react";
+import { Download, TrendingUp, RefreshCw } from "lucide-react";
 import { CompleteDataView } from "@/components/dashboard/CompleteDataView";
 import { DataSheetCenteredFilterDialog } from "@/components/dashboard/DataSheetCenteredFilterDialog";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 const EmbrexDataSheetPage = () => {
   const [activeTab, setActiveTab] = useState("embrex");
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const { showPercentages, setShowPercentages } = usePercentageToggle();
   const navigate = useNavigate();
 
@@ -148,6 +149,11 @@ const EmbrexDataSheetPage = () => {
     navigate("/embrex-timeline");
   };
 
+  const handleManualRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    toast.success("Data refreshed successfully");
+  };
+
   return (
     <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
       {/* Header Section */}
@@ -168,6 +174,10 @@ const EmbrexDataSheetPage = () => {
                 Show percentages
               </Label>
             </div>
+            <Button variant="outline" onClick={handleManualRefresh} size="sm" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
             <Button variant="outline" onClick={handleTimelineView} className="gap-2">
               <TrendingUp className="h-4 w-4" />
               Timeline View
@@ -215,7 +225,7 @@ const EmbrexDataSheetPage = () => {
       {/* Content Section */}
       <div className="flex-1 overflow-auto p-6">
         <CompleteDataView 
-          key={showPercentages ? 'percentage' : 'count'}
+          key={`${showPercentages ? 'percentage' : 'count'}-${refreshKey}`}
           activeTab={activeTab} 
           searchTerm={searchTerm}
           filters={filters}
