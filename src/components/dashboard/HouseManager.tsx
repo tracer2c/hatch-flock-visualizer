@@ -280,7 +280,22 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   const uniqueMachineTypes = Array.from(new Set(machines.map(m => m.machine_type)));
 
-const calculateHatchDate = (setDate: string) => {
+  // Helper to check if user has actively modified advanced filters
+  const hasActiveAdvancedFilters = () => {
+    const defaultFrom = subDays(new Date(), 30);
+    const hasCustomDateRange = 
+      filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
+      filters.dateRange.to.getTime() < new Date().getTime() - 86400000;
+    
+    return (
+      filters.unitIds.length > 0 ||
+      filters.machineTypes.length > 0 ||
+      filters.technicianName !== '' ||
+      hasCustomDateRange
+    );
+  };
+
+  const calculateHatchDate = (setDate: string) => {
     const date = new Date(setDate);
     date.setDate(date.getDate() + 21); // 21 days incubation period
     return date.toISOString().split('T')[0];
@@ -489,9 +504,11 @@ const calculateHatchDate = (setDate: string) => {
       if (houseView === "incubating") return h.status === "incubating";
       return true;
     })
-    // Date range filter (only apply when not viewing "all")
+    // Date range filter (only apply when explicitly set in Advanced Filters)
     .filter((h) => {
-      if (houseView === "all") return true;
+      // Only apply date filter if Advanced Filters are being used
+      if (!hasActiveAdvancedFilters()) return true;
+      
       const setDate = new Date(h.set_date);
       return setDate >= filters.dateRange.from && setDate <= filters.dateRange.to;
     })
