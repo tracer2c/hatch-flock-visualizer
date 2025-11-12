@@ -114,8 +114,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     // Hatchability metrics
     sampleSize: '648',
     technicianName: '',
-    notes: '',
-    mortalityCount: ''
+    notes: ''
   });
   const { toast } = useToast();
 
@@ -338,8 +337,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       deadPipNumber: (record.deadPipNumber || 0).toString(),
       sampleSize: (record.sampleSize || TOTAL_EGGS).toString(),
       technicianName: '',
-      notes: '',
-      mortalityCount: ''
+      notes: ''
     });
   };
 
@@ -379,8 +377,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       deadPipNumber: '',
       sampleSize: '648',
       technicianName: '',
-      notes: '',
-      mortalityCount: ''
+      notes: ''
     });
   };
 
@@ -445,6 +442,28 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 value={648}
                 disabled
                 className="bg-gray-100"
+              />
+            </div>
+
+            {/* Eggs Injected - Read-only from Clears & Injected tab */}
+            <div className="space-y-2">
+              <Label htmlFor="eggsInjected" className="flex items-center gap-1">
+                Eggs Injected
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    This value comes from the Clears & Injected data entry tab
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Input
+                id="eggsInjected"
+                type="number"
+                value={batchInfo.eggs_injected || 0}
+                disabled
+                className="bg-gray-100 font-medium"
               />
             </div>
 
@@ -600,17 +619,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 disabled
                 className="bg-gray-100 font-semibold"
                 value={calculateChicks()}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mortalityCount">Mortality Count</Label>
-              <Input
-                id="mortalityCount"
-                type="number"
-                placeholder="e.g., 10"
-                value={formData.mortalityCount}
-                onChange={(e) => handleInputChange('mortalityCount', e.target.value)}
               />
             </div>
 
