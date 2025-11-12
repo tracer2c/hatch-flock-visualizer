@@ -20,7 +20,8 @@ import {
   calculateIFPercent,
   calculateChicksHatched,
   calculateFertileEggs,
-  calculateFertilityPercent
+  calculateFertilityPercent,
+  calculateEmbryonicMortality
 } from "@/utils/hatcheryFormulas";
 
 interface ResidueBreakoutTableProps {
@@ -308,6 +309,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>{showPercentages ? "Live Pips %" : "Live Pips"}</TableHead>
               <TableHead>{showPercentages ? "Dead Pips %" : "Dead Pips"}</TableHead>
               <TableHead>Total Pips</TableHead>
+              <TableHead>{showPercentages ? "Embryonic Mortality %" : "Embryonic Mortality"}</TableHead>
               <TableHead>{showPercentages ? "Handling Cracks %" : "Handling Cracks"}</TableHead>
               <TableHead>{showPercentages ? "Transfer Crack %" : "Transfer Crack"}</TableHead>
               <TableHead>{showPercentages ? "Contamination %" : "Contamination"}</TableHead>
@@ -351,6 +353,18 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                     <TableCell>{formatValue(item.live_pip_number, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.dead_pip_number, sampleSize)}</TableCell>
                     <TableCell>{item.pip_number || 0}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const embryonicMortality = calculateEmbryonicMortality(
+                          item.early_dead || 0,
+                          item.mid_dead || 0,
+                          item.late_dead || 0,
+                          item.live_pip_number || 0,
+                          item.dead_pip_number || 0
+                        );
+                        return formatValue(embryonicMortality, sampleSize);
+                      })()}
+                    </TableCell>
                     <TableCell>{formatValue(item.handling_cracks, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.transfer_crack, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.contaminated_eggs, sampleSize)}</TableCell>
@@ -466,6 +480,22 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                   disabled
                   value={(parseInt(formData.live_pip_number) || 0) + (parseInt(formData.dead_pip_number) || 0)}
                   className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label>Embryonic Mortality (auto-calc)</Label>
+                <Input
+                  type="number"
+                  value={(() => {
+                    const earlyDead = parseInt(formData.early_dead) || 0;
+                    const midDead = parseInt(formData.mid_dead) || 0;
+                    const lateDead = parseInt(formData.late_dead) || 0;
+                    const livePips = parseInt(formData.live_pip_number) || 0;
+                    const deadPips = parseInt(formData.dead_pip_number) || 0;
+                    return calculateEmbryonicMortality(earlyDead, midDead, lateDead, livePips, deadPips);
+                  })()}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
               <div>

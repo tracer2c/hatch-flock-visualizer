@@ -134,3 +134,27 @@ export const calculateFertileEggs = (
 ): number => {
   return Math.max(0, sampleSize - infertileEggs);
 };
+
+/**
+ * Calculate Embryonic Mortality
+ * Formula: Early Dead + Mid Dead + Late Dead + Live Pips + Dead Pips
+ * 
+ * Represents all embryos that died during the incubation period, including
+ * those that died during early, mid, and late stages, as well as pipped eggs.
+ * 
+ * @param earlyDead - Number of early dead embryos (0-7 days)
+ * @param midDead - Number of mid dead embryos (8-14 days)
+ * @param lateDead - Number of late dead embryos (15-21 days)
+ * @param livePips - Number of live pipped eggs
+ * @param deadPips - Number of dead pipped eggs
+ * @returns Total embryonic mortality count
+ */
+export const calculateEmbryonicMortality = (
+  earlyDead: number,
+  midDead: number,
+  lateDead: number,
+  livePips: number,
+  deadPips: number
+): number => {
+  return earlyDead + midDead + lateDead + livePips + deadPips;
+};

@@ -8,7 +8,7 @@ import { EggPackQualityTab } from "./EggPackQualityTab";
 import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
 import { HatchPerformanceTab } from "./HatchPerformanceTab";
 import { QAMonitoringTab } from "./QAMonitoringTab";
-import { calculateChicksHatched } from "@/utils/hatcheryFormulas";
+import { calculateChicksHatched, calculateEmbryonicMortality } from "@/utils/hatcheryFormulas";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -194,6 +194,18 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
           return calculateChicksHatched(
             residueSampleSize, residueInfertile, residueEarlyDead, residueMidDead,
             residueLateDead, residueCulls, residueLivePips, residueDeadPips
+          );
+        })(),
+        // Calculate embryonic_mortality using standardized formula
+        embryonic_mortality: (() => {
+          const residueEarlyDead = batch.residue_analysis?.[0]?.early_dead || 0;
+          const residueMidDead = batch.residue_analysis?.[0]?.mid_dead || 0;
+          const residueLateDead = batch.residue_analysis?.[0]?.late_dead || 0;
+          const residueLivePips = batch.residue_analysis?.[0]?.live_pip_number || 0;
+          const residueDeadPips = batch.residue_analysis?.[0]?.dead_pip_number || 0;
+          
+          return calculateEmbryonicMortality(
+            residueEarlyDead, residueMidDead, residueLateDead, residueLivePips, residueDeadPips
           );
         })(),
         // Residue characteristics
