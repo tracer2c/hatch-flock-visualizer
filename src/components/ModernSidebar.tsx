@@ -61,7 +61,7 @@ const navigationItems = [
   },
   {
     path: '/embrex-timeline',
-    label: 'Embrex Timeline',
+    label: 'Timeline',
     icon: TrendingUp,
     requiresAuth: true
   },
