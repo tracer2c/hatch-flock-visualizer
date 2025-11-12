@@ -80,9 +80,13 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
            flocks (flock_number, flock_name, age_weeks, breed, house_number),
           fertility_analysis (
             fertility_percent,
+            sample_size
+          ),
+          residue_analysis (
             hatch_percent,
             hof_percent,
             hoi_percent,
+            if_dev_percent,
             early_dead,
             late_dead,
             sample_size
@@ -113,6 +117,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
         const summary = (data || []).map((b: any) => ({
           batch: b.batch_number,
           fert: Array.isArray(b.fertility_analysis) ? b.fertility_analysis.length : 0,
+          residue: Array.isArray(b.residue_analysis) ? b.residue_analysis.length : 0,
           eggQ: Array.isArray(b.egg_pack_quality) ? b.egg_pack_quality.length : 0,
           qa: Array.isArray(b.qa_monitoring) ? b.qa_monitoring.length : 0,
         }));
@@ -124,6 +129,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
       // Calculate performance metrics for all batches
       const mapped = data?.map((batch: any) => {
         const fertility = batch.fertility_analysis?.[0];
+        const residue = batch.residue_analysis?.[0];
         const eggQuality = batch.egg_pack_quality?.[0];
         const qaData = batch.qa_monitoring || [];
         
@@ -135,6 +141,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
         
         const hasEggQuality = !!eggQuality;
         const hasFertilityData = !!fertility;
+        const hasResidueData = !!residue;
         const hasQAData = qaData.length > 0;
         
         return {
@@ -145,10 +152,10 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
           breed: batch.flocks?.breed || 'unknown',
           houseNumber: batch.flocks?.house_number ?? null,
           fertility: typeof fertility?.fertility_percent === 'number' ? fertility.fertility_percent : null,
-          hatch: typeof fertility?.hatch_percent === 'number' ? fertility.hatch_percent : null,
-          hof: typeof fertility?.hof_percent === 'number' ? fertility.hof_percent : null,
-          hoi: batch.eggs_injected > 0 ? (batch.chicks_hatched / batch.eggs_injected) * 100 : null,
-          earlyDead: fertility && fertility.sample_size ? (((fertility.early_dead || 0) / fertility.sample_size) * 100) : null,
+          hatch: typeof residue?.hatch_percent === 'number' ? residue.hatch_percent : null,
+          hof: typeof residue?.hof_percent === 'number' ? residue.hof_percent : null,
+          hoi: typeof residue?.hoi_percent === 'number' ? residue.hoi_percent : null,
+          earlyDead: residue && residue.sample_size ? (((residue.early_dead || 0) / residue.sample_size) * 100) : null,
           qualityScore,
           totalEggs: batch.total_eggs_set,
           status: batch.status,
@@ -157,6 +164,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
           // Data availability flags
           hasEggQuality,
           hasFertilityData,
+          hasResidueData,
           hasQAData,
           // Latest QA readings for ongoing batches
           latestTemp: hasQAData ? qaData[qaData.length - 1]?.temperature : null,
@@ -169,10 +177,11 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
       try {
         const counts = (mapped as any[]).reduce((acc: any, b: any) => {
           acc.hasFertility += b.hasFertilityData ? 1 : 0;
+          acc.hasResidue += b.hasResidueData ? 1 : 0;
           acc.hasEggQuality += b.hasEggQuality ? 1 : 0;
           acc.hasQA += b.hasQAData ? 1 : 0;
           return acc;
-        }, { hasFertility: 0, hasEggQuality: 0, hasQA: 0 });
+        }, { hasFertility: 0, hasResidue: 0, hasEggQuality: 0, hasQA: 0 });
         console.debug('[useBatchPerformanceMetrics] mapped flag counts:', counts);
       } catch (e) {
         console.warn('[useBatchPerformanceMetrics] flag count failed:', e);
