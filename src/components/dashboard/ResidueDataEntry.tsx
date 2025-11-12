@@ -15,8 +15,7 @@ import {
   calculateHOIPercent, 
   calculateIFPercent,
   calculateChicksHatched,
-  calculateFertileEggs,
-  calculateEmbryonicMortality
+  calculateFertileEggs
 } from "@/utils/hatcheryFormulas";
 
 interface ResidueRecord {
@@ -174,16 +173,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     const midDead = Number(formData.midDeath) || 0;
     const lateDead = Number(formData.lateDeath) || 0;
     return earlyDead + midDead + lateDead;
-  };
-
-  // Calculate embryonic mortality (all embryos that died during incubation)
-  const calculateEmbryonicMortalityCount = () => {
-    const earlyDead = Number(formData.earlyDeath) || 0;
-    const midDead = Number(formData.midDeath) || 0;
-    const lateDead = Number(formData.lateDeath) || 0;
-    const livePips = Number(formData.livePipNumber) || 0;
-    const deadPips = Number(formData.deadPipNumber) || 0;
-    return calculateEmbryonicMortality(earlyDead, midDead, lateDead, livePips, deadPips);
   };
 
   // Auto-calculate chicks based on sample size minus core mortality
@@ -736,39 +725,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               <h3 className="text-lg font-semibold">Hatchability Metrics</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Embryonic Mortality Display - Auto-calculated */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  Embryonic Mortality
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="inline-flex">
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-semibold">Embryonic Mortality</p>
-                      <p className="text-sm">All embryos that died during incubation</p>
-                      <p className="text-sm">Formula: Early Dead + Mid Dead + Late Dead + Live Pips + Dead Pips</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={calculateEmbryonicMortalityCount()}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <Input
-                    type="text"
-                    value={`${calculatePercentage(calculateEmbryonicMortalityCount()).toFixed(2)}%`}
-                    disabled
-                    className="bg-muted w-24"
-                  />
-                </div>
-              </div>
-
               {/* Calculated Hatchability Metrics */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">
@@ -1015,7 +971,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                   <TableHead>Live Pips</TableHead>
                   <TableHead>Dead Pips</TableHead>
                   <TableHead>Total Pips</TableHead>
-                  <TableHead>Embryonic Mortality</TableHead>
                   <TableHead>Handling Cracks</TableHead>
                   <TableHead>Transfer Crack</TableHead>
                   <TableHead>Contamination</TableHead>
@@ -1036,13 +991,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               <TableBody>
                 {data.map((record) => {
                   const totalPips = (record.livePipNumber || 0) + (record.deadPipNumber || 0);
-                  const embryonicMortality = calculateEmbryonicMortality(
-                    record.earlyDeath || 0,
-                    record.midDeath || 0,
-                    record.lateDeath || 0,
-                    record.livePipNumber || 0,
-                    record.deadPipNumber || 0
-                  );
                   
                   return (
                     <TableRow key={record.id}>
@@ -1059,7 +1007,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                       <TableCell>{record.livePipNumber || 0}</TableCell>
                       <TableCell>{record.deadPipNumber || 0}</TableCell>
                       <TableCell>{totalPips}</TableCell>
-                      <TableCell>{embryonicMortality}</TableCell>
                       <TableCell>{record.handlingCracks || 0}</TableCell>
                       <TableCell>{record.transferCrack || 0}</TableCell>
                       <TableCell className={record.contaminationPercent > 1 ? "text-red-600 font-medium" : ""}>
