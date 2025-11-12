@@ -613,7 +613,7 @@ const BatchOverviewDashboard = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium">{machine.utilization}%</div>
+                              <div className="text-sm font-medium">{typeof machine.utilization === 'number' ? machine.utilization.toFixed(2) : machine.utilization}%</div>
                               <div className="text-xs text-muted-foreground capitalize">{machine.status}</div>
                             </div>
                           </div>
