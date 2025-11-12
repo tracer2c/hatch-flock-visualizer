@@ -695,7 +695,6 @@ export type Database = {
           analysis_date: string
           batch_id: string
           created_at: string
-          cull_chicks: number
           fertile_eggs: number
           fertility_percent: number | null
           hatch_percent: number | null
@@ -704,7 +703,6 @@ export type Database = {
           id: string
           if_dev_percent: number | null
           infertile_eggs: number
-          late_dead: number
           notes: string | null
           sample_size: number
           technician_name: string | null
@@ -713,7 +711,6 @@ export type Database = {
           analysis_date?: string
           batch_id: string
           created_at?: string
-          cull_chicks?: number
           fertile_eggs: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -722,7 +719,6 @@ export type Database = {
           id?: string
           if_dev_percent?: number | null
           infertile_eggs: number
-          late_dead: number
           notes?: string | null
           sample_size?: number
           technician_name?: string | null
@@ -731,7 +727,6 @@ export type Database = {
           analysis_date?: string
           batch_id?: string
           created_at?: string
-          cull_chicks?: number
           fertile_eggs?: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -740,7 +735,6 @@ export type Database = {
           id?: string
           if_dev_percent?: number | null
           infertile_eggs?: number
-          late_dead?: number
           notes?: string | null
           sample_size?: number
           technician_name?: string | null
@@ -1573,6 +1567,7 @@ export type Database = {
           clears_technician_name: string | null
           company_id: string | null
           created_at: string | null
+          data_type: string | null
           eggs_cleared: number | null
           eggs_injected: number | null
           expected_hatch_date: string | null
