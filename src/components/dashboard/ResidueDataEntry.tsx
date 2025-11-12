@@ -713,7 +713,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Embryonic Mortality Display - Auto-calculated */}
-              <div className="col-span-2">
+              <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   Embryonic Mortality
                   <Tooltip>

@@ -52,6 +52,7 @@ interface House {
   status: string;
   unit_id?: string | null;
   technician_name?: string | null;
+  data_type?: 'original' | 'dummy';
 }
 
 interface Unit {
@@ -89,6 +90,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setTime: getCurrentTime(),
     totalEggs: '',
     customHouseNumber: '',
+    dataType: 'original' as 'original' | 'dummy',
   });
   
   // Edit state
@@ -171,7 +173,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       .select(`
         *,
         flocks(flock_name, flock_number, house_number, technician_name),
-        machines(machine_number, machine_type)
+        machines(machine_number, machine_type),
+        data_type
       `)
       .order('set_date', { ascending: false });
     
@@ -205,6 +208,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
           status: batch.status,
           unit_id: batch.unit_id ?? null,
           technician_name: batch.flocks?.technician_name || null,
+          data_type: batch.data_type as 'original' | 'dummy' || 'original',
         };
       }) || [];
       setHouses(formattedHouses);
@@ -428,7 +432,8 @@ const calculateHatchDate = (setDate: string) => {
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
-        status: 'setting'
+        status: 'setting',
+        data_type: formData.dataType
       })
       .select()
       .single();
@@ -453,6 +458,7 @@ const calculateHatchDate = (setDate: string) => {
         setTime: getCurrentTime(),
         totalEggs: '',
         customHouseNumber: '',
+        dataType: 'original',
       });
       loadHouses();
       onHouseSelect(data.id);
@@ -616,6 +622,38 @@ const calculateHatchDate = (setDate: string) => {
                   value={formData.totalEggs}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
                 />
+              </div>
+              
+              {/* Data Type Selection */}
+              <div className="space-y-2 col-span-2">
+                <Label>Data Type *</Label>
+                <div className="flex gap-4 p-3 border rounded-lg bg-muted/30">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dataType"
+                      value="original"
+                      checked={formData.dataType === 'original'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dataType: e.target.value as 'original' | 'dummy' }))}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm font-medium">✓ Original Data</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dataType"
+                      value="dummy"
+                      checked={formData.dataType === 'dummy'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dataType: e.target.value as 'original' | 'dummy' }))}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <span className="text-sm font-medium">🎓 Dummy/Training Data</span>
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Original: Real production data | Dummy: Training or test data for learning purposes
+                </p>
               </div>
             </div>
             <div className="flex gap-2 mt-4">
@@ -874,6 +912,16 @@ const calculateHatchDate = (setDate: string) => {
                     >
                       <Pencil className="h-3.5 w-3.5 text-primary" />
                     </Button>
+                    {house.data_type === 'dummy' && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                        🎓 Dummy
+                      </Badge>
+                    )}
+                    {house.data_type === 'original' && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                        ✓ Original
+                      </Badge>
+                    )}
                     <Badge className={getStatusColor(house.status)}>
                       {house.status}
                     </Badge>

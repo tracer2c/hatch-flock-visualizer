@@ -27,6 +27,7 @@ const EmbrexDataSheetPage = () => {
     technicianSearch: '',
     dateFrom: '',
     dateTo: '',
+    dataType: 'all' as 'all' | 'original' | 'dummy',
   });
 
   const [hatcheries, setHatcheries] = useState<any[]>([]);
@@ -50,7 +51,8 @@ const EmbrexDataSheetPage = () => {
     (filters.selectedHatcheries.length > 0 ? 1 : 0) +
     (filters.selectedMachines.length > 0 ? 1 : 0) +
     (filters.technicianSearch ? 1 : 0) +
-    (filters.dateFrom || filters.dateTo ? 1 : 0);
+    (filters.dateFrom || filters.dateTo ? 1 : 0) +
+    (filters.dataType !== 'all' ? 1 : 0);
 
   const clearAllFilters = () => {
     setFilters({
@@ -61,6 +63,7 @@ const EmbrexDataSheetPage = () => {
       technicianSearch: '',
       dateFrom: '',
       dateTo: '',
+      dataType: 'all',
     });
   };
 

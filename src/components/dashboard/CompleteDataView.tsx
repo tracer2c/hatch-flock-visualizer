@@ -21,6 +21,7 @@ interface CompleteDataViewProps {
     technicianSearch: string;
     dateFrom: string;
     dateTo: string;
+    dataType: 'all' | 'original' | 'dummy';
   };
 }
 
@@ -141,6 +142,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
           unit_id: batch.units?.id,
           unit_name: batch.units?.name,
           batch_id: batch.id,
+          data_type: batch.data_type || 'original', // Include data_type
         // Flatten fertility data
         fertility_technician_name: batch.fertility_analysis?.[0]?.technician_name,
         fertile_eggs: batch.fertility_analysis?.[0]?.fertile_eggs,
@@ -251,7 +253,12 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         };
       });
 
-      setData(enrichedBatches);
+      // Apply data type filter
+      const filteredBatches = filters.dataType === 'all' 
+        ? enrichedBatches 
+        : enrichedBatches.filter(batch => batch.data_type === filters.dataType);
+
+      setData(filteredBatches);
     } catch (error) {
       console.error("Error loading complete data:", error);
       toast.error("Failed to load data");

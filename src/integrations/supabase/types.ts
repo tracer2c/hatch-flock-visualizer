@@ -297,6 +297,7 @@ export type Database = {
           clears_technician_name: string | null
           company_id: string
           created_at: string
+          data_type: string
           eggs_cleared: number | null
           eggs_injected: number
           expected_hatch_date: string
@@ -323,6 +324,7 @@ export type Database = {
           clears_technician_name?: string | null
           company_id?: string
           created_at?: string
+          data_type?: string
           eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date: string
@@ -349,6 +351,7 @@ export type Database = {
           clears_technician_name?: string | null
           company_id?: string
           created_at?: string
+          data_type?: string
           eggs_cleared?: number | null
           eggs_injected?: number
           expected_hatch_date?: string
