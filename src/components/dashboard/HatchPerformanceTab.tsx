@@ -267,22 +267,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
             </TableHead>
             <TableHead className="text-right">
               <div className="flex items-center justify-end gap-1">
-                Hatch of Incubated %
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="inline-flex" type="button">
-                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Hatch of Incubated</p>
-                    <p className="text-sm">Formula: ((Chicks + Culls) / Fertile) × 100</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div className="flex items-center justify-end gap-1">
                 HOI %
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -292,7 +276,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-semibold">Hatch of Injection (HOI)</p>
-                    <p className="text-sm">Formula: (Hatch / Injected) × 100</p>
+                    <p className="text-sm">Formula: (Chicks Hatched / Eggs Injected) × 100</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -307,8 +291,8 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="font-semibold">Infertile/Fertile Development</p>
-                    <p className="text-sm">Formula: HOI % - HOF %</p>
+                    <p className="font-semibold">Infertile Percentage (I/F)</p>
+                    <p className="text-sm">Formula: (Infertile Eggs / Total Eggs Set) × 100</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -342,9 +326,6 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                 </TableCell>
                 <TableCell className="text-right">
                   {item.hof_percent ? formatPercentage(item.hof_percent) : "-"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {item.hoi_percent ? formatPercentage(item.hoi_percent) : "-"}
                 </TableCell>
                 <TableCell className="text-right">
                   {item.chicks_hatched && item.eggs_injected 

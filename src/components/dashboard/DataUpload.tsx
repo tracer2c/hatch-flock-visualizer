@@ -170,7 +170,7 @@ const DataUpload = ({ onDataUpdate }: DataUploadProps) => {
                 <li>Fertility - Fertility percentage</li>
                 <li>I/F dev. - Fertility deviation</li>
                 <li>Hatch - Hatch rate percentage</li>
-                <li>HOI - Hatch of incubated percentage</li>
+                <li>HOI - Hatch of Injection percentage</li>
                 <li>HOF - Hatch of fertile percentage</li>
                 <li>Early Dead - Early mortality percentage</li>
               </ul>
