@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
 
 
@@ -29,13 +30,14 @@ const ResidueEntryPage = () => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [residueData, setResidueData] = useState([]);
   const { toast } = useToast();
+  const { viewMode } = useViewMode();
 
   useEffect(() => {
     if (houseId) {
       loadHouseInfo();
       loadResidueData();
     }
-  }, [houseId]);
+  }, [houseId, viewMode]);
 
   const loadHouseInfo = async () => {
     if (!houseId) return;
@@ -48,15 +50,20 @@ const ResidueEntryPage = () => {
         machines(id, machine_number, machine_type, location)
       `)
       .eq('id', houseId)
+      .eq('data_type', viewMode)
       .single();
 
     if (error) {
+      console.error("Error loading house:", error);
       toast({
         title: "Error loading house",
-        description: error.message,
+        description: `${error.message}. Please try refreshing the page.`,
         variant: "destructive"
       });
-    } else {
+      return;
+    }
+    
+    if (data) {
       // Extract house number from batch_number if not in flocks table
       let houseNumber = data.flocks?.house_number || '';
       if (!houseNumber && data.batch_number.includes('#')) {
