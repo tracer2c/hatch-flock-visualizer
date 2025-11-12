@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateHOIPercent, calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
+import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
 import { useViewMode } from "@/contexts/ViewModeContext";
 
 
@@ -51,8 +51,6 @@ type MetricKey =
   | "hof_percent"
   | "hoi_percent"
   | "if_dev_percent"
-  | "hatch_vs_injected_percent"
-  | "hatch_vs_injected_diff"
   | "cull_percent"
   | "live_pip_percent"
   | "dead_pip_percent"
@@ -94,8 +92,6 @@ interface RawRow {
   hof_percent?: number;
   hoi_percent?: number;
   if_dev_percent?: number;
-  hatch_vs_injected_percent?: number;
-  hatch_vs_injected_diff?: number;
   cull_percent?: number;
   live_pip_percent?: number;
   dead_pip_percent?: number;
@@ -147,8 +143,6 @@ interface BucketRow {
     hof_percent?: number;
     hoi_percent?: number;
     if_dev_percent?: number;
-    hatch_vs_injected_percent?: number;
-    hatch_vs_injected_diff?: number;
     cull_percent?: number;
     live_pip_percent?: number;
     dead_pip_percent?: number;
@@ -174,8 +168,6 @@ const metricLabel: Record<MetricKey, string> = {
   hof_percent: "HOF %",
   hoi_percent: "HOI %",
   if_dev_percent: "I/F %",
-  hatch_vs_injected_percent: "Hatch vs Injected %",
-  hatch_vs_injected_diff: "Hatch vs Injected (Diff)",
   cull_percent: "Cull %",
   live_pip_percent: "Live Pips %",
   dead_pip_percent: "Dead Pips %",
@@ -213,8 +205,6 @@ const FERTILITY_METRICS = [
   "hof_percent",
   "hoi_percent",
   "if_dev_percent",
-  "hatch_vs_injected_percent",
-  "hatch_vs_injected_diff",
   "cull_percent",
   "live_pip_percent",
   "dead_pip_percent",
@@ -230,7 +220,7 @@ const isPercentMetric = (m: MetricKey) =>
   m === "mid_dead_percent" || m === "late_dead_percent" || 
   m === "total_mortality_percent" || m === "hatch_percent" || 
   m === "hof_percent" || m === "hoi_percent" ||
-  m === "if_dev_percent" || m === "hatch_vs_injected_percent" ||
+  m === "if_dev_percent" ||
   m === "cull_percent" || m === "live_pip_percent" ||
   m === "dead_pip_percent" || m === "total_pip_percent" ||
   m === "embryonic_mortality_percent";
@@ -535,15 +525,6 @@ export default function EmbrexDashboard() {
             total_pip_percent = (totalPips / sampleSize) * 100;
             embryonic_mortality_percent = (embryonicMortalityCount / sampleSize) * 100;
           }
-          
-          // Calculate Hatch vs Injected metrics using standardized formula
-          let hatch_vs_injected_percent = 0;
-          let hatch_vs_injected_diff = 0;
-          
-          if (eggsInjected > 0) {
-            hatch_vs_injected_percent = calculateHOIPercent(chicksHatched, eggsInjected);
-          }
-          hatch_vs_injected_diff = eggsInjected - chicksHatched;
 
           return {
             batch_id: b.id,
@@ -566,8 +547,6 @@ export default function EmbrexDashboard() {
             hof_percent: residue?.hof_percent ?? 0,
             hoi_percent: residue?.hoi_percent ?? 0,
             if_dev_percent: residue?.if_dev_percent ?? 0,
-            hatch_vs_injected_percent,
-            hatch_vs_injected_diff,
             cull_percent,
             live_pip_percent,
             dead_pip_percent,
@@ -721,8 +700,6 @@ export default function EmbrexDashboard() {
       const hofVals = b.raw.filter(r => r.hof_percent != null);
       const hoiVals = b.raw.filter(r => r.hoi_percent != null);
       const ifVals = b.raw.filter(r => r.if_dev_percent != null);
-      const hatchVsInjectedPctVals = b.raw.filter(r => r.hatch_vs_injected_percent != null);
-      const hatchVsInjectedDiffVals = b.raw.filter(r => r.hatch_vs_injected_diff != null);
       const cullVals = b.raw.filter(r => r.cull_percent != null);
       const livePipVals = b.raw.filter(r => r.live_pip_percent != null);
       const deadPipVals = b.raw.filter(r => r.dead_pip_percent != null);
@@ -752,11 +729,7 @@ export default function EmbrexDashboard() {
           hoiVals.reduce((sum, r) => sum + (r.hoi_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.if_dev_percent = ifVals.length > 0 ? 
           ifVals.reduce((sum, r) => sum + (r.if_dev_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.hatch_vs_injected_percent = hatchVsInjectedPctVals.length > 0 ? 
-          hatchVsInjectedPctVals.reduce((sum, r) => sum + (r.hatch_vs_injected_percent! * (r.eggs_injected || 0)), 0) / sumInj : 0;
-        b.pct.hatch_vs_injected_diff = hatchVsInjectedDiffVals.length > 0 ? 
-          hatchVsInjectedDiffVals.reduce((sum, r) => sum + r.hatch_vs_injected_diff!, 0) : 0;
-        b.pct.cull_percent = cullVals.length > 0 ? 
+        b.pct.cull_percent = cullVals.length > 0 ?
           cullVals.reduce((sum, r) => sum + (r.cull_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.live_pip_percent = livePipVals.length > 0 ? 
           livePipVals.reduce((sum, r) => sum + (r.live_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
@@ -789,11 +762,7 @@ export default function EmbrexDashboard() {
           hoiVals.reduce((sum, r) => sum + r.hoi_percent!, 0) / hoiVals.length : 0;
         b.pct.if_dev_percent = ifVals.length > 0 ? 
           ifVals.reduce((sum, r) => sum + r.if_dev_percent!, 0) / ifVals.length : 0;
-        b.pct.hatch_vs_injected_percent = hatchVsInjectedPctVals.length > 0 ? 
-          hatchVsInjectedPctVals.reduce((sum, r) => sum + r.hatch_vs_injected_percent!, 0) / hatchVsInjectedPctVals.length : 0;
-        b.pct.hatch_vs_injected_diff = hatchVsInjectedDiffVals.length > 0 ? 
-          hatchVsInjectedDiffVals.reduce((sum, r) => sum + r.hatch_vs_injected_diff!, 0) / hatchVsInjectedDiffVals.length : 0;
-        b.pct.cull_percent = cullVals.length > 0 ? 
+        b.pct.cull_percent = cullVals.length > 0 ?
           cullVals.reduce((sum, r) => sum + r.cull_percent!, 0) / cullVals.length : 0;
         b.pct.live_pip_percent = livePipVals.length > 0 ? 
           livePipVals.reduce((sum, r) => sum + r.live_pip_percent!, 0) / livePipVals.length : 0;
@@ -838,8 +807,6 @@ export default function EmbrexDashboard() {
       total_mortality_percent: b.pct.total_mortality_percent ?? 0,
       hatch_percent: b.pct.hatch_percent ?? 0,
       if_dev_percent: b.pct.if_dev_percent ?? 0,
-      hatch_vs_injected_percent: b.pct.hatch_vs_injected_percent ?? 0,
-      hatch_vs_injected_diff: b.pct.hatch_vs_injected_diff ?? 0,
       fertile_eggs: b.count.fertile_eggs ?? 0,
       infertile_eggs: b.count.infertile_eggs ?? 0,
       early_dead: b.count.early_dead ?? 0,
@@ -876,8 +843,6 @@ export default function EmbrexDashboard() {
         total_mortality_percent: parseFloat((r.total_mortality_percent || 0).toFixed(2)),
         hatch_percent: parseFloat((r.hatch_percent || 0).toFixed(2)),
         if_dev_percent: parseFloat((r.if_dev_percent || 0).toFixed(2)),
-        hatch_vs_injected_percent: parseFloat((r.hatch_vs_injected_percent || 0).toFixed(2)),
-        hatch_vs_injected_diff: parseFloat((r.hatch_vs_injected_diff || 0).toFixed(2)),
         fertile_eggs: r.fertile_eggs || 0,
         infertile_eggs: r.infertile_eggs || 0,
         early_dead: r.early_dead || 0,
