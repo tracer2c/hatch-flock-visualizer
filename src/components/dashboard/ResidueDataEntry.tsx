@@ -981,77 +981,110 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                   <TableHead>Name</TableHead>
                   <TableHead>Flock #</TableHead>
                   <TableHead>House #</TableHead>
+                  <TableHead>Sample Size</TableHead>
                   <TableHead>Infertile</TableHead>
                   <TableHead>Chicks</TableHead>
                   <TableHead>Early Dead</TableHead>
                   <TableHead>Mid Dead</TableHead>
-                  <TableHead>Late Death</TableHead>
-                  <TableHead>Total Dead</TableHead>
+                  <TableHead>Late Dead</TableHead>
+                  <TableHead>Cull Chicks</TableHead>
+                  <TableHead>Live Pips</TableHead>
+                  <TableHead>Dead Pips</TableHead>
+                  <TableHead>Total Pips</TableHead>
+                  <TableHead>Embryonic Mortality</TableHead>
+                  <TableHead>Handling Cracks</TableHead>
+                  <TableHead>Transfer Crack</TableHead>
                   <TableHead>Contamination</TableHead>
                   <TableHead>Mold</TableHead>
                   <TableHead>Abnormal</TableHead>
+                  <TableHead>Brain Defects</TableHead>
+                  <TableHead>DY Egg</TableHead>
+                  <TableHead>Malpositioned</TableHead>
+                  <TableHead>Upside Down</TableHead>
+                  <TableHead>Technician</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Hatch %</TableHead>
                   <TableHead>HOF %</TableHead>
+                  <TableHead>HOI %</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium">{record.name}</TableCell>
-                    <TableCell>{record.flockNumber}</TableCell>
-                    <TableCell>{record.houseNumber}</TableCell>
-                    <TableCell>{record.infertile} ({record.infertilePercent}%)</TableCell>
-                    <TableCell>{record.chicks}</TableCell>
-                    <TableCell>{record.earlyDeath} ({record.earlyDeathPercent}%)</TableCell>
-                    <TableCell>{record.midDeath} ({record.midDeathPercent}%)</TableCell>
-                    <TableCell>{record.lateDeath} ({record.lateDeathPercent}%)</TableCell>
-                    <TableCell className="font-medium">
-                      {record.earlyDeath + record.midDeath + record.lateDeath} ({((record.earlyDeath + record.midDeath + record.lateDeath) / record.totalEggs * 100).toFixed(2)}%)
-                    </TableCell>
-                    <TableCell
-                      className={record.contaminationPercent > 1 ? "text-red-600 font-medium" : ""}
-                    >
-                      {record.contamination} ({record.contaminationPercent}%)
-                    </TableCell>
-                    <TableCell 
-                      className={record.moldPercent > 1 ? "text-red-600 font-medium" : ""}
-                    >
-                      {record.mold} ({record.moldPercent}%)
-                    </TableCell>
-                    <TableCell 
-                      className={record.abnormalPercent > 2 ? "text-red-600 font-medium" : ""}
-                    >
-                      {record.abnormal} ({record.abnormalPercent}%)
-                    </TableCell>
-                    <TableCell className="font-medium text-blue-600">
-                      {record.hatchPercent ? `${record.hatchPercent}%` : '-'}
-                    </TableCell>
-                    <TableCell className="font-medium text-green-600">
-                      {record.hofPercent ? `${record.hofPercent}%` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(record)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(record.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {data.map((record) => {
+                  const totalPips = (record.livePipNumber || 0) + (record.deadPipNumber || 0);
+                  const embryonicMortality = calculateEmbryonicMortality(
+                    record.earlyDeath || 0,
+                    record.midDeath || 0,
+                    record.lateDeath || 0,
+                    record.livePipNumber || 0,
+                    record.deadPipNumber || 0
+                  );
+                  
+                  return (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium">{record.name}</TableCell>
+                      <TableCell>{record.flockNumber}</TableCell>
+                      <TableCell>{record.houseNumber}</TableCell>
+                      <TableCell>{record.sampleSize || 648}</TableCell>
+                      <TableCell>{record.infertile} ({record.infertilePercent}%)</TableCell>
+                      <TableCell>{record.chicks}</TableCell>
+                      <TableCell>{record.earlyDeath} ({record.earlyDeathPercent}%)</TableCell>
+                      <TableCell>{record.midDeath} ({record.midDeathPercent}%)</TableCell>
+                      <TableCell>{record.lateDeath} ({record.lateDeathPercent}%)</TableCell>
+                      <TableCell>{record.cullChicks || 0}</TableCell>
+                      <TableCell>{record.livePipNumber || 0}</TableCell>
+                      <TableCell>{record.deadPipNumber || 0}</TableCell>
+                      <TableCell>{totalPips}</TableCell>
+                      <TableCell>{embryonicMortality}</TableCell>
+                      <TableCell>{record.handlingCracks || 0}</TableCell>
+                      <TableCell>{record.transferCrack || 0}</TableCell>
+                      <TableCell className={record.contaminationPercent > 1 ? "text-red-600 font-medium" : ""}>
+                        {record.contamination} ({record.contaminationPercent}%)
+                      </TableCell>
+                      <TableCell className={record.moldPercent > 1 ? "text-red-600 font-medium" : ""}>
+                        {record.mold} ({record.moldPercent}%)
+                      </TableCell>
+                      <TableCell className={record.abnormalPercent > 2 ? "text-red-600 font-medium" : ""}>
+                        {record.abnormal} ({record.abnormalPercent}%)
+                      </TableCell>
+                      <TableCell>{record.brain || 0}</TableCell>
+                      <TableCell>{record.dryEgg || 0}</TableCell>
+                      <TableCell>{record.malpositioned || 0}</TableCell>
+                      <TableCell>{record.upsideDown || 0}</TableCell>
+                      <TableCell>{record.technicianName || '-'}</TableCell>
+                      <TableCell className="max-w-xs truncate">{record.notes || '-'}</TableCell>
+                      <TableCell className="font-medium text-blue-600">
+                        {record.hatchPercent ? `${record.hatchPercent}%` : '-'}
+                      </TableCell>
+                      <TableCell className="font-medium text-green-600">
+                        {record.hofPercent ? `${record.hofPercent}%` : '-'}
+                      </TableCell>
+                      <TableCell className="font-medium text-purple-600">
+                        {record.hoiPercent ? `${record.hoiPercent}%` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(record)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(record.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
