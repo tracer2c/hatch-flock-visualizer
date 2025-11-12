@@ -886,7 +886,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                       <Info className="h-4 w-4 opacity-70" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Hatch incl. culls = (hatched chicks + culls) ÷ fertile eggs × 100
+                      Hatch of Injection = hatched chicks ÷ eggs injected × 100
                     </TooltipContent>
                   </Tooltip>
                 </Label>
