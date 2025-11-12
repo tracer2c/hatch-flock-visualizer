@@ -48,16 +48,28 @@ type MetricKey =
   | "late_dead_percent"
   | "total_mortality_percent"
   | "hatch_percent"
+  | "hof_percent"
+  | "hoi_percent"
   | "if_dev_percent"
   | "hatch_vs_injected_percent"
   | "hatch_vs_injected_diff"
+  | "cull_percent"
+  | "live_pip_percent"
+  | "dead_pip_percent"
+  | "total_pip_percent"
+  | "embryonic_mortality_percent"
   | "fertile_eggs"
   | "infertile_eggs"
   | "early_dead"
   | "mid_dead"
   | "late_dead"
   | "hatch_count"
-  | "sample_size";
+  | "sample_size"
+  | "cull_chicks"
+  | "live_pips"
+  | "dead_pips"
+  | "total_pips"
+  | "embryonic_mortality_count";
 type PercentAgg = "weighted" | "unweighted";
 type FacetMode = "flock" | "unit" | "flock_unit";
 
@@ -79,9 +91,16 @@ interface RawRow {
   late_dead_percent?: number;
   total_mortality_percent?: number;
   hatch_percent?: number;
+  hof_percent?: number;
+  hoi_percent?: number;
   if_dev_percent?: number;
   hatch_vs_injected_percent?: number;
   hatch_vs_injected_diff?: number;
+  cull_percent?: number;
+  live_pip_percent?: number;
+  dead_pip_percent?: number;
+  total_pip_percent?: number;
+  embryonic_mortality_percent?: number;
   fertile_eggs?: number;
   infertile_eggs?: number;
   early_dead?: number;
@@ -89,6 +108,11 @@ interface RawRow {
   late_dead?: number;
   hatch_count?: number;
   sample_size?: number;
+  cull_chicks?: number;
+  live_pips?: number;
+  dead_pips?: number;
+  total_pips?: number;
+  embryonic_mortality_count?: number;
 }
 interface BucketRow {
   bucketKey: string;
@@ -105,6 +129,11 @@ interface BucketRow {
     late_dead?: number;
     hatch_count?: number;
     sample_size?: number;
+    cull_chicks?: number;
+    live_pips?: number;
+    dead_pips?: number;
+    total_pips?: number;
+    embryonic_mortality_count?: number;
   };
   pct: { 
     clear_pct?: number; 
@@ -115,9 +144,16 @@ interface BucketRow {
     late_dead_percent?: number;
     total_mortality_percent?: number;
     hatch_percent?: number;
+    hof_percent?: number;
+    hoi_percent?: number;
     if_dev_percent?: number;
     hatch_vs_injected_percent?: number;
     hatch_vs_injected_diff?: number;
+    cull_percent?: number;
+    live_pip_percent?: number;
+    dead_pip_percent?: number;
+    total_pip_percent?: number;
+    embryonic_mortality_percent?: number;
   };
   raw: RawRow[];
 }
@@ -135,9 +171,16 @@ const metricLabel: Record<MetricKey, string> = {
   late_dead_percent: "Late Dead %", 
   total_mortality_percent: "Total Mortality %",
   hatch_percent: "Hatch %",
+  hof_percent: "HOF %",
+  hoi_percent: "HOI %",
   if_dev_percent: "I/F %",
   hatch_vs_injected_percent: "Hatch vs Injected %",
   hatch_vs_injected_diff: "Hatch vs Injected (Diff)",
+  cull_percent: "Cull %",
+  live_pip_percent: "Live Pips %",
+  dead_pip_percent: "Dead Pips %",
+  total_pip_percent: "Total Pips %",
+  embryonic_mortality_percent: "Embryonic Mortality %",
   fertile_eggs: "Fertile Eggs",
   infertile_eggs: "Infertile Eggs",
   early_dead: "Early Dead",
@@ -145,6 +188,11 @@ const metricLabel: Record<MetricKey, string> = {
   late_dead: "Late Dead",
   hatch_count: "Hatched",
   sample_size: "Sample Size",
+  cull_chicks: "Cull Chicks",
+  live_pips: "Live Pips",
+  dead_pips: "Dead Pips",
+  total_pips: "Total Pips",
+  embryonic_mortality_count: "Embryonic Mortality",
 };
 const BASIC_METRICS = [
   "total_eggs_set",
@@ -162,9 +210,16 @@ const FERTILITY_METRICS = [
   "late_dead_percent", 
   "total_mortality_percent",
   "hatch_percent",
+  "hof_percent",
+  "hoi_percent",
   "if_dev_percent",
   "hatch_vs_injected_percent",
   "hatch_vs_injected_diff",
+  "cull_percent",
+  "live_pip_percent",
+  "dead_pip_percent",
+  "total_pip_percent",
+  "embryonic_mortality_percent",
 ] as const;
 
 const ALL_METRICS = [...BASIC_METRICS, ...FERTILITY_METRICS] as const;
@@ -174,7 +229,11 @@ const isPercentMetric = (m: MetricKey) =>
   m === "fertility_percent" || m === "early_dead_percent" || 
   m === "mid_dead_percent" || m === "late_dead_percent" || 
   m === "total_mortality_percent" || m === "hatch_percent" || 
-  m === "if_dev_percent" || m === "hatch_vs_injected_percent";
+  m === "hof_percent" || m === "hoi_percent" ||
+  m === "if_dev_percent" || m === "hatch_vs_injected_percent" ||
+  m === "cull_percent" || m === "live_pip_percent" ||
+  m === "dead_pip_percent" || m === "total_pip_percent" ||
+  m === "embryonic_mortality_percent";
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
@@ -257,7 +316,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           if (entry.dataKey === '_raw' || entry.dataKey === 'rolling' && entry.value === undefined) return null;
           
           // Check if it's a count metric
-          const countMetrics = ['fertile_eggs', 'infertile_eggs', 'early_dead', 'mid_dead', 'late_dead', 'hatch_count', 'sample_size'];
+          const countMetrics = ['fertile_eggs', 'infertile_eggs', 'early_dead', 'mid_dead', 'late_dead', 'hatch_count', 'sample_size', 'cull_chicks', 'live_pips', 'dead_pips', 'total_pips', 'embryonic_mortality_count'];
           const isCount = countMetrics.includes(entry.dataKey);
           
           // Check if it's a percentage metric
@@ -392,7 +451,10 @@ export default function EmbrexDashboard() {
               if_dev_percent,
               early_dead,
               mid_dead,
-              late_dead
+              late_dead,
+              cull_chicks,
+              live_pip_number,
+              dead_pip_number
             )
           `)
           .eq('data_type', viewMode)
@@ -423,6 +485,35 @@ export default function EmbrexDashboard() {
           }
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
+          
+          // Calculate PIP metrics
+          const cullChicks = Number(residue?.cull_chicks ?? 0);
+          const livePips = Number(residue?.live_pip_number ?? 0);
+          const deadPips = Number(residue?.dead_pip_number ?? 0);
+          const totalPips = livePips + deadPips;
+
+          // Calculate Embryonic Mortality (Early + Mid + Late + Live Pips + Dead Pips)
+          const embryonicMortalityCount = 
+            (residue?.early_dead ?? 0) + 
+            (residue?.mid_dead ?? 0) + 
+            (residue?.late_dead ?? 0) + 
+            livePips + 
+            deadPips;
+
+          // Calculate percentages
+          let cull_percent = 0;
+          let live_pip_percent = 0;
+          let dead_pip_percent = 0;
+          let total_pip_percent = 0;
+          let embryonic_mortality_percent = 0;
+
+          if (totalEggs > 0) {
+            cull_percent = (cullChicks / totalEggs) * 100;
+            live_pip_percent = (livePips / totalEggs) * 100;
+            dead_pip_percent = (deadPips / totalEggs) * 100;
+            total_pip_percent = (totalPips / totalEggs) * 100;
+            embryonic_mortality_percent = (embryonicMortalityCount / totalEggs) * 100;
+          }
           
           // Calculate Hatch vs Injected metrics using standardized formula
           let hatch_vs_injected_percent = 0;
@@ -456,6 +547,11 @@ export default function EmbrexDashboard() {
             if_dev_percent: residue?.if_dev_percent ?? 0,
             hatch_vs_injected_percent,
             hatch_vs_injected_diff,
+            cull_percent,
+            live_pip_percent,
+            dead_pip_percent,
+            total_pip_percent,
+            embryonic_mortality_percent,
             fertile_eggs: fertility?.fertile_eggs,
             infertile_eggs: fertility?.infertile_eggs,
             early_dead: residue?.early_dead,
@@ -463,6 +559,11 @@ export default function EmbrexDashboard() {
             late_dead: residue?.late_dead,
             hatch_count: chicksHatched,
             sample_size: fertility?.sample_size,
+            cull_chicks: cullChicks,
+            live_pips: livePips,
+            dead_pips: deadPips,
+            total_pips: totalPips,
+            embryonic_mortality_count: embryonicMortalityCount,
           };
         });
         setRows(formatted);
@@ -576,6 +677,11 @@ export default function EmbrexDashboard() {
       b.count.late_dead      = (b.count.late_dead      ?? 0) + (r.late_dead      ?? 0);
       b.count.hatch_count    = (b.count.hatch_count    ?? 0) + (r.hatch_count    ?? 0);
       b.count.sample_size    = (b.count.sample_size    ?? 0) + (r.sample_size    ?? 0);
+      b.count.cull_chicks    = (b.count.cull_chicks    ?? 0) + (r.cull_chicks    ?? 0);
+      b.count.live_pips      = (b.count.live_pips      ?? 0) + (r.live_pips      ?? 0);
+      b.count.dead_pips      = (b.count.dead_pips      ?? 0) + (r.dead_pips      ?? 0);
+      b.count.total_pips     = (b.count.total_pips     ?? 0) + (r.total_pips     ?? 0);
+      b.count.embryonic_mortality_count = (b.count.embryonic_mortality_count ?? 0) + (r.embryonic_mortality_count ?? 0);
       b.raw.push(r);
     }
     const out: BucketRow[] = [];
@@ -591,9 +697,16 @@ export default function EmbrexDashboard() {
       const lateVals = b.raw.filter(r => r.late_dead_percent != null);
       const totalMortVals = b.raw.filter(r => r.total_mortality_percent != null);
       const hatchVals = b.raw.filter(r => r.hatch_percent != null);
+      const hofVals = b.raw.filter(r => r.hof_percent != null);
+      const hoiVals = b.raw.filter(r => r.hoi_percent != null);
       const ifVals = b.raw.filter(r => r.if_dev_percent != null);
       const hatchVsInjectedPctVals = b.raw.filter(r => r.hatch_vs_injected_percent != null);
       const hatchVsInjectedDiffVals = b.raw.filter(r => r.hatch_vs_injected_diff != null);
+      const cullVals = b.raw.filter(r => r.cull_percent != null);
+      const livePipVals = b.raw.filter(r => r.live_pip_percent != null);
+      const deadPipVals = b.raw.filter(r => r.dead_pip_percent != null);
+      const totalPipVals = b.raw.filter(r => r.total_pip_percent != null);
+      const embryonicMortVals = b.raw.filter(r => r.embryonic_mortality_percent != null);
       
       if (percentAgg === "weighted") {
         b.pct.clear_pct = sumSet > 0 ? (sumClr / sumSet) * 100 : 0;
@@ -612,12 +725,26 @@ export default function EmbrexDashboard() {
           totalMortVals.reduce((sum, r) => sum + (r.total_mortality_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.hatch_percent = hatchVals.length > 0 ? 
           hatchVals.reduce((sum, r) => sum + (r.hatch_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.hof_percent = hofVals.length > 0 ? 
+          hofVals.reduce((sum, r) => sum + (r.hof_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.hoi_percent = hoiVals.length > 0 ? 
+          hoiVals.reduce((sum, r) => sum + (r.hoi_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.if_dev_percent = ifVals.length > 0 ? 
           ifVals.reduce((sum, r) => sum + (r.if_dev_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.hatch_vs_injected_percent = hatchVsInjectedPctVals.length > 0 ? 
           hatchVsInjectedPctVals.reduce((sum, r) => sum + (r.hatch_vs_injected_percent! * (r.eggs_injected || 0)), 0) / sumInj : 0;
         b.pct.hatch_vs_injected_diff = hatchVsInjectedDiffVals.length > 0 ? 
           hatchVsInjectedDiffVals.reduce((sum, r) => sum + r.hatch_vs_injected_diff!, 0) : 0;
+        b.pct.cull_percent = cullVals.length > 0 ? 
+          cullVals.reduce((sum, r) => sum + (r.cull_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.live_pip_percent = livePipVals.length > 0 ? 
+          livePipVals.reduce((sum, r) => sum + (r.live_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.dead_pip_percent = deadPipVals.length > 0 ? 
+          deadPipVals.reduce((sum, r) => sum + (r.dead_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.total_pip_percent = totalPipVals.length > 0 ? 
+          totalPipVals.reduce((sum, r) => sum + (r.total_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
+        b.pct.embryonic_mortality_percent = embryonicMortVals.length > 0 ? 
+          embryonicMortVals.reduce((sum, r) => sum + (r.embryonic_mortality_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
       } else {
         const valsClr = b.raw.map(r => (r.total_eggs_set ? (r.eggs_cleared ?? 0) / r.total_eggs_set * 100 : 0));
         const valsInj = b.raw.map(r => (r.total_eggs_set ? (r.eggs_injected ?? 0) / r.total_eggs_set * 100 : 0));
@@ -635,12 +762,26 @@ export default function EmbrexDashboard() {
           totalMortVals.reduce((sum, r) => sum + r.total_mortality_percent!, 0) / totalMortVals.length : 0;
         b.pct.hatch_percent = hatchVals.length > 0 ? 
           hatchVals.reduce((sum, r) => sum + r.hatch_percent!, 0) / hatchVals.length : 0;
+        b.pct.hof_percent = hofVals.length > 0 ? 
+          hofVals.reduce((sum, r) => sum + r.hof_percent!, 0) / hofVals.length : 0;
+        b.pct.hoi_percent = hoiVals.length > 0 ? 
+          hoiVals.reduce((sum, r) => sum + r.hoi_percent!, 0) / hoiVals.length : 0;
         b.pct.if_dev_percent = ifVals.length > 0 ? 
           ifVals.reduce((sum, r) => sum + r.if_dev_percent!, 0) / ifVals.length : 0;
         b.pct.hatch_vs_injected_percent = hatchVsInjectedPctVals.length > 0 ? 
           hatchVsInjectedPctVals.reduce((sum, r) => sum + r.hatch_vs_injected_percent!, 0) / hatchVsInjectedPctVals.length : 0;
         b.pct.hatch_vs_injected_diff = hatchVsInjectedDiffVals.length > 0 ? 
           hatchVsInjectedDiffVals.reduce((sum, r) => sum + r.hatch_vs_injected_diff!, 0) / hatchVsInjectedDiffVals.length : 0;
+        b.pct.cull_percent = cullVals.length > 0 ? 
+          cullVals.reduce((sum, r) => sum + r.cull_percent!, 0) / cullVals.length : 0;
+        b.pct.live_pip_percent = livePipVals.length > 0 ? 
+          livePipVals.reduce((sum, r) => sum + r.live_pip_percent!, 0) / livePipVals.length : 0;
+        b.pct.dead_pip_percent = deadPipVals.length > 0 ? 
+          deadPipVals.reduce((sum, r) => sum + r.dead_pip_percent!, 0) / deadPipVals.length : 0;
+        b.pct.total_pip_percent = totalPipVals.length > 0 ? 
+          totalPipVals.reduce((sum, r) => sum + r.total_pip_percent!, 0) / totalPipVals.length : 0;
+        b.pct.embryonic_mortality_percent = embryonicMortVals.length > 0 ? 
+          embryonicMortVals.reduce((sum, r) => sum + r.embryonic_mortality_percent!, 0) / embryonicMortVals.length : 0;
         
         b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
         b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
