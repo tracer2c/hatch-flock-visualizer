@@ -138,7 +138,6 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         sample_size: sampleSize,
         infertile_eggs: infertile,
         fertile_eggs: calculated.fertileEggs,
-        fertility_percent: calculated.fertilityPercent,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
