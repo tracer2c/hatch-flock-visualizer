@@ -213,7 +213,8 @@ const BatchOverviewDashboard = () => {
       // Total batches for selected hatchery
       let batchQuery = supabase
         .from('batches')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('data_type', viewMode);
       
       if (hatcheryFilter !== 'all') {
         batchQuery = batchQuery.eq('unit_id', hatcheryFilter);
@@ -232,6 +233,7 @@ const BatchOverviewDashboard = () => {
       let lastWeekQuery = supabase
         .from('batches')
         .select('*', { count: 'exact', head: true })
+        .eq('data_type', viewMode)
         .lte('created_at', lastWeekDate.toISOString());
       
       if (hatcheryFilter !== 'all') {
@@ -261,7 +263,7 @@ const BatchOverviewDashboard = () => {
     };
     
     fetchMetrics();
-  }, [hatcheryFilter]);
+  }, [hatcheryFilter, viewMode]);
 
   // Refresh data when view mode changes
   useEffect(() => {

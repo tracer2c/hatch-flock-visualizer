@@ -839,6 +839,7 @@ export type Database = {
           capacity: number
           company_id: string
           created_at: string
+          data_type: string
           id: string
           last_maintenance: string | null
           location: string | null
@@ -853,6 +854,7 @@ export type Database = {
           capacity: number
           company_id?: string
           created_at?: string
+          data_type?: string
           id?: string
           last_maintenance?: string | null
           location?: string | null
@@ -867,6 +869,7 @@ export type Database = {
           capacity?: number
           company_id?: string
           created_at?: string
+          data_type?: string
           id?: string
           last_maintenance?: string | null
           location?: string | null

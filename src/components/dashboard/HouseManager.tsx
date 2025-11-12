@@ -156,6 +156,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const { data, error } = await supabase
       .from('machines')
       .select('*')
+      .eq('data_type', viewMode)
       .order('machine_number', { ascending: true });
     
     if (error) {
