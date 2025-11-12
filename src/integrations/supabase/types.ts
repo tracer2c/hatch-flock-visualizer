@@ -770,6 +770,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          data_type: string
           flock_name: string
           flock_number: number
           house_number: string | null
@@ -787,6 +788,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          data_type?: string
           flock_name: string
           flock_number: number
           house_number?: string | null
@@ -804,6 +806,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          data_type?: string
           flock_name?: string
           flock_number?: number
           house_number?: string | null

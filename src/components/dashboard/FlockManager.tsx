@@ -83,6 +83,7 @@ const FlockManager = () => {
     const { data, error } = await supabase
       .from('flocks')
       .select('*')
+      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {
@@ -92,9 +93,7 @@ const FlockManager = () => {
         variant: "destructive"
       });
     } else {
-      // Filter by data_type after fetching
-      const filteredData = (data || []).filter((f: any) => f.data_type === viewMode);
-      setFlocks(filteredData as Flock[]);
+      setFlocks(data as Flock[] || []);
     }
   };
 

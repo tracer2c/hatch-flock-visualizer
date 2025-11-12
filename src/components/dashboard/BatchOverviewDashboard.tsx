@@ -15,15 +15,17 @@ import { useHelpContext } from "@/contexts/HelpContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import hatcheryIcon from "@/assets/hatchery-icon.png";
 import eggsIcon from "@/assets/eggs-icon.png";
 import chicksIcon from "@/assets/chicks-icon.png";
 import utilizationIcon from "@/assets/utilization-icon.png";
 
 const BatchOverviewDashboard = () => {
-  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
-  const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics();
-  const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization();
+  const { viewMode } = useViewMode();
+  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData(viewMode);
+  const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics(viewMode);
+  const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization(viewMode);
   const { data: qaAlerts, isLoading: alertsLoading } = useQAAlerts();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -260,6 +262,11 @@ const BatchOverviewDashboard = () => {
     
     fetchMetrics();
   }, [hatcheryFilter]);
+
+  // Refresh data when view mode changes
+  useEffect(() => {
+    refetchBatches();
+  }, [viewMode, refetchBatches]);
 
   useEffect(() => {
     if (!isLoading) {

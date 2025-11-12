@@ -5,9 +5,11 @@ import ComparisonFilters from "@/components/dashboard/ComparisonFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Loader2 } from "lucide-react";
 import { useComparisonData, type ComparisonFilters as FilterType } from "@/hooks/useComparisonData";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import { toast } from "sonner";
 
 const ComparisonModelPage = () => {
+  const { viewMode } = useViewMode();
   const [filters, setFilters] = useState<FilterType>({
     dateRange: { from: subDays(new Date(), 90), to: new Date() },
     unitIds: [],

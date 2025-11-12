@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useBatchData = () => {
+export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['batches-with-relations'],
+    queryKey: ['batches-with-relations', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -29,6 +29,7 @@ export const useBatchData = () => {
           qa_monitoring (*),
           residue_analysis (*)
         `)
+        .eq('data_type', viewMode)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -37,9 +38,9 @@ export const useBatchData = () => {
   });
 };
 
-export const useActiveBatches = () => {
+export const useActiveBatches = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['active-batches'],
+    queryKey: ['active-batches', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -48,6 +49,7 @@ export const useActiveBatches = () => {
           flocks (flock_number, flock_name, age_weeks),
           machines (machine_number, machine_type, status)
         `)
+        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: true });
 
@@ -57,9 +59,9 @@ export const useActiveBatches = () => {
   });
 };
 
-export const useBatchPerformanceMetrics = () => {
+export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['batch-performance-metrics'],
+    queryKey: ['batch-performance-metrics', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -96,6 +98,7 @@ export const useBatchPerformanceMetrics = () => {
             check_date
           )
         `)
+        .eq('data_type', viewMode)
         .order('set_date', { ascending: false });
 
       if (error) throw error;
@@ -176,9 +179,9 @@ export const useBatchPerformanceMetrics = () => {
   });
 };
 
-export const useOngoingBatchMetrics = () => {
+export const useOngoingBatchMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['ongoing-batch-metrics'],
+    queryKey: ['ongoing-batch-metrics', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -204,6 +207,7 @@ export const useOngoingBatchMetrics = () => {
             check_date
           )
         `)
+        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: false });
 
@@ -241,9 +245,9 @@ export const useOngoingBatchMetrics = () => {
   });
 };
 
-export const useCompletedBatchMetrics = () => {
+export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['completed-batch-metrics'],
+    queryKey: ['completed-batch-metrics', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -268,6 +272,7 @@ export const useCompletedBatchMetrics = () => {
             mid_dead
           )
         `)
+        .eq('data_type', viewMode)
         .eq('status', 'completed')
         .not('fertility_analysis', 'is', null)
         .order('set_date', { ascending: false });
@@ -335,9 +340,9 @@ export const useQAAlerts = () => {
   });
 };
 
-export const useActiveBatchFlowData = () => {
+export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['active-batch-flow-data'],
+    queryKey: ['active-batch-flow-data', viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -362,6 +367,7 @@ export const useActiveBatchFlowData = () => {
             mid_dead
           )
         `)
+        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: false });
 
@@ -416,9 +422,9 @@ export const useActiveBatchFlowData = () => {
   });
 };
 
-export const useMachineUtilization = () => {
+export const useMachineUtilization = (viewMode: 'original' | 'dummy' = 'original') => {
   return useQuery({
-    queryKey: ['machine-utilization'],
+    queryKey: ['machine-utilization', viewMode],
     queryFn: async () => {
       const { data: machines, error: machinesError } = await supabase
         .from('machines')
@@ -429,6 +435,7 @@ export const useMachineUtilization = () => {
       const { data: activeBatches, error: batchesError } = await supabase
         .from('batches')
         .select('machine_id, status, total_eggs_set')
+        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching']);
 
       if (batchesError) throw batchesError;

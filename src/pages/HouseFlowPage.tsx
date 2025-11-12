@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import BatchFlowSankey from "@/components/dashboard/BatchFlowSankey";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import hatcheryIcon from "@/assets/hatchery-icon.png";
 
 const HouseFlowPage = () => {
+  const { viewMode } = useViewMode();
+  
   useEffect(() => {
     document.title = "House Flow Analysis | Hatchery Dashboard";
     const metaDesc = document.querySelector('meta[name="description"]');

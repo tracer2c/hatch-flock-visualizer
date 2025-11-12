@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import ProcessFlowDashboard from "@/components/dashboard/ProcessFlowDashboard";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 const ProcessFlowPage = () => {
+  const { viewMode } = useViewMode();
+  
   useEffect(() => {
     document.title = "Process Flow Analysis | Hatchery Dashboard";
     const metaDesc = document.querySelector('meta[name="description"]');
