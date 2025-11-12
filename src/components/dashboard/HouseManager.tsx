@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import chicksIcon from "@/assets/chicks-icon.png";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface Flock {
   id: string;
@@ -269,7 +270,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     if (filters.unitIds.length > 0) count++;
     if (filters.machineTypes.length > 0) count++;
     if (filters.technicianName) count++;
-    if (filters.dataType !== 'all') count++;
     const defaultFrom = subDays(new Date(), 30);
     if (filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
         filters.dateRange.to.getTime() < new Date().getTime() - 86400000) count++;

@@ -9,6 +9,7 @@ import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
 import { HatchPerformanceTab } from "./HatchPerformanceTab";
 import { QAMonitoringTab } from "./QAMonitoringTab";
 import { calculateChicksHatched, calculateEmbryonicMortality } from "@/utils/hatcheryFormulas";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -253,10 +254,10 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         };
       });
 
-      // Apply data type filter
-      const filteredBatches = filters.dataType === 'all' 
-        ? enrichedBatches 
-        : enrichedBatches.filter(batch => batch.data_type === filters.dataType);
+      // Apply data type filter based on global viewMode
+      const filteredBatches = enrichedBatches.filter(
+        batch => batch.data_type === viewMode
+      );
 
       setData(filteredBatches);
     } catch (error) {

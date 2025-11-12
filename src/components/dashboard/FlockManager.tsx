@@ -24,6 +24,7 @@ interface Flock {
   unit_id?: string | null;
   technician_name?: string | null;
   created_by?: string | null;
+  data_type?: 'original' | 'dummy';
 }
 
 const FlockManager = () => {
@@ -58,7 +59,8 @@ const FlockManager = () => {
   useEffect(() => {
     loadFlocks();
     loadUnits();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]); // Reload when viewMode changes
 
   const loadUnits = async () => {
     const { data, error } = await supabase
@@ -81,7 +83,6 @@ const FlockManager = () => {
     const { data, error } = await supabase
       .from('flocks')
       .select('*')
-      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {
@@ -91,7 +92,9 @@ const FlockManager = () => {
         variant: "destructive"
       });
     } else {
-      setFlocks(data || []);
+      // Filter by data_type after fetching
+      const filteredData = (data || []).filter((f: any) => f.data_type === viewMode);
+      setFlocks(filteredData as Flock[]);
     }
   };
 

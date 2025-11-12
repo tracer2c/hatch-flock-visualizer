@@ -7,7 +7,6 @@ import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "@/components/ui/stat-card";
@@ -26,7 +25,6 @@ const BatchOverviewDashboard = () => {
   const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics();
   const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization();
   const { data: qaAlerts, isLoading: alertsLoading } = useQAAlerts();
-  const { viewMode, setViewMode } = useViewMode();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { updateContext } = useHelpContext();
@@ -34,6 +32,9 @@ const BatchOverviewDashboard = () => {
   const [lastWeekBatchesCount, setLastWeekBatchesCount] = useState(0);
   const [targets, setTargets] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
+  
+  // UI display mode (simple vs detailed view)
+  const [displayMode, setDisplayMode] = useState<'simple' | 'detailed'>('simple');
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [hatcheryFilter, setHatcheryFilter] = useState<string>("all");
@@ -346,12 +347,12 @@ const BatchOverviewDashboard = () => {
 
               {/* Simple View Toggle */}
               <div className="flex items-center gap-2">
-                <Badge variant={viewMode === 'simple' ? 'default' : 'secondary'} className="text-xs">
-                  {viewMode === 'simple' ? 'Simple' : 'Detailed'}
+                <Badge variant={displayMode === 'simple' ? 'default' : 'secondary'} className="text-xs">
+                  {displayMode === 'simple' ? 'Simple' : 'Detailed'}
                 </Badge>
                 <Switch
-                  checked={viewMode === 'detailed'}
-                  onCheckedChange={(checked) => setViewMode(checked ? 'detailed' : 'simple')}
+                  checked={displayMode === 'detailed'}
+                  onCheckedChange={(checked) => setDisplayMode(checked ? 'detailed' : 'simple')}
                 />
               </div>
 
@@ -486,7 +487,7 @@ const BatchOverviewDashboard = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            {viewMode === 'detailed' && (
+                            {displayMode === 'detailed' && (
                               <>
                                 <div className="text-right">
                                   <div className="text-sm font-medium">Progress</div>
