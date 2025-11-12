@@ -143,8 +143,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     
     // Use standardized formulas
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
-    // HOF% = (Chicks + Culls) / Fertile Eggs × 100
-    const hofPercent = calculateHOFPercent(chicksHatched, cullChicks, fertileEggs);
+    // HOF% = (Chicks Hatched / Fertile Eggs) × 100
+    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
     // HOI% = (Chicks Hatched / Eggs Injected) × 100
     const hoiPercent = calculateHOIPercent(chicksHatched, eggsInjected);
     const ifPercent = calculateIFPercent(infertile, sampleSize);

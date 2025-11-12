@@ -168,7 +168,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     
     const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
-    const hofPercent = calculateHOFPercent(chicksHatched, malformedChicks, fertileEggs);
+    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
     const hoiPercent = calculateHOIPercent(chicksHatched, editingRecord.eggs_injected || 0);
     const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
