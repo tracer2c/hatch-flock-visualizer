@@ -1387,15 +1387,21 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium capitalize">
-                      {entry.type.replace('_', ' ')} Record
+                      {entry.type ? entry.type.replace('_', ' ') : 'QA Monitoring'} Record
                     </div>
                     <div className="text-sm text-gray-600">
-                      {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate} | 
+                      {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate || entry.check_date} | 
                       {entry.type === 'setter_temperature' && ` Setter ${entry.setterNumber} - Avg: ${entry.leftTemps.average}°F / ${entry.rightTemps.average}°F`}
                       {entry.type === 'rectal_temperature' && ` ${entry.location} - ${entry.temperature}°F`}
                       {entry.type === 'tray_wash_temperature' && ` Wash Temps: ${entry.firstCheck}°F, ${entry.secondCheck}°F, ${entry.thirdCheck}°F`}
                       {entry.type === 'cull_check' && ` Flock ${entry.flockNumber} - ${entry.totalCulls} culls`}
+                      {!entry.type && entry.temperature && ` Day ${entry.day_of_incubation || 'N/A'} - Temp: ${entry.temperature}°F, Humidity: ${entry.humidity}%`}
                     </div>
+                    {(entry.technicianName || entry.inspector_name) && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Inspector: {entry.technicianName || entry.inspector_name}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {(entry.isWithinRange || entry.allPassed || entry.isGoodQuality || entry.isBalanced || entry.isOptimal) && (
