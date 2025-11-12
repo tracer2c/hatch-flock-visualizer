@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateHOIPercent } from "@/utils/hatcheryFormulas";
+import { calculateHOIPercent, calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
 import { useViewMode } from "@/contexts/ViewModeContext";
 
 
@@ -466,12 +466,35 @@ export default function EmbrexDashboard() {
           const fertility = b.fertility_analysis?.[0];
           const residue = b.residue_analysis;
           const totalEggs = Number(b.total_eggs_set ?? 0);
-          const sampleSize = Number(residue?.sample_size ?? fertility?.sample_size ?? 648);
+          
+          // Prioritize sample size from fertility first, then residue, then default
+          const sampleSize = Number(fertility?.sample_size ?? residue?.sample_size ?? 648);
+          
+          // Get all mortality components from residue analysis
+          const infertileEggs = Number(fertility?.infertile_eggs ?? 0);
+          const earlyDead = Number(residue?.early_dead ?? 0);
+          const midDead = Number(residue?.mid_dead ?? 0);
+          const lateDead = Number(residue?.late_dead ?? 0);
+          const cullChicks = Number(residue?.cull_chicks ?? 0);
+          const livePips = Number(residue?.live_pip_number ?? 0);
+          const deadPips = Number(residue?.dead_pip_number ?? 0);
+          
+          // Calculate fertile eggs and chicks hatched using standardized formulas
+          const fertileEggs = calculateFertileEggs(sampleSize, infertileEggs);
+          const chicksHatched = calculateChicksHatched(
+            sampleSize,
+            infertileEggs,
+            earlyDead,
+            midDead,
+            lateDead,
+            cullChicks,
+            livePips,
+            deadPips
+          );
           
           // Auto-calculate from fertility_analysis if not set in batches table
-          const eggsCleared = Number(b.eggs_cleared ?? fertility?.infertile_eggs ?? 0);
-          const eggsInjected = Number(b.eggs_injected ?? fertility?.fertile_eggs ?? 0);
-          const chicksHatched = Number(b.chicks_hatched ?? 0);
+          const eggsCleared = Number(b.eggs_cleared ?? infertileEggs);
+          const eggsInjected = Number(b.eggs_injected ?? fertileEggs);
           
           let early_dead_percent = 0;
           let mid_dead_percent = 0;
@@ -487,10 +510,7 @@ export default function EmbrexDashboard() {
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
           
-          // Calculate PIP metrics
-          const cullChicks = Number(residue?.cull_chicks ?? 0);
-          const livePips = Number(residue?.live_pip_number ?? 0);
-          const deadPips = Number(residue?.dead_pip_number ?? 0);
+          // Calculate PIP metrics (already defined above, just calculate total)
           const totalPips = livePips + deadPips;
 
           // Calculate Embryonic Mortality (Early + Mid + Late + Live Pips + Dead Pips)
@@ -553,7 +573,7 @@ export default function EmbrexDashboard() {
             dead_pip_percent,
             total_pip_percent,
             embryonic_mortality_percent,
-            fertile_eggs: fertility?.fertile_eggs,
+            fertile_eggs: fertileEggs,
             infertile_eggs: fertility?.infertile_eggs,
             early_dead: residue?.early_dead,
             mid_dead: residue?.mid_dead,
