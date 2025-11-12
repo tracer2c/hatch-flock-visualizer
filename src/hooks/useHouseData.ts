@@ -116,7 +116,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
         console.debug('[useBatchPerformanceMetrics] total batches:', data?.length || 0);
         const summary = (data || []).map((b: any) => ({
           batch: b.batch_number,
-          fert: Array.isArray(b.fertility_analysis) ? b.fertility_analysis.length : 0,
+          fert: b.fertility_analysis ? 1 : 0,
           residue: b.residue_analysis ? 1 : 0,
           eggQ: Array.isArray(b.egg_pack_quality) ? b.egg_pack_quality.length : 0,
           qa: Array.isArray(b.qa_monitoring) ? b.qa_monitoring.length : 0,
@@ -128,7 +128,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
       
       // Calculate performance metrics for all batches
       const mapped = data?.map((batch: any) => {
-        const fertility = batch.fertility_analysis?.[0];
+        const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
         const eggQuality = batch.egg_pack_quality?.[0];
         const qaData = batch.qa_monitoring || [];
@@ -293,7 +293,7 @@ export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'origi
       if (error) throw error;
       
       return data?.map(batch => {
-        const fertility = batch.fertility_analysis?.[0];
+        const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
         
         // Calculate embryonic mortality data
@@ -387,7 +387,7 @@ export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'origina
       if (error) throw error;
       
       return data?.map(batch => {
-        const fertility = batch.fertility_analysis?.[0];
+        const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
         
         // Use actual fertility data if available, otherwise estimate based on flock age and breed

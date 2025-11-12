@@ -743,14 +743,14 @@ export type Database = {
           {
             foreignKeyName: "fertility_analysis_batch_id_fkey"
             columns: ["batch_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "batches"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fertility_analysis_batch_id_fkey"
             columns: ["batch_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "batches_with_fertility"
             referencedColumns: ["id"]
           },
