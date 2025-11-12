@@ -910,9 +910,45 @@ export default function EmbrexDashboard() {
     }
   }, [facets, activeFacet]);
 
+  /* ─────────────── Dynamic Y-Axis Domain Calculator ─────────────── */
+  const calculateDynamicDomain = (data: any[], selectedMetrics: string[]): [number, number] => {
+    // Only calculate for percentage metrics
+    const percentMetrics = selectedMetrics.filter(m => isPercentMetric(m as MetricKey));
+    if (percentMetrics.length === 0) return [0, 100];
+    
+    // Find min and max values across all selected percentage metrics
+    let min = Infinity;
+    let max = -Infinity;
+    
+    data.forEach(row => {
+      percentMetrics.forEach(metric => {
+        const value = row[metric];
+        if (typeof value === 'number' && isFinite(value)) {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      });
+    });
+    
+    // If no valid data, use default
+    if (!isFinite(min) || !isFinite(max)) return [0, 100];
+    
+    // Add padding: 10% below min and 20% above max
+    const range = max - min;
+    const paddedMin = Math.max(0, min - range * 0.1);
+    const paddedMax = max + range * 0.2;
+    
+    // Round to nice numbers
+    const roundedMin = Math.floor(paddedMin);
+    const roundedMax = Math.ceil(paddedMax);
+    
+    return [roundedMin, roundedMax];
+  };
+
   /* ─────────────── Chart renderer (fills container; no hardcoded height) ─────────────── */
   const renderChart = (data: any[], facetTitle: string) => {
     const commonMargin = { top: 8, right: 16, left: 8, bottom: 8 };
+    const dynamicDomain = calculateDynamicDomain(data, metrics);
 
     if (viz === "timeline_bar" || viz === "timeline_line") {
       const isBar = viz === "timeline_bar";
@@ -927,10 +963,12 @@ export default function EmbrexDashboard() {
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
               <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
-              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="right" orientation="right" domain={dynamicDomain} tick={{ fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
+                Number(benchmark) >= dynamicDomain[0] && Number(benchmark) <= dynamicDomain[1]
+              ) && (
                 <ReferenceLine
                   yAxisId="right"
                   y={Number(benchmark)}
