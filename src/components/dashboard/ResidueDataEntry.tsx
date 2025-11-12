@@ -113,7 +113,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     // Hatchability metrics
     sampleSize: '648',
     technicianName: '',
-    notes: ''
+    notes: '',
+    mortalityCount: ''
   });
   const { toast } = useToast();
 
@@ -335,7 +336,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       deadPipNumber: (record.deadPipNumber || 0).toString(),
       sampleSize: (record.sampleSize || TOTAL_EGGS).toString(),
       technicianName: '',
-      notes: ''
+      notes: '',
+      mortalityCount: ''
     });
   };
 
@@ -375,7 +377,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       deadPipNumber: '',
       sampleSize: '648',
       technicianName: '',
-      notes: ''
+      notes: '',
+      mortalityCount: ''
     });
   };
 
@@ -595,6 +598,17 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 disabled
                 className="bg-gray-100 font-semibold"
                 value={calculateChicks()}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mortalityCount">Mortality Count</Label>
+              <Input
+                id="mortalityCount"
+                type="number"
+                placeholder="e.g., 10"
+                value={formData.mortalityCount}
+                onChange={(e) => handleInputChange('mortalityCount', e.target.value)}
               />
             </div>
 

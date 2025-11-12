@@ -89,7 +89,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
         bVal = new Date(bVal).getTime();
       }
       // Handle numbers
-      else if (['flock_number', 'age_weeks', 'day_of_incubation', 'temperature', 'humidity', 'co2_level', 'ventilation_rate', 'turning_frequency', 'mortality_count'].includes(sortBy)) {
+      else if (['flock_number', 'age_weeks', 'day_of_incubation', 'temperature', 'humidity', 'co2_level', 'ventilation_rate', 'turning_frequency'].includes(sortBy)) {
         aVal = parseFloat(aVal) || 0;
         bVal = parseFloat(bVal) || 0;
       }
@@ -116,7 +116,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
       co2_level: record.co2_level || 0,
       ventilation_rate: record.ventilation_rate || 0,
       turning_frequency: record.turning_frequency || 0,
-      mortality_count: record.mortality_count || 0,
       angle_top_left: record.angle_top_left || 0,
       angle_mid_left: record.angle_mid_left || 0,
       angle_bottom_left: record.angle_bottom_left || 0,
@@ -151,7 +150,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
           co2_level: parseFloat(formData.co2_level) || 0,
           ventilation_rate: parseFloat(formData.ventilation_rate) || 0,
           turning_frequency: parseInt(formData.turning_frequency) || 0,
-          mortality_count: parseInt(formData.mortality_count) || 0,
           angle_top_left: parseFloat(formData.angle_top_left) || 0,
           angle_mid_left: parseFloat(formData.angle_mid_left) || 0,
           angle_bottom_left: parseFloat(formData.angle_bottom_left) || 0,
@@ -176,7 +174,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
           co2_level: parseFloat(formData.co2_level) || 0,
           ventilation_rate: parseFloat(formData.ventilation_rate) || 0,
           turning_frequency: parseInt(formData.turning_frequency) || 0,
-          mortality_count: parseInt(formData.mortality_count) || 0,
           angle_top_left: parseFloat(formData.angle_top_left) || 0,
           angle_mid_left: parseFloat(formData.angle_mid_left) || 0,
           angle_bottom_left: parseFloat(formData.angle_bottom_left) || 0,
@@ -237,7 +234,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
             <TableHead>CO2 Level (ppm)</TableHead>
             <TableHead>Ventilation Rate</TableHead>
             <TableHead>Turning Freq</TableHead>
-            <TableHead>Mortality Count</TableHead>
             <TableHead>Angle Top L</TableHead>
             <TableHead>Angle Mid L</TableHead>
             <TableHead>Angle Bot L</TableHead>
@@ -252,7 +248,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={21} className="text-center text-muted-foreground">
+              <TableCell colSpan={20} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -272,7 +268,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
                 <TableCell>{item.co2_level || "-"}</TableCell>
                 <TableCell>{item.ventilation_rate || "-"}</TableCell>
                 <TableCell>{item.turning_frequency || "-"}</TableCell>
-                <TableCell>{item.mortality_count || "-"}</TableCell>
                 <TableCell>{item.angle_top_left || "-"}</TableCell>
                 <TableCell>{item.angle_mid_left || "-"}</TableCell>
                 <TableCell>{item.angle_bottom_left || "-"}</TableCell>
@@ -361,14 +356,6 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
                 type="number"
                 value={formData.turning_frequency || ''}
                 onChange={(e) => setFormData({ ...formData, turning_frequency: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Mortality Count</Label>
-              <Input
-                type="number"
-                value={formData.mortality_count || ''}
-                onChange={(e) => setFormData({ ...formData, mortality_count: e.target.value })}
               />
             </div>
             <div>

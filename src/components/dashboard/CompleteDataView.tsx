@@ -111,6 +111,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
             dry_egg,
             malpositioned,
             upside_down,
+            mortality_count,
             microscopy_results,
             pathology_findings,
             hatch_percent,
@@ -244,6 +245,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         brain_defects: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.brain_defects : batch.residue_analysis?.brain_defects,
         transfer_crack: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.transfer_crack : batch.residue_analysis?.transfer_crack,
         handling_cracks: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.handling_cracks : batch.residue_analysis?.handling_cracks,
+        mortality_count: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.mortality_count : batch.residue_analysis?.mortality_count,
         microscopy_results: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.microscopy_results : batch.residue_analysis?.microscopy_results,
         pathology_findings: Array.isArray(batch.residue_analysis) ? batch.residue_analysis?.[0]?.pathology_findings : batch.residue_analysis?.pathology_findings,
         // Flatten egg pack data
@@ -271,7 +273,6 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         co2_level: batch.qa_monitoring?.[0]?.co2_level,
         ventilation_rate: batch.qa_monitoring?.[0]?.ventilation_rate,
         turning_frequency: batch.qa_monitoring?.[0]?.turning_frequency,
-        mortality_count: batch.qa_monitoring?.[0]?.mortality_count,
         candling_results: batch.qa_monitoring?.[0]?.candling_results,
         angle_top_left: batch.qa_monitoring?.[0]?.angle_top_left,
         angle_mid_left: batch.qa_monitoring?.[0]?.angle_mid_left,

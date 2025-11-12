@@ -1054,6 +1054,7 @@ export type Database = {
           microscopy_results: string | null
           mid_dead: number
           mold: number | null
+          mortality_count: number | null
           notes: string | null
           pathology_findings: string | null
           pip_number: number
@@ -1092,6 +1093,7 @@ export type Database = {
           microscopy_results?: string | null
           mid_dead?: number
           mold?: number | null
+          mortality_count?: number | null
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number
@@ -1130,6 +1132,7 @@ export type Database = {
           microscopy_results?: string | null
           mid_dead?: number
           mold?: number | null
+          mortality_count?: number | null
           notes?: string | null
           pathology_findings?: string | null
           pip_number?: number

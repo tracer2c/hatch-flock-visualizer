@@ -141,6 +141,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
       mold: record.mold || 0,
       live_pip_number: record.live_pip_number || 0,
       dead_pip_number: record.dead_pip_number || 0,
+      mortality_count: record.mortality_count || 0,
       lab_technician: record.lab_technician || "",
       notes: record.residue_notes || "",
     });
@@ -204,6 +205,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           live_pip_number: livePipNumber,
           dead_pip_number: deadPipNumber,
           pip_number: livePipNumber + deadPipNumber,
+          mortality_count: parseInt(formData.mortality_count) || 0,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
           hoi_percent: hoiPercent,
@@ -246,6 +248,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           live_pip_number: livePipNumber,
           dead_pip_number: deadPipNumber,
           pip_number: livePipNumber + deadPipNumber,
+          mortality_count: parseInt(formData.mortality_count) || 0,
           hatch_percent: hatchPercent,
           hof_percent: hofPercent,
           hoi_percent: hoiPercent,
@@ -310,6 +313,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>{showPercentages ? "Dead Pips %" : "Dead Pips"}</TableHead>
               <TableHead>Total Pips</TableHead>
               <TableHead>{showPercentages ? "Embryonic Mortality %" : "Embryonic Mortality"}</TableHead>
+              <TableHead>Mortality Count</TableHead>
               <TableHead>{showPercentages ? "Handling Cracks %" : "Handling Cracks"}</TableHead>
               <TableHead>{showPercentages ? "Transfer Crack %" : "Transfer Crack"}</TableHead>
               <TableHead>{showPercentages ? "Contamination %" : "Contamination"}</TableHead>
@@ -327,7 +331,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={24} className="text-center text-muted-foreground">
+                <TableCell colSpan={25} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -365,6 +369,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                         return formatValue(embryonicMortality, sampleSize);
                       })()}
                     </TableCell>
+                    <TableCell>{item.mortality_count || "-"}</TableCell>
                     <TableCell>{formatValue(item.handling_cracks, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.transfer_crack, sampleSize)}</TableCell>
                     <TableCell>{formatValue(item.contaminated_eggs, sampleSize)}</TableCell>
@@ -496,6 +501,14 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                   })()}
                   disabled
                   className="bg-muted"
+                />
+              </div>
+              <div>
+                <Label>Mortality Count</Label>
+                <Input
+                  type="number"
+                  value={formData.mortality_count || ''}
+                  onChange={(e) => setFormData({ ...formData, mortality_count: e.target.value })}
                 />
               </div>
               <div>

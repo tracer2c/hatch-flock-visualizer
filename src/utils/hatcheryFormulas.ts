@@ -58,20 +58,20 @@ export const calculateHOIPercent = (
 
 /**
  * Calculate Infertile Percentage (I/F%)
- * Formula: (Infertile Eggs / Total Eggs Set) × 100
+ * Formula: (Infertile Eggs / Sample Size) × 100
  * 
  * CRITICAL: This is NOT calculated as (HOI% - HOF%)
  * 
  * @param infertileEggs - Number of infertile eggs
- * @param totalEggsSet - Total number of eggs set
+ * @param sampleSize - Sample size (typically 648)
  * @returns I/F percentage rounded to 2 decimal places
  */
 export const calculateIFPercent = (
   infertileEggs: number,
-  totalEggsSet: number
+  sampleSize: number
 ): number => {
-  if (totalEggsSet <= 0) return 0;
-  return Number(((infertileEggs / totalEggsSet) * 100).toFixed(2));
+  if (sampleSize <= 0) return 0;
+  return Number(((infertileEggs / sampleSize) * 100).toFixed(2));
 };
 
 /**
