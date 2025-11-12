@@ -95,6 +95,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
             early_dead,
             mid_dead,
             late_dead,
+            cull_chicks,
             unhatched_fertile,
             pipped_not_hatched,
             malformed_chicks,
@@ -212,7 +213,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
           const residueEarlyDead = residueData?.early_dead || 0;
           const residueMidDead = residueData?.mid_dead || 0;
           const residueLateDead = residueData?.late_dead || 0;
-          const residueCulls = residueData?.malformed_chicks || 0;
+          const residueCulls = residueData?.cull_chicks || 0;
           const residueLivePips = residueData?.live_pip_number || 0;
           const residueDeadPips = residueData?.dead_pip_number || 0;
           
@@ -272,6 +273,12 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         turning_frequency: batch.qa_monitoring?.[0]?.turning_frequency,
         mortality_count: batch.qa_monitoring?.[0]?.mortality_count,
         candling_results: batch.qa_monitoring?.[0]?.candling_results,
+        angle_top_left: batch.qa_monitoring?.[0]?.angle_top_left,
+        angle_mid_left: batch.qa_monitoring?.[0]?.angle_mid_left,
+        angle_bottom_left: batch.qa_monitoring?.[0]?.angle_bottom_left,
+        angle_top_right: batch.qa_monitoring?.[0]?.angle_top_right,
+        angle_mid_right: batch.qa_monitoring?.[0]?.angle_mid_right,
+        angle_bottom_right: batch.qa_monitoring?.[0]?.angle_bottom_right,
         qa_notes: batch.qa_monitoring?.[0]?.notes,
         qa_id: batch.qa_monitoring?.[0]?.id,
         };
