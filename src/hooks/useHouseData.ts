@@ -78,6 +78,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
         .select(`
           id,
           batch_number,
+          unit_id,
           status,
           total_eggs_set,
           eggs_injected,
@@ -152,6 +153,7 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
         
         return {
           batchNumber: batch.batch_number,
+          unitId: batch.unit_id,
           flockName: batch.flocks?.flock_name || 'Unknown',
           flockNumber: batch.flocks?.flock_number || 0,
           age: batch.flocks?.age_weeks || 0,

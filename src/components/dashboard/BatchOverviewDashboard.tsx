@@ -165,8 +165,7 @@ const BatchOverviewDashboard = () => {
 
   const avgHOF = useMemo(() => {
     const validBatches = performanceMetrics?.filter((batch: any) => {
-      const hatcheryMatch = hatcheryFilter === "all" || 
-        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
+      const hatcheryMatch = hatcheryFilter === "all" || batch.unitId === hatcheryFilter;
       return batch.hof != null && !isNaN(batch.hof) && hatcheryMatch;
     }) || [];
     
@@ -174,12 +173,11 @@ const BatchOverviewDashboard = () => {
     
     const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hof, 0);
     return Math.round(sum / validBatches.length);
-  }, [performanceMetrics, hatcheryFilter, activeBatches]);
+  }, [performanceMetrics, hatcheryFilter]);
 
   const avgHOI = useMemo(() => {
     const validBatches = performanceMetrics?.filter((batch: any) => {
-      const hatcheryMatch = hatcheryFilter === "all" || 
-        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
+      const hatcheryMatch = hatcheryFilter === "all" || batch.unitId === hatcheryFilter;
       return batch.hoi != null && !isNaN(batch.hoi) && hatcheryMatch;
     }) || [];
     
@@ -187,7 +185,7 @@ const BatchOverviewDashboard = () => {
     
     const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hoi, 0);
     return Math.round(sum / validBatches.length);
-  }, [performanceMetrics, hatcheryFilter, activeBatches]);
+  }, [performanceMetrics, hatcheryFilter]);
 
   const systemUtilization = useMemo(() => {
     if (!machineUtilization || machineUtilization.length === 0) return 0;
@@ -435,7 +433,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average HOI%"
               value={`${avgHOI}%`}
-              icon={<img src={chicksIcon} alt="Chicks" className="h-10 w-10 object-contain" />}
+              icon={<img src={eggsIcon} alt="Eggs Injected" className="h-10 w-10 object-contain" />}
               description="Average Hatch of Injection percentage across all analyzed houses. HOI% = (Chicks Hatched / Eggs Injected) × 100"
               trendLabel={
                 targets?.hoi_rate 
