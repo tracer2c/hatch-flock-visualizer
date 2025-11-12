@@ -142,8 +142,8 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead);
     const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
-    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-    const hoiPercent = calculateHOFPercent(chicksHatched, fertileEggs);
+    const hofPercent = calculateHOFPercent(chicksHatched, 0, fertileEggs);
+    const hoiPercent = calculateHOFPercent(chicksHatched, 0, fertileEggs);
     const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
     console.log("Hatch Performance - Attempting save:", {

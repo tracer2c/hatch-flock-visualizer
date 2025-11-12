@@ -321,7 +321,8 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
               batch_number: batchInfo.batch_number,
               flock_name: batchInfo.flock_name,
               flock_number: batchInfo.flock_number,
-              house_number: batchInfo.house_number
+              house_number: batchInfo.house_number,
+              eggs_injected: batchInfo.eggs_injected || 0
             }}
           />
         </TabsContent>

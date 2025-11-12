@@ -19,6 +19,7 @@ interface HouseInfo {
   set_date: string;
   expected_hatch_date: string;
   total_eggs_set: number;
+  eggs_injected: number;
   status: string;
 }
 
@@ -73,6 +74,7 @@ const ResidueEntryPage = () => {
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
+        eggs_injected: data.eggs_injected || 0,
         status: data.status
       });
     }
@@ -320,7 +322,8 @@ const ResidueEntryPage = () => {
             batch_number: houseInfo.batch_number,
             flock_name: houseInfo.flock_name,
             flock_number: houseInfo.flock_number,
-            house_number: houseInfo.house_number
+            house_number: houseInfo.house_number,
+            eggs_injected: houseInfo.eggs_injected
           }}
         />
       </div>

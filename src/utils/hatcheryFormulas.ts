@@ -26,18 +26,20 @@ export const calculateHatchPercent = (
 
 /**
  * Calculate Hatch of Fertile (HOF%)
- * Formula: (Chicks Hatched / Fertile Eggs) × 100
+ * Formula: (Chicks Hatched + Cull Chicks) / Fertile Eggs × 100
  * 
  * @param chicksHatched - Number of chicks that successfully hatched
+ * @param cullChicks - Number of culled chicks
  * @param fertileEggs - Number of fertile eggs
  * @returns HOF percentage rounded to 2 decimal places
  */
 export const calculateHOFPercent = (
   chicksHatched: number,
+  cullChicks: number,
   fertileEggs: number
 ): number => {
   if (fertileEggs <= 0) return 0;
-  return Number(((chicksHatched / fertileEggs) * 100).toFixed(2));
+  return Number((((chicksHatched + cullChicks) / fertileEggs) * 100).toFixed(2));
 };
 
 /**

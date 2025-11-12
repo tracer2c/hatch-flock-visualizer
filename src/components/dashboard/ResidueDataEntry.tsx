@@ -77,6 +77,7 @@ interface BatchInfo {
   flock_name: string;
   flock_number: number;
   house_number?: string;
+  eggs_injected: number;
 }
 
 interface ResidueDataEntryProps {
@@ -134,17 +135,18 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     lateDead: number, 
     cullChicks: number,
     livePips: number,
-    deadPips: number
+    deadPips: number,
+    eggsInjected: number
   ) => {
     const fertileEggs = calculateFertileEggs(sampleSize, infertile);
     const chicksHatched = calculateChicksHatched(sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips);
     
     // Use standardized formulas
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
-    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-    // Note: HOI requires eggs_injected which comes from batch data, not residue analysis
-    // For now, calculate a placeholder based on fertile eggs
-    const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+    // HOF% = (Chicks + Culls) / Fertile Eggs × 100
+    const hofPercent = calculateHOFPercent(chicksHatched, cullChicks, fertileEggs);
+    // HOI% = (Chicks Hatched / Eggs Injected) × 100
+    const hoiPercent = calculateHOIPercent(chicksHatched, eggsInjected);
     const ifPercent = calculateIFPercent(infertile, sampleSize);
     
     return {
@@ -235,7 +237,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     const deadPips = Number(formData.deadPipNumber) || 0;
     
     const hatchabilityMetrics = calculateHatchabilityMetrics(
-      sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips
+      sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips, batchInfo.eggs_injected
     );
     const calculatedChicks = hatchabilityMetrics.chicksHatched;
     
@@ -784,7 +786,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hatchPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).hatchPercent;
                   })()}
                 />
               </div>
@@ -813,7 +815,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hofPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).hofPercent;
                   })()}
                 />
               </div>
@@ -842,7 +844,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).ifDevPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).ifDevPercent;
                   })()}
                 />
               </div>
@@ -871,7 +873,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).fertileEggs;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).fertileEggs;
                   })()}
                 />
               </div>
@@ -900,7 +902,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hoiPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).hoiPercent;
                   })()}
                 />
               </div>
