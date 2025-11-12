@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type ViewMode = 'simple' | 'detailed';
+type ViewMode = 'original' | 'dummy';
 
 interface ViewModeContextType {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  isTrainingMode: boolean;
 }
 
 const ViewModeContext = createContext<ViewModeContextType | undefined>(undefined);
@@ -14,10 +15,21 @@ interface ViewModeProviderProps {
 }
 
 export const ViewModeProvider: React.FC<ViewModeProviderProps> = ({ children }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('simple');
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    // Load from localStorage or default to 'original'
+    const saved = localStorage.getItem('hatchery_view_mode');
+    return (saved === 'dummy' ? 'dummy' : 'original') as ViewMode;
+  });
+
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    localStorage.setItem('hatchery_view_mode', mode);
+  };
+
+  const isTrainingMode = viewMode === 'dummy';
 
   return (
-    <ViewModeContext.Provider value={{ viewMode, setViewMode }}>
+    <ViewModeContext.Provider value={{ viewMode, setViewMode, isTrainingMode }}>
       {children}
     </ViewModeContext.Provider>
   );

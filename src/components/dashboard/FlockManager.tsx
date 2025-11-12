@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface Flock {
   id: string;
@@ -48,6 +49,7 @@ const FlockManager = () => {
     technician_name: '',
   });
   const { toast } = useToast();
+  const { viewMode } = useViewMode();
 
   // Units
   type Unit = { id: string; name: string };
@@ -79,6 +81,7 @@ const FlockManager = () => {
     const { data, error } = await supabase
       .from('flocks')
       .select('*')
+      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {
@@ -129,6 +132,7 @@ const FlockManager = () => {
       technician_name: formData.technician_name,
       created_by: user?.id || null,
       breed: 'breeder' as const,
+      data_type: viewMode,
     };
 
     if (editingFlock) {

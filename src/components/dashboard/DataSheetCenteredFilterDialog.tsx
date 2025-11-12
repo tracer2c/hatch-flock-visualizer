@@ -22,7 +22,6 @@ interface DataSheetCenteredFilterDialogProps {
     technicianSearch: string;
     dateFrom: string;
     dateTo: string;
-    dataType: 'all' | 'original' | 'dummy';
   };
   setFilters: React.Dispatch<React.SetStateAction<any>>;
   hatcheries: FilterOption[];
@@ -146,27 +145,6 @@ export const DataSheetCenteredFilterDialog = ({
                 onChange={(e) => setFilters((prev: any) => ({ ...prev, technicianSearch: e.target.value }))}
                 className="h-9"
               />
-            </div>
-
-            {/* Data Type Filter */}
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm">Data Type</h3>
-              <Select 
-                value={filters.dataType} 
-                onValueChange={(value: 'all' | 'original' | 'dummy') => setFilters((prev: any) => ({ ...prev, dataType: value }))}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Data</SelectItem>
-                  <SelectItem value="original">✓ Original Data Only</SelectItem>
-                  <SelectItem value="dummy">🎓 Dummy Data Only</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Filter to show only original production data or dummy training data
-              </p>
             </div>
 
             {/* Hatcheries Section */}

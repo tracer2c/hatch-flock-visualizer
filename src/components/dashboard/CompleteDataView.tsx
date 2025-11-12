@@ -21,17 +21,17 @@ interface CompleteDataViewProps {
     technicianSearch: string;
     dateFrom: string;
     dateTo: string;
-    dataType: 'all' | 'original' | 'dummy';
   };
 }
 
 export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { viewMode } = useViewMode();
 
   useEffect(() => {
     loadCompleteData();
-  }, [filters.dataType]);
+  }, [viewMode]);
 
   const loadCompleteData = async () => {
     try {
