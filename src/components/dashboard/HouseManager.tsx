@@ -885,16 +885,6 @@ const calculateHatchDate = (setDate: string) => {
                     >
                       <Pencil className="h-3.5 w-3.5 text-primary" />
                     </Button>
-                    {house.data_type === 'dummy' && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
-                        🎓 Dummy
-                      </Badge>
-                    )}
-                    {house.data_type === 'original' && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                        ✓ Original
-                      </Badge>
-                    )}
                     <Badge className={getStatusColor(house.status)}>
                       {house.status}
                     </Badge>
