@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays } from "date-fns";
+import { format, subDays, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import chicksIcon from "@/assets/chicks-icon.png";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -108,11 +108,15 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   
   // Advanced filters state
   const [filters, setFilters] = useState({
-    dateRange: { from: subDays(new Date(), 30), to: new Date() },
+    dateRange: { 
+      from: subDays(new Date(), 365 * 5), // 5 years ago - covers all data
+      to: addDays(new Date(), 365) // 1 year in future
+    },
     machineTypes: [] as string[],
     unitIds: [] as string[],
     technicianName: '',
   });
+  const [filtersApplied, setFiltersApplied] = useState(false);
   
   const { toast } = useToast();
   const { viewMode } = useViewMode();
@@ -260,11 +264,16 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   const clearAllFilters = () => {
     setFilters({
-      dateRange: { from: subDays(new Date(), 30), to: new Date() },
+      dateRange: { 
+        from: subDays(new Date(), 365 * 5),
+        to: addDays(new Date(), 365)
+      },
       machineTypes: [],
       unitIds: [],
       technicianName: '',
     });
+    setFiltersApplied(false);
+    toast({ title: "Filters cleared", description: "All filters have been reset" });
   };
 
   const getActiveFilterCount = () => {
@@ -280,18 +289,15 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   const uniqueMachineTypes = Array.from(new Set(machines.map(m => m.machine_type)));
 
-  // Helper to check if user has actively modified advanced filters
+  // Helper to check if user has explicitly applied advanced filters
   const hasActiveAdvancedFilters = () => {
-    const defaultFrom = subDays(new Date(), 30);
-    const hasCustomDateRange = 
-      filters.dateRange.from.getTime() !== defaultFrom.getTime() || 
-      filters.dateRange.to.getTime() < new Date().getTime() - 86400000;
-    
-    return (
+    return filtersApplied && (
       filters.unitIds.length > 0 ||
       filters.machineTypes.length > 0 ||
       filters.technicianName !== '' ||
-      hasCustomDateRange
+      // Check if date range has been narrowed from the default wide range
+      filters.dateRange.from.getTime() > subDays(new Date(), 365 * 5).getTime() ||
+      filters.dateRange.to.getTime() < addDays(new Date(), 365).getTime()
     );
   };
 
@@ -504,10 +510,10 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       if (houseView === "incubating") return h.status === "incubating";
       return true;
     })
-    // Date range filter (only apply when explicitly set in Advanced Filters)
+    // Date range filter (only apply when user explicitly applies filters)
     .filter((h) => {
-      // Only apply date filter if Advanced Filters are being used
-      if (!hasActiveAdvancedFilters()) return true;
+      // Skip date filtering if filters haven't been explicitly applied
+      if (!filtersApplied) return true;
       
       const setDate = new Date(h.set_date);
       return setDate >= filters.dateRange.from && setDate <= filters.dateRange.to;
@@ -836,6 +842,17 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                   >
                     <X className="h-4 w-4 mr-2" />
                     Clear All Filters
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setFiltersApplied(true);
+                      toast({ title: "Filters applied", description: "Showing filtered results" });
+                    }}
+                    className="h-9"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Apply Filters
                   </Button>
                 </div>
               </div>
