@@ -138,9 +138,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         sample_size: sampleSize,
         infertile_eggs: infertile,
         fertile_eggs: calculated.fertileEggs,
-        early_dead: 0, // Set to 0 for fertility analysis
-        late_dead: 0, // Set to 0 for fertility analysis
-        cull_chicks: 0, // Set to 0 for fertility analysis
+        fertility_percent: calculated.fertilityPercent,
         analysis_date: new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
@@ -150,14 +148,14 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       if (editingId) {
         result = await supabase
           .from('fertility_analysis')
-          .update(recordData)
+          .update(recordData as any)
           .eq('id', editingId)
           .select()
           .single();
       } else {
         result = await supabase
           .from('fertility_analysis')
-          .insert(recordData)
+          .insert(recordData as any)
           .select()
           .single();
       }
