@@ -430,6 +430,18 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 className="bg-gray-100"
               />
             </div>
+            
+            {/* Sample Size - Fixed at 648 */}
+            <div className="space-y-2">
+              <Label htmlFor="sampleSize">Sample Size</Label>
+              <Input
+                id="sampleSize"
+                type="number"
+                value={648}
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
 
             {/* Core Metrics - These count toward sample size */}
             <div className="space-y-2">
@@ -565,39 +577,6 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             
-            {/* Embryonic Mortality Display - Auto-calculated */}
-            <div className="col-span-2">
-              <Label className="flex items-center gap-2">
-                Embryonic Mortality
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex">
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-semibold">Embryonic Mortality</p>
-                    <p className="text-sm">All embryos that died during incubation</p>
-                    <p className="text-sm">Formula: Early Dead + Mid Dead + Late Dead + Live Pips + Dead Pips</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={calculateEmbryonicMortalityCount()}
-                  disabled
-                  className="bg-muted"
-                />
-                <Input
-                  type="text"
-                  value={`${calculatePercentage(calculateEmbryonicMortalityCount()).toFixed(2)}%`}
-                  disabled
-                  className="bg-muted w-24"
-                />
-              </div>
-            </div>
-            
             <div className="space-y-2">
               <Label htmlFor="chicks" className="flex items-center gap-1">
                 Chicks Hatched
@@ -731,19 +710,39 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-lg font-semibold">Hatchability Metrics</h3>
-              <Info className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
-              {/* Sample Size */}
-              <div className="space-y-2">
-                <Label htmlFor="sampleSize">Sample Size</Label>
-                <Input
-                  id="sampleSize"
-                  type="number"
-                  placeholder="e.g., 648"
-                  value={formData.sampleSize}
-                  onChange={(e) => handleInputChange('sampleSize', e.target.value)}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Embryonic Mortality Display - Auto-calculated */}
+              <div className="col-span-2">
+                <Label className="flex items-center gap-2">
+                  Embryonic Mortality
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="inline-flex">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">Embryonic Mortality</p>
+                      <p className="text-sm">All embryos that died during incubation</p>
+                      <p className="text-sm">Formula: Early Dead + Mid Dead + Late Dead + Live Pips + Dead Pips</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={calculateEmbryonicMortalityCount()}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <Input
+                    type="text"
+                    value={`${calculatePercentage(calculateEmbryonicMortalityCount()).toFixed(2)}%`}
+                    disabled
+                    className="bg-muted w-24"
+                  />
+                </div>
               </div>
 
               {/* Calculated Hatchability Metrics */}
