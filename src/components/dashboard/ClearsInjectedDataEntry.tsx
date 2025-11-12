@@ -32,31 +32,41 @@ export default function ClearsInjectedDataEntry({
   saving,
   context,
 }: Props) {
+  const [sampleSize] = useState<number>(648); // Fixed sample size
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
-  const [injNum, setInjNum] = useState<string>(initialInjected?.toString() ?? "");
   const [technicianName, setTechnicianName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   useEffect(() => {
     setClearNum(initialClear?.toString() ?? "");
-    setInjNum(initialInjected?.toString() ?? "");
-  }, [initialClear, initialInjected]);
+  }, [initialClear]);
 
-  const clear = Number.isFinite(Number(clearNum)) ? Number(clearNum) : NaN;
-  const injected = Number.isFinite(Number(injNum)) ? Number(injNum) : NaN;
+  const clear = Number.isFinite(Number(clearNum)) ? Number(clearNum) : 0;
+  const injected = Math.max(0, sampleSize - clear); // Auto-calculated: Sample Size - Clears
 
-  const valid = Number.isInteger(clear) && clear >= 0 && Number.isInteger(injected) && injected >= 0 && technicianName.trim().length > 0;
+  const valid = Number.isInteger(clear) && clear >= 0 && clear <= sampleSize && technicianName.trim().length > 0;
 
   const clearPct =
-    Number.isInteger(clear) && totalEggs && totalEggs > 0 ? ((clear / totalEggs) * 100).toFixed(2) : null;
+    Number.isInteger(clear) && sampleSize > 0 ? ((clear / sampleSize) * 100).toFixed(2) : null;
   const injPct =
-    Number.isInteger(injected) && totalEggs && totalEggs > 0 ? ((injected / totalEggs) * 100).toFixed(2) : null;
+    Number.isInteger(injected) && sampleSize > 0 ? ((injected / sampleSize) * 100).toFixed(2) : null;
 
   return (
     <>
     <Card>
       <CardContent className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="sampleSize">Sample Size</Label>
+            <Input
+              id="sampleSize"
+              type="number"
+              value={sampleSize}
+              disabled
+              className="bg-gray-100 font-medium"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="clearNum">Clear number *</Label>
             <Input
@@ -76,17 +86,13 @@ export default function ClearsInjectedDataEntry({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="injNum">Injected number *</Label>
+            <Label htmlFor="injNum">Injected (Auto-calculated)</Label>
             <Input
               id="injNum"
               type="number"
-              inputMode="numeric"
-              step={1}
-              min={0}
-              pattern="\d*"
-              placeholder="e.g., 43000"
-              value={injNum}
-              onChange={(e) => setInjNum(e.target.value.replace(/[^\d]/g, ""))}
+              value={injected}
+              disabled
+              className="bg-gray-100 font-medium"
             />
             {injPct !== null && (
               <div className="text-xs text-gray-600">Injected %: {injPct}%</div>
@@ -119,8 +125,8 @@ export default function ClearsInjectedDataEntry({
             <Button
               onClick={() => {
                 onSave({
-                  clear_number: Number(clearNum || 0),
-                  injected_number: Number(injNum || 0),
+                  clear_number: clear,
+                  injected_number: injected,
                   clears_technician_name: technicianName.trim(),
                   clears_notes: notes.trim() || null,
                 });
@@ -135,11 +141,16 @@ export default function ClearsInjectedDataEntry({
           </div>
         </div>
 
-        {totalEggs != null && (
-          <div className="text-xs text-gray-500">
-            Total eggs set: <span className="font-medium">{totalEggs.toLocaleString()}</span>
+        <div className="flex gap-4 text-xs text-gray-500">
+          <div>
+            Sample size: <span className="font-medium">{sampleSize}</span>
           </div>
-        )}
+          {totalEggs != null && (
+            <div>
+              Total eggs set: <span className="font-medium">{totalEggs.toLocaleString()}</span>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
 
