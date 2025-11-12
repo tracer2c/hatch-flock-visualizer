@@ -159,13 +159,25 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         fertile_eggs: batch.fertility_analysis?.[0]?.fertile_eggs,
         infertile_eggs: batch.fertility_analysis?.[0]?.infertile_eggs,
         fertility_percent: batch.fertility_analysis?.[0]?.fertility_percent,
-        hatch_percent: batch.fertility_analysis?.[0]?.hatch_percent,
-        hof_percent: batch.fertility_analysis?.[0]?.hof_percent,
-        hoi_percent: batch.fertility_analysis?.[0]?.hoi_percent,
-        if_dev_percent: batch.fertility_analysis?.[0]?.if_dev_percent,
+        hatch_percent: Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.hatch_percent 
+          : batch.residue_analysis?.hatch_percent,
+        hof_percent: Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.hof_percent 
+          : batch.residue_analysis?.hof_percent,
+        hoi_percent: Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.hoi_percent 
+          : batch.residue_analysis?.hoi_percent,
+        if_dev_percent: Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.if_dev_percent 
+          : batch.residue_analysis?.if_dev_percent,
         analysis_date: batch.fertility_analysis?.[0]?.analysis_date,
-        sample_size: batch.fertility_analysis?.[0]?.sample_size,
-        technician_name: batch.fertility_analysis?.[0]?.technician_name,
+        sample_size: (Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.sample_size 
+          : batch.residue_analysis?.sample_size) || batch.fertility_analysis?.[0]?.sample_size || 648,
+        technician_name: (Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0]?.lab_technician 
+          : batch.residue_analysis?.lab_technician) || batch.fertility_analysis?.[0]?.technician_name,
         fertility_notes: batch.fertility_analysis?.[0]?.notes,
         fertility_id: batch.fertility_analysis?.[0]?.id,
         // Flatten residue data - check if array or object
