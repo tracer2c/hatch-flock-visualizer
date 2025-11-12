@@ -155,7 +155,11 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
           unit_id: batch.units?.id,
           unit_name: batch.units?.name,
           batch_id: batch.id,
-          data_type: batch.data_type || 'original', // Include data_type
+          data_type: batch.data_type || 'original',
+          // Explicitly map batch fields for HOI calculation
+          eggs_injected: batch.eggs_injected || 0,
+          eggs_cleared: batch.eggs_cleared || 0,
+          chicks_hatched_db: batch.chicks_hatched || 0,
         // Flatten fertility data
         fertility_technician_name: batch.fertility_analysis?.technician_name,
         fertile_eggs: batch.fertility_analysis?.fertile_eggs,
@@ -233,7 +237,6 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
         brain_defects: batch.residue_analysis?.brain_defects,
         transfer_crack: batch.residue_analysis?.transfer_crack,
         handling_cracks: batch.residue_analysis?.handling_cracks,
-        mortality_count: batch.residue_analysis?.mortality_count,
         microscopy_results: batch.residue_analysis?.microscopy_results,
         pathology_findings: batch.residue_analysis?.pathology_findings,
         // Flatten egg pack data
