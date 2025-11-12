@@ -551,7 +551,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
             <div className="space-y-2">
               <Label htmlFor="totalDead" className="flex items-center gap-1">
-                Total Dead
+                Embryonic Mortality
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 opacity-70" />
@@ -571,13 +571,13 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
             </div>
             <div className="space-y-2">
               <Label htmlFor="totalDeadPercent" className="flex items-center gap-1">
-                Total Dead %
+                Embryonic Mortality %
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 opacity-70" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    Percentage of total dead out of sample size
+                    Percentage of embryonic mortality out of sample size
                   </TooltipContent>
                 </Tooltip>
               </Label>
