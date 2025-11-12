@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { calculateHOIPercent } from "@/utils/hatcheryFormulas";
 
 interface HOIEntryProps {
   batchId: string;
@@ -25,7 +26,7 @@ const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated }: HOIEntryP
 
   const hoiPct = useMemo(() => {
     if (!eggsInjectedNum) return null;
-    return Number(((chicksHatchedNum / eggsInjectedNum) * 100).toFixed(2));
+    return calculateHOIPercent(chicksHatchedNum, eggsInjectedNum);
   }, [eggsInjectedNum, chicksHatchedNum]);
 
   const handleSave = async () => {

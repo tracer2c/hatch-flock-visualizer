@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  calculateHatchPercent, 
+  calculateHOFPercent, 
+  calculateIFPercent,
+  calculateFertilityPercent
+} from "@/utils/hatcheryFormulas";
 
 interface FertilityAnalysisTabProps {
   data: any[];
@@ -52,11 +58,13 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       const lateDead = parseInt(formData.late_dead) || 0;
       const cullChicks = parseInt(formData.cull_chicks) || 0;
 
-      const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
-      const hatchPercent = sampleSize > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead) / sampleSize) * 100 : 0;
-      const hofPercent = fertileEggs > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead) / fertileEggs) * 100 : 0;
-      const hoiPercent = sampleSize > 0 ? ((sampleSize - infertileEggs - earlyDead - lateDead - cullChicks) / sampleSize) * 100 : 0;
-      const ifDevPercent = fertileEggs > 0 ? ((fertileEggs - earlyDead - lateDead) / fertileEggs) * 100 : 0;
+      // Use standardized hatchery formulas
+      const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead - cullChicks);
+      const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
+      const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
+      const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
+      const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+      const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
       const { error } = await supabase
         .from("fertility_analysis")

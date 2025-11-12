@@ -9,6 +9,14 @@ import { Plus, Edit, Trash2, Save, X, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { 
+  calculateHatchPercent, 
+  calculateHOFPercent, 
+  calculateHOIPercent, 
+  calculateIFPercent,
+  calculateChicksHatched,
+  calculateFertileEggs
+} from "@/utils/hatcheryFormulas";
 
 interface ResidueRecord {
   id: string;
@@ -114,21 +122,36 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     return Number(((value / TOTAL_EGGS) * 100).toFixed(2));
   };
 
-  // Calculate hatchability metrics
-  const calculateHatchabilityMetrics = (sampleSize: number, infertile: number, earlyDead: number, midDead: number, lateDead: number, cullChicks: number) => {
-    const fertileEggs = Math.max(0, sampleSize - infertile);
-    const viableChicks = Math.max(0, sampleSize - infertile - earlyDead - midDead - lateDead - cullChicks);
-    const hatchPercent = sampleSize > 0 ? (viableChicks / sampleSize) * 100 : 0; // HOS
-    const hofPercent = fertileEggs > 0 ? (viableChicks / fertileEggs) * 100 : 0; // Hatch of Fertile
-    const hoiPercent = fertileEggs > 0 ? ((viableChicks + cullChicks) / fertileEggs) * 100 : 0; // Hatch incl. culls
-    const ifDevPercent = hoiPercent - hofPercent; // delta due to culls
+  // IMPORTANT: Using standardized hatchery formulas
+  // Calculate hatchability metrics using centralized formulas
+  const calculateHatchabilityMetrics = (
+    sampleSize: number, 
+    infertile: number, 
+    earlyDead: number, 
+    midDead: number, 
+    lateDead: number, 
+    cullChicks: number,
+    livePips: number,
+    deadPips: number
+  ) => {
+    const fertileEggs = calculateFertileEggs(sampleSize, infertile);
+    const chicksHatched = calculateChicksHatched(sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips);
+    
+    // Use standardized formulas
+    const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
+    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
+    // Note: HOI requires eggs_injected which comes from batch data, not residue analysis
+    // For now, calculate a placeholder based on fertile eggs
+    const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+    const ifPercent = calculateIFPercent(infertile, sampleSize);
     
     return {
       fertileEggs,
-      hatchPercent: Number(hatchPercent.toFixed(2)),
-      hofPercent: Number(hofPercent.toFixed(2)),
-      hoiPercent: Number(hoiPercent.toFixed(2)),
-      ifDevPercent: Number(ifDevPercent.toFixed(2)),
+      chicksHatched,
+      hatchPercent,
+      hofPercent,
+      hoiPercent,
+      ifDevPercent: ifPercent,
     };
   };
 
@@ -189,16 +212,20 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   const handleSubmit = () => {
     if (!validateForm()) return;
     
-    // Calculate hatchability metrics
+    // Calculate hatchability metrics using standardized formulas
     const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
     const infertile = Number(formData.infertile) || 0;
     const earlyDead = Number(formData.earlyDeath) || 0;
     const midDead = Number(formData.midDeath) || 0;
     const lateDead = Number(formData.lateDeath) || 0;
     const cullChicks = Number(formData.cullChicks) || 0;
-    const calculatedChicks = calculateChicks();
+    const livePips = Number(formData.livePipNumber) || 0;
+    const deadPips = Number(formData.deadPipNumber) || 0;
     
-    const hatchabilityMetrics = calculateHatchabilityMetrics(sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks);
+    const hatchabilityMetrics = calculateHatchabilityMetrics(
+      sampleSize, infertile, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips
+    );
+    const calculatedChicks = hatchabilityMetrics.chicksHatched;
     
     const newRecord: ResidueRecord = {
       id: editingId || Date.now().toString(),
@@ -697,7 +724,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hatchPercent;
+                    const lp = Number(formData.livePipNumber || 0);
+                    const dp = Number(formData.deadPipNumber || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hatchPercent;
                   })()}
                 />
               </div>
@@ -724,7 +753,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hofPercent;
+                    const lp = Number(formData.livePipNumber || 0);
+                    const dp = Number(formData.deadPipNumber || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hofPercent;
                   })()}
                 />
               </div>
@@ -751,7 +782,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).ifDevPercent;
+                    const lp = Number(formData.livePipNumber || 0);
+                    const dp = Number(formData.deadPipNumber || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).ifDevPercent;
                   })()}
                 />
               </div>
@@ -778,7 +811,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).fertileEggs;
+                    const lp = Number(formData.livePipNumber || 0);
+                    const dp = Number(formData.deadPipNumber || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).fertileEggs;
                   })()}
                 />
               </div>
@@ -805,7 +840,9 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const md = Number(formData.midDeath || 0);
                     const ld = Number(formData.lateDeath || 0);
                     const cc = Number(formData.cullChicks || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc).hoiPercent;
+                    const lp = Number(formData.livePipNumber || 0);
+                    const dp = Number(formData.deadPipNumber || 0);
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp).hoiPercent;
                   })()}
                 />
               </div>

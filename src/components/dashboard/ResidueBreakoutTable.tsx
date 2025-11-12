@@ -14,6 +14,14 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  calculateHatchPercent, 
+  calculateHOFPercent, 
+  calculateIFPercent,
+  calculateChicksHatched,
+  calculateFertileEggs,
+  calculateFertilityPercent
+} from "@/utils/hatcheryFormulas";
 
 interface ResidueBreakoutTableProps {
   data: any[];
@@ -149,15 +157,17 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     const livePipNumber = parseInt(formData.live_pip_number) || 0;
     const deadPipNumber = parseInt(formData.dead_pip_number) || 0;
 
-    const fertileEggs = Math.max(0, sampleSize - infertileEggs);
-    // Calculate chicks hatched: sample - infertile - early_dead - mid_dead - late_dead - culls - pips
-    const chicksHatched = Math.max(0, sampleSize - infertileEggs - earlyDead - midDead - lateDead - malformedChicks - livePipNumber - deadPipNumber);
+    // Use standardized hatchery formulas
+    const fertileEggs = calculateFertileEggs(sampleSize, infertileEggs);
+    const chicksHatched = calculateChicksHatched(
+      sampleSize, infertileEggs, earlyDead, midDead, lateDead, malformedChicks, livePipNumber, deadPipNumber
+    );
     
-    const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
-    const hatchPercent = sampleSize > 0 ? (chicksHatched / sampleSize) * 100 : 0;
-    const hofPercent = fertileEggs > 0 ? (chicksHatched / fertileEggs) * 100 : 0;
-    const hoiPercent = fertileEggs > 0 ? ((chicksHatched + malformedChicks) / fertileEggs) * 100 : 0;
-    const ifDevPercent = hoiPercent - hofPercent;
+    const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
+    const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
+    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
+    const hoiPercent = calculateHOFPercent(chicksHatched + malformedChicks, fertileEggs);
+    const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
     console.log("Residue - Attempting save:", {
       hasResidueId: !!editingRecord.residue_id,

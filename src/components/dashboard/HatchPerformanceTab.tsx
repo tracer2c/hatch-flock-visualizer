@@ -13,6 +13,13 @@ import { AlertCircle, Edit, Trash2, Filter, ChevronDown, X } from "lucide-react"
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  calculateHatchPercent, 
+  calculateHOFPercent, 
+  calculateHOIPercent,
+  calculateIFPercent,
+  calculateFertilityPercent
+} from "@/utils/hatcheryFormulas";
 
 interface HatchPerformanceTabProps {
   data: any[];
@@ -133,12 +140,13 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const lateDead = parseInt(formData.late_dead) || 0;
     const cullChicks = parseInt(formData.cull_chicks) || 0;
 
+    // Use standardized hatchery formulas
     const chicksHatched = Math.max(0, fertileEggs - earlyDead - lateDead - cullChicks);
-    const fertilityPercent = sampleSize > 0 ? (fertileEggs / sampleSize) * 100 : 0;
-    const hatchPercent = fertileEggs > 0 ? (chicksHatched / fertileEggs) * 100 : 0;
-    const hofPercent = fertileEggs > 0 ? (chicksHatched / fertileEggs) * 100 : 0;
-    const hoiPercent = fertileEggs > 0 ? ((chicksHatched + cullChicks) / fertileEggs) * 100 : 0;
-    const ifDevPercent = hoiPercent - hofPercent;
+    const fertilityPercent = calculateFertilityPercent(fertileEggs, sampleSize);
+    const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
+    const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
+    const hoiPercent = calculateHOFPercent(chicksHatched + cullChicks, fertileEggs);
+    const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
 
     console.log("Hatch Performance - Attempting save:", {
       hasFertilityId: !!editingRecord.fertility_id,

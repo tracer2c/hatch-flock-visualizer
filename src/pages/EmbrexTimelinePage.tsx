@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateHOIPercent } from "@/utils/hatcheryFormulas";
 
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
@@ -421,12 +422,12 @@ export default function EmbrexDashboard() {
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
           
-          // Calculate Hatch vs Injected metrics
+          // Calculate Hatch vs Injected metrics using standardized formula
           let hatch_vs_injected_percent = 0;
           let hatch_vs_injected_diff = 0;
           
           if (eggsInjected > 0) {
-            hatch_vs_injected_percent = (chicksHatched / eggsInjected) * 100;
+            hatch_vs_injected_percent = calculateHOIPercent(chicksHatched, eggsInjected);
           }
           hatch_vs_injected_diff = eggsInjected - chicksHatched;
 
