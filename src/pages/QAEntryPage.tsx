@@ -90,10 +90,11 @@ const QAEntryPage = () => {
   const loadQAData = async () => {
     if (!houseId) return;
     
-    const { data, error } = await supabase
+    const { data: dbRecords, error } = await supabase
       .from('qa_monitoring')
       .select('*')
-      .eq('batch_id', houseId);
+      .eq('batch_id', houseId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       toast({
@@ -101,9 +102,151 @@ const QAEntryPage = () => {
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      setQAData(data || []);
+      return;
     }
+
+    // Transform database records back to UI format
+    const transformedData = (dbRecords || []).map(record => {
+      // Parse candling_results JSON if it exists
+      const candlingData = record.candling_results ? JSON.parse(record.candling_results) : {};
+      const recordType = candlingData.type;
+
+      // Base properties all records share
+      const baseProps = {
+        id: record.id,
+        technicianName: record.inspector_name,
+        notes: record.notes,
+        checkDate: record.check_date,
+        timestamp: record.created_at
+      };
+
+      // Transform based on record type
+      if (recordType === 'setter_temperature') {
+        return {
+          ...baseProps,
+          type: 'setter_temperature',
+          setterNumber: candlingData.setterNumber,
+          timeOfDay: candlingData.timeOfDay,
+          leftTemps: candlingData.leftSide || {},
+          rightTemps: candlingData.rightSide || {},
+          leftSide: candlingData.leftSide || {},
+          rightSide: candlingData.rightSide || {},
+          isWithinRange: (candlingData.leftSide?.average >= 99.5 && 
+                         candlingData.leftSide?.average <= 100.5 && 
+                         candlingData.rightSide?.average >= 99.5 && 
+                         candlingData.rightSide?.average <= 100.5)
+        };
+      }
+
+      if (recordType === 'rectal_temperature') {
+        return {
+          ...baseProps,
+          type: 'rectal_temperature',
+          location: candlingData.location,
+          temperature: record.temperature,
+          checkTime: record.check_time,
+          isWithinRange: record.temperature >= 104 && record.temperature <= 106
+        };
+      }
+
+      if (recordType === 'tray_wash_temperature') {
+        return {
+          ...baseProps,
+          type: 'tray_wash_temperature',
+          firstCheck: candlingData.firstCheck,
+          secondCheck: candlingData.secondCheck,
+          thirdCheck: candlingData.thirdCheck,
+          allPassed: candlingData.allPassed,
+          washDate: record.check_date
+        };
+      }
+
+      if (recordType === 'cull_check') {
+        return {
+          ...baseProps,
+          type: 'cull_check',
+          flockNumber: candlingData.flockNumber,
+          maleCount: candlingData.maleCount,
+          femaleCount: candlingData.femaleCount,
+          totalCulls: record.mortality_count,
+          defectType: candlingData.defectType
+        };
+      }
+
+      if (recordType === 'specific_gravity') {
+        return {
+          ...baseProps,
+          type: 'specific_gravity',
+          flockNumber: candlingData.flockNumber,
+          age: candlingData.age,
+          floatPercentage: candlingData.floatPercentage,
+          isGoodQuality: candlingData.isGoodQuality,
+          testDate: record.check_date
+        };
+      }
+
+      if (recordType === 'setter_angles') {
+        return {
+          ...baseProps,
+          type: 'setter_angle',
+          setterNumber: candlingData.setterNumber,
+          topLeft: record.angle_top_left,
+          midLeft: record.angle_mid_left,
+          bottomLeft: record.angle_bottom_left,
+          topRight: record.angle_top_right,
+          midRight: record.angle_mid_right,
+          bottomRight: record.angle_bottom_right,
+          angles: {
+            topLeft: record.angle_top_left,
+            midLeft: record.angle_mid_left,
+            bottomLeft: record.angle_bottom_left,
+            topRight: record.angle_top_right,
+            midRight: record.angle_mid_right,
+            bottomRight: record.angle_bottom_right
+          },
+          leftAverage: (record.angle_top_left + record.angle_mid_left + record.angle_bottom_left) / 3,
+          rightAverage: (record.angle_top_right + record.angle_mid_right + record.angle_bottom_right) / 3
+        };
+      }
+
+      if (recordType === 'hatch_progression') {
+        return {
+          ...baseProps,
+          type: 'hatch_progression',
+          flockNumber: candlingData.flockNumber || '',
+          totalPulled: candlingData.totalPulled,
+          goodChicks: candlingData.goodChicks,
+          cullChicks: candlingData.cullChicks,
+          unhatched: candlingData.unhatched,
+          timeOfPull: candlingData.timeOfPull,
+          hatchDate: record.check_date
+        };
+      }
+
+      if (recordType === 'moisture_loss') {
+        return {
+          ...baseProps,
+          type: 'moisture_loss',
+          flockNumber: candlingData.flockNumber || '',
+          initialWeight: candlingData.initialWeight,
+          currentWeight: candlingData.currentWeight,
+          percentLoss: candlingData.percentLoss,
+          targetRange: candlingData.targetRange,
+          testDate: record.check_date
+        };
+      }
+
+      // Fallback for records without type
+      return {
+        ...baseProps,
+        type: null,
+        temperature: record.temperature,
+        humidity: record.humidity,
+        day_of_incubation: record.day_of_incubation
+      };
+    });
+
+    setQAData(transformedData);
   };
 
   const handleQADataUpdate = async (newData: any[]) => {
