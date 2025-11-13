@@ -144,7 +144,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
       const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
       const hoiPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-    const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
+    const ifDevPercent = calculateIFPercent(infertileEggs, fertileEggs);
 
     console.log("Hatch Performance - Attempting save:", {
       hasFertilityId: !!editingRecord.fertility_id,

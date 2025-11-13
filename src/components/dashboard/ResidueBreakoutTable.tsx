@@ -171,7 +171,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
     const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
     const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
     const hoiPercent = calculateHOIPercent(chicksHatched, editingRecord.eggs_injected || 0);
-    const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
+    const ifDevPercent = calculateIFPercent(infertileEggs, fertileEggs);
 
     console.log("Residue - Attempting save:", {
       hasResidueId: !!editingRecord.residue_id,

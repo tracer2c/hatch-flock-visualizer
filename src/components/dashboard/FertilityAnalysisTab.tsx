@@ -62,7 +62,7 @@ export const FertilityAnalysisTab = ({ data, searchTerm, onDataUpdate }: Fertili
       const hatchPercent = calculateHatchPercent(chicksHatched, sampleSize);
     const hofPercent = calculateHOFPercent(chicksHatched, fertileEggs);
     const hoiPercent = calculateHOFPercent(chicksHatched, fertileEggs);
-      const ifDevPercent = calculateIFPercent(infertileEggs, sampleSize);
+      const ifDevPercent = calculateIFPercent(infertileEggs, fertileEggs);
 
       const { error } = await supabase
         .from("fertility_analysis")

@@ -57,21 +57,21 @@ export const calculateHOIPercent = (
 };
 
 /**
- * Calculate Infertile Percentage (I/F%)
- * Formula: (Infertile Eggs / Sample Size) × 100
+ * Calculate Infertile Development Percentage (I/F dev %)
+ * Formula: (Infertile Eggs / Fertile Eggs) × 100
  * 
- * CRITICAL: This is NOT calculated as (HOI% - HOF%)
+ * Shows the proportion of infertile eggs relative to fertile eggs
  * 
  * @param infertileEggs - Number of infertile eggs
- * @param sampleSize - Sample size (typically 648)
- * @returns I/F percentage rounded to 2 decimal places
+ * @param fertileEggs - Number of fertile eggs
+ * @returns I/F dev percentage rounded to 2 decimal places
  */
 export const calculateIFPercent = (
   infertileEggs: number,
-  sampleSize: number
+  fertileEggs: number
 ): number => {
-  if (sampleSize <= 0) return 0;
-  return Number(((infertileEggs / sampleSize) * 100).toFixed(2));
+  if (fertileEggs <= 0) return 0;
+  return Number(((infertileEggs / fertileEggs) * 100).toFixed(2));
 };
 
 /**
