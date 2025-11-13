@@ -112,8 +112,8 @@ const advancedAnalyticsItems = [
 ];
 
 export function ModernSidebar() {
-  const { open, setOpen } = useSidebar();
-  const collapsed = !open;
+  const { open, setOpen, toggleSidebar, isMobile: isMobileContext, openMobile } = useSidebar();
+  const collapsed = isMobileContext ? !openMobile : !open;
   const { user, hasRole } = useAuth();
   const { viewMode } = useViewMode();
   const location = useLocation();
@@ -131,12 +131,12 @@ export function ModernSidebar() {
     const handleKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
-        setOpen(!open);
+        toggleSidebar();
       }
     };
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [open, setOpen]);
+  }, [toggleSidebar]);
 
   // Swipe gesture handlers for touch devices
   const onTouchStart = (e: React.TouchEvent) => {
@@ -155,11 +155,13 @@ export function ModernSidebar() {
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
     
-    if (isLeftSwipe && open) {
-      setOpen(false);
+    const currentOpen = isMobileContext ? openMobile : open;
+    
+    if (isLeftSwipe && currentOpen) {
+      toggleSidebar();
     }
-    if (isRightSwipe && !open && touchStart < 50) {
-      setOpen(true);
+    if (isRightSwipe && !currentOpen && touchStart < 50) {
+      toggleSidebar();
     }
   };
 
@@ -191,10 +193,10 @@ export function ModernSidebar() {
   return (
     <>
       {/* Overlay backdrop for tablet/mobile */}
-      {(isTablet || !open) && open && (
+      {(isMobileContext ? openMobile : open) && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setOpen(false)}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
         />
       )}
 
@@ -212,7 +214,7 @@ export function ModernSidebar() {
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setOpen(!open);
+          toggleSidebar();
         }}
         title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
       >
@@ -229,8 +231,7 @@ export function ModernSidebar() {
         collapsible="offcanvas"
         className={cn(
           "border-r border-border/30 bg-background/95",
-          "transition-all duration-300",
-          (isTablet || !open) && open && "z-50"
+          "transition-all duration-300"
         )}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
