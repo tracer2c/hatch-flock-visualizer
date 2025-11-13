@@ -143,39 +143,29 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         notes: formData.notes || null
       };
 
-      let result;
-      if (editingId) {
-        result = await supabase
-          .from('fertility_analysis')
-          .update(recordData as any)
-          .eq('id', editingId)
-          .select()
-          .single();
-      } else {
-        result = await supabase
-          .from('fertility_analysis')
-          .insert(recordData as any)
-          .select()
-          .single();
-      }
+      // Use UPSERT to handle both insert and update automatically
+      const result = await supabase
+        .from('fertility_analysis')
+        .upsert(recordData as any, { onConflict: 'batch_id' })
+        .select()
+        .single();
 
       if (result.error) throw result.error;
 
-      // Update local state
-      if (editingId) {
-        const updatedData = data.map(item => item.id === editingId ? result.data : item);
-        onDataUpdate(updatedData);
-        toast({
-          title: "Record Updated",
-          description: "Fertility record updated successfully"
-        });
+      // Update local state - find and replace existing record, or add new one
+      const existingIndex = data.findIndex(item => item.batch_id === batchInfo.id);
+      let updatedData;
+      if (existingIndex >= 0) {
+        updatedData = data.map(item => item.batch_id === batchInfo.id ? result.data : item);
       } else {
-        onDataUpdate([...data, result.data]);
-        toast({
-          title: "Record Added",
-          description: "New fertility record added successfully"
-        });
+        updatedData = [...data, result.data];
       }
+
+      onDataUpdate(updatedData);
+      toast({
+        title: "Record Saved",
+        description: "Fertility data saved successfully"
+      });
 
       // Check and update batch status
       await checkBatchStatus();
