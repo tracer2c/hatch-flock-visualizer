@@ -1048,9 +1048,14 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                       <TableCell className="font-medium text-green-600">
                         {record.hofPercent ? `${record.hofPercent}%` : '-'}
                       </TableCell>
-                      <TableCell className="font-medium text-purple-600">
-                        {record.hoiPercent ? `${record.hoiPercent}%` : '-'}
-                      </TableCell>
+              <TableCell className="font-medium text-purple-600">
+                {(() => {
+                  const eggsInjected = batchInfo.eggs_injected || 0;
+                  if (eggsInjected === 0 || !record.chicks) return '-';
+                  const hoiPercent = calculateHOIPercent(record.chicks, eggsInjected);
+                  return `${hoiPercent.toFixed(2)}%`;
+                })()}
+              </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
