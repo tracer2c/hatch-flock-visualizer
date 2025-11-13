@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import SetterTempTable from "./SetterTempTable";
 
 interface BatchInfo {
   id: string;
@@ -92,6 +93,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   // Form states for different sections - with pre-populated flock numbers
   const [setterTemps, setSetterTemps] = useState({
     setterNumber: currentMachine?.machine_number || '',
+    timeOfDay: 'morning',
     leftTopTemp: '',
     leftMiddleTemp: '',
     leftBottomTemp: '',
@@ -184,6 +186,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       id: Date.now(),
       type: 'setter_temperature',
       setterNumber: setterTemps.setterNumber,
+      timeOfDay: setterTemps.timeOfDay,
       leftTemps: {
         top: parseFloat(setterTemps.leftTopTemp),
         middle: parseFloat(setterTemps.leftMiddleTemp),
@@ -208,6 +211,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     
     setSetterTemps({
       setterNumber: currentMachine?.machine_number || '',
+      timeOfDay: 'morning',
       leftTopTemp: '',
       leftMiddleTemp: '',
       leftBottomTemp: '',
@@ -710,6 +714,19 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                           Current batch machine: {currentMachine.machine_number}
                         </p>
                       )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="time-of-day">Time of Day</Label>
+                      <select
+                        id="time-of-day"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={setterTemps.timeOfDay}
+                        onChange={(e) => setSetterTemps({...setterTemps, timeOfDay: e.target.value})}
+                      >
+                        <option value="morning">Morning</option>
+                        <option value="afternoon">Afternoon</option>
+                        <option value="evening">Evening</option>
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="check-date">Check Date</Label>
@@ -1377,56 +1394,72 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
 
       {/* Data Display */}
       {data.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent QA Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {data.slice(-10).reverse().map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium capitalize">
-                      {entry.type ? entry.type.replace('_', ' ') : 'QA Monitoring'} Record
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate || entry.check_date} | 
-                      {entry.type === 'setter_temperature' && ` Setter ${entry.setterNumber} - Avg: ${entry.leftTemps.average}°F / ${entry.rightTemps.average}°F`}
-                      {entry.type === 'rectal_temperature' && ` ${entry.location} - ${entry.temperature}°F`}
-                      {entry.type === 'tray_wash_temperature' && ` Wash Temps: ${entry.firstCheck}°F, ${entry.secondCheck}°F, ${entry.thirdCheck}°F`}
-                      {entry.type === 'cull_check' && ` Flock ${entry.flockNumber} - ${entry.totalCulls} culls`}
-                      {!entry.type && entry.temperature && ` Day ${entry.day_of_incubation || 'N/A'} - Temp: ${entry.temperature}°F, Humidity: ${entry.humidity}%`}
-                    </div>
-                    {(entry.technicianName || entry.inspector_name) && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Inspector: {entry.technicianName || entry.inspector_name}
+        <>
+          {/* Setter Temperature Table Display */}
+          {data.filter(e => e.type === 'setter_temperature').length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Setter Temperature Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SetterTempTable data={data.filter(e => e.type === 'setter_temperature')} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Other QA Records (List Format) */}
+          {data.filter(e => e.type !== 'setter_temperature').length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Other QA Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.filter(e => e.type !== 'setter_temperature').slice(-10).reverse().map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium capitalize">
+                          {entry.type ? entry.type.replace('_', ' ') : 'QA Monitoring'} Record
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {entry.checkDate || entry.testDate || entry.hatchDate || entry.washDate || entry.check_date} | 
+                          {entry.type === 'rectal_temperature' && ` ${entry.location} - ${entry.temperature}°F`}
+                          {entry.type === 'tray_wash_temperature' && ` Wash Temps: ${entry.firstCheck}°F, ${entry.secondCheck}°F, ${entry.thirdCheck}°F`}
+                          {entry.type === 'cull_check' && ` Flock ${entry.flockNumber} - ${entry.totalCulls} culls`}
+                          {!entry.type && entry.temperature && ` Day ${entry.day_of_incubation || 'N/A'} - Temp: ${entry.temperature}°F, Humidity: ${entry.humidity}%`}
+                        </div>
+                        {(entry.technicianName || entry.inspector_name) && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Inspector: {entry.technicianName || entry.inspector_name}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {(entry.isWithinRange || entry.allPassed || entry.isGoodQuality || entry.isBalanced || entry.isOptimal) && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                        ✓ Good
-                      </span>
-                    )}
-                    {(entry.isWithinRange === false || entry.allPassed === false || entry.isGoodQuality === false || entry.isBalanced === false || entry.isOptimal === false) && (
-                      <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                        ⚠ Alert
-                      </span>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteEntry(entry.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <div className="flex items-center gap-2">
+                        {(entry.isWithinRange || entry.allPassed || entry.isGoodQuality || entry.isBalanced || entry.isOptimal) && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                            ✓ Good
+                          </span>
+                        )}
+                        {(entry.isWithinRange === false || entry.allPassed === false || entry.isGoodQuality === false || entry.isBalanced === false || entry.isOptimal === false) && (
+                          <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                            ⚠ Alert
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteEntry(entry.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
