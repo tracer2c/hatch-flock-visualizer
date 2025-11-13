@@ -247,7 +247,7 @@ export function ModernSidebar() {
       <Sidebar
         side="left"
         variant="sidebar" 
-        collapsible="icon"
+        collapsible="offcanvas"
         className={cn(
           "border-r border-border/30 bg-background/95 backdrop-blur-sm",
           "transition-all duration-300 ease-out",
