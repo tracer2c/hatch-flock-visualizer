@@ -177,18 +177,23 @@ export function ModernSidebar() {
         variant="outline"
         size="icon"
         className={cn(
-          "fixed top-4 left-4 z-50 h-10 w-10 rounded-lg bg-background/80 backdrop-blur-sm",
+          "fixed top-4 left-4 z-[100] h-10 w-10 rounded-lg bg-background/80 backdrop-blur-sm",
           "border-2 border-border/50 shadow-lg hover:shadow-xl",
           "transition-all duration-300 ease-out hover:scale-105",
-          "hover:bg-accent/50 hover:border-primary/30"
+          "hover:bg-accent/50 hover:border-primary/30",
+          "cursor-pointer"
         )}
-        onClick={() => setOpen(!open)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(!open);
+        }}
         title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
       >
         {collapsed ? (
-          <PanelLeft className="h-5 w-5 transition-transform duration-300" />
+          <PanelLeft className="h-5 w-5 transition-transform duration-300 pointer-events-none" />
         ) : (
-          <PanelLeftClose className="h-5 w-5 transition-transform duration-300" />
+          <PanelLeftClose className="h-5 w-5 transition-transform duration-300 pointer-events-none" />
         )}
       </Button>
 
