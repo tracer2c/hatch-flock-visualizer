@@ -450,7 +450,7 @@ const BatchOverviewDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
-              <Card className="flex flex-col max-h-[600px] lg:max-h-none">
+              <Card className="flex flex-col max-h-[600px] lg:h-[calc(100vh-420px)]">
                 <CardHeader className="pb-4 flex-shrink-0">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -559,7 +559,7 @@ const BatchOverviewDashboard = () => {
 
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-auto">
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-420px)]">
                 <CardHeader className="pb-4 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
