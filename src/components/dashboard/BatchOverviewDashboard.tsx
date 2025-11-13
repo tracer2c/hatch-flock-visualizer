@@ -559,7 +559,7 @@ const BatchOverviewDashboard = () => {
 
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
-              <Card className="flex flex-col max-h-[600px] lg:max-h-none">
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-auto">
                 <CardHeader className="pb-4 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -585,8 +585,8 @@ const BatchOverviewDashboard = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0">
-                  <div className="h-full overflow-y-auto space-y-3">
+                <CardContent className="flex-1 min-h-0 overflow-hidden">
+                  <div className="h-full overflow-y-auto space-y-3 pr-2">
                     {showQAAlerts ? (
                       qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 10).map((alert) => (
