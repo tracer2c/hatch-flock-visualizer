@@ -312,29 +312,29 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-4">
+        <div className="w-full space-y-4">
           {/* Enterprise Header - Navigation & Filters */}
-          <div className="flex items-center justify-between border-b pb-4 mb-2">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b pb-4">
             {/* Left Section: Navigation + Primary Filters */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full lg:w-auto">
               {/* Navigation */}
               <Button 
                 variant="outline" 
-                className="h-9 shadow-sm hover:shadow-md transition-all duration-200"
+                className="h-9 w-full sm:w-auto shadow-sm hover:shadow-md transition-all duration-200 shrink-0"
                 onClick={() => navigate('/house-flow')}
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
                 House Flow
               </Button>
               
-              {/* Divider */}
-              <div className="h-6 w-px bg-border mx-1" />
+              {/* Divider - Hidden on mobile */}
+              <div className="hidden sm:block h-6 w-px bg-border mx-1" />
               
               {/* Filters Group */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30 border border-border/50">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto sm:px-3 sm:py-1.5 sm:rounded-md sm:bg-muted/30 sm:border sm:border-border/50">
                 {/* Hatchery Filter */}
                 <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
-                  <SelectTrigger className="w-[180px] h-9 bg-background">
+                  <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] h-9 bg-background">
                     <SelectValue placeholder="All Hatcheries" />
                   </SelectTrigger>
                   <SelectContent>
@@ -350,7 +350,7 @@ const BatchOverviewDashboard = () => {
                 {/* Machine Filter */}
                 {machinesList && machinesList.length > 0 && (
                   <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                    <SelectTrigger className="w-[180px] h-9 bg-background">
+                    <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] h-9 bg-background">
                       <SelectValue placeholder="All Machines" />
                     </SelectTrigger>
                     <SelectContent>
@@ -365,9 +365,9 @@ const BatchOverviewDashboard = () => {
             </div>
 
             {/* Right Section: View Controls + Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background">
+              <div className="flex items-center justify-between sm:justify-start gap-2 px-3 py-1.5 rounded-md border border-border bg-background">
                 <Badge variant={displayMode === 'simple' ? 'default' : 'secondary'} className="text-xs">
                   {displayMode === 'simple' ? 'Simple' : 'Detailed'}
                 </Badge>
@@ -377,23 +377,25 @@ const BatchOverviewDashboard = () => {
                 />
               </div>
 
-              {/* Divider */}
-              <div className="h-6 w-px bg-border" />
+              {/* Divider - Hidden on mobile */}
+              <div className="hidden sm:block h-6 w-px bg-border" />
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleRefresh} className="shadow-sm hover:shadow-md transition-all duration-200">
-                  <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+                <Button variant="outline" size="sm" onClick={handleRefresh} className="flex-1 sm:flex-none shadow-sm hover:shadow-md transition-all duration-200">
+                  <RefreshCw className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Refresh</span>
                 </Button>
-                <Button size="sm" onClick={handleExport} className="shadow-sm hover:shadow-md transition-all duration-200">
-                  <Download className="h-4 w-4 mr-2" /> Export
+                <Button size="sm" onClick={handleExport} className="flex-1 sm:flex-none shadow-sm hover:shadow-md transition-all duration-200">
+                  <Download className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </div>
             </div>
           </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
@@ -445,25 +447,25 @@ const BatchOverviewDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-12 gap-4 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
-            <div className="col-span-12 lg:col-span-8 min-h-0">
-              <Card className="h-full flex flex-col">
+            <div className="lg:col-span-8">
+              <Card className="flex flex-col max-h-[600px] lg:max-h-none">
                 <CardHeader className="pb-4 flex-shrink-0">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      <CardTitle>
+                      <Building2 className="h-5 w-5 flex-shrink-0" />
+                      <CardTitle className="text-base md:text-lg">
                         {pipelineView === "all" && "All Houses"}
                         {pipelineView === "active" && "Active Houses Pipeline"}
                         {pipelineView === "completed" && "Completed Houses"}
                         {pipelineView === "incubating" && "Incubating Houses"}
                       </CardTitle>
-                      <Badge variant="secondary">{listForDisplay.length} houses</Badge>
+                      <Badge variant="secondary" className="text-xs">{listForDisplay.length} houses</Badge>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Select value={pipelineView} onValueChange={(value: any) => setPipelineView(value)}>
-                        <SelectTrigger className="w-[160px] h-9">
+                        <SelectTrigger className="w-full sm:w-[140px] md:w-[160px] h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -473,13 +475,13 @@ const BatchOverviewDashboard = () => {
                           <SelectItem value="completed">Completed</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div className="relative">
+                      <div className="relative w-full sm:w-auto">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           placeholder="Search houses..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8 w-[180px] h-9"
+                          className="pl-8 w-full sm:w-[140px] md:w-[180px] h-9"
                         />
                       </div>
                     </div>
@@ -491,47 +493,47 @@ const BatchOverviewDashboard = () => {
                       listForDisplay.map((batch) => (
                         <div
                           key={batch.id}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors gap-3"
                           onClick={() => navigate(`/process-flow?batch=${batch.batch_number}`)}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="flex flex-col">
-                              <div className="font-medium">{batch.batch_number}</div>
-                              <div className="text-sm text-muted-foreground">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
+                            <div className="flex flex-col min-w-0">
+                              <div className="font-medium truncate">{batch.batch_number}</div>
+                              <div className="text-sm text-muted-foreground truncate">
                                 {batch.flocks?.flock_name} | {batch.machines?.machine_number}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="secondary" className="text-xs">
                                 {batch.status}
                               </Badge>
                               {batch.expected_hatch_date && (
-                                <div className="text-sm text-muted-foreground">
+                                <div className="text-xs sm:text-sm text-muted-foreground">
                                   Due {formatDistanceToNow(new Date(batch.expected_hatch_date), { addSuffix: true })}
                                 </div>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end">
                             {displayMode === 'detailed' && (
                               <>
-                                <div className="text-right">
-                                  <div className="text-sm font-medium">Progress</div>
-                                  <div className="text-sm text-muted-foreground">
+                                <div className="text-left sm:text-right">
+                                  <div className="text-xs sm:text-sm font-medium">Progress</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">
                                     {getProgressDisplay(batch)}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-sm font-medium">Fertility</div>
-                                  <div className="text-sm text-muted-foreground">
+                                <div className="text-left sm:text-right">
+                                  <div className="text-xs sm:text-sm font-medium">Fertility</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">
                                     {batch.fertility_analysis?.fertility_percent 
                                       ? `${batch.fertility_analysis.fertility_percent.toFixed(1)}%`
                                       : '-'}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-sm font-medium">Hatch Rate</div>
-                                  <div className="text-sm text-muted-foreground">
+                                <div className="text-left sm:text-right">
+                                  <div className="text-xs sm:text-sm font-medium">Hatch Rate</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">
                                     {batch.residue_analysis?.hatch_percent 
                                       ? `${batch.residue_analysis.hatch_percent.toFixed(1)}%`
                                       : '-'}
@@ -539,15 +541,15 @@ const BatchOverviewDashboard = () => {
                                 </div>
                               </>
                             )}
-                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-12">
-                        <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <div className="text-lg font-medium">No active houses found</div>
-                        <div className="text-muted-foreground">Try adjusting your filters or start a new batch</div>
+                      <div className="text-center py-8 sm:py-12">
+                        <Building2 className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                        <div className="text-base sm:text-lg font-medium">No active houses found</div>
+                        <div className="text-sm text-muted-foreground">Try adjusting your filters or start a new batch</div>
                       </div>
                     )}
                   </div>
@@ -556,27 +558,30 @@ const BatchOverviewDashboard = () => {
             </div>
 
             {/* QA Alerts / Machine Utilization */}
-            <div className="col-span-12 lg:col-span-4 min-h-0">
-              <Card className="h-full flex flex-col">
+            <div className="lg:col-span-4">
+              <Card className="flex flex-col max-h-[600px] lg:max-h-none">
                 <CardHeader className="pb-4 flex-shrink-0">
                   <div className="flex items-center justify-between">
-                    {showQAAlerts ? (
-                      <>
-                        <Activity className="h-5 w-5" />
-                        <span>QA Alerts Requiring Attention</span>
-                      </>
-                    ) : (
-                      <>
-                        <Gauge className="h-5 w-5" />
-                        <span>Machine Utilization Status</span>
-                      </>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {showQAAlerts ? (
+                        <>
+                          <Activity className="h-5 w-5" />
+                          <span className="text-sm md:text-base">QA Alerts</span>
+                        </>
+                      ) : (
+                        <>
+                          <Gauge className="h-5 w-5" />
+                          <span className="text-sm md:text-base">Machine Utilization</span>
+                        </>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowQAAlerts(!showQAAlerts)}
+                      className="text-xs"
                     >
-                      Switch View
+                      Switch
                     </Button>
                   </div>
                 </CardHeader>

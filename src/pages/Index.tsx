@@ -21,17 +21,17 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6 max-w-full overflow-x-hidden">
       {/* Dashboard Header with Eggs Icon */}
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-4 md:mb-6 flex items-center gap-3 md:gap-4">
         <img 
           src="/chick-hatching.gif" 
           alt="Chick Hatching" 
-          className="w-16 h-16 object-contain animate-fade-in"
+          className="w-12 h-12 md:w-16 md:h-16 object-contain animate-fade-in flex-shrink-0"
         />
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
-          <p className="text-sm text-muted-foreground">Live overview of hatchery operations</p>
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">Dashboard Overview</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Live overview of hatchery operations</p>
         </div>
       </div>
       <OverviewOperations />

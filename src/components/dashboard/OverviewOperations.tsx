@@ -3,7 +3,7 @@ import BatchOverviewDashboard from "./BatchOverviewDashboard";
 
 const OverviewOperations = () => {
   return (
-    <div className="h-screen max-h-screen overflow-hidden">
+    <div className="w-full">
       <BatchOverviewDashboard />
     </div>
   );
