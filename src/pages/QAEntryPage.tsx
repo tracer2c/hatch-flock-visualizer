@@ -107,16 +107,159 @@ const QAEntryPage = () => {
   };
 
   const handleQADataUpdate = async (newData: any[]) => {
-    const dataWithBatchId = newData.map(record => ({
-      ...record,
-      batch_id: houseId
-    }));
-    
-    setQAData(dataWithBatchId);
-    toast({
-      title: "QA Data Updated",
-      description: "Data linked to current house"
-    });
+    try {
+      // Map QA records with proper database schema
+      const qaRecords = newData.map(record => {
+        const baseRecord = {
+          batch_id: houseId,
+          inspector_name: record.technicianName || '',
+          check_date: record.checkDate || record.testDate || record.washDate || new Date().toISOString().split('T')[0],
+          check_time: record.checkTime || new Date().toISOString().split('T')[1].split('.')[0],
+          day_of_incubation: record.dayOfIncubation || 0,
+          temperature: record.temperature || 0,
+          humidity: record.humidity || 0,
+          notes: record.notes || null
+        };
+
+        // Add type-specific fields
+        if (record.type === 'setter_temperature') {
+          return {
+            ...baseRecord,
+            temperature: record.leftSide?.average || record.rightSide?.average || 0,
+            candling_results: JSON.stringify({
+              type: 'setter_temperature',
+              setterNumber: record.setterNumber,
+              timeOfDay: record.timeOfDay,
+              leftSide: record.leftSide,
+              rightSide: record.rightSide
+            })
+          };
+        }
+        
+        if (record.type === 'rectal_temperature') {
+          return {
+            ...baseRecord,
+            temperature: record.temperature,
+            candling_results: JSON.stringify({
+              type: 'rectal_temperature',
+              location: record.location
+            })
+          };
+        }
+
+        if (record.type === 'tray_wash_temperature') {
+          return {
+            ...baseRecord,
+            temperature: (record.firstCheck + record.secondCheck + record.thirdCheck) / 3,
+            candling_results: JSON.stringify({
+              type: 'tray_wash_temperature',
+              firstCheck: record.firstCheck,
+              secondCheck: record.secondCheck,
+              thirdCheck: record.thirdCheck,
+              allPassed: record.allPassed
+            })
+          };
+        }
+
+        if (record.type === 'cull_check') {
+          return {
+            ...baseRecord,
+            mortality_count: record.totalCulls,
+            candling_results: JSON.stringify({
+              type: 'cull_check',
+              flockNumber: record.flockNumber,
+              maleCount: record.maleCount,
+              femaleCount: record.femaleCount,
+              defectType: record.defectType
+            })
+          };
+        }
+
+        if (record.type === 'specific_gravity') {
+          return {
+            ...baseRecord,
+            candling_results: JSON.stringify({
+              type: 'specific_gravity',
+              flockNumber: record.flockNumber,
+              age: record.age,
+              floatPercentage: record.floatPercentage,
+              isGoodQuality: record.isGoodQuality
+            })
+          };
+        }
+
+        if (record.type === 'setter_angles') {
+          return {
+            ...baseRecord,
+            angle_top_left: record.topLeft,
+            angle_mid_left: record.midLeft,
+            angle_bottom_left: record.bottomLeft,
+            angle_top_right: record.topRight,
+            angle_mid_right: record.midRight,
+            angle_bottom_right: record.bottomRight,
+            candling_results: JSON.stringify({
+              type: 'setter_angles',
+              setterNumber: record.setterNumber
+            })
+          };
+        }
+
+        if (record.type === 'hatch_progression') {
+          return {
+            ...baseRecord,
+            candling_results: JSON.stringify({
+              type: 'hatch_progression',
+              totalPulled: record.totalPulled,
+              goodChicks: record.goodChicks,
+              cullChicks: record.cullChicks,
+              unhatched: record.unhatched,
+              timeOfPull: record.timeOfPull
+            })
+          };
+        }
+
+        if (record.type === 'moisture_loss') {
+          return {
+            ...baseRecord,
+            candling_results: JSON.stringify({
+              type: 'moisture_loss',
+              initialWeight: record.initialWeight,
+              currentWeight: record.currentWeight,
+              percentLoss: record.percentLoss,
+              targetRange: record.targetRange
+            })
+          };
+        }
+
+        return baseRecord;
+      });
+
+      // Insert into database
+      const { error } = await supabase
+        .from('qa_monitoring')
+        .insert(qaRecords);
+
+      if (error) throw error;
+
+      // Update local state
+      setQAData(newData);
+      
+      toast({
+        title: "QA Data Saved",
+        description: "Quality assurance data saved successfully to database"
+      });
+
+      // Reload data from database
+      await loadQAData();
+
+    } catch (error: any) {
+      console.error('Error saving QA data:', error);
+      toast({
+        title: "Error Saving QA Data",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
