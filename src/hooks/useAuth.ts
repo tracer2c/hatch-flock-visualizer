@@ -173,6 +173,99 @@ export const useAuth = () => {
     }
   };
 
+  const updateProfile = async (updates: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  }) => {
+    try {
+      if (!user) throw new Error('No user logged in');
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Refresh profile data
+      await fetchUserProfile(user.id);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const updateEmail = async (newEmail: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Email update initiated",
+        description: "Please check both your old and new email to confirm the change.",
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Email update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      if (!user?.email) throw new Error('No user logged in');
+      
+      // First verify current password by signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      
+      if (signInError) throw new Error('Current password is incorrect');
+      
+      // Update to new password
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Password update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
   const createDefaultAdmin = async () => {
     // Skip if we've already attempted and failed
     const hasTriedCreation = localStorage.getItem('admin_creation_attempted');
@@ -241,6 +334,9 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    updateProfile,
+    updateEmail,
+    updatePassword,
     createDefaultAdmin,
     hasRole,
     isAdmin,

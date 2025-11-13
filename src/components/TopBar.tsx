@@ -7,18 +7,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, GraduationCap, CheckCircle2 } from "lucide-react";
+import { LogOut, User, GraduationCap, CheckCircle2, ChevronRight } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useNavigate } from "react-router-dom";
 
 export function TopBar() {
   const { user, profile, signOut } = useAuth();
   const { open: sidebarOpen } = useSidebar();
   const { viewMode, setViewMode, isTrainingMode } = useViewMode();
+  const navigate = useNavigate();
 
   const getUserInitials = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -94,9 +96,12 @@ export function TopBar() {
                 side="bottom"
                 sideOffset={8}
               >
-                <DropdownMenuItem className="flex items-center p-3 focus:bg-accent/50">
+                <DropdownMenuItem 
+                  className="flex items-center p-3 focus:bg-accent/50 cursor-pointer"
+                  onClick={() => navigate('/profile')}
+                >
                   <User className="mr-3 h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 flex-1">
                     <span className="text-sm font-medium">
                       {profile?.first_name && profile?.last_name 
                         ? `${profile.first_name} ${profile.last_name}`
@@ -107,6 +112,7 @@ export function TopBar() {
                       {user.email}
                     </span>
                   </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

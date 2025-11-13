@@ -28,6 +28,7 @@ import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
 import ResidueBreakoutPage from "./pages/ResidueBreakoutPage";
 import BulkDataImportPage from "./pages/BulkDataImportPage";
+import UserProfilePage from "./pages/UserProfilePage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -91,6 +92,7 @@ const App = () => {
                             <Route path="/bulk-import" element={<BulkDataImportPage />} />
                             <Route path="/report" element={<ProjectReport />} />
                             <Route path="/chat" element={<ChatPage />} />
+                            <Route path="/profile" element={<UserProfilePage />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
