@@ -883,6 +883,7 @@ export default function EmbrexDashboard() {
     { value: "hatch_percent", label: "Hatch %", color: PALETTE[5] },
     { value: "if_dev_percent", label: "I/F %", color: PALETTE[6] },
     { value: "injected_pct", label: "Injected %", color: PALETTE[7] },
+    { value: "embryonic_mortality_percent", label: "Embryonic Mortality %", color: PALETTE[8] },
   ] as const;
 
   const fertilityCountMetricOptions = [
@@ -894,6 +895,7 @@ export default function EmbrexDashboard() {
     { value: "late_dead", label: "Late Dead", color: PALETTE[5] },
     { value: "hatch_count", label: "Hatch Count", color: PALETTE[6] },
     { value: "sample_size", label: "Sample Size", color: PALETTE[7] },
+    { value: "embryonic_mortality_count", label: "Embryonic Mortality", color: PALETTE[8] },
   ] as const;
 
   const metricOptions = showFertilityMetrics 
