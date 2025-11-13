@@ -230,7 +230,7 @@ export const ChatInterface = () => {
                   <MessageCircle className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground">Smart Analytics</h1>
+                  <h1 className="text-lg font-bold text-foreground">Smart Analytics</h1>
                   <p className="text-sm text-muted-foreground">AI-powered insights & reports</p>
                 </div>
               </div>
@@ -258,21 +258,21 @@ export const ChatInterface = () => {
           {messages.length === 0 ? (
             <div className="space-y-8">
               <div className="space-y-4 text-center">
-                <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                <h2 className="text-xl font-semibold text-foreground">How can I help you today?</h2>
+                <p className="text-base text-muted-foreground max-w-2xl mx-auto">
                   I can help you analyze your hatchery data, generate reports, and provide insights about your operations.
                 </p>
               </div>
               
               <div className="max-w-4xl mx-auto">
-                <p className="text-base font-medium text-muted-foreground mb-6 text-center">Popular questions:</p>
+                <p className="text-sm font-medium text-muted-foreground mb-6 text-center">Popular questions:</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {suggestedPrompts.map((prompt, index) => (
                     <Button
                       key={index}
                       variant="outline"
                       onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-left h-auto p-4 text-base hover:bg-accent/50 border-2 justify-start transition-all duration-200 hover:shadow-sm"
+                      className="text-left h-auto p-4 text-sm hover:bg-accent/50 border-2 justify-start transition-all duration-200 hover:shadow-sm"
                     >
                       {prompt}
                     </Button>
@@ -315,9 +315,9 @@ export const ChatInterface = () => {
                        message.role === 'user'
                          ? 'bg-primary text-primary-foreground'
                          : 'bg-muted/50 border'
-                     }`}>
-                      {message.role === 'user' ? (
-                        <p className="text-base leading-relaxed whitespace-pre-wrap">
+                      }`}>
+                       {message.role === 'user' ? (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
                           {message.content}
                         </p>
                       ) : typeof message.content === 'object' && message.content?.type === 'analytics' ? (
@@ -336,7 +336,7 @@ export const ChatInterface = () => {
                         <EnhancedMessageFormatter 
                           content={message.content}
                           onQuestionClick={handleQuestionClick}
-                          className="text-base"
+                          className="text-sm"
                         />
                       )}
                      </div>
@@ -369,7 +369,7 @@ export const ChatInterface = () => {
                       </div>
                     )}
                     
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {message.timestamp.toLocaleTimeString()}
                     </p>
                   </div>
@@ -408,7 +408,7 @@ export const ChatInterface = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask me anything about your hatchery data..."
-                  className="min-h-[56px] text-base px-4 py-4 pr-14 rounded-xl border-2 focus:border-primary"
+                  className="min-h-[48px] text-sm px-4 py-3 pr-14 rounded-xl border-2 focus:border-primary"
                   disabled={isLoading}
                 />
                 <Button
@@ -427,7 +427,7 @@ export const ChatInterface = () => {
               <Button 
                 type="submit" 
                 disabled={isLoading || !input.trim()}
-                className="h-14 px-8 rounded-xl text-base"
+                className="h-12 px-6 rounded-xl text-sm"
               >
                 <Send className="h-5 w-5" />
               </Button>
