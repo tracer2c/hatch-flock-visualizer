@@ -170,6 +170,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   }, [currentMachine]);
 
   const handleAddSetterTemp = () => {
+    // Validate technician name
     if (!globalTechnicianName.trim()) {
       toast({
         title: "Validation Error",
@@ -179,6 +180,40 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       return;
     }
     
+    // Validate all temperature fields are filled
+    if (!setterTemps.leftTopTemp || !setterTemps.leftMiddleTemp || !setterTemps.leftBottomTemp ||
+        !setterTemps.rightTopTemp || !setterTemps.rightMiddleTemp || !setterTemps.rightBottomTemp) {
+      toast({
+        title: "Validation Error",
+        description: "All temperature fields (Top, Middle, Bottom) for both Left and Right sides must be filled",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate all values are valid numbers
+    const temps = [
+      setterTemps.leftTopTemp,
+      setterTemps.leftMiddleTemp,
+      setterTemps.leftBottomTemp,
+      setterTemps.rightTopTemp,
+      setterTemps.rightMiddleTemp,
+      setterTemps.rightBottomTemp
+    ];
+    
+    for (const temp of temps) {
+      const num = parseFloat(temp);
+      if (isNaN(num) || num < 50 || num > 150) {
+        toast({
+          title: "Validation Error",
+          description: "All temperatures must be valid numbers between 50°F and 150°F",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
+    // Continue with existing calculation logic
     const leftAvg = ((parseFloat(setterTemps.leftTopTemp) + parseFloat(setterTemps.leftMiddleTemp) + parseFloat(setterTemps.leftBottomTemp)) / 3).toFixed(1);
     const rightAvg = ((parseFloat(setterTemps.rightTopTemp) + parseFloat(setterTemps.rightMiddleTemp) + parseFloat(setterTemps.rightBottomTemp)) / 3).toFixed(1);
     
