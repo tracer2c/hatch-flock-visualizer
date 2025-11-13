@@ -324,7 +324,9 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                   {item.hof_percent ? formatPercentage(item.hof_percent) : "-"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {item.hoi_percent ? formatPercentage(item.hoi_percent) : "-"}
+                  {item.eggs_injected > 0 && item.chicks_hatched >= 0
+                    ? formatPercentage(calculateHOIPercent(item.chicks_hatched, item.eggs_injected))
+                    : "N/A"}
                 </TableCell>
                 <TableCell className="text-right">
                   {item.if_dev_percent ? formatPercentage(item.if_dev_percent) : "-"}

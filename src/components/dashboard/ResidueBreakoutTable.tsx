@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, AlertCircle, Filter, ChevronDown, X } from "lucide-react";
+import { Edit, Trash2, AlertCircle, Filter, ChevronDown, X, Info } from "lucide-react";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -383,7 +383,9 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                       {item.hof_percent ? `${item.hof_percent.toFixed(2)}%` : "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {item.hoi_percent ? `${item.hoi_percent.toFixed(2)}%` : "-"}
+                      {item.eggs_injected > 0 && item.chicks_hatched >= 0
+                        ? `${calculateHOIPercent(item.chicks_hatched, item.eggs_injected).toFixed(2)}%`
+                        : "N/A"}
                     </TableCell>
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
@@ -599,11 +601,28 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                 />
               </div>
               <div>
-                <Label>HOI % (auto-calc)</Label>
+                <Label className="flex items-center gap-1">
+                  HOI % (auto-calc)
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      HOI% = (Chicks Hatched / Eggs Injected) × 100
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
                 <Input
                   type="text"
                   disabled
-                  value={formData.hoi_percent ? `${formData.hoi_percent.toFixed(2)}%` : "-"}
+                  value={
+                    editingRecord?.eggs_injected > 0 && formData.chicks_hatched >= 0
+                      ? `${calculateHOIPercent(
+                          Number(formData.chicks_hatched), 
+                          editingRecord.eggs_injected
+                        ).toFixed(2)}%`
+                      : "N/A - Requires Eggs Injected"
+                  }
                   className="bg-gray-100"
                 />
               </div>
