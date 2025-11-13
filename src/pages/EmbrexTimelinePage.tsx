@@ -503,13 +503,11 @@ export default function EmbrexDashboard() {
           // Calculate PIP metrics (already defined above, just calculate total)
           const totalPips = livePips + deadPips;
 
-          // Calculate Embryonic Mortality (Early + Mid + Late + Live Pips + Dead Pips)
+          // Calculate Embryonic Mortality (Early Dead + Mid Dead + Late Dead)
           const embryonicMortalityCount = 
             (residue?.early_dead ?? 0) + 
             (residue?.mid_dead ?? 0) + 
-            (residue?.late_dead ?? 0) + 
-            livePips + 
-            deadPips;
+            (residue?.late_dead ?? 0);
 
           // Calculate percentages using sample size
           let cull_percent = 0;
