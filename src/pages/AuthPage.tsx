@@ -54,25 +54,49 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">Hatchery Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome to your hatchery management system
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
+      {/* Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+      
+      <div className="w-full max-w-md relative z-10">
+        {/* Header */}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="inline-block p-3 bg-primary/10 rounded-2xl mb-4 shadow-sm">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl font-bold text-primary-foreground">H</span>
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Hatchery Management
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Welcome to your enterprise hatchery management system
           </p>
         </div>
 
-        <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+        {/* Auth Tabs */}
+        <Tabs defaultValue="signin" className="w-full animate-scale-in">
+          <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 backdrop-blur-sm">
+            <TabsTrigger 
+              value="signin"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger 
+              value="signup"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Sign Up
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="signin">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign In</CardTitle>
+          <TabsContent value="signin" className="mt-4">
+            <Card className="border-2 shadow-xl backdrop-blur-sm bg-background/95">
+              <CardHeader className="space-y-1 pb-4">
+                <CardTitle className="text-2xl">Sign In</CardTitle>
                 <CardDescription>
                   Enter your credentials to access your account
                 </CardDescription>
@@ -80,30 +104,36 @@ export default function AuthPage() {
               <form onSubmit={handleSignIn}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email" className="text-sm font-medium">
+                      Email
+                    </Label>
                     <Input
                       id="signin-email"
                       name="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
+                      className="h-11"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password" className="text-sm font-medium">
+                      Password
+                    </Label>
                     <Input
                       id="signin-password"
                       name="password"
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder="••••••••"
+                      className="h-11"
                       required
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-3">
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
                     disabled={isLoading}
                   >
                     {isLoading ? "Signing in..." : "Sign In"}
@@ -113,10 +143,10 @@ export default function AuthPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="signup">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Account</CardTitle>
+          <TabsContent value="signup" className="mt-4">
+            <Card className="border-2 shadow-xl backdrop-blur-sm bg-background/95">
+              <CardHeader className="space-y-1 pb-4">
+                <CardTitle className="text-2xl">Create Account</CardTitle>
                 <CardDescription>
                   Create a new account to get started
                 </CardDescription>
@@ -125,49 +155,61 @@ export default function AuthPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName" className="text-sm font-medium">
+                        First Name
+                      </Label>
                       <Input
                         id="firstName"
                         name="firstName"
-                        placeholder="Enter first name"
+                        placeholder="John"
+                        className="h-11"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-sm font-medium">
+                        Last Name
+                      </Label>
                       <Input
                         id="lastName"
                         name="lastName"
-                        placeholder="Enter last name"
+                        placeholder="Doe"
+                        className="h-11"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-sm font-medium">
+                      Email
+                    </Label>
                     <Input
                       id="signup-email"
                       name="email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
+                      className="h-11"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-sm font-medium">
+                      Password
+                    </Label>
                     <Input
                       id="signup-password"
                       name="password"
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder="••••••••"
+                      className="h-11"
                       required
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-3">
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
                     disabled={isLoading}
                   >
                     {isLoading ? "Creating account..." : "Create Account"}
