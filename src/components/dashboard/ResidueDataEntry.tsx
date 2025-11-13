@@ -384,6 +384,20 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Warning if eggs_injected is not set */}
+          {batchInfo.eggs_injected === 0 && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-yellow-900">Eggs Injected Data Missing</p>
+                <p className="text-sm text-yellow-800">
+                  Please enter Clears & Injected data first before entering residue analysis. 
+                  HOI% (Hatch of Injection) calculation requires eggs_injected value.
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <p className="text-sm text-gray-600 mb-2">
               <strong>Selected House:</strong> {batchInfo.batch_number} - {batchInfo.flock_name} (Flock #{batchInfo.flock_number})
@@ -844,20 +858,24 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">
-                  HOI %
+                  HOI % (Hatch of Injection)
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="h-4 w-4 opacity-70" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Hatch of Injection = hatched chicks ÷ eggs injected × 100
+                      HOI% = (Chicks Hatched / Eggs Injected) × 100
                     </TooltipContent>
                   </Tooltip>
                 </Label>
                 <Input
                   disabled
-                  className="bg-white"
+                  className={batchInfo.eggs_injected === 0 ? "bg-yellow-50 font-semibold text-yellow-800" : "bg-white font-semibold"}
                   value={(() => {
+                    const eggsInjected = batchInfo.eggs_injected || 0;
+                    
+                    if (eggsInjected === 0) return "N/A - Enter Clears & Injected data first";
+                    
                     const s = Number(formData.sampleSize || 648);
                     const inf = Number(formData.infertile || 0);
                     const ed = Number(formData.earlyDeath || 0);
@@ -866,7 +884,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                     const cc = Number(formData.cullChicks || 0);
                     const lp = Number(formData.livePipNumber || 0);
                     const dp = Number(formData.deadPipNumber || 0);
-                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, batchInfo.eggs_injected).hoiPercent;
+                    return calculateHatchabilityMetrics(s, inf, ed, md, ld, cc, lp, dp, eggsInjected).hoiPercent;
                   })()}
                 />
               </div>
