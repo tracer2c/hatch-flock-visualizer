@@ -33,6 +33,7 @@ import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { HelpProvider } from "./contexts/HelpContext";
 import ContextualHelpBot from "./components/ContextualHelpBot";
+import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,20 +46,24 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <InitializeApp>
-          <ViewModeProvider>
-            <HelpProvider>
-            <Routes>
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <SidebarProvider defaultOpen={true}>
+const App = () => {
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <InitializeApp>
+            <ViewModeProvider>
+              <HelpProvider>
+              <Routes>
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/*" element={
+                  <ProtectedRoute>
+                    <SidebarProvider defaultOpen={!isMobile && !isTablet}>
                     <div className="flex min-h-screen w-full bg-background">
                       <ModernSidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
@@ -102,6 +107,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

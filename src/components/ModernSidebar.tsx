@@ -126,27 +126,6 @@ export function ModernSidebar() {
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
 
-  // Auto-collapse sidebar for tablet portrait mode
-  useEffect(() => {
-    if (isTablet && open) {
-      setOpen(false);
-    }
-  }, [isTablet]);
-
-  // Auto-collapse sidebar for Embrex Timeline page
-  useEffect(() => {
-    if (currentPath === '/embrex-timeline') {
-      // Store current state before auto-collapsing
-      previousSidebarState.current = open;
-      if (open) {
-        setOpen(false);
-      }
-    } else if (currentPath !== '/embrex-timeline' && !open && previousSidebarState.current) {
-      // Restore previous state when navigating away from timeline
-      setOpen(true);
-    }
-  }, [currentPath, open, setOpen]);
-
   // Keyboard shortcut to toggle sidebar
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -211,23 +190,23 @@ export function ModernSidebar() {
 
   return (
     <>
-      {/* Overlay backdrop for tablet */}
-      {isTablet && open && (
+      {/* Overlay backdrop for tablet/mobile */}
+      {(isTablet || !open) && open && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 tablet:block hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Floating Toggle Button - Touch-optimized for iPad */}
+      {/* Simple Toggle Button */}
       <Button
         variant="outline"
         size="touch-lg"
         className={cn(
-          "fixed top-4 left-4 z-[100] rounded-lg bg-background/80 backdrop-blur-sm",
-          "border-2 border-border/50 shadow-lg hover:shadow-xl",
-          "transition-all duration-300 ease-out hover:scale-105 active:scale-95",
-          "hover:bg-accent/50 hover:border-primary/30",
+          "fixed top-4 left-4 z-[100] rounded-lg bg-background/80",
+          "border-2 border-border/50 shadow-lg",
+          "transition-all duration-300",
+          "hover:bg-accent/50",
           "cursor-pointer touch-manipulation"
         )}
         onClick={(e) => {
@@ -238,9 +217,9 @@ export function ModernSidebar() {
         title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
       >
         {collapsed ? (
-          <PanelLeft className="h-6 w-6 transition-transform duration-300 pointer-events-none" />
+          <PanelLeft className="h-6 w-6 pointer-events-none" />
         ) : (
-          <PanelLeftClose className="h-6 w-6 transition-transform duration-300 pointer-events-none" />
+          <PanelLeftClose className="h-6 w-6 pointer-events-none" />
         )}
       </Button>
 
@@ -249,9 +228,9 @@ export function ModernSidebar() {
         variant="sidebar" 
         collapsible="offcanvas"
         className={cn(
-          "border-r border-border/30 bg-background/95 backdrop-blur-sm",
-          "transition-all duration-300 ease-out",
-          isTablet && open && "z-50"
+          "border-r border-border/30 bg-background/95",
+          "transition-all duration-300",
+          (isTablet || !open) && open && "z-50"
         )}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
