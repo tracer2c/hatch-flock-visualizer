@@ -268,13 +268,13 @@ const QAEntryPage = () => {
         if (record.type === 'setter_temperature') {
           return {
             ...baseRecord,
-            temperature: record.leftSide?.average || record.rightSide?.average || 0,
+            temperature: record.leftTemps?.average || record.rightTemps?.average || 0,
             candling_results: JSON.stringify({
               type: 'setter_temperature',
               setterNumber: record.setterNumber,
               timeOfDay: record.timeOfDay,
-              leftSide: record.leftSide,
-              rightSide: record.rightSide
+              leftSide: record.leftTemps,
+              rightSide: record.rightTemps
             })
           };
         }
