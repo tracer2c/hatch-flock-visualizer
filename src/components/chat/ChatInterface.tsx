@@ -256,23 +256,23 @@ export const ChatInterface = () => {
           )}
           
           {messages.length === 0 ? (
-            <div className="space-y-8">
-              <div className="space-y-4 text-center">
-                <h2 className="text-xl font-semibold text-foreground">How can I help you today?</h2>
-                <p className="text-base text-muted-foreground max-w-2xl mx-auto">
+            <div className="space-y-6">
+              <div className="space-y-3 text-center">
+                <h2 className="text-lg font-semibold text-foreground">How can I help you today?</h2>
+                <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
                   I can help you analyze your hatchery data, generate reports, and provide insights about your operations.
                 </p>
               </div>
               
               <div className="max-w-4xl mx-auto">
-                <p className="text-sm font-medium text-muted-foreground mb-6 text-center">Popular questions:</p>
-                <div className="grid gap-3 md:grid-cols-2">
+                <p className="text-xs font-medium text-muted-foreground mb-4 text-center">Popular questions:</p>
+                <div className="grid gap-2 md:grid-cols-2">
                   {suggestedPrompts.map((prompt, index) => (
                     <Button
                       key={index}
                       variant="outline"
                       onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-left h-auto p-4 text-sm hover:bg-accent/50 border-2 justify-start transition-all duration-200 hover:shadow-sm"
+                      className="text-left h-auto p-3 text-sm hover:bg-accent/50 justify-start transition-all duration-200"
                     >
                       {prompt}
                     </Button>
@@ -281,43 +281,39 @@ export const ChatInterface = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${
+                  className={`flex gap-3 ${
                     message.role === 'user' ? 'flex-row-reverse' : ''
                   }`}
                 >
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                     message.role === 'user' 
                       ? 'bg-primary text-primary-foreground' 
                       : 'bg-muted'
                   }`}>
                     {message.role === 'user' ? (
-                      <User className="h-5 w-5" />
+                      <User className="h-4 w-4" />
                     ) : (
-                      <MessageCircle className="h-5 w-5" />
+                      <MessageCircle className="h-4 w-4" />
                     )}
                   </div>
                   
-                   <div className={`flex-1 space-y-3 max-w-4xl ${
+                   <div className={`flex-1 space-y-2 max-w-4xl ${
                      message.role === 'user' ? 'text-right' : ''
                    }`}>
                      {/* Summary Card for assistant messages */}
                      {message.role === 'assistant' && message.summary && (
-                       <div className="mb-4">
+                       <div className="mb-3">
                          <SummaryCard summary={message.summary} />
                        </div>
                      )}
 
-                     <div className={`inline-block p-6 rounded-2xl ${
-                       message.role === 'user'
-                         ? 'bg-primary text-primary-foreground'
-                         : 'bg-muted/50 border'
-                      }`}>
-                       {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                     <div className="inline-block">
+                      {message.role === 'user' ? (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
                           {message.content}
                         </p>
                       ) : typeof message.content === 'object' && message.content?.type === 'analytics' ? (
@@ -353,16 +349,16 @@ export const ChatInterface = () => {
                     )}
                     
                     {message.actions && message.actions.length > 0 && !message.payload && (
-                      <div className="flex gap-3 mt-4">
+                      <div className="flex gap-2 mt-3">
                         {message.actions.map((action, index) => (
                           <Button
                             key={index}
                             variant="outline"
                             size="sm"
                             onClick={() => handleActionClick(action, message)}
-                            className="text-sm"
+                            className="text-xs h-8"
                           >
-                            {action.type === 'download_csv' && <Download className="h-4 w-4 mr-2" />}
+                            {action.type === 'download_csv' && <Download className="h-3 w-3 mr-1.5" />}
                             {action.name}
                           </Button>
                         ))}
@@ -377,16 +373,16 @@ export const ChatInterface = () => {
               ))}
               
               {isLoading && (
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <MessageCircle className="h-5 w-5" />
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4" />
                   </div>
                   <div className="flex-1">
-                    <div className="inline-block p-6 rounded-2xl bg-muted/50 border">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse" />
-                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse delay-100" />
-                        <div className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse delay-200" />
+                    <div className="inline-block py-2">
+                      <div className="flex gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse delay-100" />
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse delay-200" />
                       </div>
                     </div>
                   </div>
