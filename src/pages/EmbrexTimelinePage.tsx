@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
@@ -903,7 +904,7 @@ export default function EmbrexDashboard() {
   ] as const;
 
   const metricOptions = showFertilityMetrics 
-    ? [...fertilityPercentMetricOptions, ...fertilityCountMetricOptions]
+    ? (showFertilityCounts ? fertilityCountMetricOptions : fertilityPercentMetricOptions)
     : basicMetricOptions;
 
   /* Facet tabs state */
@@ -1386,27 +1387,35 @@ export default function EmbrexDashboard() {
 
                   {/* Count/Percentage Toggle for Fertility Metrics */}
                   {showFertilityMetrics && (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-600" />
-                        <span className="text-sm font-medium">
-                          {showFertilityCounts ? "Showing Counts" : "Showing Percentages"}
+                    <div className="flex items-center justify-between p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/60 shadow-sm">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 shadow-sm" />
+                        <span className="text-sm font-medium text-gray-700">
+                          {showFertilityCounts ? "Showing Counts" : "Showing %"}
                         </span>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setShowFertilityCounts(!showFertilityCounts);
-                          // Reset metrics when toggling
-                          setMetrics(showFertilityCounts 
-                            ? ["fertility_percent", "hatch_percent"] 
-                            : ["fertile_eggs", "early_dead"]);
-                        }}
-                        className="h-8 text-xs"
-                      >
-                        Show {showFertilityCounts ? "%" : "Counts"}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 font-medium">
+                          %
+                        </span>
+                        <Switch
+                          checked={showFertilityCounts}
+                          onCheckedChange={(checked) => {
+                            setShowFertilityCounts(checked);
+                            // Update URL parameter
+                            searchParams.set("fertCount", checked ? "1" : "0");
+                            setSearchParams(searchParams);
+                            // Reset metrics when toggling to avoid showing incompatible metrics
+                            setMetrics(checked 
+                              ? ["fertile_eggs", "early_dead"] 
+                              : ["fertility_percent", "hatch_percent"]);
+                          }}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                        <span className="text-xs text-gray-500 font-medium">
+                          Counts
+                        </span>
+                      </div>
                     </div>
                   )}
                   
