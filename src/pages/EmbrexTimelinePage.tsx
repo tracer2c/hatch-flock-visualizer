@@ -453,7 +453,7 @@ export default function EmbrexDashboard() {
 
         const formatted: RawRow[] = (data ?? []).map((b: any) => {
           // Calculate mortality percentages from fertility and residue analysis
-          const fertility = b.fertility_analysis?.[0];
+          const fertility = b.fertility_analysis;
           const residue = b.residue_analysis;
           const totalEggs = Number(b.total_eggs_set ?? 0);
           
