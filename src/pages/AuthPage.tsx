@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import henLogo from '@/assets/hen-logo.png';
 
 export default function AuthPage() {
   const { user, signIn, signUp, loading } = useAuth();
@@ -57,18 +58,22 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
       {/* Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
       
       <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-block p-3 bg-primary/10 rounded-2xl mb-4 shadow-sm">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-2xl font-bold text-primary-foreground">H</span>
+          <div className="inline-block p-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl mb-4 shadow-sm">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-100/50 to-amber-100/50 rounded-xl flex items-center justify-center shadow-lg">
+              <img 
+                src={henLogo} 
+                alt="Hatchery Logo" 
+                className="w-12 h-12 object-contain drop-shadow-md"
+              />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-700 via-amber-600 to-orange-600 bg-clip-text text-transparent">
             Hatchery Management
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
