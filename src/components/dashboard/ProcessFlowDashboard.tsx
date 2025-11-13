@@ -6,8 +6,12 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import utilizationIcon from "@/assets/utilization-icon.png";
 
-const ProcessFlowDashboard = () => {
-  const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
+interface ProcessFlowDashboardProps {
+  viewMode?: 'original' | 'dummy';
+}
+
+const ProcessFlowDashboard = ({ viewMode = 'original' }: ProcessFlowDashboardProps) => {
+  const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics(viewMode);
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading performance data...</div>;

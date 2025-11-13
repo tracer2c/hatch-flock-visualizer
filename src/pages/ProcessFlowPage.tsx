@@ -23,7 +23,7 @@ const ProcessFlowPage = () => {
 
   return (
     <div className="p-6">
-      <ProcessFlowDashboard />
+      <ProcessFlowDashboard viewMode={viewMode} />
     </div>
   );
 };
