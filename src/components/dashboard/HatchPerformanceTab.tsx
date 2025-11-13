@@ -288,7 +288,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-semibold">Infertile Percentage (I/F)</p>
-                    <p className="text-sm">Formula: (Infertile Eggs / Total Eggs Set) × 100</p>
+                    <p className="text-sm">Formula: (Infertile Eggs / Fertile Eggs) × 100</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
