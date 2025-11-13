@@ -212,7 +212,7 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
                   {localData.length}
@@ -224,12 +224,6 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                   {(localData.reduce((sum, entry) => sum + overallQualityScore(entry), 0) / localData.length).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">Avg Quality Score</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {(localData.reduce((sum, entry) => sum + calculatePercentage(entry.usd, entry.totalEggsPulled), 0) / localData.length).toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-600">Avg USD Rate</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
