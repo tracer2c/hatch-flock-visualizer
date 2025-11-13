@@ -788,12 +788,12 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 <Label className="flex items-center gap-1">
                   I/F dev. %
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 opacity-70" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Fertile eggs ÷ sample size × 100
-                    </TooltipContent>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 opacity-70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Infertile eggs ÷ fertile eggs × 100
+                  </TooltipContent>
                   </Tooltip>
                 </Label>
                 <Input
