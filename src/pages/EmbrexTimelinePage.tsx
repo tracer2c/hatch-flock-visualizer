@@ -903,7 +903,7 @@ export default function EmbrexDashboard() {
   ] as const;
 
   const metricOptions = showFertilityMetrics 
-    ? (showFertilityCounts ? fertilityCountMetricOptions : fertilityPercentMetricOptions)
+    ? [...fertilityPercentMetricOptions, ...fertilityCountMetricOptions]
     : basicMetricOptions;
 
   /* Facet tabs state */
