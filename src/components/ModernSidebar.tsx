@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
   FileInput, 
@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useIsTablet } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -118,6 +119,19 @@ export function ModernSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const previousSidebarState = useRef<boolean>(open);
+  const isTablet = useIsTablet();
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  // Auto-collapse sidebar for tablet portrait mode
+  useEffect(() => {
+    if (isTablet && open) {
+      setOpen(false);
+    }
+  }, [isTablet]);
 
   // Auto-collapse sidebar for Embrex Timeline page
   useEffect(() => {
@@ -144,6 +158,31 @@ export function ModernSidebar() {
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
   }, [open, setOpen]);
+
+  // Swipe gesture handlers for touch devices
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && open) {
+      setOpen(false);
+    }
+    if (isRightSwipe && !open && touchStart < 50) {
+      setOpen(true);
+    }
+  };
 
   const visibleNavItems = navigationItems.filter(item => {
     if (!item.requiresAuth) return true;
@@ -172,16 +211,24 @@ export function ModernSidebar() {
 
   return (
     <>
-      {/* Floating Toggle Button */}
+      {/* Overlay backdrop for tablet */}
+      {isTablet && open && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 tablet:block hidden backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Floating Toggle Button - Touch-optimized for iPad */}
       <Button
         variant="outline"
-        size="icon"
+        size="touch-lg"
         className={cn(
-          "fixed top-4 left-4 z-[100] h-10 w-10 rounded-lg bg-background/80 backdrop-blur-sm",
+          "fixed top-4 left-4 z-[100] rounded-lg bg-background/80 backdrop-blur-sm",
           "border-2 border-border/50 shadow-lg hover:shadow-xl",
-          "transition-all duration-300 ease-out hover:scale-105",
+          "transition-all duration-300 ease-out hover:scale-105 active:scale-95",
           "hover:bg-accent/50 hover:border-primary/30",
-          "cursor-pointer"
+          "cursor-pointer touch-manipulation"
         )}
         onClick={(e) => {
           e.preventDefault();
@@ -191,9 +238,9 @@ export function ModernSidebar() {
         title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
       >
         {collapsed ? (
-          <PanelLeft className="h-5 w-5 transition-transform duration-300 pointer-events-none" />
+          <PanelLeft className="h-6 w-6 transition-transform duration-300 pointer-events-none" />
         ) : (
-          <PanelLeftClose className="h-5 w-5 transition-transform duration-300 pointer-events-none" />
+          <PanelLeftClose className="h-6 w-6 transition-transform duration-300 pointer-events-none" />
         )}
       </Button>
 
@@ -203,8 +250,12 @@ export function ModernSidebar() {
         collapsible="icon"
         className={cn(
           "border-r border-border/30 bg-background/95 backdrop-blur-sm",
-          "transition-all duration-300 ease-out"
+          "transition-all duration-300 ease-out",
+          isTablet && open && "z-50"
         )}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <SidebarContent className="pt-16 px-2">
 
@@ -221,11 +272,11 @@ export function ModernSidebar() {
                         asChild 
                         tooltip={collapsed ? item.label : undefined}
                         className={cn(
-                          "group relative flex items-center rounded-lg transition-all duration-200",
-                          collapsed ? "justify-center p-3 w-10 h-10" : "gap-3 px-3 py-2.5",
+                          "group relative flex items-center rounded-lg transition-all duration-200 touch-manipulation",
+                          collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-3 py-3 min-h-[44px]",
                           active
                             ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                            : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
                         )}
                       >
                         <NavLink
@@ -263,11 +314,11 @@ export function ModernSidebar() {
                       <SidebarMenuButton
                         tooltip={collapsed ? "Advanced Analytics" : undefined}
                           className={cn(
-                            "group relative flex items-center rounded-lg transition-all duration-200",
-                            collapsed ? "justify-center p-3 w-10 h-10" : "gap-3 px-3 py-2.5",
+                            "group relative flex items-center rounded-lg transition-all duration-200 touch-manipulation",
+                            collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-3 py-3 min-h-[44px]",
                             hasActiveAdvancedItem
                               ? "bg-accent text-foreground"
-                              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                              : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
                           )}
                         >
                           <TrendingUp className={cn(
@@ -300,14 +351,14 @@ export function ModernSidebar() {
                               
                               return (
                                 <SidebarMenuSubItem key={item.path}>
-                                  <SidebarMenuSubButton asChild>
+                                   <SidebarMenuSubButton asChild>
                                     <NavLink
                                       to={item.path}
                                        className={cn(
-                                         "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                         "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px]",
                                          active
                                            ? "bg-black text-white shadow-sm"
-                                           : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                                           : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
                                        )}
                                     >
                                       <Icon className="h-4 w-4 flex-shrink-0" />
