@@ -42,7 +42,9 @@ export const useAgeBasedPerformance = (viewMode: 'original' | 'dummy') => {
       
       if (error) throw error;
       
-      const rangeGroups = AGE_RANGES.reduce((acc, range) => {
+      const customRanges = AgeRangeService.getCustomRanges();
+      
+      const rangeGroups = customRanges.reduce((acc, range) => {
         acc[range.key] = [];
         return acc;
       }, {} as Record<AgeRange, any[]>);
@@ -54,7 +56,7 @@ export const useAgeBasedPerformance = (viewMode: 'original' | 'dummy') => {
         rangeGroups[ageRange.key].push(batch);
       });
       
-      const metrics: AgeRangeMetrics[] = AGE_RANGES.map(range => {
+      const metrics: AgeRangeMetrics[] = customRanges.map(range => {
         const batchesInRange = rangeGroups[range.key];
         
         if (batchesInRange.length === 0) {

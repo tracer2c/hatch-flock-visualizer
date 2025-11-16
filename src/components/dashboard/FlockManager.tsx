@@ -733,15 +733,21 @@ const FlockManager = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        <div className="flex overflow-x-auto gap-4 pb-4">
-          {Object.entries(
+        {(() => {
+          const groupedFlocks = Object.entries(
             filteredFlocks.reduce((groups, flock) => {
               const groupId = flock.flock_group_id || `single-${flock.id}`;
               if (!groups[groupId]) groups[groupId] = [];
               groups[groupId].push(flock);
               return groups;
             }, {} as Record<string, typeof filteredFlocks>)
-          ).map(([groupId, flocks]) => (
+          );
+          
+          const midpoint = Math.ceil(groupedFlocks.length / 2);
+          const firstRow = groupedFlocks.slice(0, midpoint);
+          const secondRow = groupedFlocks.slice(midpoint);
+          
+          const renderFlockCards = (groups: typeof groupedFlocks) => groups.map(([groupId, flocks]) => (
             <div key={groupId} className="flex-shrink-0 space-y-3" style={{ width: flocks[0].flock_group_id ? `${Math.min(flocks.length * 320, 1000)}px` : '300px' }}>
               {flocks[0].flock_group_id && (
                 <div className="px-3 py-2 bg-primary/10 border-l-4 border-primary rounded">
@@ -800,21 +806,13 @@ const FlockManager = () => {
                                 <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
                                     <span className="text-muted-foreground">Last Updated:</span>
-                                    <span className="font-medium">{format(new Date(flock.last_modified_at), 'MMM d, yyyy h:mm a')}</span>
+                                    <span>{format(new Date(flock.last_modified_at), 'PPp')}</span>
                                   </div>
                                   {flock.updated_by_profile && (
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Updated By:</span>
                                       <span className="font-medium">
                                         {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {flock.created_by_profile && (
-                                    <div className="flex justify-between pt-2 border-t">
-                                      <span className="text-muted-foreground">Created By:</span>
-                                      <span className="font-medium">
-                                        {flock.created_by_profile.first_name} {flock.created_by_profile.last_name}
                                       </span>
                                     </div>
                                   )}
@@ -840,8 +838,24 @@ const FlockManager = () => {
                 ))}
               </div>
             </div>
-          ))}
-        </div>
+          ));
+          
+          return (
+            <div className="space-y-6">
+              {/* First Row */}
+              <div className="flex overflow-x-auto gap-4 pb-4">
+                {renderFlockCards(firstRow)}
+              </div>
+              
+              {/* Second Row */}
+              {secondRow.length > 0 && (
+                <div className="flex overflow-x-auto gap-4 pb-4">
+                  {renderFlockCards(secondRow)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       {filteredFlocks.length === 0 && flocks.length > 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No flocks match your current filters. Try adjusting your search criteria.
