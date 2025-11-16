@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -16,6 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { ExportService } from "@/services/exportService";
+import { useChartExport } from "@/hooks/useChartExport";
 import hatcheryIcon from "@/assets/hatchery-icon.png";
 import eggsIcon from "@/assets/eggs-icon.png";
 import chicksIcon from "@/assets/chicks-icon.png";
@@ -27,6 +31,8 @@ const BatchOverviewDashboard = () => {
   const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics(viewMode);
   const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization(viewMode);
   const { data: qaAlerts, isLoading: alertsLoading } = useQAAlerts();
+  const { data: flockAgeData } = useAverageFlockAge(viewMode);
+  const { exportChartToPDF } = useChartExport();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { updateContext } = useHelpContext();
@@ -54,7 +60,24 @@ const BatchOverviewDashboard = () => {
   };
 
   const handleExport = () => {
-    toast({ title: "Export queued", description: "Selected charts will be exported shortly." });
+    try {
+      const exportData = ExportService.formatDataForExport(listForDisplay, {
+        'Batch #': 'batch_number',
+        'Flock': 'flock_name',
+        'Status': 'status',
+        'Set Date': 'set_date',
+        'Eggs Set': 'total_eggs_set',
+        'Hatchery': 'unit_name'
+      });
+      ExportService.exportToCSV(exportData, 'active-batches', Object.keys(exportData[0] || {}));
+      toast({ title: "Export successful", description: "Data exported to CSV." });
+    } catch (error) {
+      toast({ title: "Export failed", description: "Failed to export data.", variant: "destructive" });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    await exportChartToPDF('batch-overview-dashboard', 'batch-overview-dashboard');
   };
 
   const handleDemoCleanup = async () => {
@@ -444,10 +467,46 @@ const BatchOverviewDashboard = () => {
               }
               trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
             />
-      </div>
+          </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard
+              title="Average Flock Age"
+              value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
+              icon={<Users className="h-10 w-10" />}
+              description={
+                flockAgeData 
+                  ? `Average age of flocks in active batches. Range: ${flockAgeData.min}-${flockAgeData.max} weeks from ${flockAgeData.count} active flock(s). Peak performance: 35-50 weeks.`
+                  : "No active flocks to display"
+              }
+              trendLabel={
+                flockAgeData?.average 
+                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                    ? "Peak Performance Age" 
+                    : flockAgeData.average > 50
+                    ? "Aging Flock Range"
+                    : "Young Flock Range"
+                  : "N/A"
+              }
+              trendDirection={
+                flockAgeData?.average 
+                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                    ? "up"
+                    : null
+                  : null
+              }
+            />
+            <StatCard
+              title="Machine Utilization"
+              value={`${systemUtilization || 0}%`}
+              icon={<img src={utilizationIcon} alt="Utilization" className="h-10 w-10 object-contain" />}
+              description="Average percentage of incubator capacity currently in use across all machines. Includes both setter and hatcher machines."
+              trendLabel="Current average across all machines"
+            />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
               <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-420px)]">

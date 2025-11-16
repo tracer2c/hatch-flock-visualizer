@@ -233,7 +233,8 @@ const FertilityEntryPage = () => {
             id: houseInfo.id,
             batch_number: houseInfo.batch_number,
             flock_name: houseInfo.flock_name,
-            flock_number: houseInfo.flock_number
+            flock_number: houseInfo.flock_number,
+            set_date: houseInfo.set_date
           }}
         />
       </div>

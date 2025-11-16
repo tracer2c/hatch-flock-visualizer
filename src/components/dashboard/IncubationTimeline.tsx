@@ -106,6 +106,10 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
               <span>Incubating (Days 4-18)</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-purple-500 rounded"></div>
+              <span>Fertility Check (Days 10-14)</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded"></div>
               <span>Hatching (Days 19-21)</span>
             </div>

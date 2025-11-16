@@ -133,6 +133,7 @@ const FlockManager = () => {
       unit_id: formData.unitId,
       technician_name: formData.technician_name,
       created_by: user?.id || null,
+      updated_by: user?.id || null,
       breed: 'breeder' as const,
       data_type: viewMode,
     };

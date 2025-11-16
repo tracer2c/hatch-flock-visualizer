@@ -720,7 +720,7 @@ export type Database = {
           if_dev_percent?: number | null
           infertile_eggs: number
           notes?: string | null
-          sample_size?: number
+          sample_size: number
           technician_name?: string | null
         }
         Update: {
@@ -756,6 +756,50 @@ export type Database = {
           },
         ]
       }
+      flock_history: {
+        Row: {
+          change_type: string
+          changed_at: string | null
+          changed_by: string | null
+          field_changed: string | null
+          flock_id: string | null
+          id: string
+          new_value: string | null
+          notes: string | null
+          old_value: string | null
+        }
+        Insert: {
+          change_type: string
+          changed_at?: string | null
+          changed_by?: string | null
+          field_changed?: string | null
+          flock_id?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          change_type?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          field_changed?: string | null
+          flock_id?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_history_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flocks: {
         Row: {
           age_weeks: number
@@ -769,11 +813,13 @@ export type Database = {
           flock_number: number
           house_number: string | null
           id: string
+          last_modified_at: string | null
           notes: string | null
           technician_name: string | null
           total_birds: number | null
           unit_id: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           age_weeks: number
@@ -787,11 +833,13 @@ export type Database = {
           flock_number: number
           house_number?: string | null
           id?: string
+          last_modified_at?: string | null
           notes?: string | null
           technician_name?: string | null
           total_birds?: number | null
           unit_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           age_weeks?: number
@@ -805,11 +853,13 @@ export type Database = {
           flock_number?: number
           house_number?: string | null
           id?: string
+          last_modified_at?: string | null
           notes?: string | null
           technician_name?: string | null
           total_birds?: number | null
           unit_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -1214,6 +1264,41 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_size_presets: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_common: boolean | null
+          size: number
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_common?: boolean | null
+          size: number
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_common?: boolean | null
+          size?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_size_presets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
