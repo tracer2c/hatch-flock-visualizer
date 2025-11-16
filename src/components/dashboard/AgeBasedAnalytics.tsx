@@ -3,19 +3,29 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { Users, Filter } from "lucide-react";
+import { Users, Filter, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import AgeRangeSettings from "./AgeRangeSettings";
+import { AgeRangeService } from "@/services/ageRangeService";
 
 const AgeBasedAnalytics = () => {
   const { viewMode } = useViewMode();
-  const { data: metrics, isLoading } = useAgeBasedPerformance(viewMode);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { data: metrics, isLoading, refetch } = useAgeBasedPerformance(viewMode);
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const [selectedFlock, setSelectedFlock] = useState<string>("all");
   const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
+  
+  const ageRanges = useMemo(() => AgeRangeService.getCustomRanges(), [refreshKey]);
+  
+  const handleRangesUpdate = () => {
+    setRefreshKey(prev => prev + 1);
+    refetch();
+  };
   
   // Fetch units for filtering
   const { data: units } = useQuery({
@@ -75,13 +85,47 @@ const AgeBasedAnalytics = () => {
   
   return (
     <div className="space-y-6">
+      {/* Age Range Legend */}
+      <Card className="bg-muted/50">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            Age Range Categories
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {ageRanges.map(range => (
+              <div key={range.key} className="flex items-start gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full mt-1 flex-shrink-0" 
+                  style={{ backgroundColor: range.color }}
+                />
+                <div>
+                  <p className="font-medium text-xs">{range.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {range.minWeeks}-{range.maxWeeks === 999 ? '70+' : range.maxWeeks} weeks
+                  </p>
+                  <p className="text-xs text-muted-foreground italic mt-0.5">
+                    {range.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters
+            </CardTitle>
+            <AgeRangeSettings onRangesUpdate={handleRangesUpdate} />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -138,11 +182,16 @@ const AgeBasedAnalytics = () => {
       </Card>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {filteredMetrics?.map(range => (
-          <Card key={range.ageRange} className="border-l-4" style={{ borderLeftColor: range.color }}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">{range.label}</CardTitle>
-            </CardHeader>
+        {filteredMetrics?.map((range, idx) => {
+          const rangeInfo = ageRanges[idx];
+          return (
+            <Card key={range.ageRange} className="border-l-4" style={{ borderLeftColor: range.color }}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">{range.label}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {rangeInfo?.minWeeks}-{rangeInfo?.maxWeeks === 999 ? '70+' : rangeInfo?.maxWeeks} weeks
+                </p>
+              </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -163,7 +212,8 @@ const AgeBasedAnalytics = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
       
       {/* Performance Comparison Chart */}

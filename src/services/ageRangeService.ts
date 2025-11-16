@@ -45,10 +45,23 @@ export const AGE_RANGES: AgeRangeDefinition[] = [
 ];
 
 export class AgeRangeService {
+  static getCustomRanges(): AgeRangeDefinition[] {
+    const stored = localStorage.getItem('customAgeRanges');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Error loading custom age ranges:', e);
+      }
+    }
+    return AGE_RANGES;
+  }
+  
   static getAgeRange(ageWeeks: number): AgeRangeDefinition {
-    return AGE_RANGES.find(
+    const ranges = this.getCustomRanges();
+    return ranges.find(
       range => ageWeeks >= range.minWeeks && ageWeeks <= range.maxWeeks
-    ) || AGE_RANGES[0];
+    ) || ranges[0];
   }
   
   static getAgeRangeLabel(ageWeeks: number): string {
