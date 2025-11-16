@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -23,6 +24,7 @@ interface Flock {
   total_birds: number | null;
   notes: string | null;
   unit_id?: string | null;
+  unit?: { id: string; name: string } | null;
   technician_name?: string | null;
   created_by?: string | null;
   data_type?: 'original' | 'dummy';
@@ -30,6 +32,11 @@ interface Flock {
   last_modified_at?: string | null;
   flock_group_id?: string | null;
   updated_by_profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+  } | null;
+  created_by_profile?: {
     first_name: string | null;
     last_name: string | null;
     email: string;
@@ -91,7 +98,10 @@ const FlockManager = () => {
   const loadFlocks = async () => {
     const { data, error } = await supabase
       .from('flocks')
-      .select('*')
+      .select(`
+        *,
+        unit:units(id, name)
+      `)
       .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
@@ -105,18 +115,31 @@ const FlockManager = () => {
       return;
     }
 
-    // Fetch user profiles for updated_by
+    // Fetch user profiles for updated_by and created_by
     const flocksWithProfiles = await Promise.all(
       (data || []).map(async (flock) => {
+        let updated_by_profile = null;
+        let created_by_profile = null;
+        
         if (flock.updated_by) {
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('first_name, last_name, email')
             .eq('id', flock.updated_by)
             .single();
-          return { ...flock, updated_by_profile: profile };
+          updated_by_profile = profile;
         }
-        return { ...flock, updated_by_profile: null };
+        
+        if (flock.created_by) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('first_name, last_name, email')
+            .eq('id', flock.created_by)
+            .single();
+          created_by_profile = profile;
+        }
+        
+        return { ...flock, updated_by_profile, created_by_profile };
       })
     );
 
@@ -277,15 +300,16 @@ const FlockManager = () => {
     setShowDialog(true);
   };
 
-  const handleDelete = async (flock: Flock) => {
-    if (!confirm(`Are you sure you want to delete flock ${flock.flock_number} - ${flock.flock_name}?`)) {
+  const handleDelete = async (flockId: string) => {
+    const flock = flocks.find(f => f.id === flockId);
+    if (!flock || !confirm(`Are you sure you want to delete flock ${flock.flock_number} - ${flock.flock_name}?`)) {
       return;
     }
 
     const { error } = await supabase
       .from('flocks')
       .delete()
-      .eq('id', flock.id);
+      .eq('id', flockId);
 
     if (error) {
       toast({
@@ -612,80 +636,115 @@ const FlockManager = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {Object.entries(
-          filteredFlocks.reduce((groups, flock) => {
-            const groupId = flock.flock_group_id || `single-${flock.id}`;
-            if (!groups[groupId]) groups[groupId] = [];
-            groups[groupId].push(flock);
-            return groups;
-          }, {} as Record<string, typeof filteredFlocks>)
-        ).map(([groupId, flocks]) => (
-          <div key={groupId} className="col-span-full space-y-3">
-            {flocks[0].flock_group_id && (
-              <div className="px-3 py-2 bg-primary/10 border-l-4 border-primary rounded">
-                <p className="text-sm font-medium text-primary flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Flock Group #{flocks[0].flock_number} - {flocks[0].flock_name}
-                  <Badge variant="secondary" className="ml-2">{flocks.length} hatcheries</Badge>
-                </p>
-              </div>
-            )}
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${flocks[0].flock_group_id ? 'pl-4' : ''}`}>
-              {flocks.map(flock => (
-                <div key={flock.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(flock)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="font-medium">{flock.flock_name}</div>
-                    {flock.unit_id && units.find(u => u.id === flock.unit_id) && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Building2 className="h-4 w-4" />
-                        {units.find(u => u.id === flock.unit_id)?.name}
+        <div className="flex overflow-x-auto gap-4 pb-4">
+          {Object.entries(
+            filteredFlocks.reduce((groups, flock) => {
+              const groupId = flock.flock_group_id || `single-${flock.id}`;
+              if (!groups[groupId]) groups[groupId] = [];
+              groups[groupId].push(flock);
+              return groups;
+            }, {} as Record<string, typeof filteredFlocks>)
+          ).map(([groupId, flocks]) => (
+            <div key={groupId} className="flex-shrink-0 space-y-3" style={{ width: flocks[0].flock_group_id ? `${Math.min(flocks.length * 320, 1000)}px` : '300px' }}>
+              {flocks[0].flock_group_id && (
+                <div className="px-3 py-2 bg-primary/10 border-l-4 border-primary rounded">
+                  <p className="text-sm font-medium text-primary flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Flock Group #{flocks[0].flock_number} - {flocks[0].flock_name}
+                    <Badge variant="secondary" className="ml-2">{flocks.length} hatcheries</Badge>
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-4">
+                {flocks.map(flock => (
+                  <div key={flock.id} className="flex-shrink-0 w-[300px] p-4 border rounded-lg hover:border-primary/50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <p className="font-medium text-muted-foreground">{flock.flock_name}</p>
+                      {flock.unit && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building2 className="h-4 w-4" />
+                          <span>{flock.unit.name}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        {format(new Date(flock.arrival_date), 'MMM d, yyyy')}
+                        <span>{new Date(flock.arrival_date).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="ml-auto">{flock.age_weeks} weeks</Badge>
                       </div>
-                      <Badge variant="secondary">{flock.age_weeks} weeks</Badge>
-                    </div>
-                    {flock.total_birds && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Users className="h-4 w-4" />
-                        {flock.total_birds.toLocaleString()} birds
-                      </div>
-                    )}
-                    {flock.last_modified_at && (
-                      <div className="mt-3 pt-3 border-t bg-muted/50 -mx-4 -mb-4 px-4 py-2 rounded-b-lg">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Updated {format(new Date(flock.last_modified_at), 'MMM d, h:mm a')}
-                          </div>
-                          {flock.updated_by_profile && (
-                            <Badge variant="secondary" className="text-xs">
-                              {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
+                      {flock.total_birds && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          <span>{flock.total_birds.toLocaleString()} birds</span>
+                        </div>
+                      )}
+                      {flock.last_modified_at && (
+                        <div className="pt-2 border-t flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <button className="hover:text-primary transition-colors">
+                                Updated {format(new Date(flock.last_modified_at), 'MMM d, h:mm a')}
+                              </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-sm">Update History</h4>
+                                <div className="space-y-1 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Last Updated:</span>
+                                    <span className="font-medium">{format(new Date(flock.last_modified_at), 'MMM d, yyyy h:mm a')}</span>
+                                  </div>
+                                  {flock.updated_by_profile && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Updated By:</span>
+                                      <span className="font-medium">
+                                        {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {flock.created_by_profile && (
+                                    <div className="flex justify-between pt-2 border-t">
+                                      <span className="text-muted-foreground">Created By:</span>
+                                      <span className="font-medium">
+                                        {flock.created_by_profile.first_name} {flock.created_by_profile.last_name}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {flock.technician_name && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Technician:</span>
+                                      <span className="font-medium">{flock.technician_name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                          {flock.technician_name && (
+                            <Badge variant="outline" className="ml-auto">
+                              {flock.technician_name}
                             </Badge>
                           )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ))}
       {filteredFlocks.length === 0 && flocks.length > 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No flocks match your current filters. Try adjusting your search criteria.

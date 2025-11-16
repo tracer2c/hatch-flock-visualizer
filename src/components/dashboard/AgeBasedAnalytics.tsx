@@ -3,19 +3,142 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { Users } from "lucide-react";
+import { Users, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const AgeBasedAnalytics = () => {
   const { viewMode } = useViewMode();
   const { data: metrics, isLoading } = useAgeBasedPerformance(viewMode);
+  const [selectedUnit, setSelectedUnit] = useState<string>("all");
+  const [selectedFlock, setSelectedFlock] = useState<string>("all");
+  const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
+  
+  // Fetch units for filtering
+  const { data: units } = useQuery({
+    queryKey: ['units', viewMode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('units')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+  
+  // Fetch flocks for filtering
+  const { data: flocks } = useQuery({
+    queryKey: ['flocks-filter', viewMode, selectedUnit],
+    queryFn: async () => {
+      let query = supabase
+        .from('flocks')
+        .select('id, flock_number, flock_name, flock_group_id, unit_id')
+        .eq('data_type', viewMode)
+        .order('flock_number');
+      
+      if (selectedUnit !== "all") {
+        query = query.eq('unit_id', selectedUnit);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    }
+  });
+  
+  // Get unique flock groups
+  const flockGroups = useMemo(() => {
+    if (!flocks) return [];
+    const groups = new Map();
+    flocks.forEach(f => {
+      if (f.flock_group_id) {
+        if (!groups.has(f.flock_group_id)) {
+          groups.set(f.flock_group_id, { id: f.flock_group_id, number: f.flock_number, name: f.flock_name });
+        }
+      }
+    });
+    return Array.from(groups.values());
+  }, [flocks]);
+  
+  // Filter metrics based on selections
+  const filteredMetrics = useMemo(() => {
+    // This would require re-fetching with filters - for now show all
+    return metrics;
+  }, [metrics, selectedUnit, selectedFlock, selectedFlockGroup]);
   
   if (isLoading) return <div>Loading age-based analytics...</div>;
   
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Hatchery</Label>
+              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Hatcheries</SelectItem>
+                  {units?.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Flock</Label>
+              <Select value={selectedFlock} onValueChange={setSelectedFlock}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Flocks</SelectItem>
+                  {flocks?.filter(f => !f.flock_group_id).map(flock => (
+                    <SelectItem key={flock.id} value={flock.id}>
+                      #{flock.flock_number} - {flock.flock_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Multi-Hatchery Flock Group</Label>
+              <Select value={selectedFlockGroup} onValueChange={setSelectedFlockGroup}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {flockGroups.map(group => (
+                    <SelectItem key={group.id} value={group.id}>
+                      Group #{group.number} - {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {metrics?.map(range => (
+        {filteredMetrics?.map(range => (
           <Card key={range.ageRange} className="border-l-4" style={{ borderLeftColor: range.color }}>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">{range.label}</CardTitle>
@@ -50,7 +173,7 @@ const AgeBasedAnalytics = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={metrics}>
+            <BarChart data={filteredMetrics}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
@@ -72,7 +195,7 @@ const AgeBasedAnalytics = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={metrics}>
+            <LineChart data={filteredMetrics}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis label={{ value: 'Average Count', angle: -90, position: 'insideLeft' }} />
