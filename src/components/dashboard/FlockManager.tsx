@@ -677,26 +677,25 @@ const FlockManager = () => {
                               {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
                             </Badge>
                           )}
-                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        ))}
         </div>
-        {filteredFlocks.length === 0 && flocks.length > 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            No flocks match your current filters. Try adjusting your search criteria.
-          </div>
-        )}
-        {flocks.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            No flocks found. Create your first flock to get started.
-          </div>
-        )}
+      ))}
+      {filteredFlocks.length === 0 && flocks.length > 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No flocks match your current filters. Try adjusting your search criteria.
+        </div>
+      )}
+      {flocks.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No flocks found. Create your first flock to get started.
+        </div>
+      )}
       </CardContent>
     </Card>
   );
