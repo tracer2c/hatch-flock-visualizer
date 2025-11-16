@@ -809,6 +809,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_type: string
+          flock_group_id: string | null
           flock_name: string
           flock_number: number
           house_number: string | null
@@ -829,6 +830,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_type?: string
+          flock_group_id?: string | null
           flock_name: string
           flock_number: number
           house_number?: string | null
@@ -849,6 +851,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_type?: string
+          flock_group_id?: string | null
           flock_name?: string
           flock_number?: number
           house_number?: string | null
