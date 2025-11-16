@@ -7,12 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { format } from 'date-fns';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FlockHistoryService } from "@/services/flockHistoryService";
+import FlockUpdateHistory from "./FlockUpdateHistory";
 
 interface Flock {
   id: string;
@@ -48,6 +53,7 @@ const FlockManager = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [editingFlock, setEditingFlock] = useState<Flock | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [flockToDelete, setFlockToDelete] = useState<Flock | null>(null);
   const [filters, setFilters] = useState({
     flockNumber: '',
     flockName: '',
@@ -170,6 +176,16 @@ const FlockManager = () => {
       return;
     }
 
+    // Require technician name when editing
+    if (editingFlock && !formData.technician_name) {
+      toast({
+        title: "Technician Name Required",
+        description: "Please enter the technician name who is making this update",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     
     if (formData.unitId === 'all-hatcheries') {
@@ -225,6 +241,59 @@ const FlockManager = () => {
     }
 
     if (editingFlock) {
+      // Track changes for history
+      const changes: any[] = [];
+      
+      if (parseInt(formData.flock_number) !== editingFlock.flock_number) {
+        changes.push({
+          field_changed: 'flock_number',
+          old_value: editingFlock.flock_number.toString(),
+          new_value: formData.flock_number
+        });
+      }
+      if (formData.flock_name !== editingFlock.flock_name) {
+        changes.push({
+          field_changed: 'flock_name',
+          old_value: editingFlock.flock_name,
+          new_value: formData.flock_name
+        });
+      }
+      if (parseInt(formData.age_weeks) !== editingFlock.age_weeks) {
+        changes.push({
+          field_changed: 'age_weeks',
+          old_value: editingFlock.age_weeks.toString(),
+          new_value: formData.age_weeks
+        });
+      }
+      if (formData.arrival_date !== editingFlock.arrival_date) {
+        changes.push({
+          field_changed: 'arrival_date',
+          old_value: editingFlock.arrival_date,
+          new_value: formData.arrival_date
+        });
+      }
+      if (formData.total_birds !== (editingFlock.total_birds?.toString() || '')) {
+        changes.push({
+          field_changed: 'total_birds',
+          old_value: editingFlock.total_birds?.toString() || 'null',
+          new_value: formData.total_birds || 'null'
+        });
+      }
+      if (formData.notes !== (editingFlock.notes || '')) {
+        changes.push({
+          field_changed: 'notes',
+          old_value: editingFlock.notes || 'null',
+          new_value: formData.notes || 'null'
+        });
+      }
+      if (formData.unitId !== (editingFlock.unit_id || '')) {
+        changes.push({
+          field_changed: 'unit',
+          old_value: editingFlock.unit?.name || 'null',
+          new_value: units.find(u => u.id === formData.unitId)?.name || 'null'
+        });
+      }
+
       const { error } = await supabase
         .from('flocks')
         .update({
@@ -236,7 +305,8 @@ const FlockManager = () => {
           notes: formData.notes || null,
           unit_id: formData.unitId || null,
           technician_name: formData.technician_name || null,
-          updated_by: user?.id
+          updated_by: user?.id,
+          last_modified_at: new Date().toISOString()
         })
         .eq('id', editingFlock.id);
 
@@ -247,13 +317,23 @@ const FlockManager = () => {
           variant: "destructive"
         });
       } else {
+        // Log changes to history
+        if (changes.length > 0) {
+          await FlockHistoryService.logFlockUpdate(
+            editingFlock.id,
+            changes,
+            user?.id || '',
+            formData.technician_name || 'Unknown'
+          );
+        }
+        
         toast({ title: "Flock updated successfully" });
         setShowDialog(false);
         resetForm();
         loadFlocks();
       }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('flocks')
         .insert({
           flock_number: parseInt(formData.flock_number),
@@ -268,7 +348,8 @@ const FlockManager = () => {
           created_by: user?.id,
           updated_by: user?.id,
           breed: 'broiler' as const
-        });
+        })
+        .select();
 
       if (error) {
         toast({
@@ -277,6 +358,15 @@ const FlockManager = () => {
           variant: "destructive"
         });
       } else {
+        // Log creation to history
+        if (data && data.length > 0) {
+          await FlockHistoryService.logFlockCreation(
+            data[0].id,
+            user?.id || '',
+            formData.technician_name || ''
+          );
+        }
+        
         toast({ title: "Flock created successfully" });
         setShowDialog(false);
         resetForm();
@@ -300,16 +390,20 @@ const FlockManager = () => {
     setShowDialog(true);
   };
 
-  const handleDelete = async (flockId: string) => {
+  const handleDelete = async (flockId: string, flockNumber: number, flockName: string) => {
     const flock = flocks.find(f => f.id === flockId);
-    if (!flock || !confirm(`Are you sure you want to delete flock ${flock.flock_number} - ${flock.flock_name}?`)) {
-      return;
+    if (flock) {
+      setFlockToDelete(flock);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!flockToDelete) return;
 
     const { error } = await supabase
       .from('flocks')
       .delete()
-      .eq('id', flockId);
+      .eq('id', flockToDelete.id);
 
     if (error) {
       toast({
@@ -321,6 +415,8 @@ const FlockManager = () => {
       toast({ title: "Flock deleted successfully" });
       loadFlocks();
     }
+
+    setFlockToDelete(null);
   };
 
   const filteredFlocks = useMemo(() => {
@@ -366,6 +462,7 @@ const FlockManager = () => {
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
@@ -664,7 +761,7 @@ const FlockManager = () => {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id, flock.flock_number, flock.flock_name)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -754,10 +851,28 @@ const FlockManager = () => {
         <div className="text-center py-8 text-muted-foreground">
           No flocks found. Create your first flock to get started.
         </div>
-      )}
-      </CardContent>
-    </Card>
-  );
-};
+       )}
+       </CardContent>
+     </Card>
 
-export default FlockManager;
+     <AlertDialog open={!!flockToDelete} onOpenChange={() => setFlockToDelete(null)}>
+       <AlertDialogContent>
+         <AlertDialogHeader>
+           <AlertDialogTitle>Delete Flock</AlertDialogTitle>
+           <AlertDialogDescription>
+             Are you sure you want to delete Flock #{flockToDelete?.flock_number} - {flockToDelete?.flock_name}? This action cannot be undone.
+           </AlertDialogDescription>
+         </AlertDialogHeader>
+         <AlertDialogFooter>
+           <AlertDialogCancel>Cancel</AlertDialogCancel>
+           <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+             Delete
+           </AlertDialogAction>
+       </AlertDialogFooter>
+       </AlertDialogContent>
+     </AlertDialog>
+     </>
+   );
+ };
+
+ export default FlockManager;

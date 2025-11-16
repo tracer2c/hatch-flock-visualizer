@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
-import { ArrowRight, TrendingUp, Info } from "lucide-react";
+import { ArrowRight, TrendingUp, Info, Users } from "lucide-react";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AgeBasedAnalytics from "./AgeBasedAnalytics";
 import utilizationIcon from "@/assets/utilization-icon.png";
 
 interface ProcessFlowDashboardProps {
@@ -139,9 +141,22 @@ const ProcessFlowDashboard = ({ viewMode = 'original' }: ProcessFlowDashboardPro
   }, []);
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-      {/* Main Process Flow Chart */}
+    <Tabs defaultValue="process-flow" className="w-full animate-fade-in">
+      <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsTrigger value="process-flow" className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Process Flow Charts
+        </TabsTrigger>
+        <TabsTrigger value="age-analysis" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Age-Based Performance
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="process-flow" className="space-y-6">
+        <TooltipProvider>
+        <div className="space-y-6">
+        {/* Main Process Flow Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -431,8 +446,14 @@ const ProcessFlowDashboard = ({ viewMode = 'original' }: ProcessFlowDashboardPro
           </CardContent>
         </Card>
       </div>
-    </div>
-    </TooltipProvider>
+      </div>
+      </TooltipProvider>
+      </TabsContent>
+
+      <TabsContent value="age-analysis">
+        <AgeBasedAnalytics />
+      </TabsContent>
+    </Tabs>
   );
 };
 
