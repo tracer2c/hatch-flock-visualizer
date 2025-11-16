@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Save, X, Info } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Info, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { calculateDaysSinceSet, validateFertilityAnalysisDate } from "@/utils/dateValidation";
 
 interface FertilityRecord {
   id: string;
@@ -26,6 +29,7 @@ interface BatchInfo {
   batch_number: string;
   flock_name: string;
   flock_number: number;
+  set_date: string;
 }
 
 interface FertilityDataEntryProps {
@@ -38,8 +42,9 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    sampleSize: '648',
+    sampleSize: '',
     infertileEggs: '',
+    analysisDate: new Date().toISOString().split('T')[0],
     technicianName: '',
     notes: ''
   });
@@ -138,7 +143,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         sample_size: sampleSize,
         infertile_eggs: infertile,
         fertile_eggs: calculated.fertileEggs,
-        analysis_date: new Date().toISOString().split('T')[0],
+        analysis_date: formData.analysisDate || new Date().toISOString().split('T')[0],
         technician_name: formData.technicianName || null,
         notes: formData.notes || null
       };
@@ -234,6 +239,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     setFormData({
       sampleSize: record.sample_size.toString(),
       infertileEggs: record.infertile_eggs.toString(),
+      analysisDate: record.analysis_date,
       technicianName: record.technician_name || '',
       notes: record.notes || ''
     });
@@ -267,12 +273,21 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
   const handleCancel = () => {
     setEditingId(null);
     setFormData({
-      sampleSize: '648',
+      sampleSize: '',
       infertileEggs: '',
+      analysisDate: new Date().toISOString().split('T')[0],
       technicianName: '',
       notes: ''
     });
   };
+
+  const daysSinceSet = formData.analysisDate && batchInfo.set_date 
+    ? calculateDaysSinceSet(batchInfo.set_date, formData.analysisDate)
+    : null;
+
+  const dateValidation = formData.analysisDate && batchInfo.set_date
+    ? validateFertilityAnalysisDate(batchInfo.set_date, formData.analysisDate)
+    : null;
 
   const calculateOverallAverages = () => {
     if (data.length === 0) return null;
@@ -305,15 +320,31 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sampleSize">Sample Size *</Label>
-              <Input
-                id="sampleSize"
-                type="number"
-                min="1"
-                placeholder="e.g., 648"
-                value={formData.sampleSize}
-                onChange={(e) => handleInputChange('sampleSize', e.target.value)}
-              />
+              <Label htmlFor="sampleSize">Sample Size <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="sampleSize"
+                  type="number"
+                  value={formData.sampleSize}
+                  onChange={(e) => handleInputChange('sampleSize', e.target.value)}
+                  placeholder="Enter sample size"
+                  min="1"
+                  required
+                  className="flex-1"
+                />
+                <Select onValueChange={(val) => handleInputChange('sampleSize', val)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Presets" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="648">648 (Standard)</SelectItem>
+                    <SelectItem value="360">360 (Half)</SelectItem>
+                    <SelectItem value="324">324 (Quarter)</SelectItem>
+                    <SelectItem value="180">180 (Small)</SelectItem>
+                    <SelectItem value="100">100 (Minimal)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="infertileEggs">Infertile Eggs *</Label>
@@ -325,6 +356,32 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                 value={formData.infertileEggs}
                 onChange={(e) => handleInputChange('infertileEggs', e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="analysisDate">Analysis Date <span className="text-destructive">*</span></Label>
+              <Input
+                id="analysisDate"
+                type="date"
+                value={formData.analysisDate}
+                onChange={(e) => handleInputChange('analysisDate', e.target.value)}
+                required
+              />
+              {daysSinceSet !== null && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={
+                    daysSinceSet >= 10 && daysSinceSet <= 14 ? "default" : "secondary"
+                  } className="text-xs">
+                    Day {daysSinceSet}
+                  </Badge>
+                  {dateValidation?.warning && (
+                    <p className="text-xs text-yellow-600 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Days 10-14 recommended
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-1">

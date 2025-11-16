@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2, Save, X, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   calculateHatchPercent, 
   calculateHOFPercent, 
@@ -111,16 +112,15 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     livePipNumber: '',
     deadPipNumber: '',
     // Hatchability metrics
-    sampleSize: '648',
+    sampleSize: '',
     technicianName: '',
     notes: ''
   });
   const { toast } = useToast();
 
-  const TOTAL_EGGS = 648;
-
-  const calculatePercentage = (value: number) => {
-    return Number(((value / TOTAL_EGGS) * 100).toFixed(2));
+  const calculatePercentage = (value: number, sampleSize: number) => {
+    if (sampleSize <= 0) return 0;
+    return Number(((value / sampleSize) * 100).toFixed(2));
   };
 
   // IMPORTANT: Using standardized hatchery formulas
@@ -177,7 +177,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
 
   // Auto-calculate chicks based on sample size minus core mortality
   const calculateChicks = () => {
-    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
+    const sampleSize = Number(formData.sampleSize) || 648;
     const totalUsed = calculateTotalUsed();
     return Math.max(0, sampleSize - totalUsed);
   };
@@ -187,7 +187,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   };
 
   const validateForm = () => {
-    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
+    const sampleSize = Number(formData.sampleSize) || 648;
     const totalUsed = calculateTotalUsed();
     
     if (totalUsed > sampleSize) {
@@ -215,7 +215,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     if (!validateForm()) return;
     
     // Calculate hatchability metrics using standardized formulas
-    const sampleSize = Number(formData.sampleSize) || TOTAL_EGGS;
+    const sampleSize = Number(formData.sampleSize) || 648;
     const infertile = Number(formData.infertile) || 0;
     const earlyDead = Number(formData.earlyDeath) || 0;
     const midDead = Number(formData.midDeath) || 0;
@@ -235,41 +235,41 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       flockNumber: Number(formData.flockNumber),
       houseNumber: Number(formData.houseNumber),
       infertile: Number(formData.infertile) || 0,
-      infertilePercent: calculatePercentage(Number(formData.infertile) || 0),
+      infertilePercent: calculatePercentage(Number(formData.infertile) || 0, sampleSize),
       chicks: calculatedChicks,
       earlyDeath: Number(formData.earlyDeath) || 0,
-      earlyDeathPercent: calculatePercentage(Number(formData.earlyDeath) || 0),
+      earlyDeathPercent: calculatePercentage(Number(formData.earlyDeath) || 0, sampleSize),
       live: Number(formData.live) || 0,
-      livePercent: calculatePercentage(Number(formData.live) || 0),
+      livePercent: calculatePercentage(Number(formData.live) || 0, sampleSize),
       dead: Number(formData.dead) || 0,
-      deadPercent: calculatePercentage(Number(formData.dead) || 0),
+      deadPercent: calculatePercentage(Number(formData.dead) || 0, sampleSize),
       midDeath: Number(formData.midDeath) || 0,
-      midDeathPercent: calculatePercentage(Number(formData.midDeath) || 0),
+      midDeathPercent: calculatePercentage(Number(formData.midDeath) || 0, sampleSize),
       lateDeath: Number(formData.lateDeath) || 0,
-      lateDeathPercent: calculatePercentage(Number(formData.lateDeath) || 0),
+      lateDeathPercent: calculatePercentage(Number(formData.lateDeath) || 0, sampleSize),
       cullChicks: Number(formData.cullChicks) || 0,
       handlingCracks: Number(formData.handlingCracks) || 0,
-      handlingCracksPercent: calculatePercentage(Number(formData.handlingCracks) || 0),
+      handlingCracksPercent: calculatePercentage(Number(formData.handlingCracks) || 0, sampleSize),
       transferCrack: Number(formData.transferCrack) || 0,
-      transferCrackPercent: calculatePercentage(Number(formData.transferCrack) || 0),
+      transferCrackPercent: calculatePercentage(Number(formData.transferCrack) || 0, sampleSize),
       contamination: Number(formData.contamination) || 0,
-      contaminationPercent: calculatePercentage(Number(formData.contamination) || 0),
+      contaminationPercent: calculatePercentage(Number(formData.contamination) || 0, sampleSize),
       mold: Number(formData.mold) || 0,
-      moldPercent: calculatePercentage(Number(formData.mold) || 0),
+      moldPercent: calculatePercentage(Number(formData.mold) || 0, sampleSize),
       abnormal: Number(formData.abnormal) || 0,
-      abnormalPercent: calculatePercentage(Number(formData.abnormal) || 0),
+      abnormalPercent: calculatePercentage(Number(formData.abnormal) || 0, sampleSize),
       brain: Number(formData.brain) || 0,
-      brainPercent: calculatePercentage(Number(formData.brain) || 0),
+      brainPercent: calculatePercentage(Number(formData.brain) || 0, sampleSize),
       dryEgg: Number(formData.dryEgg) || 0,
-      dryEggPercent: calculatePercentage(Number(formData.dryEgg) || 0),
+      dryEggPercent: calculatePercentage(Number(formData.dryEgg) || 0, sampleSize),
       malpositioned: Number(formData.malpositioned) || 0,
-      malpositionedPercent: calculatePercentage(Number(formData.malpositioned) || 0),
+      malpositionedPercent: calculatePercentage(Number(formData.malpositioned) || 0, sampleSize),
       upsideDown: Number(formData.upsideDown) || 0,
-      upsideDownPercent: calculatePercentage(Number(formData.upsideDown) || 0),
+      upsideDownPercent: calculatePercentage(Number(formData.upsideDown) || 0, sampleSize),
       livePipNumber: Number(formData.livePipNumber) || 0,
       deadPipNumber: Number(formData.deadPipNumber) || 0,
       pipNumber: (Number(formData.livePipNumber) || 0) + (Number(formData.deadPipNumber) || 0),
-      totalEggs: TOTAL_EGGS,
+      totalEggs: sampleSize,
       // Include hatchability metrics
       sampleSize: sampleSize,
       fertileEggs: hatchabilityMetrics.fertileEggs,
@@ -324,7 +324,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       upsideDown: record.upsideDown.toString(),
       livePipNumber: (record.livePipNumber || 0).toString(),
       deadPipNumber: (record.deadPipNumber || 0).toString(),
-      sampleSize: (record.sampleSize || TOTAL_EGGS).toString(),
+      sampleSize: (record.sampleSize || 648).toString(),
       technicianName: '',
       notes: ''
     });
@@ -371,7 +371,8 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
   };
 
   const totalUsed = calculateTotalUsed();
-  const remaining = TOTAL_EGGS - totalUsed;
+  const sampleSizeValue = Number(formData.sampleSize) || 648;
+  const remaining = sampleSizeValue - totalUsed;
 
   return (
     <div className="space-y-6">
@@ -436,16 +437,33 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
               />
             </div>
             
-            {/* Sample Size - Fixed at 648 */}
+            {/* Sample Size with Presets */}
             <div className="space-y-2">
-              <Label htmlFor="sampleSize">Sample Size</Label>
-              <Input
-                id="sampleSize"
-                type="number"
-                value={648}
-                disabled
-                className="bg-gray-100"
-              />
+              <Label htmlFor="sampleSize">Sample Size <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="sampleSize"
+                  type="number"
+                  value={formData.sampleSize}
+                  onChange={(e) => handleInputChange('sampleSize', e.target.value)}
+                  placeholder="Enter sample size"
+                  min="1"
+                  required
+                  className="flex-1"
+                />
+                <Select onValueChange={(val) => handleInputChange('sampleSize', val)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Presets" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="648">648 (Standard)</SelectItem>
+                    <SelectItem value="360">360 (Half)</SelectItem>
+                    <SelectItem value="324">324 (Quarter)</SelectItem>
+                    <SelectItem value="180">180 (Small)</SelectItem>
+                    <SelectItem value="100">100 (Minimal)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Eggs Injected - Read-only from Clears & Injected tab */}
@@ -600,7 +618,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 type="number"
                 disabled
                 className="bg-gray-100 font-semibold"
-                value={calculatePercentage(calculateTotalDead())}
+                value={calculatePercentage(calculateTotalDead(), sampleSizeValue)}
               />
             </div>
             
@@ -899,7 +917,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
                 <span className="mx-2">|</span>
                 <span className="font-medium text-green-600">Chicks: {calculateChicks()}</span>
                 <span className="mx-2">|</span>
-                <span className="font-medium">Sample Size: {Number(formData.sampleSize) || TOTAL_EGGS}</span>
+                <span className="font-medium">Sample Size: {sampleSizeValue}</span>
               </div>
               {remaining < 0 && (
                 <div className="flex items-center gap-2 text-red-600">
