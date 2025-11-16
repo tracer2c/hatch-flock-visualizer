@@ -9,6 +9,8 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { useHelpContext } from '@/contexts/HelpContext';
+import { AGE_RANGES, AgeRangeService } from '@/services/ageRangeService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ComparisonAnalysisProps {
   data: any[];
@@ -25,6 +27,7 @@ const formatFlockLabel = (item: any) => {
 const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("flocks");
+  const [ageRangeFilter, setAgeRangeFilter] = useState<string>('all');
   const { updateContext } = useHelpContext();
 
   const handleItemSelect = (batchNumber: string) => {
@@ -35,11 +38,22 @@ const ComparisonAnalysis = ({ data }: ComparisonAnalysisProps) => {
     }
   };
 
-  // Filter data for comparison - only show batches with some meaningful data
-  const displayData = useMemo(() => 
-    data.filter(batch => 
+  // Filter data for comparison
+  const displayData = useMemo(() => {
+    let filtered = data.filter(batch => 
       batch.hasEggQuality || batch.hasFertilityData || batch.hasQAData
-    ), [data]);
+    );
+    
+    // Apply age range filter
+    if (ageRangeFilter !== 'all') {
+      filtered = filtered.filter(batch => {
+        const ageRange = AgeRangeService.getAgeRange(batch.flockAge || 0);
+        return ageRange.key === ageRangeFilter;
+      });
+    }
+    
+    return filtered;
+  }, [data, ageRangeFilter]);
 
   const selectedData = useMemo(() => 
     displayData.filter(item => selectedItems.includes(item.batchNumber)),

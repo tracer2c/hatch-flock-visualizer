@@ -4,16 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, TrendingUp, LineChart, Eye, EyeOff } from "lucide-react";
+import { BarChart3, TrendingUp, LineChart, Eye, EyeOff, Users } from "lucide-react";
 import ProcessFlowDashboard from "./ProcessFlowDashboard";
 import PerformanceCharts from "./PerformanceCharts";
 import ComparisonAnalysis from "./ComparisonAnalysis";
+import AgeBasedAnalytics from "./AgeBasedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 const PerformanceAnalytics = () => {
   const [viewMode, setViewMode] = useState<'simple' | 'detailed'>('simple');
   const [showComparison, setShowComparison] = useState(false);
-  const { data: performanceMetrics } = useBatchPerformanceMetrics();
+  const { viewMode: dataViewMode } = useViewMode();
+  const { data: performanceMetrics } = useBatchPerformanceMetrics(dataViewMode);
 
   return (
     <div className="space-y-6">
@@ -60,7 +63,7 @@ const PerformanceAnalytics = () => {
       {/* Detailed View - All analytics */}
       {viewMode === 'detailed' && (
         <Tabs defaultValue="process" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="process" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Process Flow Analysis
@@ -68,6 +71,10 @@ const PerformanceAnalytics = () => {
             <TabsTrigger value="performance" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Performance Charts
+            </TabsTrigger>
+            <TabsTrigger value="age-analysis" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Age-Based Analysis
             </TabsTrigger>
             {showComparison && (
               <TabsTrigger value="comparison" className="flex items-center gap-2">
@@ -83,6 +90,10 @@ const PerformanceAnalytics = () => {
 
           <TabsContent value="performance">
             <PerformanceCharts data={performanceMetrics || []} />
+          </TabsContent>
+
+          <TabsContent value="age-analysis">
+            <AgeBasedAnalytics />
           </TabsContent>
 
           {showComparison && (

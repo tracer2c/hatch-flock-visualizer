@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -24,6 +24,7 @@ import hatcheryIcon from "@/assets/hatchery-icon.png";
 import eggsIcon from "@/assets/eggs-icon.png";
 import chicksIcon from "@/assets/chicks-icon.png";
 import utilizationIcon from "@/assets/utilization-icon.png";
+import CriticalEventsPanel from "./CriticalEventsPanel";
 
 const BatchOverviewDashboard = () => {
   const { viewMode } = useViewMode();
@@ -505,7 +506,7 @@ const BatchOverviewDashboard = () => {
             />
           </div>
 
-          {/* Main Content Grid */}
+          {/* Main Content Grid with Critical Events */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
