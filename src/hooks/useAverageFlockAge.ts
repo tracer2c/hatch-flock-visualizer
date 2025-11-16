@@ -30,7 +30,7 @@ export const useAverageFlockAge = (viewMode: 'original' | 'dummy') => {
       const avgAge = ages.reduce((sum, age) => sum + age, 0) / ages.length;
       
       return {
-        average: Number(avgAge.toFixed(1)),
+        average: Math.round(avgAge),
         min: Math.min(...ages),
         max: Math.max(...ages),
         count: ages.length
