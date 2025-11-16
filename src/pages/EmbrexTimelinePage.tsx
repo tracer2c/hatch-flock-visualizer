@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useChartExport } from "@/hooks/useChartExport";
 
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
@@ -829,6 +830,8 @@ export default function EmbrexDashboard() {
   };
 
   /* Export / Saved Views */
+  const { exportMultipleChartsToPDF } = useChartExport();
+  
   const exportBucketsCsv = () => {
     const out: Record<string, any>[] = [];
     (compareMode ? facets : [facets.find(f=>true)!]).forEach(f => {
@@ -857,6 +860,17 @@ export default function EmbrexDashboard() {
       }));
     });
     saveFile("embrex_timeline.csv", toCsv(out));
+  };
+
+  const exportFullReport = async () => {
+    const chartIds = ['embrex-timeline-main-chart'];
+    if (compareMode) {
+      facets.forEach((_, idx) => chartIds.push(`embrex-facet-chart-${idx}`));
+    }
+    await exportMultipleChartsToPDF(
+      chartIds,
+      `embrex_timeline_report_${new Date().toISOString().split('T')[0]}`
+    );
   };
   const saveCurrentView = () => {
     if (!savedName.trim()) { toast({ title: "Name required", description: "Provide a name to save this view." }); return; }
@@ -1668,7 +1682,10 @@ export default function EmbrexDashboard() {
                     )}
                     {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
                     <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-                      <Download className="h-4 w-4" /> Export
+                      <Download className="h-4 w-4" /> Export Data (CSV)
+                    </Button>
+                    <Button variant="default" size="sm" className="gap-2" onClick={exportFullReport}>
+                      <Download className="h-4 w-4" /> Export Full Report (PDF)
                     </Button>
                     <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
                       <RefreshCw className="h-4 w-4" /> Reset
@@ -1709,10 +1726,10 @@ export default function EmbrexDashboard() {
                           className="grid gap-3 h-full"
                           style={{ gridTemplateColumns: `repeat(${compareCols}, minmax(0,1fr))` }}
                         >
-                          {facets.slice(0, compareCols * 2).map((f) => {
+                          {facets.slice(0, compareCols * 2).map((f, idx) => {
                             const data = chartDataForFacet(f.rows);
                             return (
-                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg">
+                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg" id={`embrex-facet-chart-${idx}`}>
                                 <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate">{f.title}</div>
                                 <div className="flex-1 min-h-0">{renderChart(data, f.title)}</div>
                               </div>
@@ -1720,7 +1737,7 @@ export default function EmbrexDashboard() {
                           })}
                         </div>
                       ) : (
-                        <div className="h-full">{renderChart(activeData, activeFacetObj?.title || "All flocks")}</div>
+                        <div className="h-full" id="embrex-timeline-main-chart">{renderChart(activeData, activeFacetObj?.title || "All flocks")}</div>
                       )}
                     </>
                   )}

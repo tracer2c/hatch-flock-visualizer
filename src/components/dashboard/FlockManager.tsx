@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown } fro
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { format } from 'date-fns';
 
 interface Flock {
   id: string;
@@ -25,6 +26,13 @@ interface Flock {
   technician_name?: string | null;
   created_by?: string | null;
   data_type?: 'original' | 'dummy';
+  updated_by?: string | null;
+  last_modified_at?: string | null;
+  updated_by_profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+  } | null;
 }
 
 const FlockManager = () => {
@@ -92,9 +100,26 @@ const FlockManager = () => {
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      setFlocks(data as Flock[] || []);
+      setFlocks([]);
+      return;
     }
+
+    // Fetch user profiles for updated_by
+    const flocksWithProfiles = await Promise.all(
+      (data || []).map(async (flock) => {
+        if (flock.updated_by) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('first_name, last_name, email')
+            .eq('id', flock.updated_by)
+            .single();
+          return { ...flock, updated_by_profile: profile };
+        }
+        return { ...flock, updated_by_profile: null };
+      })
+    );
+
+    setFlocks(flocksWithProfiles as Flock[]);
   };
 
   const resetForm = () => {
@@ -552,6 +577,25 @@ const FlockManager = () => {
                   Arrived: {new Date(flock.arrival_date).toLocaleDateString()}
                 </div>
               </div>
+              
+              {/* Update Tracking Display */}
+              {flock.last_modified_at && (
+                <div className="mt-3 pt-3 border-t border-border bg-muted/30 -mx-4 -mb-4 px-4 py-2.5 rounded-b-lg">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" />
+                      <span>
+                        Updated {format(new Date(flock.last_modified_at), 'MMM d, yyyy h:mm a')}
+                      </span>
+                    </div>
+                    {flock.updated_by_profile && (
+                      <Badge variant="secondary" className="text-xs">
+                        {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
