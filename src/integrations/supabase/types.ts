@@ -957,6 +957,7 @@ export type Database = {
           data_type: string
           flock_id: string
           id: string
+          level: Database["public"]["Enums"]["level_type"]
           machine_id: string
           notes: string | null
           set_date: string
@@ -973,6 +974,7 @@ export type Database = {
           data_type?: string
           flock_id: string
           id?: string
+          level: Database["public"]["Enums"]["level_type"]
           machine_id: string
           notes?: string | null
           set_date: string
@@ -989,6 +991,7 @@ export type Database = {
           data_type?: string
           flock_id?: string
           id?: string
+          level?: Database["public"]["Enums"]["level_type"]
           machine_id?: string
           notes?: string | null
           set_date?: string
@@ -1911,6 +1914,7 @@ export type Database = {
         | "cancelled"
       breed_type: "broiler" | "layer" | "breeder"
       company_status: "active" | "suspended" | "cancelled"
+      level_type: "Top" | "Middle" | "Bottom"
       machine_type: "setter" | "hatcher" | "combo"
       setter_mode: "single_setter" | "multi_setter"
       side_type: "Left" | "Right"
@@ -2071,6 +2075,7 @@ export const Constants = {
       ],
       breed_type: ["broiler", "layer", "breeder"],
       company_status: ["active", "suspended", "cancelled"],
+      level_type: ["Top", "Middle", "Bottom"],
       machine_type: ["setter", "hatcher", "combo"],
       setter_mode: ["single_setter", "multi_setter"],
       side_type: ["Left", "Right"],

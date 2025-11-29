@@ -403,7 +403,10 @@ const MachineManager = () => {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Multi setter machines can hold multiple flock sets in different zones.
+                        {formData.setter_mode === 'multi_setter' 
+                          ? 'Multi setter machines can hold multiple flock sets in different zones.'
+                          : 'Single setter machines load all eggs together as one set.'
+                        }
                       </p>
                     </div>
                   )}
