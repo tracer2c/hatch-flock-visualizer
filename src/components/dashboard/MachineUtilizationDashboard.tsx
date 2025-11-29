@@ -735,7 +735,7 @@ const MachineUtilizationDashboard: React.FC = () => {
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 50, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     type="number" 
@@ -744,7 +744,7 @@ const MachineUtilizationDashboard: React.FC = () => {
                     domain={[0, 100]}
                     tickFormatter={(v) => `${v}%`}
                     tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    label={{ value: 'Utilization %', position: 'bottom', fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    label={{ value: 'Utilization %', position: 'bottom', offset: -5, fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   />
                   <YAxis 
                     type="number" 
@@ -774,7 +774,6 @@ const MachineUtilizationDashboard: React.FC = () => {
                       return null;
                     }}
                   />
-                  <Legend />
                   <Scatter name="Machines" data={scatterData} fill="hsl(var(--primary))">
                     {scatterData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getScatterColor(entry.type)} />
