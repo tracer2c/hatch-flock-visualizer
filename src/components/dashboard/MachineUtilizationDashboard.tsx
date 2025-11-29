@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, subDays } from 'date-fns';
-import { Calendar, Factory, Settings2, Layers, X, ChevronRight, ArrowRight, Egg, RefreshCw, CheckCircle2, TrendingUp, TrendingDown, Minus, Trophy, AlertTriangle, BarChart3 } from 'lucide-react';
+import { Calendar, Factory, Settings2, Layers, X, ChevronRight, ArrowRight, Egg, RefreshCw, CheckCircle2, TrendingUp, TrendingDown, Minus, Trophy, AlertTriangle, BarChart3, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,9 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, ScatterChart, Scatter, ZAxis, Legend, Cell } from 'recharts';
+import { ChartDownloadButton } from '@/components/ui/chart-download-button';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ExportService } from '@/services/exportService';
 
 const MachineUtilizationDashboard: React.FC = () => {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
@@ -159,6 +162,46 @@ const MachineUtilizationDashboard: React.FC = () => {
     }
   };
 
+  // Export handlers
+  const handleExportMachineData = () => {
+    const exportData = machines.map(m => ({
+      'Machine Number': m.machine_number,
+      'Type': m.machine_type,
+      'Setter Mode': m.setter_mode || '-',
+      'Status': m.status || '-',
+      'Capacity': m.capacity,
+      'Eggs Loaded': m.eggs_loaded || 0,
+      'Utilization %': m.utilization_percent,
+      'Houses': m.active_batches,
+      'Unit': units?.find(u => u.id === m.unit_id)?.name || '-',
+    }));
+    ExportService.exportToExcel(exportData, 'machine-utilization', 'Machine Data');
+  };
+
+  const handleExportDailyUtilization = () => {
+    if (!dailyUtilization) return;
+    const exportData = dailyUtilization.map(d => ({
+      'Date': d.date,
+      'Setter Utilization %': d.setterUtilization,
+      'Hatcher Utilization %': d.hatcherUtilization,
+    }));
+    ExportService.exportToCSV(exportData, 'daily-utilization');
+  };
+
+  const handleExportPerformance = () => {
+    if (!performanceData?.allMachinePerformance) return;
+    const exportData = performanceData.allMachinePerformance.map(m => ({
+      'Machine': m.machineNumber,
+      'Type': m.machineType,
+      'Houses Processed': m.housesProcessed,
+      'Avg Fertility %': m.avgFertility.toFixed(1),
+      'Avg HOF %': m.avgHOF.toFixed(1),
+      'Avg HOI %': m.avgHOI.toFixed(1),
+      'Trend': m.trend,
+    }));
+    ExportService.exportToCSV(exportData, 'machine-performance');
+  };
+
   return (
     <div className="space-y-6">
       {/* Enhanced Filter Bar */}
@@ -262,6 +305,16 @@ const MachineUtilizationDashboard: React.FC = () => {
                 Clear ({activeFiltersCount})
               </Button>
             )}
+
+            <div className="h-8 w-px bg-border hidden md:block" />
+
+            {/* Export Group */}
+            <ExportDropdown
+              onExportExcel={handleExportMachineData}
+              onExportCSV={handleExportDailyUtilization}
+              availableFormats={['excel', 'csv']}
+              disabled={machines.length === 0}
+            />
           </div>
         </CardContent>
       </Card>
@@ -622,15 +675,19 @@ const MachineUtilizationDashboard: React.FC = () => {
         <Card className="shadow-md overflow-hidden border-0">
           <div className="h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Setter Utilization Over Time</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Setter Utilization Over Time</CardTitle>
+              </div>
+              <ChartDownloadButton chartId="setter-utilization-chart" filename="setter-utilization" />
             </div>
           </CardHeader>
           <CardContent>
             {dailyUtilizationLoading ? (
               <Skeleton className="h-[300px] w-full" />
             ) : (
+              <div id="setter-utilization-chart">
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dailyUtilization || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -664,6 +721,7 @@ const MachineUtilizationDashboard: React.FC = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -672,15 +730,19 @@ const MachineUtilizationDashboard: React.FC = () => {
         <Card className="shadow-md overflow-hidden border-0">
           <div className="h-1 bg-gradient-to-r from-accent via-accent/80 to-accent/60" />
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-5 w-5 text-accent" />
-              <CardTitle className="text-lg">Hatcher Utilization Over Time</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-accent" />
+                <CardTitle className="text-lg">Hatcher Utilization Over Time</CardTitle>
+              </div>
+              <ChartDownloadButton chartId="hatcher-utilization-chart" filename="hatcher-utilization" />
             </div>
           </CardHeader>
           <CardContent>
             {dailyUtilizationLoading ? (
               <Skeleton className="h-[300px] w-full" />
             ) : (
+              <div id="hatcher-utilization-chart">
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dailyUtilization || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -714,6 +776,7 @@ const MachineUtilizationDashboard: React.FC = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -724,15 +787,19 @@ const MachineUtilizationDashboard: React.FC = () => {
         <Card className="shadow-md overflow-hidden border-0">
           <div className="h-1 bg-gradient-to-r from-primary via-accent to-teal-500" />
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle className="text-lg">Performance vs Utilization</CardTitle>
-                <CardDescription>Correlation between machine utilization and hatch outcomes</CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-lg">Performance vs Utilization</CardTitle>
+                  <CardDescription>Correlation between machine utilization and hatch outcomes</CardDescription>
+                </div>
               </div>
+              <ChartDownloadButton chartId="performance-scatter-chart" filename="performance-vs-utilization" />
             </div>
           </CardHeader>
           <CardContent>
+            <div id="performance-scatter-chart">
             <ChartContainer config={chartConfig} className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 50, left: 20 }}>
@@ -782,6 +849,7 @@ const MachineUtilizationDashboard: React.FC = () => {
                 </ScatterChart>
               </ResponsiveContainer>
             </ChartContainer>
+            </div>
             <div className="flex items-center justify-center gap-6 mt-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(217, 91%, 60%)' }} />

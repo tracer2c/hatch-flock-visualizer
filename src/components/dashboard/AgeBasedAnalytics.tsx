@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
-import { Users, Filter, Info } from "lucide-react";
+import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
+import { Users, Filter, Info, Download, Image, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
@@ -10,6 +12,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AgeRangeSettings from "./AgeRangeSettings";
 import { AgeRangeService } from "@/services/ageRangeService";
+import { ChartDownloadButton } from "@/components/ui/chart-download-button";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { ExportService } from "@/services/exportService";
 
 const AgeBasedAnalytics = () => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,6 +28,9 @@ const AgeBasedAnalytics = () => {
     flockId: selectedFlock !== "all" ? selectedFlock : undefined,
     flockGroupId: selectedFlockGroup !== "all" ? selectedFlockGroup : undefined
   });
+  
+  // Average flock age hook
+  const { data: avgFlockAge, isLoading: avgAgeLoading } = useAverageFlockAge();
   
   const ageRanges = useMemo(() => AgeRangeService.getCustomRanges(), [refreshKey]);
   
@@ -80,11 +88,83 @@ const AgeBasedAnalytics = () => {
   
   // Metrics are already filtered by the hook, just use them directly
   const filteredMetrics = metrics;
+
+  // Export handlers
+  const handleExportCSV = () => {
+    if (!filteredMetrics) return;
+    const exportData = filteredMetrics.map(m => ({
+      'Age Range': m.label,
+      'Batches': m.batchCount,
+      'Avg Fertility (%)': m.avgFertility,
+      'Avg Hatch (%)': m.avgHatch,
+      'Avg HOF (%)': m.avgHOF,
+      'Avg HOI (%)': m.avgHOI,
+      'Avg Early Dead': m.earlyDeadAvg,
+      'Avg Mid Dead': m.midDeadAvg,
+      'Avg Late Dead': m.lateDeadAvg,
+    }));
+    ExportService.exportToCSV(exportData, 'age-based-analytics');
+  };
+
+  const handleExportExcel = () => {
+    if (!filteredMetrics) return;
+    const exportData = filteredMetrics.map(m => ({
+      'Age Range': m.label,
+      'Batches': m.batchCount,
+      'Avg Fertility (%)': m.avgFertility,
+      'Avg Hatch (%)': m.avgHatch,
+      'Avg HOF (%)': m.avgHOF,
+      'Avg HOI (%)': m.avgHOI,
+      'Avg Early Dead': m.earlyDeadAvg,
+      'Avg Mid Dead': m.midDeadAvg,
+      'Avg Late Dead': m.lateDeadAvg,
+    }));
+    ExportService.exportToExcel(exportData, 'age-based-analytics', 'Age Based Analytics');
+  };
   
   if (isLoading) return <div>Loading age-based analytics...</div>;
   
   return (
     <div className="space-y-6">
+      {/* Average Flock Age KPI Card */}
+      <Card className="shadow-md overflow-hidden border-0 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10">
+        <div className="h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400" />
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10">
+                <Calendar className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Average Flock Age</p>
+                {avgAgeLoading ? (
+                  <div className="h-8 w-20 bg-muted animate-pulse rounded" />
+                ) : avgFlockAge ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-amber-600">{avgFlockAge.average}</span>
+                    <span className="text-lg text-muted-foreground">weeks</span>
+                  </div>
+                ) : (
+                  <span className="text-2xl font-bold text-muted-foreground">--</span>
+                )}
+              </div>
+            </div>
+            {avgFlockAge && (
+              <div className="flex gap-6 text-sm">
+                <div className="text-center">
+                  <p className="text-muted-foreground">Range</p>
+                  <p className="font-semibold">{avgFlockAge.min} - {avgFlockAge.max} wks</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-muted-foreground">Active Houses</p>
+                  <p className="font-semibold">{avgFlockAge.count}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Age Range Legend */}
       <Card className="bg-muted/50">
         <CardHeader>
@@ -124,7 +204,15 @@ const AgeBasedAnalytics = () => {
               <Filter className="h-5 w-5" />
               Filters
             </CardTitle>
-            <AgeRangeSettings onRangesUpdate={handleRangesUpdate} />
+            <div className="flex items-center gap-2">
+              <ExportDropdown
+                onExportCSV={handleExportCSV}
+                onExportExcel={handleExportExcel}
+                availableFormats={['csv', 'excel']}
+                disabled={!filteredMetrics || filteredMetrics.length === 0}
+              />
+              <AgeRangeSettings onRangesUpdate={handleRangesUpdate} />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -219,43 +307,53 @@ const AgeBasedAnalytics = () => {
       {/* Performance Comparison Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Performance by Age Range</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Performance by Age Range</CardTitle>
+            <ChartDownloadButton chartId="age-performance-chart" filename="age-performance-chart" />
+          </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={filteredMetrics}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="avgFertility" fill="hsl(var(--chart-1))" name="Fertility %" />
-              <Bar dataKey="avgHatch" fill="hsl(var(--chart-2))" name="Hatch %" />
-              <Bar dataKey="avgHOF" fill="hsl(var(--chart-3))" name="HOF %" />
-              <Bar dataKey="avgHOI" fill="hsl(var(--chart-4))" name="HOI %" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div id="age-performance-chart">
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={filteredMetrics}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="avgFertility" fill="hsl(var(--chart-1))" name="Fertility %" />
+                <Bar dataKey="avgHatch" fill="hsl(var(--chart-2))" name="Hatch %" />
+                <Bar dataKey="avgHOF" fill="hsl(var(--chart-3))" name="HOF %" />
+                <Bar dataKey="avgHOI" fill="hsl(var(--chart-4))" name="HOI %" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
       
       {/* Mortality Breakdown Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Embryonic Mortality by Age Range</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Embryonic Mortality by Age Range</CardTitle>
+            <ChartDownloadButton chartId="age-mortality-chart" filename="age-mortality-chart" />
+          </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={filteredMetrics}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis label={{ value: 'Average Count', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="earlyDeadAvg" stroke="hsl(var(--chart-1))" name="Early Dead" strokeWidth={2} />
-              <Line type="monotone" dataKey="midDeadAvg" stroke="hsl(var(--chart-3))" name="Mid Dead" strokeWidth={2} />
-              <Line type="monotone" dataKey="lateDeadAvg" stroke="hsl(var(--chart-4))" name="Late Dead" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div id="age-mortality-chart">
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={filteredMetrics}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis label={{ value: 'Average Count', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="earlyDeadAvg" stroke="hsl(var(--chart-1))" name="Early Dead" strokeWidth={2} />
+                <Line type="monotone" dataKey="midDeadAvg" stroke="hsl(var(--chart-3))" name="Mid Dead" strokeWidth={2} />
+                <Line type="monotone" dataKey="lateDeadAvg" stroke="hsl(var(--chart-4))" name="Late Dead" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

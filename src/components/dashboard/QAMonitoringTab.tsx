@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Filter, ChevronDown, X, Thermometer } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Edit, Trash2, Filter, ChevronDown, X, Thermometer, Download, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Setter18PointDisplay from "./Setter18PointDisplay";
+import { ExportService } from "@/services/exportService";
 
 interface QAMonitoringTabProps {
   data: any[];
@@ -218,8 +220,66 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
     }
   };
 
+  // Export handler
+  const handleExportQAData = () => {
+    const exportData = filteredData.map(item => ({
+      'Flock #': item.flock_number || '',
+      'Flock Name': item.flock_name || '',
+      'House #': item.house_number || '',
+      'Age (wks)': item.age_weeks || '',
+      'Check Date': item.check_date ? format(new Date(item.check_date), "yyyy-MM-dd") : '',
+      'Day of Incubation': item.day_of_incubation || '',
+      'Temperature (°F)': item.temperature || '',
+      'Temp Avg Overall': item.temp_avg_overall || '',
+      'Temp Avg Front': item.temp_avg_front || '',
+      'Temp Avg Middle': item.temp_avg_middle || '',
+      'Temp Avg Back': item.temp_avg_back || '',
+      'Humidity (%)': item.humidity || '',
+      'CO2 Level (ppm)': item.co2_level || '',
+      'Ventilation Rate': item.ventilation_rate || '',
+      'Turning Freq': item.turning_frequency || '',
+      'Angle Top L': item.angle_top_left || '',
+      'Angle Mid L': item.angle_mid_left || '',
+      'Angle Bot L': item.angle_bottom_left || '',
+      'Angle Top R': item.angle_top_right || '',
+      'Angle Mid R': item.angle_mid_right || '',
+      'Angle Bot R': item.angle_bottom_right || '',
+      'Inspector': item.inspector_name || '',
+      'Notes': item.notes || '',
+    }));
+    ExportService.exportToExcel(exportData, 'qa-monitoring-data', 'QA Monitoring');
+  };
+
+  // QA Temperature alerts - count records with temp outside normal range
+  const tempAlertCount = useMemo(() => {
+    return filteredData.filter(item => {
+      if (item.temp_avg_overall == null) return false;
+      return item.temp_avg_overall < 99.5 || item.temp_avg_overall > 100.5;
+    }).length;
+  }, [filteredData]);
+
   return (
     <>
+      {/* Temperature Alert Banner */}
+      {tempAlertCount > 0 && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              <strong>{tempAlertCount}</strong> QA record{tempAlertCount !== 1 ? 's' : ''} with temperature outside normal range (99.5-100.5°F)
+            </span>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Export Button */}
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={handleExportQAData} disabled={filteredData.length === 0}>
+          <Download className="h-4 w-4 mr-2" />
+          Export QA Data
+        </Button>
+      </div>
+
       <div className="overflow-x-auto">
       <Table>
         <TableHeader>
