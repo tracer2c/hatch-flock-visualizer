@@ -84,37 +84,9 @@ const navigationItems = [
 
 const advancedAnalyticsItems = [
   {
-    path: '/live-tracking',
-    label: 'Live Tracking',
-    icon: Activity,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
     path: '/bulk-import',
     label: 'Bulk Import',
     icon: Upload,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
-    path: '/process-flow',
-    label: 'Process Flow',
-    icon: Workflow,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
-    path: '/house-flow',
-    label: 'House Flow',
-    icon: Workflow,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
-  {
-    path: '/machine-utilization',
-    label: 'Machine Utilization',
-    icon: Gauge,
     requiresAuth: true,
     requiredRole: undefined
   }

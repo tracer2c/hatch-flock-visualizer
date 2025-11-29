@@ -1257,16 +1257,17 @@ export default function EmbrexDashboard() {
                 {/* Feature Grid */}
                 <div className="grid grid-cols-4 gap-3 mb-8">
                   {[
-                    { label: "Timeline Views", icon: CalendarIcon },
-                    { label: "Trend Analysis", icon: TrendingUp },
-                    { label: "Comparisons", icon: BarChart3 },
-                    { label: "Advanced Analytics", icon: Activity }
+                    { label: "Timeline Views", icon: CalendarIcon, action: () => setShowWelcome(false) },
+                    { label: "Trend Analysis", icon: TrendingUp, path: "/analytics" },
+                    { label: "Comparisons", icon: BarChart3, path: "/process-flow" },
+                    { label: "Advanced Analytics", icon: Activity, path: "/machine-utilization" }
                   ].map((feature) => {
                     const Icon = feature.icon;
                     return (
                       <div 
                         key={feature.label}
-                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+                        onClick={() => feature.path ? navigate(feature.path) : feature.action?.()}
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-muted/30 hover:bg-primary/10 hover:border-primary/50 transition-colors cursor-pointer"
                       >
                         <Icon className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                         <span className="text-xs text-center text-muted-foreground font-medium">
