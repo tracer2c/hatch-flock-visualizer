@@ -4,10 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Clock, AlertTriangle, CheckCircle, Search, Filter, 
   LayoutGrid, Table as TableIcon, ArrowUpDown, TrendingUp, Egg, 
-  Activity, ChevronRight
+  Activity, ChevronRight, History
 } from "lucide-react";
 import { useViewMode } from '@/contexts/ViewModeContext';
 import { format, differenceInDays, addDays } from 'date-fns';
@@ -20,11 +21,16 @@ import { cn } from '@/lib/utils';
 const LiveHouseTracker = () => {
   const { viewMode } = useViewMode();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
 
-  // Fetch active houses with units included
-  const { data: activeHouses, isLoading } = useQuery({
-    queryKey: ['active-houses-tracking', viewMode],
+  // Fetch houses based on tab selection
+  const { data: houses, isLoading } = useQuery({
+    queryKey: ['houses-tracking', viewMode, activeTab],
     queryFn: async () => {
+      const statusFilter = activeTab === 'active' 
+        ? ['setting', 'incubating', 'hatching'] 
+        : ['completed'];
+      
       const { data, error } = await supabase
         .from('batches')
         .select(`
@@ -34,8 +40,8 @@ const LiveHouseTracker = () => {
           units (id, name)
         `)
         .eq('data_type', viewMode)
-        .in('status', ['setting', 'incubating', 'hatching'])
-        .order('set_date', { ascending: true });
+        .in('status', statusFilter)
+        .order('set_date', { ascending: activeTab === 'active' });
       
       if (error) throw error;
       return data || [];
@@ -80,7 +86,8 @@ const LiveHouseTracker = () => {
     }
   });
 
-  const getPhaseInfo = (daysSinceSet: number) => {
+  const getPhaseInfo = (daysSinceSet: number, status: string) => {
+    if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
     if (daysSinceSet <= 0) return { phase: 'Setting', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', nextPhase: 'Incubating', daysToNext: 1 - daysSinceSet };
     if (daysSinceSet <= 18) return { phase: 'Incubating', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50', nextPhase: 'Hatching', daysToNext: 19 - daysSinceSet };
     return { phase: 'Hatching', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: 'Complete', daysToNext: 22 - daysSinceSet };
@@ -97,13 +104,13 @@ const LiveHouseTracker = () => {
   };
 
   const housesWithProgress = useMemo(() => {
-    if (!activeHouses) return [];
+    if (!houses) return [];
 
-    return activeHouses.map(house => {
+    return houses.map(house => {
       const daysSinceSet = Math.max(0, differenceInDays(new Date(), new Date(house.set_date)));
       const expectedHatchDate = addDays(new Date(house.set_date), 21);
-      const phaseInfo = getPhaseInfo(daysSinceSet);
-      const criticalDay = getCriticalDayInfo(daysSinceSet);
+      const phaseInfo = getPhaseInfo(daysSinceSet, house.status);
+      const criticalDay = activeTab === 'active' ? getCriticalDayInfo(daysSinceSet) : null;
       const progressPercentage = Math.min(100, (daysSinceSet / 21) * 100);
       
       // Get performance metrics
@@ -132,7 +139,7 @@ const LiveHouseTracker = () => {
         unitName: (house as any).units?.name || 'Unknown'
       };
     });
-  }, [activeHouses, performanceData]);
+  }, [houses, performanceData, activeTab]);
 
   // Apply filters
   const filteredHouses = useMemo(() => {
@@ -171,6 +178,9 @@ const LiveHouseTracker = () => {
         case 'status':
           comparison = (a.status || '').localeCompare(b.status || '');
           break;
+        case 'setDate':
+          comparison = new Date(a.set_date).getTime() - new Date(b.set_date).getTime();
+          break;
         default:
           comparison = a.daysSinceSet - b.daysSinceSet;
       }
@@ -182,6 +192,19 @@ const LiveHouseTracker = () => {
 
   // Summary statistics
   const summaryStats = useMemo(() => {
+    if (activeTab === 'completed') {
+      const avgFertility = housesWithProgress.filter(h => h.fertilityPercent).length > 0
+        ? Math.round(housesWithProgress.reduce((sum, h) => sum + (h.fertilityPercent || 0), 0) / housesWithProgress.filter(h => h.fertilityPercent).length)
+        : 0;
+      const avgHOF = housesWithProgress.filter(h => h.hofPercent).length > 0
+        ? Math.round(housesWithProgress.reduce((sum, h) => sum + (h.hofPercent || 0), 0) / housesWithProgress.filter(h => h.hofPercent).length)
+        : 0;
+      const avgHOI = housesWithProgress.filter(h => h.hoiPercent).length > 0
+        ? Math.round(housesWithProgress.reduce((sum, h) => sum + (h.hoiPercent || 0), 0) / housesWithProgress.filter(h => h.hoiPercent).length)
+        : 0;
+      return { total: housesWithProgress.length, avgFertility, avgHOF, avgHOI };
+    }
+    
     const setting = housesWithProgress.filter(h => h.phaseInfo.phase === 'Setting').length;
     const incubating = housesWithProgress.filter(h => h.phaseInfo.phase === 'Incubating').length;
     const hatching = housesWithProgress.filter(h => h.phaseInfo.phase === 'Hatching').length;
@@ -191,7 +214,7 @@ const LiveHouseTracker = () => {
       : 0;
     
     return { setting, incubating, hatching, criticalAlerts, avgProgress };
-  }, [housesWithProgress]);
+  }, [housesWithProgress, activeTab]);
 
   if (isLoading) {
     return (
@@ -203,44 +226,91 @@ const LiveHouseTracker = () => {
 
   return (
     <div className="space-y-6">
-      {/* Summary Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <Egg className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-blue-700">{summaryStats.setting}</div>
-            <div className="text-xs text-blue-600">Setting</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="p-4 text-center">
-            <Clock className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-amber-700">{summaryStats.incubating}</div>
-            <div className="text-xs text-amber-600">Incubating</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="p-4 text-center">
-            <Activity className="h-6 w-6 text-green-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-green-700">{summaryStats.hatching}</div>
-            <div className="text-xs text-green-600">Hatching</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-orange-50 border-orange-200">
-          <CardContent className="p-4 text-center">
-            <AlertTriangle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-orange-700">{summaryStats.criticalAlerts}</div>
-            <div className="text-xs text-orange-600">Critical Days</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
-            <div className="text-2xl font-bold text-primary">{summaryStats.avgProgress}%</div>
-            <div className="text-xs text-primary/80">Avg Progress</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tabs for Active/Completed */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'completed')}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Active Houses
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Completed Houses
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Summary Statistics - Different for Active vs Completed */}
+      {activeTab === 'active' ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4 text-center">
+              <Egg className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-blue-700">{summaryStats.setting}</div>
+              <div className="text-xs text-blue-600">Setting</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-4 text-center">
+              <Clock className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-amber-700">{summaryStats.incubating}</div>
+              <div className="text-xs text-amber-600">Incubating</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-4 text-center">
+              <Activity className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-700">{summaryStats.hatching}</div>
+              <div className="text-xs text-green-600">Hatching</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-orange-50 border-orange-200">
+            <CardContent className="p-4 text-center">
+              <AlertTriangle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-orange-700">{summaryStats.criticalAlerts}</div>
+              <div className="text-xs text-orange-600">Critical Days</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
+              <div className="text-2xl font-bold text-primary">{summaryStats.avgProgress}%</div>
+              <div className="text-xs text-primary/80">Avg Progress</div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-slate-50 border-slate-200">
+            <CardContent className="p-4 text-center">
+              <CheckCircle className="h-6 w-6 text-slate-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-slate-700">{summaryStats.total}</div>
+              <div className="text-xs text-slate-600">Total Completed</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4 text-center">
+              <Egg className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-blue-700">{summaryStats.avgFertility}%</div>
+              <div className="text-xs text-blue-600">Avg Fertility</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-700">{summaryStats.avgHOF}%</div>
+              <div className="text-xs text-green-600">Avg HOF%</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-4 text-center">
+              <Activity className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-amber-700">{summaryStats.avgHOI}%</div>
+              <div className="text-xs text-amber-600">Avg HOI%</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -263,17 +333,19 @@ const LiveHouseTracker = () => {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="setting">Setting</SelectItem>
-                <SelectItem value="incubating">Incubating</SelectItem>
-                <SelectItem value="hatching">Hatching</SelectItem>
-              </SelectContent>
-            </Select>
+            {activeTab === 'active' && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="setting">Setting</SelectItem>
+                  <SelectItem value="incubating">Incubating</SelectItem>
+                  <SelectItem value="hatching">Hatching</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -291,6 +363,7 @@ const LiveHouseTracker = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="daysSinceSet">Days Since Set</SelectItem>
+                <SelectItem value="setDate">Set Date</SelectItem>
                 <SelectItem value="progressPercentage">Progress %</SelectItem>
                 <SelectItem value="hatchery">Hatchery</SelectItem>
                 <SelectItem value="status">Status</SelectItem>
@@ -327,36 +400,42 @@ const LiveHouseTracker = () => {
         </CardContent>
       </Card>
 
-      {/* Phase Legend */}
-      <div className="flex flex-wrap gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded"></div>
-          <span>Setting (Day 0)</span>
+      {/* Phase Legend - Only for Active */}
+      {activeTab === 'active' && (
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+            <span>Setting (Day 0)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-amber-500 rounded"></div>
+            <span>Incubating (Days 1-18)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 rounded"></div>
+            <span>Hatching (Days 19-21)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3 h-3 text-orange-500" />
+            <span>Critical Day Alert</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-amber-500 rounded"></div>
-          <span>Incubating (Days 1-18)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
-          <span>Hatching (Days 19-21)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-3 h-3 text-orange-500" />
-          <span>Critical Day Alert</span>
-        </div>
-      </div>
+      )}
 
       {/* Houses Grid/Table */}
       {filteredHouses.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground">No Active Houses</h3>
+            <h3 className="text-lg font-medium text-muted-foreground">
+              {activeTab === 'active' ? 'No Active Houses' : 'No Completed Houses'}
+            </h3>
             <p className="text-sm text-muted-foreground">
               {searchTerm || hatcheryFilter !== 'all' || statusFilter !== 'all'
                 ? 'No houses match your filters. Try adjusting your search criteria.'
-                : 'All houses have been completed or no houses are currently in progress.'}
+                : activeTab === 'active' 
+                  ? 'All houses have been completed or no houses are currently in progress.'
+                  : 'No houses have been completed yet.'}
             </p>
           </CardContent>
         </Card>
@@ -390,55 +469,70 @@ const LiveHouseTracker = () => {
               </CardHeader>
 
               <CardContent className="p-4 space-y-4">
-                {/* Progress Timeline */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className={cn("font-medium", house.phaseInfo.textColor)}>
-                      Day {house.daysSinceSet} of 21
-                    </span>
-                    <span className="text-muted-foreground">
-                      {house.daysRemaining} days remaining
-                    </span>
-                  </div>
-
-                  {/* Visual Progress Bar */}
-                  <div className="relative h-6 bg-muted rounded-full overflow-hidden">
-                    {/* Phase sections */}
-                    <div className="absolute inset-0 flex">
-                      <div className="w-[4.76%] bg-blue-200 border-r border-white/50" title="Setting"></div>
-                      <div className="w-[80.95%] bg-amber-200 border-r border-white/50" title="Incubating"></div>
-                      <div className="w-[14.29%] bg-green-200" title="Hatching"></div>
+                {/* Progress Timeline - Only for Active */}
+                {activeTab === 'active' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className={cn("font-medium", house.phaseInfo.textColor)}>
+                        Day {house.daysSinceSet} of 21
+                      </span>
+                      <span className="text-muted-foreground">
+                        {house.daysRemaining} days remaining
+                      </span>
                     </div>
-                    
-                    {/* Progress fill */}
-                    <div 
-                      className={cn("absolute top-0 left-0 h-full transition-all duration-500", house.phaseInfo.color)}
-                      style={{ width: `${house.progressPercentage}%` }}
-                    ></div>
 
-                    {/* Day markers */}
-                    {[7, 14, 18].map(day => (
-                      <div
-                        key={day}
-                        className="absolute top-0 bottom-0 w-0.5 bg-white/70"
-                        style={{ left: `${(day / 21) * 100}%` }}
-                      >
-                        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
-                          {day}
-                        </span>
+                    {/* Visual Progress Bar */}
+                    <div className="relative h-6 bg-muted rounded-full overflow-hidden">
+                      {/* Phase sections */}
+                      <div className="absolute inset-0 flex">
+                        <div className="w-[4.76%] bg-blue-200 border-r border-white/50" title="Setting"></div>
+                        <div className="w-[80.95%] bg-amber-200 border-r border-white/50" title="Incubating"></div>
+                        <div className="w-[14.29%] bg-green-200" title="Hatching"></div>
                       </div>
-                    ))}
+                      
+                      {/* Progress fill */}
+                      <div 
+                        className={cn("absolute top-0 left-0 h-full transition-all duration-500", house.phaseInfo.color)}
+                        style={{ width: `${house.progressPercentage}%` }}
+                      ></div>
 
-                    {/* Current position indicator */}
-                    <div
-                      className="absolute top-0 bottom-0 w-1 bg-foreground shadow-md"
-                      style={{ left: `${house.progressPercentage}%` }}
-                    />
+                      {/* Day markers */}
+                      {[7, 14, 18].map(day => (
+                        <div
+                          key={day}
+                          className="absolute top-0 bottom-0 w-0.5 bg-white/70"
+                          style={{ left: `${(day / 21) * 100}%` }}
+                        >
+                          <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
+                            {day}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Current position indicator */}
+                      <div
+                        className="absolute top-0 bottom-0 w-1 bg-foreground shadow-md"
+                        style={{ left: `${house.progressPercentage}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Phase Transition Info */}
-                {house.phaseInfo.nextPhase !== 'Complete' && (
+                {/* Completed House - Duration Info */}
+                {activeTab === 'completed' && (
+                  <div className="text-sm text-muted-foreground">
+                    <span>Completed on </span>
+                    <span className="font-medium text-foreground">
+                      {house.actual_hatch_date 
+                        ? format(new Date(house.actual_hatch_date), 'MMM d, yyyy')
+                        : format(house.expectedHatchDate, 'MMM d, yyyy')}
+                    </span>
+                    <span> • Duration: {house.daysSinceSet} days</span>
+                  </div>
+                )}
+
+                {/* Phase Transition Info - Only for Active */}
+                {activeTab === 'active' && house.phaseInfo.nextPhase && house.phaseInfo.nextPhase !== 'Complete' && (
                   <div className="flex items-center gap-2 text-sm">
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">
@@ -462,9 +556,25 @@ const LiveHouseTracker = () => {
                     <div className="font-medium">{format(new Date(house.set_date), 'MMM d, yyyy')}</div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Expected Hatch:</span>
-                    <div className="font-medium">{format(house.expectedHatchDate, 'MMM d, yyyy')}</div>
+                    <span className="text-muted-foreground">{activeTab === 'completed' ? 'Hatch Date:' : 'Expected Hatch:'}</span>
+                    <div className="font-medium">
+                      {activeTab === 'completed' && house.actual_hatch_date
+                        ? format(new Date(house.actual_hatch_date), 'MMM d, yyyy')
+                        : format(house.expectedHatchDate, 'MMM d, yyyy')}
+                    </div>
                   </div>
+                  {activeTab === 'completed' && (
+                    <>
+                      <div>
+                        <span className="text-muted-foreground">Eggs Set:</span>
+                        <div className="font-medium">{house.total_eggs_set?.toLocaleString() || '-'}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Chicks Hatched:</span>
+                        <div className="font-medium">{house.chicks_hatched?.toLocaleString() || '-'}</div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Performance Metrics */}
@@ -488,7 +598,7 @@ const LiveHouseTracker = () => {
                   </div>
                 )}
 
-                {/* Critical Day Alert */}
+                {/* Critical Day Alert - Only for Active */}
                 {house.criticalDay && (
                   <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-center gap-2 text-orange-800">
@@ -514,14 +624,15 @@ const LiveHouseTracker = () => {
                   <th className="text-left p-3 font-medium">House</th>
                   <th className="text-left p-3 font-medium">Hatchery</th>
                   <th className="text-left p-3 font-medium">Phase</th>
-                  <th className="text-center p-3 font-medium">Day</th>
-                  <th className="text-left p-3 font-medium">Progress</th>
+                  <th className="text-center p-3 font-medium">{activeTab === 'active' ? 'Day' : 'Duration'}</th>
+                  {activeTab === 'active' && <th className="text-left p-3 font-medium">Progress</th>}
                   <th className="text-left p-3 font-medium">Flock</th>
                   <th className="text-left p-3 font-medium">Machine</th>
                   <th className="text-center p-3 font-medium">Fertility</th>
                   <th className="text-center p-3 font-medium">HOF%</th>
                   <th className="text-center p-3 font-medium">HOI%</th>
-                  <th className="text-center p-3 font-medium">Alert</th>
+                  {activeTab === 'active' && <th className="text-center p-3 font-medium">Alert</th>}
+                  {activeTab === 'completed' && <th className="text-center p-3 font-medium">Chicks</th>}
                 </tr>
               </thead>
               <tbody>
@@ -541,15 +652,19 @@ const LiveHouseTracker = () => {
                         {house.phaseInfo.phase}
                       </Badge>
                     </td>
-                    <td className="p-3 text-center font-medium">{house.daysSinceSet}</td>
-                    <td className="p-3">
-                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className={cn("h-full", house.phaseInfo.color)}
-                          style={{ width: `${house.progressPercentage}%` }}
-                        />
-                      </div>
+                    <td className="p-3 text-center font-medium">
+                      {activeTab === 'active' ? house.daysSinceSet : `${house.daysSinceSet}d`}
                     </td>
+                    {activeTab === 'active' && (
+                      <td className="p-3">
+                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={cn("h-full", house.phaseInfo.color)}
+                            style={{ width: `${house.progressPercentage}%` }}
+                          />
+                        </div>
+                      </td>
+                    )}
                     <td className="p-3 truncate max-w-[120px]">{house.flocks?.flock_name || '-'}</td>
                     <td className="p-3">{house.machines?.machine_number || '-'}</td>
                     <td className="p-3 text-center">
@@ -561,11 +676,16 @@ const LiveHouseTracker = () => {
                     <td className="p-3 text-center">
                       {house.hoiPercent ? `${house.hoiPercent.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="p-3 text-center">
-                      {house.criticalDay && (
-                        <AlertTriangle className="h-4 w-4 text-orange-500 mx-auto" />
-                      )}
-                    </td>
+                    {activeTab === 'active' && (
+                      <td className="p-3 text-center">
+                        {house.criticalDay && (
+                          <AlertTriangle className="h-4 w-4 text-orange-500 mx-auto" />
+                        )}
+                      </td>
+                    )}
+                    {activeTab === 'completed' && (
+                      <td className="p-3 text-center">{house.chicks_hatched?.toLocaleString() || '-'}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
