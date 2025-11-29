@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
   Download, RefreshCw, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
-  Monitor, ChevronDown, ChevronRight
+  Monitor, ChevronDown, ChevronRight, Radio, GitBranch
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -1257,16 +1257,16 @@ export default function EmbrexDashboard() {
                 {/* Feature Grid */}
                 <div className="grid grid-cols-4 gap-3 mb-8">
                   {[
-                    { label: "Timeline Views", icon: CalendarIcon, action: () => setShowWelcome(false) },
-                    { label: "Trend Analysis", icon: TrendingUp, path: "/analytics" },
-                    { label: "Comparisons", icon: BarChart3, path: "/process-flow" },
-                    { label: "Advanced Analytics", icon: Activity, path: "/machine-utilization" }
+                    { label: "Live Tracking", icon: Radio, path: "/live-tracking" },
+                    { label: "Machine Utilization", icon: Settings, path: "/machine-utilization" },
+                    { label: "House Flow", icon: GitBranch, path: "/house-flow" },
+                    { label: "Age Based Performance", icon: TrendingUp, path: "/analytics" }
                   ].map((feature) => {
                     const Icon = feature.icon;
                     return (
                       <div 
                         key={feature.label}
-                        onClick={() => feature.path ? navigate(feature.path) : feature.action?.()}
+                        onClick={() => navigate(feature.path)}
                         className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-muted/30 hover:bg-primary/10 hover:border-primary/50 transition-colors cursor-pointer"
                       >
                         <Icon className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
