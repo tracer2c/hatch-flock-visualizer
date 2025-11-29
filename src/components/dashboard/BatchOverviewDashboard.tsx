@@ -24,7 +24,6 @@ import eggsIcon from "@/assets/eggs-icon.png";
 import chicksIcon from "@/assets/chicks-icon.png";
 import utilizationIcon from "@/assets/utilization-icon.png";
 import CriticalEventsPanel from "./CriticalEventsPanel";
-import IncubationTimeline from "./IncubationTimeline";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
@@ -683,9 +682,6 @@ const BatchOverviewDashboard = () => {
                 </CardContent>
               </Card>
           </div>
-
-          {/* Live House Status Tracking */}
-          <IncubationTimeline className="mt-6" />
         </div>
         </div>
       )}
