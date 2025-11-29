@@ -516,12 +516,12 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs">Flock</Label>
-                      <Select value={filters.flockId} onValueChange={(v) => setFilters(prev => ({ ...prev, flockId: v }))}>
+                    <Select value={filters.flockId || "__all__"} onValueChange={(v) => setFilters(prev => ({ ...prev, flockId: v === "__all__" ? "" : v }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="All flocks" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All flocks</SelectItem>
+                          <SelectItem value="__all__">All flocks</SelectItem>
                           {flocks.map(f => (
                             <SelectItem key={f.id} value={f.id}>
                               {f.flock_name} ({f.flock_number})
@@ -579,15 +579,15 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                     <div className="space-y-2">
                       <Label className="text-xs">House (Optional)</Label>
                       <Select 
-                        value={formData.batch_id} 
-                        onValueChange={(v) => setFormData(prev => ({ ...prev, batch_id: v }))}
+                        value={formData.batch_id || "__none__"} 
+                        onValueChange={(v) => setFormData(prev => ({ ...prev, batch_id: v === "__none__" ? "" : v }))}
                         disabled={!formData.flock_id}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={formData.flock_id ? "Select house" : "Select flock first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="__none__">None</SelectItem>
                           {batches.map(b => (
                             <SelectItem key={b.id} value={b.id}>
                               {b.batch_number}
