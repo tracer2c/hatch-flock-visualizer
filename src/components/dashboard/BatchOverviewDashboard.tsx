@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users, AlertTriangle } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users, AlertTriangle, Egg, Baby, Target } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -19,7 +19,6 @@ import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { ExportService } from "@/services/exportService";
 import { useChartExport } from "@/hooks/useChartExport";
-import { HatcheryIcon, EggsIcon, ChicksIcon, NestIcon, FlockIcon } from "@/components/icons/HatcheryIcons";
 import CriticalEventsPanel from "./CriticalEventsPanel";
 
 const BatchOverviewDashboard = () => {
@@ -416,7 +415,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
-              icon={<HatcheryIcon size={40} />}
+              icon={<Building2 className="h-10 w-10 text-primary" />}
               description="Total number of houses in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
               trendLabel={
                 lastWeekBatchesCount > 0 
@@ -428,7 +427,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average Fertility"
               value={`${avgFert}%`}
-              icon={<EggsIcon size={40} />}
+              icon={<Egg className="h-10 w-10 text-amber-500" />}
               description="The average fertility percentage across all analyzed houses. Fertility measures the percentage of eggs that contain viable embryos after candling analysis."
               trendLabel={
                 targets?.fertility_rate 
@@ -440,7 +439,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average HOF%"
               value={`${avgHOF}%`}
-              icon={<ChicksIcon size={40} />}
+              icon={<Baby className="h-10 w-10 text-green-500" />}
               description="Average Hatch of Fertile percentage across all analyzed houses. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
               trendLabel={
                 targets?.hof_rate 
@@ -452,7 +451,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average HOI%"
               value={`${avgHOI}%`}
-              icon={<NestIcon size={40} />}
+              icon={<Target className="h-10 w-10 text-blue-500" />}
               description="Average Hatch of Injection percentage across all analyzed houses. HOI% = (Chicks Hatched / Eggs Injected) × 100"
               trendLabel={
                 targets?.hoi_rate 

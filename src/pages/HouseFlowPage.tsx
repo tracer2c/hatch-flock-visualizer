@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import BatchFlowSankey from "@/components/dashboard/BatchFlowSankey";
-import { HatcheryIcon } from "@/components/icons/HatcheryIcons";
+import { Building2 } from "lucide-react";
 
 const HouseFlowPage = () => {
   useEffect(() => {
@@ -23,7 +23,9 @@ const HouseFlowPage = () => {
     <div className="p-6">
       {/* Page Header with Hatchery Icon */}
       <div className="mb-6 flex items-center gap-4">
-        <HatcheryIcon size={64} className="animate-fade-in" />
+        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+          <Building2 className="w-10 h-10 text-primary" />
+        </div>
         <div>
           <h1 className="text-3xl font-bold text-foreground">House Flow Analysis</h1>
           <p className="text-sm text-muted-foreground">Detailed house flow analysis and batch processing visualization</p>
