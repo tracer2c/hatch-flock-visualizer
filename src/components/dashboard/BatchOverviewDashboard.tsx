@@ -415,7 +415,7 @@ const BatchOverviewDashboard = () => {
           </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
@@ -464,9 +464,6 @@ const BatchOverviewDashboard = () => {
               }
               trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
             />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard
               title="Average Flock Age"
               value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
@@ -492,13 +489,6 @@ const BatchOverviewDashboard = () => {
                     : null
                   : null
               }
-            />
-            <StatCard
-              title="Machine Utilization"
-              value={`${systemUtilization || 0}%`}
-              icon={<img src={utilizationIcon} alt="Utilization" className="h-10 w-10 object-contain" />}
-              description="Average percentage of incubator capacity currently in use across all machines. Includes both setter and hatcher machines."
-              trendLabel="Current average across all machines"
             />
           </div>
 

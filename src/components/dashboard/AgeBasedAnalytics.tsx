@@ -13,10 +13,16 @@ import { AgeRangeService } from "@/services/ageRangeService";
 
 const AgeBasedAnalytics = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const { data: metrics, isLoading, refetch } = useAgeBasedPerformance();
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const [selectedFlock, setSelectedFlock] = useState<string>("all");
   const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
+  
+  // Pass filters to the hook
+  const { data: metrics, isLoading, refetch } = useAgeBasedPerformance({
+    unitId: selectedUnit !== "all" ? selectedUnit : undefined,
+    flockId: selectedFlock !== "all" ? selectedFlock : undefined,
+    flockGroupId: selectedFlockGroup !== "all" ? selectedFlockGroup : undefined
+  });
   
   const ageRanges = useMemo(() => AgeRangeService.getCustomRanges(), [refreshKey]);
   
@@ -72,11 +78,8 @@ const AgeBasedAnalytics = () => {
     return Array.from(groups.values());
   }, [flocks]);
   
-  // Filter metrics based on selections
-  const filteredMetrics = useMemo(() => {
-    // This would require re-fetching with filters - for now show all
-    return metrics;
-  }, [metrics, selectedUnit, selectedFlock, selectedFlockGroup]);
+  // Metrics are already filtered by the hook, just use them directly
+  const filteredMetrics = metrics;
   
   if (isLoading) return <div>Loading age-based analytics...</div>;
   

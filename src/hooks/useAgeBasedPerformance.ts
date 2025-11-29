@@ -17,16 +17,27 @@ export interface AgeRangeMetrics {
   lateDeadAvg: number;
 }
 
-export const useAgeBasedPerformance = () => {
+export interface AgeBasedPerformanceFilters {
+  unitId?: string;
+  flockId?: string;
+  flockGroupId?: string;
+}
+
+export const useAgeBasedPerformance = (filters?: AgeBasedPerformanceFilters) => {
   return useQuery({
-    queryKey: ['age-based-performance'],
+    queryKey: ['age-based-performance', filters?.unitId, filters?.flockId, filters?.flockGroupId],
     queryFn: async () => {
-      const { data: batches, error } = await supabase
+      let query = supabase
         .from('batches_with_fertility')
         .select(`
           *,
+          unit_id,
+          flock_id,
           flocks (
-            age_weeks
+            id,
+            age_weeks,
+            unit_id,
+            flock_group_id
           ),
           residue_analysis (
             hof_percent,
@@ -39,7 +50,26 @@ export const useAgeBasedPerformance = () => {
         `)
         .not('fertility_percent', 'is', null);
       
+      // Apply filters
+      if (filters?.unitId) {
+        query = query.eq('unit_id', filters.unitId);
+      }
+      
+      if (filters?.flockId) {
+        query = query.eq('flock_id', filters.flockId);
+      }
+      
+      const { data: batches, error } = await query;
+      
       if (error) throw error;
+      
+      // Filter by flock group if specified (need to do client-side as it's in flocks table)
+      let filteredBatches = batches || [];
+      if (filters?.flockGroupId) {
+        filteredBatches = filteredBatches.filter(
+          batch => batch.flocks?.flock_group_id === filters.flockGroupId
+        );
+      }
       
       const customRanges = AgeRangeService.getCustomRanges();
       
@@ -48,7 +78,7 @@ export const useAgeBasedPerformance = () => {
         return acc;
       }, {} as Record<AgeRange, any[]>);
       
-      batches.forEach(batch => {
+      filteredBatches.forEach(batch => {
         if (!batch.flocks?.age_weeks) return;
         
         const ageRange = AgeRangeService.getAgeRange(batch.flocks.age_weeks);
@@ -82,32 +112,32 @@ export const useAgeBasedPerformance = () => {
           sum + (b.hatch_percent || 0), 0) / batchesInRange.length;
         
         const avgHOF = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.hof_percent || 0);
         }, 0) / batchesInRange.length;
         
         const avgHOI = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.hoi_percent || 0);
         }, 0) / batchesInRange.length;
         
         const totalMortality = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.mortality_count || 0);
         }, 0);
         
         const earlyDeadAvg = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.early_dead || 0);
         }, 0) / batchesInRange.length;
         
         const midDeadAvg = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.mid_dead || 0);
         }, 0) / batchesInRange.length;
         
         const lateDeadAvg = batchesInRange.reduce((sum, b) => {
-          const residue = b.residue_analysis?.[0];
+          const residue = b.residue_analysis;
           return sum + (residue?.late_dead || 0);
         }, 0) / batchesInRange.length;
         
