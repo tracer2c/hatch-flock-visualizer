@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, ChevronDown, ChevronRight, Filter, X, Calendar, Layers, Activity, Thermometer, ArrowRightLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Edit, Trash2, ChevronDown, ChevronRight, Filter, X, Calendar, Layers, Activity, Thermometer, ArrowRightLeft, Download, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Setter18PointDisplay from "@/components/dashboard/Setter18PointDisplay";
 import MachineTransfersTab from "@/components/dashboard/MachineTransfersTab";
+import { ExportService } from "@/services/exportService";
 
 interface MultiSetterSet {
   id: string;
@@ -437,6 +439,48 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
     return filteredSets.reduce((sum, set) => sum + set.capacity, 0);
   }, [filteredSets]);
 
+  // Export handlers
+  const handleExportSets = () => {
+    const exportData = filteredSets.map(set => ({
+      'Flock': set.flock?.flock_name || '',
+      'Flock #': set.flock?.flock_number || '',
+      'House': set.batch?.batch_number || '-',
+      'Capacity': set.capacity,
+      'Zone': getZoneLabel(set.zone),
+      'Side': set.side,
+      'Level': set.level,
+      'Set Date': set.set_date,
+      'Notes': set.notes || '',
+    }));
+    ExportService.exportToExcel(exportData, `sets-${machine.machine_number}`, 'Sets');
+  };
+
+  const handleExportQARecords = () => {
+    const exportData = qaRecords.map(record => ({
+      'Check Date': record.check_date,
+      'Check Time': record.check_time,
+      'House': record.batch?.batch_number || '-',
+      'Flock': record.batch?.flock?.flock_name || '-',
+      'Temperature': record.temperature,
+      'Humidity': record.humidity,
+      'Temp Avg Overall': record.temp_avg_overall || '',
+      'Temp Avg Front': record.temp_avg_front || '',
+      'Temp Avg Middle': record.temp_avg_middle || '',
+      'Temp Avg Back': record.temp_avg_back || '',
+      'Inspector': record.inspector_name,
+      'Notes': record.notes || '',
+    }));
+    ExportService.exportToExcel(exportData, `qa-${machine.machine_number}`, 'QA Records');
+  };
+
+  // QA Temperature alerts
+  const qaAlertCount = useMemo(() => {
+    return qaRecords.filter(record => {
+      if (record.temp_avg_overall == null) return false;
+      return record.temp_avg_overall < 99.5 || record.temp_avg_overall > 100.5;
+    }).length;
+  }, [qaRecords]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -487,6 +531,15 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportSets}
+                  disabled={filteredSets.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -794,6 +847,16 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
 
           {/* QA Tab */}
           <TabsContent value="qa" className="space-y-4 mt-4">
+            {/* QA Temperature Alert Banner */}
+            {qaAlertCount > 0 && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>{qaAlertCount}</strong> QA record{qaAlertCount !== 1 ? 's' : ''} with temperature outside normal range (99.5-100.5°F)
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* QA Summary */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-4 text-sm">
@@ -803,9 +866,15 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
                   <span className="font-semibold">{qaRecords.length}</span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={loadQARecords} disabled={qaLoading}>
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportQARecords} disabled={qaRecords.length === 0}>
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+                <Button variant="outline" size="sm" onClick={loadQARecords} disabled={qaLoading}>
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             {/* QA Records Table */}
