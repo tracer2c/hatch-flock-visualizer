@@ -207,7 +207,7 @@ const FlockManager = () => {
         unit_id: unit.id,
         flock_group_id: groupId,
         technician_name: formData.technician_name || null,
-        data_type: viewMode,
+        data_type: 'original',
         created_by: user?.id,
         updated_by: user?.id,
         breed: 'broiler' as const
@@ -340,7 +340,7 @@ const FlockManager = () => {
           notes: formData.notes || null,
           unit_id: formData.unitId || null,
           technician_name: formData.technician_name || null,
-          data_type: viewMode,
+          data_type: 'original',
           created_by: user?.id,
           updated_by: user?.id,
           breed: 'broiler' as const
