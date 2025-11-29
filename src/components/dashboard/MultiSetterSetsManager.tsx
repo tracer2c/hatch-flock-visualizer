@@ -21,6 +21,7 @@ interface MultiSetterSet {
   capacity: number;
   zone: 'A' | 'B' | 'C';
   side: 'Left' | 'Right';
+  level: 'Top' | 'Middle' | 'Bottom';
   set_date: string;
   notes: string | null;
   created_at: string;
@@ -123,6 +124,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
     capacity: '',
     zone: '' as 'A' | 'B' | 'C' | '',
     side: '' as 'Left' | 'Right' | '',
+    level: '' as 'Top' | 'Middle' | 'Bottom' | '',
     set_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
@@ -226,6 +228,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
       capacity: '',
       zone: '',
       side: '',
+      level: '',
       set_date: new Date().toISOString().split('T')[0],
       notes: ''
     });
@@ -234,10 +237,10 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
   };
 
   const handleSubmit = async () => {
-    if (!formData.flock_id || !formData.capacity || !formData.zone || !formData.side || !formData.set_date) {
+    if (!formData.flock_id || !formData.capacity || !formData.zone || !formData.side || !formData.level || !formData.set_date) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields (Flock, Capacity, Zone, Side, Set Date)",
+        description: "Please fill in all required fields (Flock, Capacity, Side, Zone, Level, Set Date)",
         variant: "destructive"
       });
       return;
@@ -250,6 +253,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
       capacity: parseInt(formData.capacity),
       zone: formData.zone as 'A' | 'B' | 'C',
       side: formData.side as 'Left' | 'Right',
+      level: formData.level as 'Top' | 'Middle' | 'Bottom',
       set_date: formData.set_date,
       notes: formData.notes || null
     };
@@ -298,6 +302,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
       capacity: set.capacity.toString(),
       zone: set.zone,
       side: set.side,
+      level: set.level,
       set_date: set.set_date,
       notes: set.notes || ''
     });
@@ -608,24 +613,6 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-xs">Zone *</Label>
-                      <div className="flex gap-2">
-                        {(['A', 'B', 'C'] as const).map(zone => (
-                          <Button
-                            key={zone}
-                            type="button"
-                            variant={formData.zone === zone ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setFormData(prev => ({ ...prev, zone }))}
-                            className="flex-1"
-                          >
-                            {zone}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
                       <Label className="text-xs">Side *</Label>
                       <div className="flex gap-2">
                         {(['Left', 'Right'] as const).map(side => (
@@ -638,6 +625,46 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                             className="flex-1"
                           >
                             {side}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs">Zone *</Label>
+                      <div className="flex gap-2">
+                        {([
+                          { value: 'A', label: 'A (Front)' },
+                          { value: 'B', label: 'B (Middle)' },
+                          { value: 'C', label: 'C (Back)' }
+                        ] as const).map(zone => (
+                          <Button
+                            key={zone.value}
+                            type="button"
+                            variant={formData.zone === zone.value ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setFormData(prev => ({ ...prev, zone: zone.value }))}
+                            className="flex-1"
+                          >
+                            {zone.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs">Level *</Label>
+                      <div className="flex gap-2">
+                        {(['Top', 'Middle', 'Bottom'] as const).map(level => (
+                          <Button
+                            key={level}
+                            type="button"
+                            variant={formData.level === level ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setFormData(prev => ({ ...prev, level }))}
+                            className="flex-1"
+                          >
+                            {level}
                           </Button>
                         ))}
                       </div>
@@ -683,21 +710,22 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                     <TableHead>Flock</TableHead>
                     <TableHead>House</TableHead>
                     <TableHead className="text-right">Capacity</TableHead>
-                    <TableHead>Zone</TableHead>
                     <TableHead>Side</TableHead>
+                    <TableHead>Zone</TableHead>
+                    <TableHead>Level</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Loading sets...
                       </TableCell>
                     </TableRow>
                   ) : filteredSets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         {sets.length === 0 ? 'No sets added yet. Click "Add Set" to get started.' : 'No sets match your filters.'}
                       </TableCell>
                     </TableRow>
@@ -724,13 +752,18 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                           {set.capacity.toLocaleString()}
                         </TableCell>
                         <TableCell>
+                          <Badge className={getSideColor(set.side)}>
+                            {set.side}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge className={getZoneColor(set.zone)}>
                             {getZoneLabel(set.zone)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getSideColor(set.side)}>
-                            {set.side}
+                          <Badge variant="outline" className="bg-slate-100 text-slate-800">
+                            {set.level}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
