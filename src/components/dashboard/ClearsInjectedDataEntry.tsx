@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table,TableHeader,TableRow,TableHead, TableBody, TableCell,} from "@/components/ui/table";
-import { Edit, Trash2 } from "lucide-react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   initialClear?: number | null;
@@ -32,24 +32,28 @@ export default function ClearsInjectedDataEntry({
   saving,
   context,
 }: Props) {
-  const [sampleSize] = useState<number>(648); // Fixed sample size
+  const [sampleSize, setSampleSize] = useState<string>('648');
+  const [showCustomSize, setShowCustomSize] = useState(false);
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
   const [technicianName, setTechnicianName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  const sampleSizePresets = [150, 300, 432, 576, 648, 720];
+  const sampleSizeNum = parseInt(sampleSize) || 648;
 
   useEffect(() => {
     setClearNum(initialClear?.toString() ?? "");
   }, [initialClear]);
 
   const clear = Number.isFinite(Number(clearNum)) ? Number(clearNum) : 0;
-  const injected = Math.max(0, sampleSize - clear); // Auto-calculated: Sample Size - Clears
+  const injected = Math.max(0, sampleSizeNum - clear); // Auto-calculated: Sample Size - Clears
 
-  const valid = Number.isInteger(clear) && clear >= 0 && clear <= sampleSize && technicianName.trim().length > 0;
+  const valid = Number.isInteger(clear) && clear >= 0 && clear <= sampleSizeNum && sampleSizeNum >= 50 && sampleSizeNum <= 2000 && technicianName.trim().length > 0;
 
   const clearPct =
-    Number.isInteger(clear) && sampleSize > 0 ? ((clear / sampleSize) * 100).toFixed(2) : null;
+    Number.isInteger(clear) && sampleSizeNum > 0 ? ((clear / sampleSizeNum) * 100).toFixed(2) : null;
   const injPct =
-    Number.isInteger(injected) && sampleSize > 0 ? ((injected / sampleSize) * 100).toFixed(2) : null;
+    Number.isInteger(injected) && sampleSizeNum > 0 ? ((injected / sampleSizeNum) * 100).toFixed(2) : null;
 
   return (
     <>
@@ -57,14 +61,41 @@ export default function ClearsInjectedDataEntry({
       <CardContent className="p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="sampleSize">Sample Size</Label>
-            <Input
-              id="sampleSize"
-              type="number"
-              value={sampleSize}
-              disabled
-              className="bg-gray-100 font-medium"
-            />
+            <Label htmlFor="sampleSize">Sample Size *</Label>
+            <div className="flex gap-2">
+              <Select
+                value={showCustomSize ? 'custom' : sampleSize}
+                onValueChange={(v) => {
+                  if (v === 'custom') {
+                    setShowCustomSize(true);
+                  } else {
+                    setSampleSize(v);
+                    setShowCustomSize(false);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sampleSizePresets.map(size => (
+                    <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {showCustomSize && (
+                <Input
+                  type="number"
+                  value={sampleSize}
+                  onChange={(e) => setSampleSize(e.target.value)}
+                  placeholder="50-2000"
+                  className="w-24"
+                  min={50}
+                  max={2000}
+                />
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
