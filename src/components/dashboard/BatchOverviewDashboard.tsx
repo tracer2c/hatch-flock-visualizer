@@ -111,11 +111,21 @@ const BatchOverviewDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "setting": return "bg-blue-100 text-blue-800";
-      case "incubating": return "bg-yellow-100 text-yellow-800";
-      case "hatching": return "bg-green-100 text-green-800";
-      case "completed": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "setting": return "bg-blue-500/10 text-blue-700 border-blue-200";
+      case "incubating": return "bg-amber-500/10 text-amber-700 border-amber-200";
+      case "hatching": return "bg-green-500/10 text-green-700 border-green-200";
+      case "completed": return "bg-slate-500/10 text-slate-600 border-slate-200";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getStatusBorderColor = (status: string) => {
+    switch (status) {
+      case "setting": return "border-l-blue-500";
+      case "incubating": return "border-l-amber-500";
+      case "hatching": return "border-l-green-500";
+      case "completed": return "border-l-slate-400";
+      default: return "border-l-muted";
     }
   };
 
@@ -311,14 +321,14 @@ const BatchOverviewDashboard = () => {
   return (
     <>
       {isLoading ? (
-        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-4">
+        <div className="h-screen grid grid-rows-[auto_auto_1fr] p-4 gap-6">
           <Skeleton className="h-14" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
             ))}
           </div>
-          <div className="grid grid-cols-12 gap-4">
+          <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 lg:col-span-8">
               <Skeleton className="h-full" />
             </div>
@@ -328,9 +338,9 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="w-full space-y-4">
-          {/* Enterprise Header - Clean Layout */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4">
+        <div className="w-full space-y-6">
+          {/* Enterprise Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-muted/40 to-transparent border shadow-sm">
             {/* Left Section: Analytics Navigation + Hatchery Filter */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {/* Analytics Navigation Dropdown */}
@@ -342,7 +352,7 @@ const BatchOverviewDashboard = () => {
                   if (value === 'machine-utilization') navigate('/machine-utilization');
                 }}
               >
-                <SelectTrigger className="w-[160px] h-9 bg-background shadow-sm">
+                <SelectTrigger className="w-[160px] h-10 bg-background shadow-sm border-border/60">
                   <TrendingUp className="mr-2 h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Analytics</span>
                 </SelectTrigger>
@@ -355,7 +365,8 @@ const BatchOverviewDashboard = () => {
               
               {/* Hatchery Filter */}
               <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
-                <SelectTrigger className="w-[160px] h-9 bg-background shadow-sm">
+                <SelectTrigger className="w-[160px] h-10 bg-background shadow-sm border-border/60">
+                  <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="All Hatcheries" />
                 </SelectTrigger>
                 <SelectContent>
@@ -372,8 +383,8 @@ const BatchOverviewDashboard = () => {
             {/* Right Section: View Controls + Actions */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-background">
-                <span className="text-xs text-muted-foreground">{displayMode === 'simple' ? 'Simple' : 'Detailed'}</span>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-background shadow-sm">
+                <span className="text-xs font-medium text-muted-foreground">{displayMode === 'simple' ? 'Simple' : 'Detailed'}</span>
                 <Switch
                   checked={displayMode === 'detailed'}
                   onCheckedChange={(checked) => setDisplayMode(checked ? 'detailed' : 'simple')}
@@ -381,113 +392,129 @@ const BatchOverviewDashboard = () => {
               </div>
 
               {/* Action Buttons */}
-              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 shadow-sm">
+              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-10 w-10 shadow-sm">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button size="icon" onClick={handleExport} className="h-9 w-9 shadow-sm">
+              <Button size="icon" onClick={handleExport} className="h-10 w-10 shadow-sm">
                 <Download className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <StatCard
-              title="All Houses"
-              value={totalBatchesCount.toString()}
-              icon={<Building2 className="h-10 w-10 text-primary" />}
-              description="Total number of houses in the system across all hatcheries. Each house represents a group of eggs set for incubation at a specific date and time."
-              trendLabel={
-                lastWeekBatchesCount > 0 
-                  ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
-                  : `Total houses in system`
-              }
-              trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
-            />
-            <StatCard
-              title="Average Fertility"
-              value={`${avgFert}%`}
-              icon={<Egg className="h-10 w-10 text-amber-500" />}
-              description="The average fertility percentage across all analyzed houses. Fertility measures the percentage of eggs that contain viable embryos after candling analysis."
-              trendLabel={
-                targets?.fertility_rate 
-                  ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target (${targets.fertility_rate}%)`
-                  : "Target: 85%"
-              }
-              trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
-            />
-            <StatCard
-              title="Average HOF%"
-              value={`${avgHOF}%`}
-              icon={<Bird className="h-10 w-10 text-green-500" />}
-              description="Average Hatch of Fertile percentage across all analyzed houses. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
-              trendLabel={
-                targets?.hof_rate 
-                  ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target (${targets.hof_rate}%)`
-                  : "Target: 88%"
-              }
-              trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
-            />
-            <StatCard
-              title="Average HOI%"
-              value={`${avgHOI}%`}
-              icon={<Syringe className="h-10 w-10 text-blue-500" />}
-              description="Average Hatch of Injection percentage across all analyzed houses. HOI% = (Chicks Hatched / Eggs Injected) × 100"
-              trendLabel={
-                targets?.hoi_rate 
-                  ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target (${targets.hoi_rate}%)`
-                  : "Target: 90%"
-              }
-              trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
-            />
-            <StatCard
-              title="Average Flock Age"
-              value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
-              icon={<Clock className="h-10 w-10 text-slate-500" />}
-              description={
-                flockAgeData 
-                  ? `Average age of flocks in active batches. Range: ${flockAgeData.min}-${flockAgeData.max} weeks from ${flockAgeData.count} active flock(s). Peak performance: 35-50 weeks.`
-                  : "No active flocks to display"
-              }
-              trendLabel={
-                flockAgeData?.average 
-                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
-                    ? "Peak Performance Age" 
-                    : flockAgeData.average > 50
-                    ? "Aging Flock Range"
-                    : "Young Flock Range"
-                  : "N/A"
-              }
-              trendDirection={
-                flockAgeData?.average 
-                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
-                    ? "up"
+          {/* KPI Cards Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="text-sm font-medium text-muted-foreground">Key Performance Indicators</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              <StatCard
+                title="All Houses"
+                value={totalBatchesCount.toString()}
+                icon={<Building2 className="h-8 w-8 text-primary" />}
+                accentColor="from-primary via-primary/70 to-accent"
+                description="Total number of houses in the system across all hatcheries."
+                trendLabel={
+                  lastWeekBatchesCount > 0 
+                    ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
+                    : `Total houses in system`
+                }
+                trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
+              />
+              <StatCard
+                title="Avg Fertility"
+                value={`${avgFert}%`}
+                icon={<Egg className="h-8 w-8 text-amber-500" />}
+                accentColor="from-amber-400 via-amber-500 to-orange-500"
+                description="Average fertility percentage across all analyzed houses."
+                trendLabel={
+                  targets?.fertility_rate 
+                    ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target`
+                    : "Target: 85%"
+                }
+                trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
+              />
+              <StatCard
+                title="Average HOF%"
+                value={`${avgHOF}%`}
+                icon={<Bird className="h-8 w-8 text-green-500" />}
+                accentColor="from-green-400 via-green-500 to-emerald-500"
+                description="Average Hatch of Fertile percentage. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
+                trendLabel={
+                  targets?.hof_rate 
+                    ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target`
+                    : "Target: 88%"
+                }
+                trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
+              />
+              <StatCard
+                title="Average HOI%"
+                value={`${avgHOI}%`}
+                icon={<Syringe className="h-8 w-8 text-blue-500" />}
+                accentColor="from-blue-400 via-blue-500 to-indigo-500"
+                description="Average Hatch of Injection percentage. HOI% = (Chicks Hatched / Eggs Injected) × 100"
+                trendLabel={
+                  targets?.hoi_rate 
+                    ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target`
+                    : "Target: 90%"
+                }
+                trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
+              />
+              <StatCard
+                title="Avg Flock Age"
+                value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
+                icon={<Clock className="h-8 w-8 text-slate-500" />}
+                accentColor="from-slate-400 via-slate-500 to-slate-600"
+                description={
+                  flockAgeData 
+                    ? `Range: ${flockAgeData.min}-${flockAgeData.max} weeks. Peak: 35-50 weeks.`
+                    : "No active flocks"
+                }
+                trendLabel={
+                  flockAgeData?.average 
+                    ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                      ? "Peak Performance" 
+                      : flockAgeData.average > 50
+                      ? "Aging Range"
+                      : "Young Range"
+                    : "N/A"
+                }
+                trendDirection={
+                  flockAgeData?.average 
+                    ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                      ? "up"
+                      : null
                     : null
-                  : null
-              }
-            />
+                }
+              />
+            </div>
           </div>
 
-          {/* Main Content Grid with Critical Events */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-420px)]">
-                <CardHeader className="pb-4 flex-shrink-0">
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-480px)] overflow-hidden shadow-lg">
+                {/* Gradient Accent */}
+                <div className="h-1 bg-gradient-to-r from-blue-500 via-primary to-accent flex-shrink-0" />
+                
+                <CardHeader className="pb-4 flex-shrink-0 bg-gradient-to-b from-muted/30 to-transparent">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 flex-shrink-0" />
-                      <CardTitle className="text-base md:text-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Building2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <CardTitle className="text-base md:text-lg font-semibold">
                         {pipelineView === "all" && "All Houses"}
                         {pipelineView === "active" && "Active Houses Pipeline"}
                         {pipelineView === "completed" && "Completed Houses"}
                         {pipelineView === "incubating" && "Incubating Houses"}
                       </CardTitle>
-                      <Badge variant="secondary" className="text-xs">{listForDisplay.length} houses</Badge>
+                      <Badge variant="secondary" className="text-xs rounded-full px-3">{listForDisplay.length} houses</Badge>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Select value={pipelineView} onValueChange={(value: any) => setPipelineView(value)}>
-                        <SelectTrigger className="w-full sm:w-[130px] h-9">
+                        <SelectTrigger className="w-full sm:w-[130px] h-9 bg-background">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -499,7 +526,7 @@ const BatchOverviewDashboard = () => {
                       </Select>
                       {/* Machine Filter - Inside Pipeline */}
                       <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                        <SelectTrigger className="w-full sm:w-[130px] h-9">
+                        <SelectTrigger className="w-full sm:w-[130px] h-9 bg-background">
                           <SelectValue placeholder="All Machines" />
                         </SelectTrigger>
                         <SelectContent>
@@ -510,35 +537,40 @@ const BatchOverviewDashboard = () => {
                         </SelectContent>
                       </Select>
                       <div className="relative w-full sm:w-auto">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           placeholder="Search..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8 w-full sm:w-[120px] h-9"
+                          className="pl-9 w-full sm:w-[140px] h-9 bg-background"
                         />
                       </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0">
-                  <div className="h-full overflow-y-auto space-y-3">
+                <CardContent className="flex-1 min-h-0 px-4 pb-4">
+                  <div className="h-full overflow-y-auto space-y-3 pr-1">
                     {listForDisplay.length > 0 ? (
                       listForDisplay.map((batch) => (
                         <div
                           key={batch.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors gap-3"
+                          className={cn(
+                            "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg",
+                            "border-l-4 border bg-card hover:bg-muted/40",
+                            "cursor-pointer transition-all duration-200 hover:shadow-md",
+                            getStatusBorderColor(batch.status)
+                          )}
                           onClick={() => navigate(`/process-flow?batch=${batch.batch_number}`)}
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
                             <div className="flex flex-col min-w-0">
-                              <div className="font-medium truncate">{batch.batch_number}</div>
+                              <div className="font-semibold truncate">{batch.batch_number}</div>
                               <div className="text-sm text-muted-foreground truncate">
                                 {batch.flocks?.flock_name} | {batch.machines?.machine_number}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge className={cn("text-xs capitalize border", getStatusColor(batch.status))}>
                                 {batch.status}
                               </Badge>
                               {batch.expected_hatch_date && (
@@ -548,26 +580,26 @@ const BatchOverviewDashboard = () => {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end">
+                          <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end mt-3 sm:mt-0">
                             {displayMode === 'detailed' && (
                               <>
                                 <div className="text-left sm:text-right">
-                                  <div className="text-xs sm:text-sm font-medium">Progress</div>
-                                  <div className="text-xs sm:text-sm text-muted-foreground">
+                                  <div className="text-xs font-medium text-muted-foreground">Progress</div>
+                                  <div className="text-sm font-semibold">
                                     {getProgressDisplay(batch)}
                                   </div>
                                 </div>
                                 <div className="text-left sm:text-right">
-                                  <div className="text-xs sm:text-sm font-medium">Fertility</div>
-                                  <div className="text-xs sm:text-sm text-muted-foreground">
+                                  <div className="text-xs font-medium text-muted-foreground">Fertility</div>
+                                  <div className="text-sm font-semibold">
                                     {batch.fertility_analysis?.fertility_percent 
                                       ? `${batch.fertility_analysis.fertility_percent.toFixed(1)}%`
                                       : '-'}
                                   </div>
                                 </div>
                                 <div className="text-left sm:text-right">
-                                  <div className="text-xs sm:text-sm font-medium">Hatch Rate</div>
-                                  <div className="text-xs sm:text-sm text-muted-foreground">
+                                  <div className="text-xs font-medium text-muted-foreground">Hatch Rate</div>
+                                  <div className="text-sm font-semibold">
                                     {batch.residue_analysis?.hatch_percent 
                                       ? `${batch.residue_analysis.hatch_percent.toFixed(1)}%`
                                       : '-'}
@@ -580,10 +612,12 @@ const BatchOverviewDashboard = () => {
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 sm:py-12">
-                        <Building2 className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-                        <div className="text-base sm:text-lg font-medium">No active houses found</div>
-                        <div className="text-sm text-muted-foreground">Try adjusting your filters or start a new batch</div>
+                      <div className="text-center py-12">
+                        <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                          <Building2 className="h-10 w-10 text-muted-foreground" />
+                        </div>
+                        <div className="text-lg font-semibold">No active houses found</div>
+                        <div className="text-sm text-muted-foreground mt-1">Try adjusting your filters or start a new batch</div>
                       </div>
                     )}
                   </div>
@@ -593,53 +627,67 @@ const BatchOverviewDashboard = () => {
 
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-420px)]">
-                <CardHeader className="pb-4 flex-shrink-0">
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-480px)] overflow-hidden shadow-lg">
+                {/* Gradient Accent */}
+                <div className={cn(
+                  "h-1 flex-shrink-0",
+                  showQAAlerts 
+                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"
+                    : "bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500"
+                )} />
+                
+                <CardHeader className="pb-4 flex-shrink-0 bg-gradient-to-b from-muted/30 to-transparent">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {showQAAlerts ? (
-                        <>
-                          <Activity className="h-5 w-5" />
-                          <span className="text-sm md:text-base">QA Alerts</span>
-                        </>
-                      ) : (
-                        <>
-                          <Gauge className="h-5 w-5" />
-                          <span className="text-sm md:text-base">Machine Utilization</span>
-                        </>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        showQAAlerts ? "bg-amber-500/10" : "bg-cyan-500/10"
+                      )}>
+                        {showQAAlerts ? (
+                          <Activity className="h-5 w-5 text-amber-600" />
+                        ) : (
+                          <Gauge className="h-5 w-5 text-cyan-600" />
+                        )}
+                      </div>
+                      <span className="text-base font-semibold">
+                        {showQAAlerts ? "QA Alerts" : "Machine Utilization"}
+                      </span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowQAAlerts(!showQAAlerts)}
-                      className="text-xs"
+                      className="text-xs font-medium"
                     >
                       Switch
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0 overflow-hidden">
-                  <div className="h-full overflow-y-auto space-y-3 pr-2">
+                <CardContent className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
+                  <div className="h-full overflow-y-auto space-y-3 pr-1">
                     {showQAAlerts ? (
                       qaAlerts && qaAlerts.length > 0 ? (
                         qaAlerts.slice(0, 10).map((alert) => (
-                          <div key={alert.id} className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg">
+                          <div key={alert.id} className="flex items-center justify-between p-3 bg-muted/40 border border-border/60 rounded-lg hover:bg-muted/60 transition-colors">
                             <div className="flex items-center gap-3">
-                              <Activity className="h-4 w-4 text-muted-foreground" />
+                              <div className="p-1.5 rounded-md bg-amber-500/10">
+                                <Activity className="h-4 w-4 text-amber-600" />
+                              </div>
                               <div>
-                                <div className="font-medium text-card-foreground">{alert.batches?.batch_number} - Alert</div>
-                                <div className="text-sm text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
+                                <div className="font-medium text-sm">{alert.batches?.batch_number} - Alert</div>
+                                <div className="text-xs text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
                               </div>
                             </div>
-                            <Badge variant="secondary">Active</Badge>
+                            <Badge variant="secondary" className="text-xs">Active</Badge>
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-8">
-                          <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                          <div className="text-sm font-medium">All systems normal</div>
-                          <div className="text-xs text-muted-foreground">No alerts requiring attention</div>
+                        <div className="text-center py-12">
+                          <div className="p-4 rounded-full bg-green-500/10 w-fit mx-auto mb-3">
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                          </div>
+                          <div className="text-sm font-semibold">All systems normal</div>
+                          <div className="text-xs text-muted-foreground mt-1">No alerts requiring attention</div>
                         </div>
                       )
                     ) : (
@@ -651,24 +699,31 @@ const BatchOverviewDashboard = () => {
                         
                         return filteredMachines && filteredMachines.length > 0 ? (
                           filteredMachines.slice(0, 10).map((machine) => (
-                            <div key={machine.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div key={machine.id} className="flex items-center justify-between p-3 border border-border/60 rounded-lg hover:bg-muted/40 transition-colors">
                               <div className="flex items-center gap-3">
-                                <div className={`w-3 h-3 rounded-full ${machine.status === 'operational' ? 'bg-green-500' : machine.status === 'maintenance' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                <div className={cn(
+                                  "w-3 h-3 rounded-full ring-2 ring-offset-2 ring-offset-background",
+                                  machine.status === 'operational' ? 'bg-green-500 ring-green-500/30' : 
+                                  machine.status === 'maintenance' ? 'bg-yellow-500 ring-yellow-500/30' : 
+                                  'bg-red-500 ring-red-500/30'
+                                )} />
                                 <div>
-                                  <div className="font-medium">{machine.machine_number}</div>
-                                  <div className="text-sm text-muted-foreground">{machine.location}</div>
+                                  <div className="font-medium text-sm">{machine.machine_number}</div>
+                                  <div className="text-xs text-muted-foreground">{machine.location}</div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-sm font-medium">{typeof machine.utilization === 'number' ? machine.utilization.toFixed(2) : machine.utilization}%</div>
+                                <div className="text-sm font-semibold">{typeof machine.utilization === 'number' ? machine.utilization.toFixed(1) : machine.utilization}%</div>
                                 <div className="text-xs text-muted-foreground capitalize">{machine.status}</div>
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="text-center py-8">
-                            <Gauge className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                            <div className="text-sm">No machine data available</div>
+                          <div className="text-center py-12">
+                            <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-3">
+                              <Gauge className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <div className="text-sm font-medium">No machine data available</div>
                           </div>
                         );
                       })()
@@ -676,8 +731,8 @@ const BatchOverviewDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
           </div>
-        </div>
         </div>
       )}
     </>
