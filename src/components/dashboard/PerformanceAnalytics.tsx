@@ -10,13 +10,11 @@ import PerformanceCharts from "./PerformanceCharts";
 import ComparisonAnalysis from "./ComparisonAnalysis";
 import AgeBasedAnalytics from "./AgeBasedAnalytics";
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 const PerformanceAnalytics = () => {
   const [viewMode, setViewMode] = useState<'simple' | 'detailed'>('simple');
   const [showComparison, setShowComparison] = useState(false);
-  const { viewMode: dataViewMode } = useViewMode();
-  const { data: performanceMetrics } = useBatchPerformanceMetrics(dataViewMode);
+  const { data: performanceMetrics } = useBatchPerformanceMetrics();
 
   return (
     <div className="space-y-6">

@@ -15,7 +15,6 @@ import { useHelpContext } from "@/contexts/HelpContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { ExportService } from "@/services/exportService";
@@ -27,12 +26,11 @@ import utilizationIcon from "@/assets/utilization-icon.png";
 import CriticalEventsPanel from "./CriticalEventsPanel";
 
 const BatchOverviewDashboard = () => {
-  const { viewMode } = useViewMode();
-  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData(viewMode);
-  const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics(viewMode);
-  const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization(viewMode);
+  const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
+  const { data: performanceMetrics, isLoading: metricsLoading } = useBatchPerformanceMetrics();
+  const { data: machineUtilization, isLoading: machinesLoading } = useMachineUtilization();
   const { data: qaAlerts, isLoading: alertsLoading } = useQAAlerts();
-  const { data: flockAgeData } = useAverageFlockAge(viewMode);
+  const { data: flockAgeData } = useAverageFlockAge();
   const { exportChartToPDF } = useChartExport();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -240,8 +238,7 @@ const BatchOverviewDashboard = () => {
           (async () => {
             let query = supabase
               .from('batches')
-              .select('*', { count: 'exact', head: true })
-              .eq('data_type', viewMode);
+              .select('*', { count: 'exact', head: true });
             
             if (hatcheryFilter !== 'all') {
               query = query.eq('unit_id', hatcheryFilter);
@@ -256,7 +253,6 @@ const BatchOverviewDashboard = () => {
             let query = supabase
               .from('batches')
               .select('*', { count: 'exact', head: true })
-              .eq('data_type', viewMode)
               .gte('created_at', lastWeekDate.toISOString());
             
             if (hatcheryFilter !== 'all') {
@@ -292,12 +288,12 @@ const BatchOverviewDashboard = () => {
     };
     
     fetchMetrics();
-  }, [hatcheryFilter, viewMode]);
+  }, [hatcheryFilter]);
 
-  // Refresh data when view mode changes
+  // Refresh data when needed
   useEffect(() => {
     refetchBatches();
-  }, [viewMode, refetchBatches]);
+  }, [refetchBatches]);
 
   useEffect(() => {
     if (!isLoading) {

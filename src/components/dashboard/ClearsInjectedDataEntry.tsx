@@ -45,7 +45,7 @@ export default function ClearsInjectedDataEntry({
   const clear = Number.isFinite(Number(clearNum)) ? Number(clearNum) : 0;
   const injected = Math.max(0, sampleSizeNum - clear); // Auto-calculated: Sample Size - Clears
 
-  const valid = Number.isInteger(clear) && clear >= 0 && clear <= sampleSizeNum && sampleSizeNum >= 50 && sampleSizeNum <= 2000 && technicianName.trim().length > 0;
+  const valid = Number.isInteger(clear) && clear >= 0 && clear <= sampleSizeNum && sampleSizeNum > 0 && technicianName.trim().length > 0;
 
   const clearPct =
     Number.isInteger(clear) && sampleSizeNum > 0 ? ((clear / sampleSizeNum) * 100).toFixed(2) : null;
@@ -63,11 +63,10 @@ export default function ClearsInjectedDataEntry({
               id="sampleSize"
               type="number"
               inputMode="numeric"
-              min={50}
-              max={2000}
+              min={1}
               value={sampleSize}
               onChange={(e) => setSampleSize(e.target.value.replace(/[^\d]/g, ""))}
-              placeholder="Enter sample size (50-2000)"
+              placeholder="Enter sample size"
             />
           </div>
 

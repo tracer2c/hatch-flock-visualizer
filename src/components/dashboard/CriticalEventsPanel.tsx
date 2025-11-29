@@ -4,11 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Clock, CheckCircle, ArrowRight } from "lucide-react";
 import { useCriticalEvents } from "@/hooks/useCriticalEvents";
 import { useNavigate } from "react-router-dom";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 const CriticalEventsPanel = () => {
-  const { viewMode } = useViewMode();
-  const { data: events, isLoading } = useCriticalEvents(viewMode);
+  const { data: events, isLoading } = useCriticalEvents();
   const navigate = useNavigate();
   
   if (isLoading) return <div>Loading events...</div>;

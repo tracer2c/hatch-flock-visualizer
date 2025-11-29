@@ -12,7 +12,6 @@ import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Buil
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { format } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,7 +71,6 @@ const FlockManager = () => {
     technician_name: ''
   });
   const { toast } = useToast();
-  const { viewMode } = useViewMode();
 
   // Units
   type Unit = { id: string; name: string; code?: string; status?: string };
@@ -81,8 +79,7 @@ const FlockManager = () => {
   useEffect(() => {
     loadFlocks();
     loadUnits();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode]); // Reload when viewMode changes
+  }, []);
 
   const loadUnits = async () => {
     const { data, error } = await supabase
@@ -108,7 +105,6 @@ const FlockManager = () => {
         *,
         unit:units(id, name)
       `)
-      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {

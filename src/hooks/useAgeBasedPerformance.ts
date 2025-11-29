@@ -17,9 +17,9 @@ export interface AgeRangeMetrics {
   lateDeadAvg: number;
 }
 
-export const useAgeBasedPerformance = (viewMode: 'original' | 'dummy') => {
+export const useAgeBasedPerformance = () => {
   return useQuery({
-    queryKey: ['age-based-performance', viewMode],
+    queryKey: ['age-based-performance'],
     queryFn: async () => {
       const { data: batches, error } = await supabase
         .from('batches_with_fertility')
@@ -37,7 +37,6 @@ export const useAgeBasedPerformance = (viewMode: 'original' | 'dummy') => {
             mortality_count
           )
         `)
-        .eq('data_type', viewMode)
         .not('fertility_percent', 'is', null);
       
       if (error) throw error;

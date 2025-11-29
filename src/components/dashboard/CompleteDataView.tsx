@@ -9,7 +9,6 @@ import { FertilityAnalysisTab } from "./FertilityAnalysisTab";
 import { HatchPerformanceTab } from "./HatchPerformanceTab";
 import { QAMonitoringTab } from "./QAMonitoringTab";
 import { calculateChicksHatched, calculateEmbryonicMortality } from "@/utils/hatcheryFormulas";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface CompleteDataViewProps {
   activeTab: string;
@@ -29,11 +28,10 @@ interface CompleteDataViewProps {
 export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { viewMode } = useViewMode();
 
   useEffect(() => {
     loadCompleteData();
-  }, [viewMode]);
+  }, []);
 
   // Notify parent when data is ready for export
   useEffect(() => {
@@ -52,7 +50,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [viewMode]);
+  }, []);
 
   const loadCompleteData = async () => {
     try {
@@ -284,12 +282,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }
         };
       });
 
-      // Apply data type filter based on global viewMode
-      const filteredBatches = enrichedBatches.filter(
-        batch => batch.data_type === viewMode
-      );
-
-      setData(filteredBatches);
+      setData(enrichedBatches);
     } catch (error) {
       console.error("Error loading complete data:", error);
       toast.error("Failed to load data");

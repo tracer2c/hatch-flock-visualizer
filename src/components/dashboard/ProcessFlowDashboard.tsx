@@ -12,8 +12,8 @@ interface ProcessFlowDashboardProps {
   viewMode?: 'original' | 'dummy';
 }
 
-const ProcessFlowDashboard = ({ viewMode = 'original' }: ProcessFlowDashboardProps) => {
-  const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics(viewMode);
+const ProcessFlowDashboard = ({}: ProcessFlowDashboardProps) => {
+  const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading performance data...</div>;
