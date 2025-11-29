@@ -893,6 +893,7 @@ export type Database = {
           machine_number: string
           machine_type: Database["public"]["Enums"]["machine_type"]
           notes: string | null
+          setter_mode: Database["public"]["Enums"]["setter_mode"] | null
           status: string | null
           unit_id: string | null
           updated_at: string
@@ -908,6 +909,7 @@ export type Database = {
           machine_number: string
           machine_type: Database["public"]["Enums"]["machine_type"]
           notes?: string | null
+          setter_mode?: Database["public"]["Enums"]["setter_mode"] | null
           status?: string | null
           unit_id?: string | null
           updated_at?: string
@@ -923,6 +925,7 @@ export type Database = {
           machine_number?: string
           machine_type?: Database["public"]["Enums"]["machine_type"]
           notes?: string | null
+          setter_mode?: Database["public"]["Enums"]["setter_mode"] | null
           status?: string | null
           unit_id?: string | null
           updated_at?: string
@@ -940,6 +943,86 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      multi_setter_sets: {
+        Row: {
+          batch_id: string | null
+          capacity: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          data_type: string
+          flock_id: string
+          id: string
+          machine_id: string
+          notes: string | null
+          set_date: string
+          side: Database["public"]["Enums"]["side_type"]
+          updated_at: string
+          zone: Database["public"]["Enums"]["zone_type"]
+        }
+        Insert: {
+          batch_id?: string | null
+          capacity: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_type?: string
+          flock_id: string
+          id?: string
+          machine_id: string
+          notes?: string | null
+          set_date: string
+          side: Database["public"]["Enums"]["side_type"]
+          updated_at?: string
+          zone: Database["public"]["Enums"]["zone_type"]
+        }
+        Update: {
+          batch_id?: string | null
+          capacity?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_type?: string
+          flock_id?: string
+          id?: string
+          machine_id?: string
+          notes?: string | null
+          set_date?: string
+          side?: Database["public"]["Enums"]["side_type"]
+          updated_at?: string
+          zone?: Database["public"]["Enums"]["zone_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_setter_sets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_setter_sets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_setter_sets_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_setter_sets_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
             referencedColumns: ["id"]
           },
         ]
@@ -1819,9 +1902,12 @@ export type Database = {
       breed_type: "broiler" | "layer" | "breeder"
       company_status: "active" | "suspended" | "cancelled"
       machine_type: "setter" | "hatcher" | "combo"
+      setter_mode: "single_setter" | "multi_setter"
+      side_type: "Left" | "Right"
       subscription_type: "trial" | "basic" | "premium" | "enterprise"
       user_role: "company_admin" | "operations_head" | "staff"
       user_status: "active" | "inactive" | "pending"
+      zone_type: "A" | "B" | "C"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1976,9 +2062,12 @@ export const Constants = {
       breed_type: ["broiler", "layer", "breeder"],
       company_status: ["active", "suspended", "cancelled"],
       machine_type: ["setter", "hatcher", "combo"],
+      setter_mode: ["single_setter", "multi_setter"],
+      side_type: ["Left", "Right"],
       subscription_type: ["trial", "basic", "premium", "enterprise"],
       user_role: ["company_admin", "operations_head", "staff"],
       user_status: ["active", "inactive", "pending"],
+      zone_type: ["A", "B", "C"],
     },
   },
 } as const
