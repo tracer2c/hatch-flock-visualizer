@@ -14,7 +14,8 @@ import {
   BarChart3,
   FileSpreadsheet,
   Upload,
-  Activity
+  Activity,
+  Gauge
 } from "lucide-react";
 import {
   Sidebar,
@@ -113,6 +114,13 @@ const advancedAnalyticsItems = [
     path: '/house-flow',
     label: 'House Flow',
     icon: Workflow,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
+  {
+    path: '/machine-utilization',
+    label: 'Machine Utilization',
+    icon: Gauge,
     requiresAuth: true,
     requiredRole: undefined
   }

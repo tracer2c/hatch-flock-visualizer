@@ -1,0 +1,177 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useViewMode } from '@/contexts/ViewModeContext';
+
+export interface MachineMetricsFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  unitId?: string;
+  machineType?: 'setter' | 'hatcher' | 'combo' | 'all';
+  setterMode?: 'single_setter' | 'multi_setter' | 'all';
+  machineIds?: string[];
+}
+
+export interface MachineWithMetrics {
+  id: string;
+  machine_number: string;
+  machine_type: 'setter' | 'hatcher' | 'combo';
+  setter_mode: 'single_setter' | 'multi_setter' | null;
+  capacity: number;
+  status: string | null;
+  location: string | null;
+  unit_id: string | null;
+  unit_name: string | null;
+  utilization_percent: number;
+  eggs_loaded: number;
+  active_batches: number;
+}
+
+export interface MachineKPIs {
+  avgSetterUtilization: number;
+  avgHatcherUtilization: number;
+  housesInSetters: number;
+  housesInHatchers: number;
+  totalSetterCapacity: number;
+  totalHatcherCapacity: number;
+  totalSetterEggs: number;
+  totalHatcherEggs: number;
+}
+
+export const useMachineMetrics = (filters: MachineMetricsFilters) => {
+  const { viewMode } = useViewMode();
+
+  return useQuery({
+    queryKey: ['machine-metrics', filters, viewMode],
+    queryFn: async () => {
+      // Fetch machines with unit info
+      let machinesQuery = supabase
+        .from('machines')
+        .select(`
+          id,
+          machine_number,
+          machine_type,
+          setter_mode,
+          capacity,
+          status,
+          location,
+          unit_id,
+          units(name)
+        `)
+        .eq('data_type', viewMode);
+
+      if (filters.unitId && filters.unitId !== 'all') {
+        machinesQuery = machinesQuery.eq('unit_id', filters.unitId);
+      }
+      if (filters.machineType && filters.machineType !== 'all') {
+        machinesQuery = machinesQuery.eq('machine_type', filters.machineType);
+      }
+      if (filters.setterMode && filters.setterMode !== 'all') {
+        machinesQuery = machinesQuery.eq('setter_mode', filters.setterMode);
+      }
+      if (filters.machineIds && filters.machineIds.length > 0) {
+        machinesQuery = machinesQuery.in('id', filters.machineIds);
+      }
+
+      const { data: machines, error: machinesError } = await machinesQuery;
+      if (machinesError) throw machinesError;
+
+      // Fetch active batches within date range
+      let batchesQuery = supabase
+        .from('batches')
+        .select('id, machine_id, total_eggs_set, status, set_date')
+        .eq('data_type', viewMode)
+        .in('status', ['setting', 'incubating', 'hatching']);
+
+      if (filters.dateFrom) {
+        batchesQuery = batchesQuery.gte('set_date', filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        batchesQuery = batchesQuery.lte('set_date', filters.dateTo);
+      }
+
+      const { data: batches, error: batchesError } = await batchesQuery;
+      if (batchesError) throw batchesError;
+
+      // Calculate metrics per machine
+      const machineMetrics: MachineWithMetrics[] = (machines || []).map((machine: any) => {
+        const machineBatches = (batches || []).filter(b => b.machine_id === machine.id);
+        const eggsLoaded = machineBatches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+        const utilizationPercent = machine.capacity > 0 
+          ? Math.min(Math.round((eggsLoaded / machine.capacity) * 100), 100)
+          : 0;
+
+        return {
+          id: machine.id,
+          machine_number: machine.machine_number,
+          machine_type: machine.machine_type,
+          setter_mode: machine.setter_mode,
+          capacity: machine.capacity,
+          status: machine.status,
+          location: machine.location,
+          unit_id: machine.unit_id,
+          unit_name: machine.units?.name || null,
+          utilization_percent: utilizationPercent,
+          eggs_loaded: eggsLoaded,
+          active_batches: machineBatches.length,
+        };
+      });
+
+      // Calculate KPIs
+      const setters = machineMetrics.filter(m => m.machine_type === 'setter' || m.machine_type === 'combo');
+      const hatchers = machineMetrics.filter(m => m.machine_type === 'hatcher' || m.machine_type === 'combo');
+
+      const totalSetterCapacity = setters.reduce((sum, m) => sum + m.capacity, 0);
+      const totalHatcherCapacity = hatchers.reduce((sum, m) => sum + m.capacity, 0);
+      
+      const setterBatches = (batches || []).filter(b => 
+        ['setting', 'incubating'].includes(b.status) &&
+        setters.some(m => m.id === b.machine_id)
+      );
+      const hatcherBatches = (batches || []).filter(b => 
+        b.status === 'hatching' &&
+        hatchers.some(m => m.id === b.machine_id)
+      );
+
+      const totalSetterEggs = setterBatches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+      const totalHatcherEggs = hatcherBatches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+
+      const avgSetterUtilization = totalSetterCapacity > 0
+        ? Math.round((totalSetterEggs / totalSetterCapacity) * 100)
+        : 0;
+      const avgHatcherUtilization = totalHatcherCapacity > 0
+        ? Math.round((totalHatcherEggs / totalHatcherCapacity) * 100)
+        : 0;
+
+      const kpis: MachineKPIs = {
+        avgSetterUtilization: Math.min(avgSetterUtilization, 100),
+        avgHatcherUtilization: Math.min(avgHatcherUtilization, 100),
+        housesInSetters: setterBatches.length,
+        housesInHatchers: hatcherBatches.length,
+        totalSetterCapacity,
+        totalHatcherCapacity,
+        totalSetterEggs,
+        totalHatcherEggs,
+      };
+
+      return {
+        machines: machineMetrics,
+        kpis,
+      };
+    },
+    staleTime: 30000,
+  });
+};
+
+export const useUnitsForFilter = () => {
+  return useQuery({
+    queryKey: ['units-for-filter'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('units')
+        .select('id, name, code')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
