@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   initialClear?: number | null;
@@ -33,12 +32,10 @@ export default function ClearsInjectedDataEntry({
   context,
 }: Props) {
   const [sampleSize, setSampleSize] = useState<string>('648');
-  const [showCustomSize, setShowCustomSize] = useState(false);
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
   const [technicianName, setTechnicianName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  const sampleSizePresets = [150, 300, 432, 576, 648, 720];
   const sampleSizeNum = parseInt(sampleSize) || 648;
 
   useEffect(() => {
@@ -62,40 +59,17 @@ export default function ClearsInjectedDataEntry({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="sampleSize">Sample Size *</Label>
-            <div className="flex gap-2">
-              <Select
-                value={showCustomSize ? 'custom' : sampleSize}
-                onValueChange={(v) => {
-                  if (v === 'custom') {
-                    setShowCustomSize(true);
-                  } else {
-                    setSampleSize(v);
-                    setShowCustomSize(false);
-                  }
-                }}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sampleSizePresets.map(size => (
-                    <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
-                  ))}
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {showCustomSize && (
-                <Input
-                  type="number"
-                  value={sampleSize}
-                  onChange={(e) => setSampleSize(e.target.value)}
-                  placeholder="50-2000"
-                  className="w-24"
-                  min={50}
-                  max={2000}
-                />
-              )}
-            </div>
+            <Input
+              id="sampleSize"
+              type="number"
+              inputMode="numeric"
+              min={50}
+              max={2000}
+              value={sampleSize}
+              onChange={(e) => setSampleSize(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder="Enter sample size (50-2000)"
+            />
+            <p className="text-xs text-muted-foreground">Default: 648</p>
           </div>
 
           <div className="space-y-2">

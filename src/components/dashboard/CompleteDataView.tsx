@@ -23,9 +23,10 @@ interface CompleteDataViewProps {
     dateFrom: string;
     dateTo: string;
   };
+  onDataReady?: (data: any[]) => void;
 }
 
-export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDataViewProps) => {
+export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { viewMode } = useViewMode();
@@ -33,6 +34,13 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters }: CompleteDat
   useEffect(() => {
     loadCompleteData();
   }, [viewMode]);
+
+  // Notify parent when data is ready for export
+  useEffect(() => {
+    if (onDataReady && data.length > 0) {
+      onDataReady(data);
+    }
+  }, [data, onDataReady]);
 
   // Auto-refresh when user returns to the page
   useEffect(() => {

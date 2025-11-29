@@ -1,22 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Download, TrendingUp, RefreshCw } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Download, TrendingUp, RefreshCw, FileSpreadsheet, FileText } from "lucide-react";
 import { CompleteDataView } from "@/components/dashboard/CompleteDataView";
 import { DataSheetCenteredFilterDialog } from "@/components/dashboard/DataSheetCenteredFilterDialog";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ExportService } from "@/services/exportService";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 const EmbrexDataSheetPage = () => {
   const [activeTab, setActiveTab] = useState("embrex");
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [exportData, setExportData] = useState<any[]>([]);
   const { showPercentages, setShowPercentages } = usePercentageToggle();
+  const { viewMode } = useViewMode();
   const navigate = useNavigate();
 
   // Filter state
@@ -140,9 +145,128 @@ const EmbrexDataSheetPage = () => {
     }
   }, []);
 
+  // Column mappings for each tab
+  const getColumnMapForTab = (tab: string): Record<string, string> => {
+    switch (tab) {
+      case 'embrex':
+        return {
+          'Flock #': 'flock_number',
+          'Flock Name': 'flock_name',
+          'House #': 'house_number',
+          'Age (weeks)': 'age_weeks',
+          'Set Date': 'set_date',
+          'Total Eggs': 'total_eggs_set',
+          'Cleared': 'eggs_cleared',
+          'Injected': 'eggs_injected',
+          'Chicks Hatched': 'chicks_hatched',
+          'Technician': 'hoi_technician_name',
+          'Notes': 'hoi_notes'
+        };
+      case 'residue':
+        return {
+          'Flock #': 'flock_number',
+          'Flock Name': 'flock_name',
+          'House #': 'house_number',
+          'Age (weeks)': 'age_weeks',
+          'Set Date': 'set_date',
+          'Sample Size': 'sample_size',
+          'Infertile': 'infertile_eggs',
+          'Early Dead': 'early_dead',
+          'Mid Dead': 'mid_dead',
+          'Late Dead': 'late_dead',
+          'Cull Chicks': 'cull_chicks',
+          'HOF %': 'hof_percent',
+          'HOI %': 'hoi_percent',
+          'Technician': 'lab_technician',
+          'Notes': 'notes'
+        };
+      case 'egg-pack':
+        return {
+          'Flock #': 'flock_number',
+          'Flock Name': 'flock_name',
+          'House #': 'house_number',
+          'Age (weeks)': 'age_weeks',
+          'Inspection Date': 'inspection_date',
+          'Sample Size': 'sample_size',
+          'Grade A': 'grade_a',
+          'Grade B': 'grade_b',
+          'Grade C': 'grade_c',
+          'Cracked': 'cracked',
+          'Dirty': 'dirty',
+          'Inspector': 'inspector_name',
+          'Notes': 'notes'
+        };
+      case 'hatch':
+        return {
+          'Flock #': 'flock_number',
+          'Flock Name': 'flock_name',
+          'House #': 'house_number',
+          'Age (weeks)': 'age_weeks',
+          'Set Date': 'set_date',
+          'Fertile Eggs': 'fertile_eggs',
+          'Fertility %': 'fertility_percent',
+          'Hatch %': 'hatch_percent',
+          'HOF %': 'hof_percent',
+          'HOI %': 'hoi_percent',
+          'Technician': 'technician_name',
+          'Notes': 'notes'
+        };
+      case 'qa':
+        return {
+          'Flock #': 'flock_number',
+          'Flock Name': 'flock_name',
+          'House #': 'house_number',
+          'Check Date': 'check_date',
+          'Day': 'day_of_incubation',
+          'Temperature': 'temperature',
+          'Humidity': 'humidity',
+          'CO2 Level': 'co2_level',
+          'Inspector': 'inspector_name',
+          'Notes': 'notes'
+        };
+      default:
+        return {};
+    }
+  };
+
+  const handleDataReady = useCallback((data: any[]) => {
+    setExportData(data);
+  }, []);
+
   const handleExportCSV = () => {
-    toast.success("CSV export started");
-    // Export functionality will be implemented based on active tab
+    if (exportData.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    const columnMap = getColumnMapForTab(activeTab);
+    const headers = Object.keys(columnMap);
+    const formattedData = exportData.map(row => {
+      const formatted: Record<string, any> = {};
+      Object.entries(columnMap).forEach(([displayName, fieldName]) => {
+        formatted[displayName] = row[fieldName] ?? '';
+      });
+      return formatted;
+    });
+    ExportService.exportToCSV(formattedData, `${activeTab}-data-${new Date().toISOString().split('T')[0]}`, headers);
+    toast.success("CSV exported successfully");
+  };
+
+  const handleExportExcel = () => {
+    if (exportData.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    const columnMap = getColumnMapForTab(activeTab);
+    const headers = Object.keys(columnMap);
+    const formattedData = exportData.map(row => {
+      const formatted: Record<string, any> = {};
+      Object.entries(columnMap).forEach(([displayName, fieldName]) => {
+        formatted[displayName] = row[fieldName] ?? '';
+      });
+      return formatted;
+    });
+    ExportService.exportToExcel(formattedData, `${activeTab}-data-${new Date().toISOString().split('T')[0]}`, activeTab.charAt(0).toUpperCase() + activeTab.slice(1), headers);
+    toast.success("Excel exported successfully");
   };
 
   const handleTimelineView = () => {
@@ -182,10 +306,24 @@ const EmbrexDataSheetPage = () => {
               <TrendingUp className="h-4 w-4" />
               Timeline View
             </Button>
-            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -229,6 +367,7 @@ const EmbrexDataSheetPage = () => {
           activeTab={activeTab} 
           searchTerm={searchTerm}
           filters={filters}
+          onDataReady={handleDataReady}
         />
       </div>
     </div>
