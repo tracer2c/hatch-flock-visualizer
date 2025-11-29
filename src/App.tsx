@@ -22,7 +22,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import InitializeApp from "./components/InitializeApp";
 import ProjectReport from "./pages/ProjectReport";
 import ChatPage from "./pages/ChatPage";
-import ComparisonModelPage from "./pages/ComparisonModelPage";
 import HouseFlowPage from "./pages/HouseFlowPage";
 import EmbrexDataSheetPage from "./pages/EmbrexDataSheetPage";
 import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
@@ -81,7 +80,6 @@ const App = () => {
                             <Route path="/live-tracking" element={<LiveTrackingPage />} />
                             <Route path="/machine-utilization" element={<MachineUtilizationPage />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
-                            <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
                             <Route path="/data-entry" element={<DataEntryPage />} />
                             <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />

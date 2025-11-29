@@ -11,7 +11,6 @@ import {
   Workflow,
   ChevronDown,
   TrendingUp,
-  BarChart3,
   FileSpreadsheet,
   Upload,
   Activity,
@@ -96,13 +95,6 @@ const navigationItems = [
 ];
 
 const advancedAnalyticsItems = [
-  {
-    path: '/comparison-model',
-    label: 'Comparison Model',
-    icon: BarChart3,
-    requiresAuth: true,
-    requiredRole: undefined
-  },
   {
     path: '/process-flow',
     label: 'Process Flow',

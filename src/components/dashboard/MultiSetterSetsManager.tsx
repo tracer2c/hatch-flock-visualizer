@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, ChevronDown, ChevronRight, Filter, X, Calendar, Layers, Activity, Thermometer } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronDown, ChevronRight, Filter, X, Calendar, Layers, Activity, Thermometer, ArrowRightLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Setter18PointDisplay from "@/components/dashboard/Setter18PointDisplay";
+import MachineTransfersTab from "@/components/dashboard/MachineTransfersTab";
 
 interface MultiSetterSet {
   id: string;
@@ -92,13 +93,16 @@ interface MultiSetterSetsManagerProps {
   machine: {
     id: string;
     machine_number: string;
+    machine_type: string;
     capacity: number;
     unit_id: string | null;
   };
   unitName?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
-const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: MultiSetterSetsManagerProps) => {
+const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFrom, dateTo }: MultiSetterSetsManagerProps) => {
   const [activeTab, setActiveTab] = useState('sets');
   const [sets, setSets] = useState<MultiSetterSet[]>([]);
   const [qaRecords, setQaRecords] = useState<QARecord[]>([]);
@@ -449,14 +453,18 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sets" className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
               Sets ({sets.length})
             </TabsTrigger>
             <TabsTrigger value="qa" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Recent QA ({qaRecords.length})
+              QA ({qaRecords.length})
+            </TabsTrigger>
+            <TabsTrigger value="transfers" className="flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4" />
+              Transfers
             </TabsTrigger>
           </TabsList>
 
@@ -938,6 +946,16 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName }: Multi
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Transfers Tab */}
+          <TabsContent value="transfers" className="mt-4">
+            <MachineTransfersTab
+              machineId={machine.id}
+              machineType={machine.machine_type}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>
