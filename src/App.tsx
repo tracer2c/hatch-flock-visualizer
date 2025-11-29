@@ -29,6 +29,7 @@ import EmbrexTimelinePage from "./pages/EmbrexTimelinePage";
 import ResidueBreakoutPage from "./pages/ResidueBreakoutPage";
 import BulkDataImportPage from "./pages/BulkDataImportPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import LiveTrackingPage from "./pages/LiveTrackingPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -76,6 +77,7 @@ const App = () => {
                             <Route path="/process-flow" element={<ProcessFlowPage />} />
                             <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
                             <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
+                            <Route path="/live-tracking" element={<LiveTrackingPage />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
                             <Route path="/comparison-model" element={<ComparisonModelPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />

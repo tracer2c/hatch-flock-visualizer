@@ -13,7 +13,8 @@ import {
   TrendingUp,
   BarChart3,
   FileSpreadsheet,
-  Upload
+  Upload,
+  Activity
 } from "lucide-react";
 import {
   Sidebar,
@@ -64,6 +65,12 @@ const navigationItems = [
     path: '/embrex-timeline',
     label: 'Timeline',
     icon: TrendingUp,
+    requiresAuth: true
+  },
+  {
+    path: '/live-tracking',
+    label: 'Live Tracking',
+    icon: Activity,
     requiresAuth: true
   },
   {
