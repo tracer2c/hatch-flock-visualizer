@@ -338,11 +338,11 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="w-full space-y-6">
-          {/* Enterprise Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-muted/40 to-transparent border shadow-sm">
+        <div className="w-full space-y-4">
+          {/* Compact Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/20 border">
             {/* Left Section: Analytics Navigation + Hatchery Filter */}
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               {/* Analytics Navigation Dropdown */}
               <Select 
                 value="" 
@@ -352,9 +352,9 @@ const BatchOverviewDashboard = () => {
                   if (value === 'machine-utilization') navigate('/machine-utilization');
                 }}
               >
-                <SelectTrigger className="w-[160px] h-10 bg-background shadow-sm border-border/60">
-                  <TrendingUp className="mr-2 h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Analytics</span>
+                <SelectTrigger className="w-[140px] h-9 bg-background border-border/50">
+                  <TrendingUp className="mr-2 h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm">Analytics</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="house-flow">House Flow</SelectItem>
@@ -365,8 +365,8 @@ const BatchOverviewDashboard = () => {
               
               {/* Hatchery Filter */}
               <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
-                <SelectTrigger className="w-[160px] h-10 bg-background shadow-sm border-border/60">
-                  <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectTrigger className="w-[140px] h-9 bg-background border-border/50">
+                  <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue placeholder="All Hatcheries" />
                 </SelectTrigger>
                 <SelectContent>
@@ -381,130 +381,119 @@ const BatchOverviewDashboard = () => {
             </div>
 
             {/* Right Section: View Controls + Actions */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-background shadow-sm">
-                <span className="text-xs font-medium text-muted-foreground">{displayMode === 'simple' ? 'Simple' : 'Detailed'}</span>
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-background">
+                <span className="text-xs text-muted-foreground">{displayMode === 'simple' ? 'Simple' : 'Detailed'}</span>
                 <Switch
                   checked={displayMode === 'detailed'}
                   onCheckedChange={(checked) => setDisplayMode(checked ? 'detailed' : 'simple')}
                 />
               </div>
 
-              {/* Action Buttons */}
-              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-10 w-10 shadow-sm">
+              {/* Action Buttons - Blue hover */}
+              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button size="icon" onClick={handleExport} className="h-10 w-10 shadow-sm">
+              <Button variant="outline" size="icon" onClick={handleExport} className="h-9 w-9 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
                 <Download className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* KPI Cards Section */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Key Performance Indicators</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-              <StatCard
-                title="All Houses"
-                value={totalBatchesCount.toString()}
-                icon={<Building2 className="h-8 w-8 text-primary" />}
-                accentColor="from-primary via-primary/70 to-accent"
-                description="Total number of houses in the system across all hatcheries."
-                trendLabel={
-                  lastWeekBatchesCount > 0 
-                    ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
-                    : `Total houses in system`
-                }
-                trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
-              />
-              <StatCard
-                title="Avg Fertility"
-                value={`${avgFert}%`}
-                icon={<Egg className="h-8 w-8 text-amber-500" />}
-                accentColor="from-amber-400 via-amber-500 to-orange-500"
-                description="Average fertility percentage across all analyzed houses."
-                trendLabel={
-                  targets?.fertility_rate 
-                    ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target`
-                    : "Target: 85%"
-                }
-                trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
-              />
-              <StatCard
-                title="Average HOF%"
-                value={`${avgHOF}%`}
-                icon={<Bird className="h-8 w-8 text-green-500" />}
-                accentColor="from-green-400 via-green-500 to-emerald-500"
-                description="Average Hatch of Fertile percentage. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
-                trendLabel={
-                  targets?.hof_rate 
-                    ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target`
-                    : "Target: 88%"
-                }
-                trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
-              />
-              <StatCard
-                title="Average HOI%"
-                value={`${avgHOI}%`}
-                icon={<Syringe className="h-8 w-8 text-blue-500" />}
-                accentColor="from-blue-400 via-blue-500 to-indigo-500"
-                description="Average Hatch of Injection percentage. HOI% = (Chicks Hatched / Eggs Injected) × 100"
-                trendLabel={
-                  targets?.hoi_rate 
-                    ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target`
-                    : "Target: 90%"
-                }
-                trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
-              />
-              <StatCard
-                title="Avg Flock Age"
-                value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
-                icon={<Clock className="h-8 w-8 text-slate-500" />}
-                accentColor="from-slate-400 via-slate-500 to-slate-600"
-                description={
-                  flockAgeData 
-                    ? `Range: ${flockAgeData.min}-${flockAgeData.max} weeks. Peak: 35-50 weeks.`
-                    : "No active flocks"
-                }
-                trendLabel={
-                  flockAgeData?.average 
-                    ? flockAgeData.average >= 35 && flockAgeData.average <= 50
-                      ? "Peak Performance" 
-                      : flockAgeData.average > 50
-                      ? "Aging Range"
-                      : "Young Range"
-                    : "N/A"
-                }
-                trendDirection={
-                  flockAgeData?.average 
-                    ? flockAgeData.average >= 35 && flockAgeData.average <= 50
-                      ? "up"
-                      : null
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <StatCard
+              title="All Houses"
+              value={totalBatchesCount.toString()}
+              icon={<Building2 className="h-5 w-5 text-primary" />}
+              description="Total number of houses in the system across all hatcheries."
+              trendLabel={
+                lastWeekBatchesCount > 0 
+                  ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
+                  : `Total houses`
+              }
+              trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
+            />
+            <StatCard
+              title="Avg Fertility"
+              value={`${avgFert}%`}
+              icon={<Egg className="h-5 w-5 text-primary" />}
+              description="Average fertility percentage across all analyzed houses."
+              trendLabel={
+                targets?.fertility_rate 
+                  ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target`
+                  : "Target: 85%"
+              }
+              trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
+            />
+            <StatCard
+              title="Average HOF%"
+              value={`${avgHOF}%`}
+              icon={<Bird className="h-5 w-5 text-primary" />}
+              description="Average Hatch of Fertile percentage. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
+              trendLabel={
+                targets?.hof_rate 
+                  ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target`
+                  : "Target: 88%"
+              }
+              trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
+            />
+            <StatCard
+              title="Average HOI%"
+              value={`${avgHOI}%`}
+              icon={<Syringe className="h-5 w-5 text-primary" />}
+              description="Average Hatch of Injection percentage. HOI% = (Chicks Hatched / Eggs Injected) × 100"
+              trendLabel={
+                targets?.hoi_rate 
+                  ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target`
+                  : "Target: 90%"
+              }
+              trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
+            />
+            <StatCard
+              title="Avg Flock Age"
+              value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
+              icon={<Clock className="h-5 w-5 text-primary" />}
+              description={
+                flockAgeData 
+                  ? `Range: ${flockAgeData.min}-${flockAgeData.max} weeks. Peak: 35-50 weeks.`
+                  : "No active flocks"
+              }
+              trendLabel={
+                flockAgeData?.average 
+                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                    ? "Peak Performance" 
+                    : flockAgeData.average > 50
+                    ? "Aging Range"
+                    : "Young Range"
+                  : "N/A"
+              }
+              trendDirection={
+                flockAgeData?.average 
+                  ? flockAgeData.average >= 35 && flockAgeData.average <= 50
+                    ? "up"
                     : null
-                }
-              />
-            </div>
+                  : null
+              }
+            />
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-480px)] overflow-hidden shadow-lg">
-                {/* Gradient Accent */}
-                <div className="h-1 bg-gradient-to-r from-blue-500 via-primary to-accent flex-shrink-0" />
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden">
+                {/* Single Blue Accent */}
+                <div className="h-0.5 bg-gradient-to-r from-primary to-primary/60 flex-shrink-0" />
                 
-                <CardHeader className="pb-4 flex-shrink-0 bg-gradient-to-b from-muted/30 to-transparent">
+                <CardHeader className="py-3 px-4 flex-shrink-0">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Building2 className="h-5 w-5 text-primary" />
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-primary/10">
+                        <Building2 className="h-4 w-4 text-primary" />
                       </div>
-                      <CardTitle className="text-base md:text-lg font-semibold">
+                      <CardTitle className="text-sm md:text-base font-semibold">
                         {pipelineView === "all" && "All Houses"}
                         {pipelineView === "active" && "Active Houses Pipeline"}
                         {pipelineView === "completed" && "Completed Houses"}
@@ -627,29 +616,21 @@ const BatchOverviewDashboard = () => {
 
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-480px)] overflow-hidden shadow-lg">
-                {/* Gradient Accent */}
-                <div className={cn(
-                  "h-1 flex-shrink-0",
-                  showQAAlerts 
-                    ? "bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"
-                    : "bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500"
-                )} />
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden">
+                {/* Single Blue Accent */}
+                <div className="h-0.5 bg-gradient-to-r from-primary to-primary/60 flex-shrink-0" />
                 
-                <CardHeader className="pb-4 flex-shrink-0 bg-gradient-to-b from-muted/30 to-transparent">
+                <CardHeader className="py-3 px-4 flex-shrink-0">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        showQAAlerts ? "bg-amber-500/10" : "bg-cyan-500/10"
-                      )}>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-primary/10">
                         {showQAAlerts ? (
-                          <Activity className="h-5 w-5 text-amber-600" />
+                          <Activity className="h-4 w-4 text-primary" />
                         ) : (
-                          <Gauge className="h-5 w-5 text-cyan-600" />
+                          <Gauge className="h-4 w-4 text-primary" />
                         )}
                       </div>
-                      <span className="text-base font-semibold">
+                      <span className="text-sm font-semibold">
                         {showQAAlerts ? "QA Alerts" : "Machine Utilization"}
                       </span>
                     </div>
@@ -657,7 +638,7 @@ const BatchOverviewDashboard = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowQAAlerts(!showQAAlerts)}
-                      className="text-xs font-medium"
+                      className="text-xs hover:bg-primary/10 hover:text-primary"
                     >
                       Switch
                     </Button>
