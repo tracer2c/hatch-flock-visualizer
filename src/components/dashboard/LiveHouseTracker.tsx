@@ -28,8 +28,8 @@ const LiveHouseTracker = () => {
     queryKey: ['houses-tracking', viewMode, activeTab],
     queryFn: async () => {
       const statusFilter = activeTab === 'active' 
-        ? ['setting', 'incubating', 'hatching'] 
-        : ['completed'];
+        ? ['setting', 'incubating', 'hatching'] as const
+        : ['completed'] as const;
       
       const { data, error } = await supabase
         .from('batches')
