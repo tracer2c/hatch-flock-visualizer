@@ -329,84 +329,64 @@ const BatchOverviewDashboard = () => {
         </div>
       ) : (
         <div className="w-full space-y-4">
-          {/* Enterprise Header - Navigation & Filters */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b pb-4">
-            {/* Left Section: Navigation + Primary Filters */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full lg:w-auto">
-              {/* Navigation */}
-              <Button 
-                variant="outline" 
-                className="h-9 w-full sm:w-auto shadow-sm hover:shadow-md transition-all duration-200 shrink-0"
-                onClick={() => navigate('/house-flow')}
+          {/* Enterprise Header - Clean Layout */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4">
+            {/* Left Section: Analytics Navigation + Hatchery Filter */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {/* Analytics Navigation Dropdown */}
+              <Select 
+                value="" 
+                onValueChange={(value) => {
+                  if (value === 'house-flow') navigate('/house-flow');
+                  if (value === 'process-flow') navigate('/process-flow');
+                  if (value === 'machine-utilization') navigate('/machine-utilization');
+                }}
               >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                House Flow
-              </Button>
+                <SelectTrigger className="w-[160px] h-9 bg-background shadow-sm">
+                  <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Analytics</span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="house-flow">House Flow</SelectItem>
+                  <SelectItem value="process-flow">Process Flow</SelectItem>
+                  <SelectItem value="machine-utilization">Machine Utilization</SelectItem>
+                </SelectContent>
+              </Select>
               
-              {/* Divider - Hidden on mobile */}
-              <div className="hidden sm:block h-6 w-px bg-border mx-1" />
-              
-              {/* Filters Group */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto sm:px-3 sm:py-1.5 sm:rounded-md sm:bg-muted/30 sm:border sm:border-border/50">
-                {/* Hatchery Filter */}
-                <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
-                  <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] h-9 bg-background">
-                    <SelectValue placeholder="All Hatcheries" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Hatcheries</SelectItem>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Machine Filter */}
-                {machinesList && machinesList.length > 0 && (
-                  <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                    <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] h-9 bg-background">
-                      <SelectValue placeholder="All Machines" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Machines</SelectItem>
-                      {machinesList.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+              {/* Hatchery Filter */}
+              <Select value={hatcheryFilter} onValueChange={setHatcheryFilter}>
+                <SelectTrigger className="w-[160px] h-9 bg-background shadow-sm">
+                  <SelectValue placeholder="All Hatcheries" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Hatcheries</SelectItem>
+                  {units.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Right Section: View Controls + Actions */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               {/* View Mode Toggle */}
-              <div className="flex items-center justify-between sm:justify-start gap-2 px-3 py-1.5 rounded-md border border-border bg-background">
-                <Badge variant={displayMode === 'simple' ? 'default' : 'secondary'} className="text-xs">
-                  {displayMode === 'simple' ? 'Simple' : 'Detailed'}
-                </Badge>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-background">
+                <span className="text-xs text-muted-foreground">{displayMode === 'simple' ? 'Simple' : 'Detailed'}</span>
                 <Switch
                   checked={displayMode === 'detailed'}
                   onCheckedChange={(checked) => setDisplayMode(checked ? 'detailed' : 'simple')}
                 />
               </div>
 
-              {/* Divider - Hidden on mobile */}
-              <div className="hidden sm:block h-6 w-px bg-border" />
-
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleRefresh} className="flex-1 sm:flex-none shadow-sm hover:shadow-md transition-all duration-200">
-                  <RefreshCw className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Refresh</span>
-                </Button>
-                <Button size="sm" onClick={handleExport} className="flex-1 sm:flex-none shadow-sm hover:shadow-md transition-all duration-200">
-                  <Download className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </div>
+              <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 shadow-sm">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button size="icon" onClick={handleExport} className="h-9 w-9 shadow-sm">
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
@@ -507,7 +487,7 @@ const BatchOverviewDashboard = () => {
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <Select value={pipelineView} onValueChange={(value: any) => setPipelineView(value)}>
-                        <SelectTrigger className="w-full sm:w-[140px] md:w-[160px] h-9">
+                        <SelectTrigger className="w-full sm:w-[130px] h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -517,13 +497,25 @@ const BatchOverviewDashboard = () => {
                           <SelectItem value="completed">Completed</SelectItem>
                         </SelectContent>
                       </Select>
+                      {/* Machine Filter - Inside Pipeline */}
+                      <Select value={selectedMachine} onValueChange={setSelectedMachine}>
+                        <SelectTrigger className="w-full sm:w-[130px] h-9">
+                          <SelectValue placeholder="All Machines" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Machines</SelectItem>
+                          {machinesList.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <div className="relative w-full sm:w-auto">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search houses..."
+                          placeholder="Search..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8 w-full sm:w-[140px] md:w-[180px] h-9"
+                          className="pl-8 w-full sm:w-[120px] h-9"
                         />
                       </div>
                     </div>
@@ -651,28 +643,35 @@ const BatchOverviewDashboard = () => {
                         </div>
                       )
                     ) : (
-                      machineUtilization && machineUtilization.length > 0 ? (
-                        machineUtilization.slice(0, 10).map((machine) => (
-                          <div key={machine.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full ${machine.status === 'operational' ? 'bg-green-500' : machine.status === 'maintenance' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                              <div>
-                                <div className="font-medium">{machine.machine_number}</div>
-                                <div className="text-sm text-muted-foreground">{machine.location}</div>
+                      (() => {
+                        // Filter machines by selected hatchery
+                        const filteredMachines = hatcheryFilter === "all" 
+                          ? machineUtilization 
+                          : machineUtilization?.filter((machine: any) => machine.unit_id === hatcheryFilter);
+                        
+                        return filteredMachines && filteredMachines.length > 0 ? (
+                          filteredMachines.slice(0, 10).map((machine) => (
+                            <div key={machine.id} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${machine.status === 'operational' ? 'bg-green-500' : machine.status === 'maintenance' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                <div>
+                                  <div className="font-medium">{machine.machine_number}</div>
+                                  <div className="text-sm text-muted-foreground">{machine.location}</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium">{typeof machine.utilization === 'number' ? machine.utilization.toFixed(2) : machine.utilization}%</div>
+                                <div className="text-xs text-muted-foreground capitalize">{machine.status}</div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">{typeof machine.utilization === 'number' ? machine.utilization.toFixed(2) : machine.utilization}%</div>
-                              <div className="text-xs text-muted-foreground capitalize">{machine.status}</div>
-                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <Gauge className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                            <div className="text-sm">No machine data available</div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <Gauge className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <div className="text-sm">No machine data available</div>
-                        </div>
-                      )
+                        );
+                      })()
                     )}
                   </div>
                 </CardContent>
