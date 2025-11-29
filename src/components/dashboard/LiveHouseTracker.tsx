@@ -10,7 +10,6 @@ import {
   LayoutGrid, Table as TableIcon, ArrowUpDown, TrendingUp, Egg, 
   Activity, ChevronRight, History
 } from "lucide-react";
-import { useViewMode } from '@/contexts/ViewModeContext';
 import { format, differenceInDays, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -19,13 +18,12 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const LiveHouseTracker = () => {
-  const { viewMode } = useViewMode();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
 
   // Fetch houses based on tab selection
   const { data: houses, isLoading } = useQuery({
-    queryKey: ['houses-tracking', viewMode, activeTab],
+    queryKey: ['houses-tracking', activeTab],
     queryFn: async () => {
       const statusFilter = activeTab === 'active' 
         ? ['setting', 'incubating', 'hatching'] as const
@@ -39,7 +37,6 @@ const LiveHouseTracker = () => {
           machines (machine_number, machine_type, status),
           units (id, name)
         `)
-        .eq('data_type', viewMode)
         .in('status', statusFilter)
         .order('set_date', { ascending: activeTab === 'active' });
       
@@ -67,7 +64,7 @@ const LiveHouseTracker = () => {
 
   // Fetch performance data (fertility & residue)
   const { data: performanceData } = useQuery({
-    queryKey: ['house-performance-data', viewMode],
+    queryKey: ['house-performance-data'],
     queryFn: async () => {
       const { data: fertility } = await supabase
         .from('fertility_analysis')
@@ -79,8 +76,7 @@ const LiveHouseTracker = () => {
 
       const { data: batches } = await supabase
         .from('batches')
-        .select('id, eggs_injected, chicks_hatched')
-        .eq('data_type', viewMode);
+        .select('id, eggs_injected, chicks_hatched');
 
       return { fertility, residue, batches };
     }

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Syringe, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import ClearsInjectedDataEntry from "@/components/dashboard/ClearsInjectedDataEntry";
 
 interface HouseInfo {
@@ -30,13 +29,12 @@ const ClearsInjectedEntryPage = () => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { viewMode } = useViewMode();
 
   useEffect(() => {
     if (houseId) {
       loadHouseInfo();
     }
-  }, [houseId, viewMode]);
+  }, [houseId]);
 
   const loadHouseInfo = async () => {
     if (!houseId) return;
@@ -49,7 +47,6 @@ const ClearsInjectedEntryPage = () => {
         machines(id, machine_number, machine_type, location)
       `)
       .eq('id', houseId)
-      .eq('data_type', viewMode)
       .single();
 
     if (error) {

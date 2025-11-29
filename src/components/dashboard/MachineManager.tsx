@@ -10,7 +10,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface Machine {
   id: string;
@@ -25,7 +24,6 @@ interface Machine {
 }
 
 const MachineManager = () => {
-  const { viewMode } = useViewMode();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [units, setUnits] = useState<{id: string, name: string}[]>([]);
   const [showDialog, setShowDialog] = useState(false);
@@ -55,7 +53,7 @@ const MachineManager = () => {
   useEffect(() => {
     loadMachines();
     loadUnits();
-  }, [viewMode]);
+  }, []);
 
   const loadUnits = async () => {
     const { data, error } = await supabase
@@ -75,7 +73,6 @@ const MachineManager = () => {
     const { data, error } = await supabase
       .from('machines')
       .select('*')
-      .eq('data_type', viewMode)
       .order('machine_number', { ascending: true });
     
     if (error) {
@@ -121,8 +118,7 @@ const MachineManager = () => {
       unit_id: formData.unit_id || null,
       status: formData.status || 'available',
       last_maintenance: formData.last_maintenance || null,
-      notes: formData.notes || null,
-      data_type: viewMode
+      notes: formData.notes || null
     };
 
     if (editingMachine) {
