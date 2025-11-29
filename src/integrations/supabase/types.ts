@@ -1093,6 +1093,7 @@ export type Database = {
           humidity: number
           id: string
           inspector_name: string
+          machine_id: string | null
           mortality_count: number | null
           notes: string | null
           temp_avg_back: number | null
@@ -1138,6 +1139,7 @@ export type Database = {
           humidity: number
           id?: string
           inspector_name: string
+          machine_id?: string | null
           mortality_count?: number | null
           notes?: string | null
           temp_avg_back?: number | null
@@ -1183,6 +1185,7 @@ export type Database = {
           humidity?: number
           id?: string
           inspector_name?: string
+          machine_id?: string | null
           mortality_count?: number | null
           notes?: string | null
           temp_avg_back?: number | null
@@ -1224,6 +1227,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_monitoring_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
             referencedColumns: ["id"]
           },
         ]
