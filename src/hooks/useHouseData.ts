@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useBatchData = () => {
   return useQuery({
-    queryKey: ['batches-with-relations', viewMode],
-    staleTime: 30000, // Keep data fresh for 30 seconds
+    queryKey: ['batches-with-relations'],
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -38,7 +38,6 @@ export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
             hatch_percent
           )
         `)
-        .eq('data_type', viewMode)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -47,9 +46,9 @@ export const useBatchData = (viewMode: 'original' | 'dummy' = 'original') => {
   });
 };
 
-export const useActiveBatches = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useActiveBatches = () => {
   return useQuery({
-    queryKey: ['active-batches', viewMode],
+    queryKey: ['active-batches'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -58,7 +57,6 @@ export const useActiveBatches = (viewMode: 'original' | 'dummy' = 'original') =>
           flocks (flock_number, flock_name, age_weeks),
           machines (machine_number, machine_type, status)
         `)
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: true });
 
@@ -68,10 +66,10 @@ export const useActiveBatches = (viewMode: 'original' | 'dummy' = 'original') =>
   });
 };
 
-export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useBatchPerformanceMetrics = () => {
   return useQuery({
-    queryKey: ['batch-performance-metrics', viewMode],
-    staleTime: 30000, // Keep data fresh for 30 seconds
+    queryKey: ['batch-performance-metrics'],
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -113,27 +111,10 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
             check_date
           )
         `)
-        .eq('data_type', viewMode)
         .order('set_date', { ascending: false });
 
       if (error) throw error;
       
-      // Debug: summarize raw data availability
-      try {
-        console.debug('[useBatchPerformanceMetrics] total batches:', data?.length || 0);
-        const summary = (data || []).map((b: any) => ({
-          batch: b.batch_number,
-          fert: b.fertility_analysis ? 1 : 0,
-          residue: b.residue_analysis ? 1 : 0,
-          eggQ: Array.isArray(b.egg_pack_quality) ? b.egg_pack_quality.length : 0,
-          qa: Array.isArray(b.qa_monitoring) ? b.qa_monitoring.length : 0,
-        }));
-        console.debug('[useBatchPerformanceMetrics] data summary:', summary);
-      } catch (e) {
-        console.warn('[useBatchPerformanceMetrics] debug summary failed:', e);
-      }
-      
-      // Calculate performance metrics for all batches
       const mapped = data?.map((batch: any) => {
         const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
@@ -169,40 +150,24 @@ export const useBatchPerformanceMetrics = (viewMode: 'original' | 'dummy' = 'ori
           status: batch.status,
           daysSinceSet,
           setDate: batch.set_date,
-          // Data availability flags
           hasEggQuality,
           hasFertilityData,
           hasResidueData,
           hasQAData,
-          // Latest QA readings for ongoing batches
           latestTemp: hasQAData ? qaData[qaData.length - 1]?.temperature : null,
           latestHumidity: hasQAData ? qaData[qaData.length - 1]?.humidity : null,
           currentDay: hasQAData ? qaData[qaData.length - 1]?.day_of_incubation : daysSinceSet
         };
       }) || [];
 
-      // Debug: counts of mapped flags
-      try {
-        const counts = (mapped as any[]).reduce((acc: any, b: any) => {
-          acc.hasFertility += b.hasFertilityData ? 1 : 0;
-          acc.hasResidue += b.hasResidueData ? 1 : 0;
-          acc.hasEggQuality += b.hasEggQuality ? 1 : 0;
-          acc.hasQA += b.hasQAData ? 1 : 0;
-          return acc;
-        }, { hasFertility: 0, hasResidue: 0, hasEggQuality: 0, hasQA: 0 });
-        console.debug('[useBatchPerformanceMetrics] mapped flag counts:', counts);
-      } catch (e) {
-        console.warn('[useBatchPerformanceMetrics] flag count failed:', e);
-      }
-
       return mapped;
     },
   });
 };
 
-export const useOngoingBatchMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useOngoingBatchMetrics = () => {
   return useQuery({
-    queryKey: ['ongoing-batch-metrics', viewMode],
+    queryKey: ['ongoing-batch-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -228,7 +193,6 @@ export const useOngoingBatchMetrics = (viewMode: 'original' | 'dummy' = 'origina
             check_date
           )
         `)
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: false });
 
@@ -266,9 +230,9 @@ export const useOngoingBatchMetrics = (viewMode: 'original' | 'dummy' = 'origina
   });
 };
 
-export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useCompletedBatchMetrics = () => {
   return useQuery({
-    queryKey: ['completed-batch-metrics', viewMode],
+    queryKey: ['completed-batch-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -293,7 +257,6 @@ export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'origi
             mid_dead
           )
         `)
-        .eq('data_type', viewMode)
         .eq('status', 'completed')
         .not('fertility_analysis', 'is', null)
         .order('set_date', { ascending: false });
@@ -304,12 +267,10 @@ export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'origi
         const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
         
-        // Calculate embryonic mortality data
         const earlyDead = residue?.early_dead || 0;
         const lateDead = residue?.late_dead || 0;
         const pipped = residue?.pipped_not_hatched || 0;
         
-        // Calculate mid dead as remaining dead embryos
         const totalFertile = fertility?.sample_size || 0;
         const totalHatched = Math.round((totalFertile * (fertility?.hatch_percent || 0)) / 100);
         const totalDead = totalFertile - totalHatched;
@@ -327,7 +288,6 @@ export const useCompletedBatchMetrics = (viewMode: 'original' | 'dummy' = 'origi
           totalEggs: batch.total_eggs_set,
           status: batch.status,
           setDate: batch.set_date,
-          // Embryonic mortality data
           earlyDead,
           midDead,
           lateDead,
@@ -361,9 +321,9 @@ export const useQAAlerts = () => {
   });
 };
 
-export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useActiveBatchFlowData = () => {
   return useQuery({
-    queryKey: ['active-batch-flow-data', viewMode],
+    queryKey: ['active-batch-flow-data'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
@@ -388,7 +348,6 @@ export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'origina
             mid_dead
           )
         `)
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching'])
         .order('set_date', { ascending: false });
 
@@ -398,20 +357,16 @@ export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'origina
         const fertility = batch.fertility_analysis;
         const residue = batch.residue_analysis;
         
-        // Use actual fertility data if available, otherwise estimate based on flock age and breed
         const estimatedFertility = !fertility ? (
           batch.flocks?.age_weeks && batch.flocks.age_weeks < 60 ? 85 : 75
         ) : fertility.fertility_percent;
         
-        // Use actual hatch data if available, otherwise estimate
         const estimatedHatch = !fertility?.hatch_percent ? 85 : fertility.hatch_percent;
         
-        // Calculate embryonic mortality data
         const earlyDead = residue?.early_dead || 0;
         const lateDead = residue?.late_dead || 0;
         const pipped = residue?.pipped_not_hatched || 0;
         
-        // Calculate mid dead as remaining dead embryos (estimated if no actual data)
         const totalFertile = fertility?.sample_size || Math.round((batch.total_eggs_set * estimatedFertility) / 100);
         const totalHatched = Math.round((totalFertile * estimatedHatch) / 100);
         const totalDead = totalFertile - totalHatched;
@@ -432,7 +387,6 @@ export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'origina
           isProjected: !fertility || !fertility.hatch_percent,
           hasActualFertility: !!fertility,
           hasActualResidue: !!residue,
-          // Embryonic mortality data
           earlyDead,
           midDead,
           lateDead,
@@ -443,9 +397,9 @@ export const useActiveBatchFlowData = (viewMode: 'original' | 'dummy' = 'origina
   });
 };
 
-export const useMachineUtilization = (viewMode: 'original' | 'dummy' = 'original') => {
+export const useMachineUtilization = () => {
   return useQuery({
-    queryKey: ['machine-utilization', viewMode],
+    queryKey: ['machine-utilization'],
     queryFn: async () => {
       const { data: machines, error: machinesError } = await supabase
         .from('machines')
@@ -456,7 +410,6 @@ export const useMachineUtilization = (viewMode: 'original' | 'dummy' = 'original
       const { data: activeBatches, error: batchesError } = await supabase
         .from('batches')
         .select('machine_id, status, total_eggs_set')
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching']);
 
       if (batchesError) throw batchesError;

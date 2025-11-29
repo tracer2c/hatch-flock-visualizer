@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CriticalEventsService } from '@/services/criticalEventsService';
 
-export const useCriticalEvents = (viewMode: 'original' | 'dummy') => {
+export const useCriticalEvents = () => {
   return useQuery({
-    queryKey: ['critical-events', viewMode],
+    queryKey: ['critical-events'],
     queryFn: async () => {
       const { data: batches, error } = await supabase
         .from('batches')
@@ -16,7 +16,6 @@ export const useCriticalEvents = (viewMode: 'original' | 'dummy') => {
           fertility_analysis!left(id),
           residue_analysis!left(id)
         `)
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching']);
       
       if (error) throw error;

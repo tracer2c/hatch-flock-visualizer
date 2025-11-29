@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 
+// Simplified context - always returns 'original' to maintain compatibility
 type ViewMode = 'original' | 'dummy';
 
 interface ViewModeContextType {
@@ -15,18 +16,10 @@ interface ViewModeProviderProps {
 }
 
 export const ViewModeProvider: React.FC<ViewModeProviderProps> = ({ children }) => {
-  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-    // Load from localStorage or default to 'original'
-    const saved = localStorage.getItem('hatchery_view_mode');
-    return (saved === 'dummy' ? 'dummy' : 'original') as ViewMode;
-  });
-
-  const setViewMode = (mode: ViewMode) => {
-    setViewModeState(mode);
-    localStorage.setItem('hatchery_view_mode', mode);
-  };
-
-  const isTrainingMode = viewMode === 'dummy';
+  // Always return 'original' - no longer segregating data
+  const viewMode: ViewMode = 'original';
+  const setViewMode = () => {}; // No-op
+  const isTrainingMode = false;
 
   return (
     <ViewModeContext.Provider value={{ viewMode, setViewMode, isTrainingMode }}>

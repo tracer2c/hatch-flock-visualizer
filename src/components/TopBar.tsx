@@ -7,19 +7,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, GraduationCap, CheckCircle2, ChevronRight } from "lucide-react";
+import { LogOut, User, ChevronRight } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useNavigate } from "react-router-dom";
 
 export function TopBar() {
   const { user, profile, signOut } = useAuth();
   const { open: sidebarOpen } = useSidebar();
-  const { viewMode, setViewMode, isTrainingMode } = useViewMode();
   const navigate = useNavigate();
 
   const getUserInitials = () => {
@@ -39,28 +36,11 @@ export function TopBar() {
         "flex h-12 items-center justify-between pr-6 transition-all duration-300",
         sidebarOpen ? "pl-20" : "pl-6"
       )}>
-        {/* Left Side - Brand and Mode Toggle */}
+        {/* Left Side - Brand */}
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Hatchery Pro
           </h1>
-          
-          {/* Training/Production Mode Toggle */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-lg border bg-card/50 shadow-sm">
-            {isTrainingMode ? (
-              <GraduationCap className="h-4 w-4 text-amber-500" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            )}
-            <span className="text-xs font-medium whitespace-nowrap">
-              {isTrainingMode ? '🎓 Training' : '✓ Production'}
-            </span>
-            <Switch
-              checked={isTrainingMode}
-              onCheckedChange={(checked) => setViewMode(checked ? 'dummy' : 'original')}
-              className="ml-1 scale-75"
-            />
-          </div>
         </div>
 
         {/* Right Side - Notifications & User */}

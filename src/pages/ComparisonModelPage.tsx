@@ -5,11 +5,9 @@ import ComparisonFilters from "@/components/dashboard/ComparisonFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Loader2 } from "lucide-react";
 import { useComparisonData, type ComparisonFilters as FilterType } from "@/hooks/useComparisonData";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { toast } from "sonner";
 
 const ComparisonModelPage = () => {
-  const { viewMode } = useViewMode();
   const [filters, setFilters] = useState<FilterType>({
     dateRange: { from: subDays(new Date(), 90), to: new Date() },
     unitIds: [],
@@ -48,23 +46,39 @@ const ComparisonModelPage = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <TrendingUp className="h-8 w-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Comparison Model</h1>
+          <p className="text-sm text-muted-foreground">
+            Advanced comparison analytics for flock performance
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
       <ComparisonFilters
         filters={filters}
         onFiltersChange={setFilters}
         onApplyFilters={handleApplyFilters}
       />
 
+      {/* Results */}
       {isLoading ? (
         <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Loading comparison data...</span>
-            </div>
+          <CardContent className="py-12 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </CardContent>
         </Card>
+      ) : comparisonData && comparisonData.length > 0 ? (
+        <ComparisonAnalysis data={comparisonData} />
       ) : (
-        <ComparisonAnalysis data={comparisonData || []} />
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No data found for the selected filters. Try adjusting your filter criteria.
+          </CardContent>
+        </Card>
       )}
     </div>
   );

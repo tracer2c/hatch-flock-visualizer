@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { Users, Filter, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -13,9 +12,8 @@ import AgeRangeSettings from "./AgeRangeSettings";
 import { AgeRangeService } from "@/services/ageRangeService";
 
 const AgeBasedAnalytics = () => {
-  const { viewMode } = useViewMode();
   const [refreshKey, setRefreshKey] = useState(0);
-  const { data: metrics, isLoading, refetch } = useAgeBasedPerformance(viewMode);
+  const { data: metrics, isLoading, refetch } = useAgeBasedPerformance();
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const [selectedFlock, setSelectedFlock] = useState<string>("all");
   const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
@@ -29,7 +27,7 @@ const AgeBasedAnalytics = () => {
   
   // Fetch units for filtering
   const { data: units } = useQuery({
-    queryKey: ['units', viewMode],
+    queryKey: ['units'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('units')
@@ -43,12 +41,11 @@ const AgeBasedAnalytics = () => {
   
   // Fetch flocks for filtering
   const { data: flocks } = useQuery({
-    queryKey: ['flocks-filter', viewMode, selectedUnit],
+    queryKey: ['flocks-filter', selectedUnit],
     queryFn: async () => {
       let query = supabase
         .from('flocks')
         .select('id, flock_number, flock_name, flock_group_id, unit_id')
-        .eq('data_type', viewMode)
         .order('flock_number');
       
       if (selectedUnit !== "all") {
