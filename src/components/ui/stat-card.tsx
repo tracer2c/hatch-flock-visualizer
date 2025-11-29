@@ -14,7 +14,6 @@ interface StatCardProps {
   sparklineData?: number[];
   className?: string;
   description?: string;
-  accentColor?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ 
@@ -25,8 +24,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trendDirection = null, 
   sparklineData, 
   className,
-  description,
-  accentColor = "from-primary via-accent to-primary"
+  description
 }) => {
   const data = React.useMemo(() =>
     (sparklineData || []).map((v, i) => ({ i, v })),
@@ -34,22 +32,22 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <Card className={cn(
-      "group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5",
+      "group relative overflow-hidden transition-all duration-200 hover:shadow-md",
       className
     )}>
-      {/* Gradient Accent Line */}
-      <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r", accentColor)} />
+      {/* Single Blue Accent Line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-primary/60" />
       
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 pt-6 px-6">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
             {title}
           </CardTitle>
           {description && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help opacity-0 group-hover:opacity-100 transition-opacity" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p>{description}</p>
@@ -58,15 +56,14 @@ export const StatCard: React.FC<StatCardProps> = ({
             </TooltipProvider>
           )}
         </div>
-        {/* Icon in gradient pill background */}
         {icon && (
-          <div className="rounded-xl bg-gradient-to-br from-muted/60 to-muted/30 p-2.5 shadow-sm">
+          <div className="rounded-lg bg-muted/50 p-1.5">
             {icon}
           </div>
         )}
       </CardHeader>
-      <CardContent className="px-6 pb-6">
-        <div className="text-3xl font-bold tracking-tight text-foreground">{value}</div>
+      <CardContent className="px-4 pb-4">
+        <div className="text-2xl font-bold text-foreground">{value}</div>
         {trendLabel && (
           <p
             className={cn(
@@ -82,10 +79,10 @@ export const StatCard: React.FC<StatCardProps> = ({
           </p>
         )}
         {data.length > 1 && (
-          <div className="mt-4 h-12">
+          <div className="mt-3 h-10">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-                <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
+                <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
