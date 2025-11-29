@@ -243,6 +243,22 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
             <TableHead>House#</TableHead>
             <TableHead>Set Date</TableHead>
             <TableHead className="text-right">Sample Size</TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                Fertility %
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex" type="button">
+                      <AlertCircle className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">Fertility Percentage</p>
+                    <p className="text-sm">Formula: (Fertile Eggs / Sample Size) × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TableHead>
             <TableHead className="text-right">Hatch</TableHead>
             <TableHead className="text-right">Hatch %</TableHead>
             <TableHead className="text-right">
@@ -301,7 +317,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={17} className="text-center text-muted-foreground">
+              <TableCell colSpan={15} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
@@ -314,6 +330,9 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                 <TableCell>{item.house_number || "-"}</TableCell>
                 <TableCell>{item.set_date ? new Date(item.set_date).toLocaleDateString() : "-"}</TableCell>
                 <TableCell className="text-right">{item.sample_size || "-"}</TableCell>
+                <TableCell className="text-right">
+                  {item.fertility_percent ? formatPercentage(item.fertility_percent) : "-"}
+                </TableCell>
                 <TableCell className="text-right">
                   {item.chicks_hatched ? formatValue(item.chicks_hatched, item.sample_size) : "-"}
                 </TableCell>
