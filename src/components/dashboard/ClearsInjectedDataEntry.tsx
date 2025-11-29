@@ -31,12 +31,12 @@ export default function ClearsInjectedDataEntry({
   saving,
   context,
 }: Props) {
-  const [sampleSize, setSampleSize] = useState<string>('648');
+  const [sampleSize, setSampleSize] = useState<string>('');
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
   const [technicianName, setTechnicianName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  const sampleSizeNum = parseInt(sampleSize) || 648;
+  const sampleSizeNum = parseInt(sampleSize) || 0;
 
   useEffect(() => {
     setClearNum(initialClear?.toString() ?? "");
@@ -69,7 +69,6 @@ export default function ClearsInjectedDataEntry({
               onChange={(e) => setSampleSize(e.target.value.replace(/[^\d]/g, ""))}
               placeholder="Enter sample size (50-2000)"
             />
-            <p className="text-xs text-muted-foreground">Default: 648</p>
           </div>
 
           <div className="space-y-2">
