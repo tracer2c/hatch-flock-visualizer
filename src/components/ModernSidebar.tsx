@@ -8,13 +8,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Home,
-  Workflow,
-  ChevronDown,
   TrendingUp,
-  FileSpreadsheet,
-  Upload,
-  Activity,
-  Gauge
+  FileSpreadsheet
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,13 +19,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useIsTablet } from "@/hooks/use-mobile";
@@ -82,15 +73,6 @@ const navigationItems = [
   }
 ];
 
-const advancedAnalyticsItems = [
-  {
-    path: '/bulk-import',
-    label: 'Bulk Import',
-    icon: Upload,
-    requiresAuth: true,
-    requiredRole: undefined
-  }
-];
 
 export function ModernSidebar() {
   const { open, setOpen, toggleSidebar, isMobile: isMobileContext, openMobile } = useSidebar();
@@ -155,21 +137,10 @@ export function ModernSidebar() {
     return true;
   });
 
-  const visibleAdvancedItems = advancedAnalyticsItems.filter(item => {
-    if (!item.requiresAuth) return true;
-    if (!user) return false;
-    if (item.requiredRole) {
-      return hasRole(item.requiredRole);
-    }
-    return true;
-  });
-
   const isActive = (path: string) => {
     if (path === '/') return currentPath === '/';
     return currentPath.startsWith(path);
   };
-
-  const hasActiveAdvancedItem = visibleAdvancedItems.some(item => isActive(item.path));
 
   return (
     <>
@@ -265,77 +236,6 @@ export function ModernSidebar() {
                   );
                 })}
 
-                {/* Advanced Analytics Dropdown */}
-                <SidebarMenuItem>
-                  <Collapsible
-                    defaultOpen={hasActiveAdvancedItem}
-                    className="group/collapsible"
-                  >
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={collapsed ? "Advanced Analytics" : undefined}
-                          className={cn(
-                            "group relative flex items-center rounded-lg transition-all duration-200 touch-manipulation",
-                            collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-3 py-3 min-h-[44px]",
-                            hasActiveAdvancedItem
-                              ? "bg-accent text-foreground"
-                              : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
-                          )}
-                        >
-                          <TrendingUp className={cn(
-                            "flex-shrink-0 transition-colors",
-                            collapsed ? "h-5 w-5" : "h-4 w-4"
-                          )} />
-                          
-                          {!collapsed && (
-                            <>
-                              <span className="ml-3 text-sm font-medium truncate">
-                                Advanced Analytics
-                              </span>
-                              <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                            </>
-                          )}
-
-                          {/* Active indicator for collapsed state */}
-                          {hasActiveAdvancedItem && collapsed && (
-                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full" />
-                          )}
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      
-                      {!collapsed && (
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {visibleAdvancedItems.map((item) => {
-                              const Icon = item.icon;
-                              const active = isActive(item.path);
-                              
-                              return (
-                                <SidebarMenuSubItem key={item.path}>
-                                   <SidebarMenuSubButton asChild>
-                                    <NavLink
-                                      to={item.path}
-                                       className={cn(
-                                         "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px]",
-                                         active
-                                           ? "bg-black text-white shadow-sm"
-                                           : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
-                                       )}
-                                    >
-                                      <Icon className="h-4 w-4 flex-shrink-0" />
-                                      <span className="text-sm truncate">
-                                        {item.label}
-                                      </span>
-                                    </NavLink>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      )}
-                    </Collapsible>
-                  </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
