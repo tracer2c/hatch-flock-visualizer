@@ -486,15 +486,10 @@ const BatchOverviewDashboard = () => {
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
               <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden bg-gradient-to-br from-card to-muted/20 hover:shadow-lg transition-shadow">
-                {/* Bold Blue Accent Bar */}
-                <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/50 flex-shrink-0" />
-                
                 <CardHeader className="py-3 px-4 flex-shrink-0 border-b border-border/50">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-primary/10 ring-1 ring-primary/20">
-                        <Building2 className="h-4 w-4 text-primary" />
-                      </div>
+                      <Building2 className="h-4 w-4 text-primary/70" strokeWidth={1.5} />
                       <CardTitle className="text-sm md:text-base font-semibold">
                         {pipelineView === "all" && "All Houses"}
                         {pipelineView === "active" && "Active Houses Pipeline"}
@@ -619,19 +614,14 @@ const BatchOverviewDashboard = () => {
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
               <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden bg-gradient-to-br from-card to-muted/20 hover:shadow-lg transition-shadow">
-                {/* Bold Blue Accent Bar */}
-                <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/50 flex-shrink-0" />
-                
                 <CardHeader className="py-3 px-4 flex-shrink-0 border-b border-border/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-primary/10 ring-1 ring-primary/20">
-                        {showQAAlerts ? (
-                          <Activity className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Gauge className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
+                      {showQAAlerts ? (
+                        <Activity className="h-4 w-4 text-primary/70" strokeWidth={1.5} />
+                      ) : (
+                        <Gauge className="h-4 w-4 text-primary/70" strokeWidth={1.5} />
+                      )}
                       <span className="text-sm font-semibold">
                         {showQAAlerts ? "QA Alerts" : "Machine Utilization"}
                       </span>
