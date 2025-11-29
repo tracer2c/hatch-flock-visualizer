@@ -7,14 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import MultiSetterSetsManager from './MultiSetterSetsManager';
 
 interface Machine {
   id: string;
   machine_number: string;
   machine_type: 'setter' | 'hatcher' | 'combo';
+  setter_mode: 'single_setter' | 'multi_setter' | null;
   capacity: number;
   location: string | null;
   status: string | null;
@@ -29,6 +31,7 @@ const MachineManager = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedMachineForSets, setSelectedMachineForSets] = useState<Machine | null>(null);
   const [filters, setFilters] = useState({
     machineNumber: '',
     machineType: [] as string[],
@@ -41,6 +44,7 @@ const MachineManager = () => {
   const [formData, setFormData] = useState({
     machine_number: '',
     machine_type: '',
+    setter_mode: 'multi_setter' as 'single_setter' | 'multi_setter' | '',
     capacity: '',
     location: '',
     unit_id: '',
@@ -90,6 +94,7 @@ const MachineManager = () => {
     setFormData({
       machine_number: '',
       machine_type: '',
+      setter_mode: 'multi_setter',
       capacity: '',
       location: '',
       unit_id: '',
@@ -110,9 +115,15 @@ const MachineManager = () => {
       return;
     }
 
+    // Determine setter_mode based on machine_type
+    const setterMode = (formData.machine_type === 'setter' || formData.machine_type === 'combo') 
+      ? (formData.setter_mode || 'multi_setter') 
+      : null;
+
     const machineData = {
       machine_number: formData.machine_number,
       machine_type: formData.machine_type as 'setter' | 'hatcher' | 'combo',
+      setter_mode: setterMode,
       capacity: parseInt(formData.capacity),
       location: formData.location || null,
       unit_id: formData.unit_id || null,
@@ -164,6 +175,7 @@ const MachineManager = () => {
     setFormData({
       machine_number: machine.machine_number,
       machine_type: machine.machine_type,
+      setter_mode: machine.setter_mode || 'multi_setter',
       capacity: machine.capacity.toString(),
       location: machine.location || '',
       unit_id: machine.unit_id || '',
@@ -208,46 +220,30 @@ const MachineManager = () => {
 
   const filteredMachines = useMemo(() => {
     return machines.filter(machine => {
-      // Machine number filter
       if (filters.machineNumber && !machine.machine_number.toLowerCase().includes(filters.machineNumber.toLowerCase())) {
         return false;
       }
-      
-      // Machine type filter
       if (filters.machineType.length > 0 && !filters.machineType.includes(machine.machine_type)) {
         return false;
       }
-      
-      // Status filter
       if (filters.status.length > 0 && !filters.status.includes(machine.status || 'available')) {
         return false;
       }
-      
-      // Hatchery filter
       if (filters.hatchery.length > 0 && !filters.hatchery.includes(machine.unit_id || '')) {
         return false;
       }
-      
-      // Location filter
       if (filters.location && (!machine.location || !machine.location.toLowerCase().includes(filters.location.toLowerCase()))) {
         return false;
       }
-      
-      // Capacity range filter
       if (filters.minCapacity && machine.capacity < parseInt(filters.minCapacity)) {
         return false;
       }
       if (filters.maxCapacity && machine.capacity > parseInt(filters.maxCapacity)) {
         return false;
       }
-      
       return true;
     });
   }, [machines, filters]);
-
-  const uniqueLocations = useMemo(() => {
-    return [...new Set(machines.map(m => m.location).filter(Boolean))].sort();
-  }, [machines]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -298,6 +294,30 @@ const MachineManager = () => {
     }
   };
 
+  const getSetterModeColor = (mode: string | null) => {
+    switch (mode) {
+      case 'single_setter': return 'bg-orange-100 text-orange-800';
+      case 'multi_setter': return 'bg-teal-100 text-teal-800';
+      default: return '';
+    }
+  };
+
+  const getSetterModeLabel = (mode: string | null) => {
+    switch (mode) {
+      case 'single_setter': return 'Single';
+      case 'multi_setter': return 'Multi';
+      default: return '';
+    }
+  };
+
+  const getUnitName = (unitId: string | null) => {
+    const unit = units.find(u => u.id === unitId);
+    return unit?.name || '';
+  };
+
+  // Check if machine type is setter or combo (shows setter_mode)
+  const showSetterMode = formData.machine_type === 'setter' || formData.machine_type === 'combo';
+
   return (
     <Card>
       <CardHeader>
@@ -323,111 +343,142 @@ const MachineManager = () => {
               <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </Button>
             <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Machine
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingMachine ? 'Edit Machine' : 'Create New Machine'}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Machine Number *</Label>
-                  <Input
-                    value={formData.machine_number}
-                    onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
-                    placeholder="e.g., INC-001"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Machine Type *</Label>
-                  <Select value={formData.machine_type} onValueChange={(value) => setFormData(prev => ({ ...prev, machine_type: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="setter">Setter</SelectItem>
-                      <SelectItem value="hatcher">Hatcher</SelectItem>
-                      <SelectItem value="combo">Combo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Capacity *</Label>
-                  <Input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
-                    placeholder="e.g., 50000"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Hatchery</Label>
-                  <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select hatchery" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map(unit => (
-                        <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Location</Label>
-                  <Input
-                    value={formData.location}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="e.g., Building A"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="in-use">In Use</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Last Maintenance</Label>
-                  <Input
-                    type="date"
-                    value={formData.last_maintenance}
-                    onChange={(e) => setFormData(prev => ({ ...prev, last_maintenance: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Notes</Label>
-                  <Input
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Additional notes..."
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <Button onClick={handleSubmit}>
-                  {editingMachine ? 'Update' : 'Create'} Machine
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Machine
                 </Button>
-                <Button variant="outline" onClick={() => setShowDialog(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingMachine ? 'Edit Machine' : 'Create New Machine'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Machine Number *</Label>
+                    <Input
+                      value={formData.machine_number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
+                      placeholder="e.g., INC-001"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Machine Type *</Label>
+                    <Select 
+                      value={formData.machine_type} 
+                      onValueChange={(value) => setFormData(prev => ({ 
+                        ...prev, 
+                        machine_type: value,
+                        // Reset setter_mode to default when changing type
+                        setter_mode: (value === 'setter' || value === 'combo') ? 'multi_setter' : ''
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="setter">Setter</SelectItem>
+                        <SelectItem value="hatcher">Hatcher</SelectItem>
+                        <SelectItem value="combo">Combo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Setter Mode - only shown for setter/combo */}
+                  {showSetterMode && (
+                    <div className="space-y-2">
+                      <Label>Setter Mode *</Label>
+                      <Select 
+                        value={formData.setter_mode} 
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, setter_mode: value as 'single_setter' | 'multi_setter' }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single_setter">Single Setter</SelectItem>
+                          <SelectItem value="multi_setter">Multi Setter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Multi setter machines can hold multiple flock sets in different zones.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label>Capacity *</Label>
+                    <Input
+                      type="number"
+                      value={formData.capacity}
+                      onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
+                      placeholder="e.g., 50000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hatchery</Label>
+                    <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select hatchery" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map(unit => (
+                          <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="e.g., Building A"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="in-use">In Use</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="offline">Offline</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Maintenance</Label>
+                    <Input
+                      type="date"
+                      value={formData.last_maintenance}
+                      onChange={(e) => setFormData(prev => ({ ...prev, last_maintenance: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Notes</Label>
+                    <Input
+                      value={formData.notes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Additional notes..."
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button onClick={handleSubmit}>
+                    {editingMachine ? 'Update' : 'Create'} Machine
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowDialog(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardTitle>
       </CardHeader>
@@ -590,11 +641,17 @@ const MachineManager = () => {
           {filteredMachines.map((machine) => (
             <div key={machine.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-lg">{machine.machine_number}</h3>
                   <Badge className={getTypeColor(machine.machine_type)}>
                     {machine.machine_type}
                   </Badge>
+                  {/* Show setter mode badge for setter/combo machines */}
+                  {(machine.machine_type === 'setter' || machine.machine_type === 'combo') && machine.setter_mode && (
+                    <Badge className={getSetterModeColor(machine.setter_mode)}>
+                      {getSetterModeLabel(machine.setter_mode)}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(machine)}>
@@ -629,6 +686,21 @@ const MachineManager = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Manage Sets button - only for multi-setter machines */}
+              {machine.setter_mode === 'multi_setter' && (
+                <div className="mt-3 pt-3 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setSelectedMachineForSets(machine)}
+                  >
+                    <Layers className="h-4 w-4 mr-2" />
+                    Manage Sets
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -643,6 +715,16 @@ const MachineManager = () => {
           </div>
         )}
       </CardContent>
+
+      {/* Multi-Setter Sets Manager Dialog */}
+      {selectedMachineForSets && (
+        <MultiSetterSetsManager
+          open={!!selectedMachineForSets}
+          onOpenChange={(open) => !open && setSelectedMachineForSets(null)}
+          machine={selectedMachineForSets}
+          unitName={getUnitName(selectedMachineForSets.unit_id)}
+        />
+      )}
     </Card>
   );
 };
