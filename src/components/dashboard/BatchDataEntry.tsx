@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Package, Egg, Activity, AlertTriangle, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Package, Egg, Activity, AlertTriangle, Info, ArrowRightLeft, ArrowRight, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import EggPackDataEntry from "./EggPackDataEntry";
@@ -10,6 +11,8 @@ import FertilityDataEntry from "./FertilityDataEntry";
 import QADataEntry from "./QADataEntry";
 import ResidueDataEntry from "./ResidueDataEntry";
 import HOIEntry from "./HOIEntry";
+import TransferManager from "./TransferManager";
+import { useBatchTransfers } from "@/hooks/useMachineTransfers";
 
 interface BatchInfo {
   id: string;
@@ -18,6 +21,7 @@ interface BatchInfo {
   flock_number: number;
   machine_id: string;
   machine_number: string;
+  machine_type: string;
   house_number: string;
   set_date: string;
   expected_hatch_date: string;
@@ -25,6 +29,7 @@ interface BatchInfo {
   status: string;
   eggs_injected: number;
   chicks_hatched: number;
+  unit_id: string | null;
 }
 
 interface BatchDataEntryProps {
@@ -37,7 +42,10 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
   const [fertilityData, setFertilityData] = useState([]);
   const [qaData, setQAData] = useState([]);
   const [residueData, setResidueData] = useState([]);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const { toast } = useToast();
+  
+  const { data: transfers, refetch: refetchTransfers } = useBatchTransfers(batchId);
 
   useEffect(() => {
     if (batchId) {
@@ -78,6 +86,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         flock_number: data.flocks?.flock_number || 0,
         machine_id: data.machine_id,
         machine_number: data.machines?.machine_number || '',
+        machine_type: data.machines?.machine_type || 'setter',
         house_number: houseNumber,
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
@@ -85,6 +94,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
         status: data.status,
         eggs_injected: data.eggs_injected ?? 0,
         chicks_hatched: data.chicks_hatched ?? 0,
+        unit_id: data.unit_id,
       });
     }
   };
@@ -247,6 +257,105 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
           />
         </CardContent>
       </Card>
+
+      {/* Machine Transfer Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" />
+              Machine Transfer
+            </CardTitle>
+            <Button 
+              size="sm" 
+              onClick={() => setShowTransferModal(true)}
+              disabled={batchInfo.status === 'completed' || batchInfo.status === 'cancelled'}
+            >
+              Record Transfer
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Current Machine Info */}
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Current Machine</p>
+                <p className="font-medium">{batchInfo.machine_number} ({batchInfo.machine_type})</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Set Date</p>
+                <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Transfer Timeline */}
+          {transfers && transfers.length > 0 ? (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground">Transfer History</h4>
+              <div className="relative">
+                {/* Timeline line */}
+                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-border" />
+                
+                {/* Set Date */}
+                <div className="relative flex items-start gap-3 pb-4">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center z-10">
+                    <Calendar className="h-3 w-3 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 pt-0.5">
+                    <p className="text-sm font-medium">Set in {batchInfo.machine_number}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(batchInfo.set_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Transfers */}
+                {transfers.map((t, idx) => (
+                  <div key={t.id} className="relative flex items-start gap-3 pb-4">
+                    <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center z-10">
+                      <ArrowRight className="h-3 w-3 text-white" />
+                    </div>
+                    <div className="flex-1 pt-0.5">
+                      <p className="text-sm font-medium">
+                        Transferred to {t.to_machine?.machine_number}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(t.transfer_date).toLocaleDateString()}
+                        {t.days_in_previous_machine && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Day {t.days_in_previous_machine}
+                          </Badge>
+                        )}
+                      </p>
+                      {t.notes && (
+                        <p className="text-xs text-muted-foreground mt-1">{t.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              No transfers recorded yet. Click "Record Transfer" when moving to hatcher.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Transfer Manager Modal */}
+      <TransferManager
+        open={showTransferModal}
+        onOpenChange={setShowTransferModal}
+        batchId={batchInfo.id}
+        currentMachineId={batchInfo.machine_id}
+        currentMachineNumber={batchInfo.machine_number}
+        setDate={batchInfo.set_date}
+        unitId={batchInfo.unit_id}
+        onTransferComplete={() => refetchTransfers()}
+      />
 
       {/* Data Entry Tabs */}
       <Tabs defaultValue="eggpack" className="space-y-6">

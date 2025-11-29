@@ -881,6 +881,80 @@ export type Database = {
           },
         ]
       }
+      machine_transfers: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          days_in_previous_machine: number | null
+          from_machine_id: string
+          id: string
+          notes: string | null
+          to_machine_id: string
+          transfer_date: string
+          transfer_time: string | null
+          transferred_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          company_id?: string
+          created_at?: string
+          days_in_previous_machine?: number | null
+          from_machine_id: string
+          id?: string
+          notes?: string | null
+          to_machine_id: string
+          transfer_date?: string
+          transfer_time?: string | null
+          transferred_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          days_in_previous_machine?: number | null
+          from_machine_id?: string
+          id?: string
+          notes?: string | null
+          to_machine_id?: string
+          transfer_date?: string
+          transfer_time?: string | null
+          transferred_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machine_transfers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_transfers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_transfers_from_machine_id_fkey"
+            columns: ["from_machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_transfers_to_machine_id_fkey"
+            columns: ["to_machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machines: {
         Row: {
           capacity: number

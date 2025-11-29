@@ -348,10 +348,13 @@ const MachineUtilizationDashboard: React.FC = () => {
           machine={{
             id: selectedMachine.id,
             machine_number: selectedMachine.machine_number,
+            machine_type: selectedMachine.machine_type,
             capacity: selectedMachine.capacity,
             unit_id: selectedMachine.unit_id,
           }}
           unitName={selectedMachine.unit_name || undefined}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
         />
       )}
 
