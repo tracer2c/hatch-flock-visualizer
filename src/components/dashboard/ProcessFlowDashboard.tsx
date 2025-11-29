@@ -6,7 +6,7 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AgeBasedAnalytics from "./AgeBasedAnalytics";
-import utilizationIcon from "@/assets/utilization-icon.png";
+import { IncubatorIcon } from "@/components/icons/HatcheryIcons";
 
 interface ProcessFlowDashboardProps {
   viewMode?: 'original' | 'dummy';
@@ -22,11 +22,7 @@ const ProcessFlowDashboard = ({}: ProcessFlowDashboardProps) => {
   if (!performanceMetrics || performanceMetrics.length === 0) {
     return (
       <div className="text-center py-12">
-        <img 
-          src={utilizationIcon} 
-          alt="System Utilization" 
-          className="w-24 h-24 mx-auto mb-4 object-contain animate-fade-in opacity-70"
-        />
+        <IncubatorIcon size={96} className="mx-auto mb-4 animate-fade-in opacity-70" />
         <h3 className="text-lg font-medium text-muted-foreground mb-2">
           No process data available
         </h3>
