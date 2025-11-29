@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useChartExport } from "@/hooks/useChartExport";
 
 
@@ -341,7 +340,6 @@ export default function EmbrexDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { viewMode } = useViewMode();
 
   /* Data */
   const [loading, setLoading] = useState(true);
@@ -449,7 +447,6 @@ export default function EmbrexDashboard() {
               dead_pip_number
             )
           `)
-          .eq('data_type', viewMode)
           .order("set_date", { ascending: true });
         if (error) throw error;
 
@@ -572,7 +569,7 @@ export default function EmbrexDashboard() {
         toast({ title: "Failed to load", description: "Could not load timeline data.", variant: "destructive" });
       } finally { setLoading(false); }
     })();
-  }, [toast, viewMode]);
+  }, [toast]);
 
   /* URL sync */
   useEffect(() => {

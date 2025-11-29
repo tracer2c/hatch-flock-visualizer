@@ -19,7 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import chicksIcon from "@/assets/chicks-icon.png";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 interface Flock {
   id: string;
@@ -119,7 +118,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [filtersApplied, setFiltersApplied] = useState(false);
   
   const { toast } = useToast();
-  const { viewMode } = useViewMode();
 
   // Calculate critical day indicators for a house
   const getCriticalDayIndicator = (house: House) => {
@@ -168,7 +166,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     loadMachines();
     loadHouses();
     loadUnits();
-  }, [viewMode]);
+  }, []);
 
   // Auto-set current time when create form is opened
   useEffect(() => {
@@ -184,7 +182,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const { data, error } = await supabase
       .from('flocks')
       .select('*')
-      .eq('data_type', viewMode)
       .order('flock_number', { ascending: true });
     
     if (error) {
@@ -202,7 +199,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const { data, error } = await supabase
       .from('machines')
       .select('*')
-      .eq('data_type', viewMode)
       .order('machine_number', { ascending: true });
     
     if (error) {
@@ -222,10 +218,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       .select(`
         *,
         flocks(flock_name, flock_number, house_number, technician_name),
-        machines(machine_number, machine_type),
-        data_type
+        machines(machine_number, machine_type)
       `)
-      .eq('data_type', viewMode)
       .order('set_date', { ascending: false });
     
     if (error) {
@@ -499,8 +493,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
-        status: 'setting',
-        data_type: viewMode
+        status: 'setting'
       })
       .select()
       .single();
@@ -572,8 +565,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       if (!filters.technicianName) return true;
       return h.technician_name?.toLowerCase().includes(filters.technicianName.toLowerCase());
     })
-    // View mode filter - only show houses matching current mode
-    .filter((h) => h.data_type === viewMode)
     // Search filter
     .filter((h) => {
       if (!searchTerm) return true;

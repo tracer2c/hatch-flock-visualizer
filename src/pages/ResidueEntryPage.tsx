@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
 
 
@@ -30,14 +29,13 @@ const ResidueEntryPage = () => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [residueData, setResidueData] = useState([]);
   const { toast } = useToast();
-  const { viewMode } = useViewMode();
 
   useEffect(() => {
     if (houseId) {
       loadHouseInfo();
       loadResidueData();
     }
-  }, [houseId, viewMode]);
+  }, [houseId]);
 
   const loadHouseInfo = async () => {
     if (!houseId) return;
@@ -50,7 +48,6 @@ const ResidueEntryPage = () => {
         machines(id, machine_number, machine_type, location)
       `)
       .eq('id', houseId)
-      .eq('data_type', viewMode)
       .single();
 
     if (error) {
