@@ -175,3 +175,115 @@ export const useUnitsForFilter = () => {
     },
   });
 };
+
+export interface DailyUtilization {
+  date: string;
+  setterUtilization: number;
+  hatcherUtilization: number;
+  setterEggs: number;
+  hatcherEggs: number;
+}
+
+export interface DailyUtilizationFilters {
+  dateFrom: string;
+  dateTo: string;
+  unitId?: string;
+}
+
+export const useDailyUtilizationMetrics = (filters: DailyUtilizationFilters) => {
+  const { viewMode } = useViewMode();
+
+  return useQuery({
+    queryKey: ['daily-utilization-metrics', filters, viewMode],
+    queryFn: async (): Promise<DailyUtilization[]> => {
+      // Get all machines for capacity calculation
+      let machinesQuery = supabase
+        .from('machines')
+        .select('id, machine_type, capacity')
+        .eq('data_type', viewMode);
+
+      if (filters.unitId) {
+        machinesQuery = machinesQuery.eq('unit_id', filters.unitId);
+      }
+
+      const { data: machines, error: machinesError } = await machinesQuery;
+      if (machinesError) throw machinesError;
+
+      const setterMachineIds = (machines || [])
+        .filter(m => m.machine_type === 'setter' || m.machine_type === 'combo')
+        .map(m => m.id);
+      const hatcherMachineIds = (machines || [])
+        .filter(m => m.machine_type === 'hatcher' || m.machine_type === 'combo')
+        .map(m => m.id);
+
+      const totalSetterCapacity = (machines || [])
+        .filter(m => m.machine_type === 'setter' || m.machine_type === 'combo')
+        .reduce((sum, m) => sum + m.capacity, 0);
+      const totalHatcherCapacity = (machines || [])
+        .filter(m => m.machine_type === 'hatcher' || m.machine_type === 'combo')
+        .reduce((sum, m) => sum + m.capacity, 0);
+
+      // Get all batches in date range
+      let batchesQuery = supabase
+        .from('batches')
+        .select('id, machine_id, total_eggs_set, status, set_date, expected_hatch_date')
+        .eq('data_type', viewMode)
+        .lte('set_date', filters.dateTo)
+        .or(`expected_hatch_date.gte.${filters.dateFrom},status.eq.setting,status.eq.incubating,status.eq.hatching`);
+
+      if (filters.unitId) {
+        batchesQuery = batchesQuery.eq('unit_id', filters.unitId);
+      }
+
+      const { data: batches, error: batchesError } = await batchesQuery;
+      if (batchesError) throw batchesError;
+
+      // Generate daily data points
+      const dailyData: DailyUtilization[] = [];
+      const startDate = new Date(filters.dateFrom);
+      const endDate = new Date(filters.dateTo);
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+
+        // Calculate eggs in setters on this day (days 1-18 of incubation)
+        const setterEggs = (batches || [])
+          .filter(b => {
+            if (!setterMachineIds.includes(b.machine_id)) return false;
+            const setDate = new Date(b.set_date);
+            const daysSinceSet = Math.floor((d.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+            return daysSinceSet >= 0 && daysSinceSet <= 18;
+          })
+          .reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+
+        // Calculate eggs in hatchers on this day (days 19-21)
+        const hatcherEggs = (batches || [])
+          .filter(b => {
+            if (!hatcherMachineIds.includes(b.machine_id)) return false;
+            const setDate = new Date(b.set_date);
+            const daysSinceSet = Math.floor((d.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+            return daysSinceSet >= 19 && daysSinceSet <= 21;
+          })
+          .reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+
+        const setterUtilization = totalSetterCapacity > 0
+          ? Math.min(Math.round((setterEggs / totalSetterCapacity) * 100), 100)
+          : 0;
+        const hatcherUtilization = totalHatcherCapacity > 0
+          ? Math.min(Math.round((hatcherEggs / totalHatcherCapacity) * 100), 100)
+          : 0;
+
+        dailyData.push({
+          date: dateStr,
+          setterUtilization,
+          hatcherUtilization,
+          setterEggs,
+          hatcherEggs,
+        });
+      }
+
+      return dailyData;
+    },
+    staleTime: 30000,
+  });
+};

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, subDays } from 'date-fns';
-import { Calendar, Factory, Settings2, Layers, X, ChevronRight } from 'lucide-react';
+import { Calendar, Factory, Settings2, Layers, X, ChevronRight, ArrowRight, Egg, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useMachineMetrics, useUnitsForFilter, MachineWithMetrics } from '@/hooks/useMachineMetrics';
+import { useMachineMetrics, useUnitsForFilter, useDailyUtilizationMetrics, MachineWithMetrics } from '@/hooks/useMachineMetrics';
+import { useProcessFlowMetrics } from '@/hooks/useProcessFlowMetrics';
 import MultiSetterSetsManager from './MultiSetterSetsManager';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 const MachineUtilizationDashboard: React.FC = () => {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
@@ -18,8 +25,8 @@ const MachineUtilizationDashboard: React.FC = () => {
   const [unitId, setUnitId] = useState<string>('all');
   const [machineType, setMachineType] = useState<'setter' | 'hatcher' | 'combo' | 'all'>('all');
   const [setterMode, setSetterMode] = useState<'single_setter' | 'multi_setter' | 'all'>('all');
+  const [selectedMachineIds, setSelectedMachineIds] = useState<string[]>([]);
   const [selectedMachine, setSelectedMachine] = useState<MachineWithMetrics | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
 
   const { data: units } = useUnitsForFilter();
   const { data, isLoading } = useMachineMetrics({
@@ -28,10 +35,33 @@ const MachineUtilizationDashboard: React.FC = () => {
     unitId: unitId !== 'all' ? unitId : undefined,
     machineType: machineType !== 'all' ? machineType : undefined,
     setterMode: setterMode !== 'all' ? setterMode : undefined,
+    machineIds: selectedMachineIds.length > 0 ? selectedMachineIds : undefined,
+  });
+
+  const { data: processFlowData, isLoading: processFlowLoading } = useProcessFlowMetrics({
+    dateFrom,
+    dateTo,
+    unitId: unitId !== 'all' ? unitId : undefined,
+  });
+
+  const { data: dailyUtilization, isLoading: dailyUtilizationLoading } = useDailyUtilizationMetrics({
+    dateFrom,
+    dateTo,
+    unitId: unitId !== 'all' ? unitId : undefined,
   });
 
   const machines = data?.machines || [];
   const kpis = data?.kpis;
+
+  // Get all machines for multi-select (before filtering by selectedMachineIds)
+  const { data: allMachinesData } = useMachineMetrics({
+    dateFrom,
+    dateTo,
+    unitId: unitId !== 'all' ? unitId : undefined,
+    machineType: machineType !== 'all' ? machineType : undefined,
+    setterMode: setterMode !== 'all' ? setterMode : undefined,
+  });
+  const allMachines = allMachinesData?.machines || [];
 
   const getUtilizationColor = (percent: number) => {
     if (percent < 50) return 'bg-muted';
@@ -63,14 +93,35 @@ const MachineUtilizationDashboard: React.FC = () => {
     unitId !== 'all',
     machineType !== 'all',
     setterMode !== 'all',
+    selectedMachineIds.length > 0,
   ].filter(Boolean).length;
 
   const clearFilters = () => {
     setUnitId('all');
     setMachineType('all');
     setSetterMode('all');
+    setSelectedMachineIds([]);
     setDateFrom(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
     setDateTo(format(new Date(), 'yyyy-MM-dd'));
+  };
+
+  const handleMachineSelect = (machineId: string) => {
+    setSelectedMachineIds(prev => 
+      prev.includes(machineId) 
+        ? prev.filter(id => id !== machineId)
+        : [...prev, machineId]
+    );
+  };
+
+  const chartConfig = {
+    setterUtilization: {
+      label: 'Setter Utilization',
+      color: 'hsl(var(--primary))',
+    },
+    hatcherUtilization: {
+      label: 'Hatcher Utilization',
+      color: 'hsl(var(--accent))',
+    },
   };
 
   return (
@@ -149,6 +200,53 @@ const MachineUtilizationDashboard: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Machine Multi-Select */}
+            {allMachines.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedMachineIds.length > 0 ? 'custom' : 'all'}
+                  onValueChange={(v) => {
+                    if (v === 'all') setSelectedMachineIds([]);
+                  }}
+                >
+                  <SelectTrigger className="w-[160px] h-9">
+                    <SelectValue>
+                      {selectedMachineIds.length > 0 
+                        ? `${selectedMachineIds.length} machines` 
+                        : 'All Machines'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Machines</SelectItem>
+                    <div className="border-t my-1" />
+                    <div className="max-h-[200px] overflow-y-auto">
+                      {allMachines.map((machine) => (
+                        <div
+                          key={machine.id}
+                          className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMachineSelect(machine.id);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedMachineIds.includes(machine.id)}
+                            onChange={() => {}}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm">{machine.machine_number}</span>
+                          <Badge variant="outline" className="text-xs ml-auto">
+                            {machine.machine_type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {activeFiltersCount > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
@@ -250,6 +348,166 @@ const MachineUtilizationDashboard: React.FC = () => {
                   Currently Hatching
                 </p>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Process Flow Summary */}
+      <Card className="shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Process Flow Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {processFlowLoading ? (
+            <div className="flex items-center justify-center gap-8 py-6">
+              <Skeleton className="h-24 w-32" />
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-24 w-32" />
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-24 w-32" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-4 md:gap-8 py-4">
+              {/* Houses Entered Setters */}
+              <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 min-w-[120px]">
+                <div className="p-3 rounded-full bg-blue-500/20 mb-2">
+                  <Egg className="h-6 w-6 text-blue-600" />
+                </div>
+                <p className="text-3xl font-bold text-blue-600">
+                  {processFlowData?.housesEnteredSetters || 0}
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  Entered Setters
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+
+              {/* Houses Transferred */}
+              <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 min-w-[120px]">
+                <div className="p-3 rounded-full bg-orange-500/20 mb-2">
+                  <RefreshCw className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className="text-3xl font-bold text-orange-600">
+                  {processFlowData?.housesTransferredToHatchers || 0}
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  Transferred
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+
+              {/* Houses Hatched */}
+              <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 min-w-[120px]">
+                <div className="p-3 rounded-full bg-green-500/20 mb-2">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-3xl font-bold text-green-600">
+                  {processFlowData?.housesHatched || 0}
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  Hatched
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Utilization Over Time Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Setter Utilization Chart */}
+        <Card className="shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Setter Utilization Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dailyUtilizationLoading ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dailyUtilization || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => format(new Date(value), 'MMM d')}
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      tickFormatter={(value) => `${value}%`}
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />}
+                      labelFormatter={(value) => format(new Date(value), 'MMM d, yyyy')}
+                    />
+                    <ReferenceLine y={80} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
+                    <Line
+                      type="monotone"
+                      dataKey="setterUtilization"
+                      name="Setter Utilization"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4, fill: 'hsl(var(--primary))' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Hatcher Utilization Chart */}
+        <Card className="shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Hatcher Utilization Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dailyUtilizationLoading ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dailyUtilization || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => format(new Date(value), 'MMM d')}
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      tickFormatter={(value) => `${value}%`}
+                      className="text-xs"
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />}
+                      labelFormatter={(value) => format(new Date(value), 'MMM d, yyyy')}
+                    />
+                    <ReferenceLine y={80} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
+                    <Line
+                      type="monotone"
+                      dataKey="hatcherUtilization"
+                      name="Hatcher Utilization"
+                      stroke="hsl(var(--accent))"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4, fill: 'hsl(var(--accent))' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
