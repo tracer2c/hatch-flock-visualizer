@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend } from 'recharts';
 import { useBatchPerformanceMetrics } from "@/hooks/useHouseData";
@@ -13,6 +15,9 @@ interface ProcessFlowDashboardProps {
 }
 
 const ProcessFlowDashboard = ({}: ProcessFlowDashboardProps) => {
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam === 'age-analysis' ? 'age-analysis' : 'process-flow');
   const { data: performanceMetrics, isLoading } = useBatchPerformanceMetrics();
 
   if (isLoading) {
@@ -139,7 +144,7 @@ const ProcessFlowDashboard = ({}: ProcessFlowDashboardProps) => {
   }, []);
 
   return (
-    <Tabs defaultValue="process-flow" className="w-full animate-fade-in">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-fade-in">
       <TabsList className="grid w-full grid-cols-2 mb-6">
         <TabsTrigger value="process-flow" className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4" />

@@ -1260,7 +1260,7 @@ export default function EmbrexDashboard() {
                     { label: "Live Tracking", icon: Radio, path: "/live-tracking" },
                     { label: "Machine Utilization", icon: Settings, path: "/machine-utilization" },
                     { label: "House Flow", icon: GitBranch, path: "/house-flow" },
-                    { label: "Age Based Performance", icon: TrendingUp, path: "/analytics" }
+                    { label: "Age Based Performance", icon: TrendingUp, path: "/process-flow?tab=age-analysis" }
                   ].map((feature) => {
                     const Icon = feature.icon;
                     return (
