@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import henLogo from '@/assets/hen-logo.png';
+import { HenLogo } from '@/components/icons/HatcheryIcons';
 
 export default function AuthPage() {
   const { user, signIn, signUp, loading } = useAuth();
@@ -66,11 +66,7 @@ export default function AuthPage() {
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-block p-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl mb-4 shadow-sm">
             <div className="w-16 h-16 bg-gradient-to-br from-orange-100/50 to-amber-100/50 rounded-xl flex items-center justify-center shadow-lg">
-              <img 
-                src={henLogo} 
-                alt="Hatchery Logo" 
-                className="w-12 h-12 object-contain drop-shadow-md"
-              />
+              <HenLogo size={48} className="drop-shadow-md" />
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-700 via-amber-600 to-orange-600 bg-clip-text text-transparent">
