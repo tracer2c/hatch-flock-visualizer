@@ -285,6 +285,7 @@ const QAEntryPage = () => {
       const qaRecords = newData.map(record => {
         const baseRecord = {
           batch_id: houseId,
+          machine_id: houseInfo?.machine_id || null,
           inspector_name: record.technicianName || '',
           check_date: record.checkDate || record.testDate || record.washDate || new Date().toISOString().split('T')[0],
           check_time: record.checkTime || new Date().toISOString().split('T')[1].split('.')[0],
