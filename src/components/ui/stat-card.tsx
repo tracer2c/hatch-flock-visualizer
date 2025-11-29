@@ -58,11 +58,11 @@ export const StatCard: React.FC<StatCardProps> = ({
             </TooltipProvider>
           )}
         </div>
-        {icon && (
-          <div className="rounded-lg bg-primary/10 p-2 ring-1 ring-primary/20 group-hover:bg-primary/15 transition-colors">
-            {icon}
-          </div>
-        )}
+          {icon && (
+            <div className="text-primary/70 group-hover:text-primary transition-colors [&>svg]:stroke-[1.5]">
+              {icon}
+            </div>
+          )}
       </CardHeader>
       <CardContent className="px-4 pb-4">
         <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
