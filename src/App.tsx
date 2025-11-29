@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import PerformancePage from "./pages/PerformancePage";
 import ProcessFlowPage from "./pages/ProcessFlowPage";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import DataEntryPage from "./pages/DataEntryPage";
 import EggPackEntryPage from "./pages/EggPackEntryPage";
 import FertilityEntryPage from "./pages/FertilityEntryPage";
@@ -79,6 +80,7 @@ const App = () => {
                             <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
                             <Route path="/live-tracking" element={<LiveTrackingPage />} />
                             <Route path="/machine-utilization" element={<MachineUtilizationPage />} />
+                            <Route path="/analytics" element={<AnalyticsDashboard />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
                             <Route path="/data-entry" element={<DataEntryPage />} />
