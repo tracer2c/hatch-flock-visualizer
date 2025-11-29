@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, Users, AlertTriangle, Egg, Baby, Target } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, AlertTriangle, Egg, Bird, Syringe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -439,7 +439,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average HOF%"
               value={`${avgHOF}%`}
-              icon={<Baby className="h-10 w-10 text-green-500" />}
+              icon={<Bird className="h-10 w-10 text-green-500" />}
               description="Average Hatch of Fertile percentage across all analyzed houses. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
               trendLabel={
                 targets?.hof_rate 
@@ -451,7 +451,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average HOI%"
               value={`${avgHOI}%`}
-              icon={<Target className="h-10 w-10 text-blue-500" />}
+              icon={<Syringe className="h-10 w-10 text-blue-500" />}
               description="Average Hatch of Injection percentage across all analyzed houses. HOI% = (Chicks Hatched / Eggs Injected) × 100"
               trendLabel={
                 targets?.hoi_rate 
@@ -463,7 +463,7 @@ const BatchOverviewDashboard = () => {
             <StatCard
               title="Average Flock Age"
               value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
-              icon={<Users className="h-10 w-10" />}
+              icon={<Clock className="h-10 w-10 text-slate-500" />}
               description={
                 flockAgeData 
                   ? `Average age of flocks in active batches. Range: ${flockAgeData.min}-${flockAgeData.max} weeks from ${flockAgeData.count} active flock(s). Peak performance: 35-50 weeks.`
