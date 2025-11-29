@@ -7,17 +7,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight } from "lucide-react";
+import { LogOut, User, ChevronRight, ArrowLeft, Home } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export function TopBar() {
   const { user, profile, signOut } = useAuth();
   const { open: sidebarOpen } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const getUserInitials = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -25,6 +26,8 @@ export function TopBar() {
     }
     return user?.email?.charAt(0).toUpperCase() || 'U';
   };
+
+  const isOnDashboard = location.pathname === '/';
 
   return (
     <header className={cn(
@@ -36,15 +39,41 @@ export function TopBar() {
         "flex h-12 items-center justify-between pr-6 transition-all duration-300",
         sidebarOpen ? "pl-20" : "pl-6"
       )}>
-        {/* Left Side - Brand */}
-        <div className="flex items-center gap-4">
+        {/* Left Side - Back Button + Brand */}
+        <div className="flex items-center gap-3">
+          {/* Back Button - hidden on dashboard */}
+          {!isOnDashboard && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(-1)}
+              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+              title="Go back"
+            >
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+            </Button>
+          )}
           <h1 className="text-base font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Hatchery Pro
           </h1>
         </div>
 
-        {/* Right Side - Notifications & User */}
+        {/* Right Side - Dashboard Icon, Notifications & User */}
         <div className="flex items-center gap-2">
+          {/* Dashboard Home Icon */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/')}
+            className={cn(
+              "h-9 w-9 hover:bg-primary/10 hover:text-primary",
+              isOnDashboard && "bg-primary/10 text-primary"
+            )}
+            title="Go to Dashboard"
+          >
+            <Home className="h-4 w-4" strokeWidth={1.5} />
+          </Button>
+
           {/* Notification Bell */}
           <div className="relative">
             <NotificationBell />

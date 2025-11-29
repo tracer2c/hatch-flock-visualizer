@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, AlertTriangle, Egg, Bird, Syringe } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, AlertTriangle, Egg, Bird, Syringe, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -392,6 +392,17 @@ const BatchOverviewDashboard = () => {
                   onCheckedChange={(checked) => setDisplayMode(checked ? 'detailed' : 'simple')}
                 />
               </div>
+
+              {/* Bulk Import Button */}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/bulk-import')}
+                className="h-9 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+              >
+                <Upload className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                <span className="text-sm">Import</span>
+              </Button>
 
               {/* Action Buttons - Blue hover */}
               <Button variant="outline" size="icon" onClick={handleRefresh} className="h-9 w-9 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
