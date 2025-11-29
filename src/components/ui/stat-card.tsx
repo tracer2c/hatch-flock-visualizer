@@ -31,7 +31,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   [sparklineData]);
 
   return (
-    <Card className={cn("transition-shadow hover:shadow-md", className)}>
+    <Card className={cn("group transition-shadow hover:shadow-md", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -39,7 +39,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help opacity-0 group-hover:opacity-100 transition-opacity" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p>{description}</p>
