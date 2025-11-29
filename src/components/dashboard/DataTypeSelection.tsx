@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe } from "lucide-react";
+import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe, ArrowRightLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import TransferManager from "@/components/dashboard/TransferManager";
+import { useBatchTransfers } from "@/hooks/useMachineTransfers";
 
 interface HouseInfo {
   id: string;
@@ -13,11 +15,14 @@ interface HouseInfo {
   flock_name: string;
   flock_number: number;
   machine_number: string;
+  machine_id: string;
+  machine_type: string;
   house_number: string;
   set_date: string;
   expected_hatch_date: string;
   total_eggs_set: number;
   status: string;
+  unit_id: string | null;
 }
 
 interface DataTypeSelectionProps {
@@ -27,6 +32,7 @@ interface DataTypeSelectionProps {
 
 const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [dataCounts, setDataCounts] = useState({
     eggPack: 0,
     fertility: 0,
@@ -36,6 +42,8 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { data: transfers = [], refetch: refetchTransfers } = useBatchTransfers(houseId);
 
   useEffect(() => {
     if (houseId) {
@@ -76,11 +84,14 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
         flock_name: data.flocks?.flock_name || '',
         flock_number: data.flocks?.flock_number || 0,
         machine_number: data.machines?.machine_number || '',
+        machine_id: data.machines?.id || '',
+        machine_type: data.machines?.machine_type || '',
         house_number: houseNumber,
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
-        status: data.status
+        status: data.status,
+        unit_id: data.unit_id
       });
     }
   };
@@ -224,6 +235,83 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           </div>
         </div>
 
+        {/* Machine Transfer Card */}
+        <Card className="mb-6 bg-white">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 text-white">
+                  <ArrowRightLeft className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Machine Transfer</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Record Day-18 setter → hatcher transfers
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => setShowTransferModal(true)}>
+                Record Transfer
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Current Machine Info */}
+            <div className="p-3 bg-muted/40 rounded-lg mb-4">
+              <p className="text-xs text-muted-foreground">Current Machine</p>
+              <p className="font-medium">
+                {houseInfo.machine_number} 
+                <span className="text-muted-foreground ml-2">({houseInfo.machine_type})</span>
+              </p>
+            </div>
+            
+            {/* Transfer History */}
+            {transfers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No transfers recorded for this house yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Transfer History</p>
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                        <th className="px-3 py-2 text-left font-medium">From</th>
+                        <th className="px-3 py-2 text-left font-medium">To</th>
+                        <th className="px-3 py-2 text-right font-medium">Day</th>
+                        <th className="px-3 py-2 text-left font-medium">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transfers.map(t => (
+                        <tr key={t.id} className="border-t">
+                          <td className="px-3 py-2">
+                            {new Date(t.transfer_date).toLocaleDateString()}
+                          </td>
+                          <td className="px-3 py-2">{t.from_machine?.machine_number || '—'}</td>
+                          <td className="px-3 py-2">{t.to_machine?.machine_number || '—'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <Badge className={
+                              t.days_in_previous_machine === 18 
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }>
+                              {t.days_in_previous_machine ?? '—'}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">{t.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Data Type Selection */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Data Entry Type</h2>
@@ -263,6 +351,20 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           })}
         </div>
       </div>
+
+      {/* Transfer Manager Modal */}
+      <TransferManager
+        open={showTransferModal}
+        onOpenChange={(open) => {
+          setShowTransferModal(open);
+          if (!open) refetchTransfers();
+        }}
+        batchId={houseId}
+        currentMachineId={houseInfo.machine_id}
+        currentMachineNumber={houseInfo.machine_number}
+        setDate={houseInfo.set_date}
+        unitId={houseInfo.unit_id}
+      />
     </div>
   );
 };
