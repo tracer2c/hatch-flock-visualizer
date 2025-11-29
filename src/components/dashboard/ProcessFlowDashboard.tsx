@@ -6,7 +6,7 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AgeBasedAnalytics from "./AgeBasedAnalytics";
-import { IncubatorIcon } from "@/components/icons/HatcheryIcons";
+import { Gauge } from "lucide-react";
 
 interface ProcessFlowDashboardProps {
   viewMode?: 'original' | 'dummy';
@@ -22,7 +22,9 @@ const ProcessFlowDashboard = ({}: ProcessFlowDashboardProps) => {
   if (!performanceMetrics || performanceMetrics.length === 0) {
     return (
       <div className="text-center py-12">
-        <IncubatorIcon size={96} className="mx-auto mb-4 animate-fade-in opacity-70" />
+        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+          <Gauge className="w-12 h-12 text-muted-foreground" />
+        </div>
         <h3 className="text-lg font-medium text-muted-foreground mb-2">
           No process data available
         </h3>

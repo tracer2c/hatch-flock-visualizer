@@ -4,7 +4,7 @@ import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, ArrowRight, Activity, CheckCircle, Eye } from "lucide-react";
 import { useCompletedBatchMetrics, useActiveBatchFlowData } from '@/hooks/useHouseData';
-import { HatcheryIcon } from "@/components/icons/HatcheryIcons";
+import { Building2 } from "lucide-react";
 
 interface HouseFlowSankeyProps {
   className?: string;
@@ -205,7 +205,9 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
           {/* Empty State */}
           {flowData.batchCount === 0 && (
             <div className="text-center py-12">
-              <HatcheryIcon size={96} className="mx-auto mb-4 animate-fade-in opacity-70" />
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                <Building2 className="w-12 h-12 text-muted-foreground" />
+              </div>
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 No {viewMode} houses found
               </h3>

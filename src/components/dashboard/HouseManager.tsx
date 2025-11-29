@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { ChicksIcon } from "@/components/icons/HatcheryIcons";
+import { Baby } from "lucide-react";
 
 interface Flock {
   id: string;
@@ -1012,7 +1012,9 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
           </div>
           {houses.length === 0 && (
             <div className="text-center py-12">
-              <ChicksIcon size={96} className="mx-auto mb-4 animate-fade-in opacity-70" />
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                <Baby className="w-12 h-12 text-muted-foreground" />
+              </div>
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 No houses found
               </h3>
