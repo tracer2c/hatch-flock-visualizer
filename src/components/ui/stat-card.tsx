@@ -32,15 +32,17 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <Card className={cn(
-      "group relative overflow-hidden transition-all duration-200 hover:shadow-md",
+      "group relative overflow-hidden transition-all duration-200",
+      "hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/30",
+      "bg-gradient-to-br from-card to-muted/30",
       className
     )}>
-      {/* Single Blue Accent Line */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-primary/60" />
+      {/* Bold Blue Accent Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/50" />
       
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
         <div className="flex items-center gap-1.5">
-          <CardTitle className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
+          <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
             {title}
           </CardTitle>
           {description && (
@@ -57,13 +59,13 @@ export const StatCard: React.FC<StatCardProps> = ({
           )}
         </div>
         {icon && (
-          <div className="rounded-lg bg-muted/50 p-1.5">
+          <div className="rounded-lg bg-primary/10 p-2 ring-1 ring-primary/20 group-hover:bg-primary/15 transition-colors">
             {icon}
           </div>
         )}
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
         {trendLabel && (
           <p
             className={cn(
@@ -82,7 +84,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           <div className="mt-3 h-10">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-                <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={1.5} />
+                <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
