@@ -11,12 +11,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, addDays } from "date-fns";
+import { format, subDays, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import chicksIcon from "@/assets/chicks-icon.png";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -120,6 +120,48 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   
   const { toast } = useToast();
   const { viewMode } = useViewMode();
+
+  // Calculate critical day indicators for a house
+  const getCriticalDayIndicator = (house: House) => {
+    const today = new Date();
+    const setDate = new Date(house.set_date);
+    const daysSinceSet = differenceInDays(today, setDate);
+    
+    // Skip completed or cancelled batches
+    if (house.status === 'completed' || house.status === 'cancelled') return null;
+    
+    // Fertility window: Days 10-14
+    if (daysSinceSet >= 8 && daysSinceSet < 10) {
+      return { type: 'upcoming', label: `Fertility in ${10 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    }
+    if (daysSinceSet >= 10 && daysSinceSet <= 14) {
+      return { type: 'due', label: 'Fertility due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    if (daysSinceSet > 14 && daysSinceSet < 18) {
+      return { type: 'overdue', label: 'Fertility overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+    }
+    
+    // Transfer: Day 18
+    if (daysSinceSet >= 16 && daysSinceSet < 18) {
+      return { type: 'upcoming', label: `Transfer in ${18 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    }
+    if (daysSinceSet === 18) {
+      return { type: 'due', label: 'Transfer today', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    
+    // Residue window: Days 22-23
+    if (daysSinceSet >= 20 && daysSinceSet < 22) {
+      return { type: 'upcoming', label: `Residue in ${22 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    }
+    if (daysSinceSet >= 22 && daysSinceSet <= 23) {
+      return { type: 'due', label: 'Residue due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    if (daysSinceSet > 23) {
+      return { type: 'overdue', label: 'Residue overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     loadFlocks();
@@ -906,60 +948,76 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredHouses.map((house) => (
-              <div
-                key={house.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                  selectedHouse === house.id ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50 hover:shadow-sm'
-                }`}
-                onClick={() => onHouseSelect(house.id)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{house.flock_name} #{house.house_number}</h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 hover:bg-primary/10"
-                      onClick={(e) => handleEdit(house, e)}
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-primary" />
-                    </Button>
-                    <Badge className={getStatusColor(house.status)}>
-                      {house.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="space-y-1 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Package2 className="h-4 w-4" />
-                    {house.flock_number} - {house.flock_name}
-                  </div>
-                  {house.technician_name && (
+            {filteredHouses.map((house) => {
+              const criticalIndicator = getCriticalDayIndicator(house);
+              return (
+                <div
+                  key={house.id}
+                  className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                    selectedHouse === house.id ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50 hover:shadow-sm'
+                  }`}
+                  onClick={() => onHouseSelect(house.id)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium">{house.flock_name} #{house.house_number}</h3>
                     <div className="flex items-center gap-2">
-                      <Factory className="h-4 w-4" />
-                      <span className="font-medium text-primary">Technician: {house.technician_name}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 hover:bg-primary/10"
+                        onClick={(e) => handleEdit(house, e)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-primary" />
+                      </Button>
+                      <Badge className={getStatusColor(house.status)}>
+                        {house.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {/* Critical Day Indicator */}
+                  {criticalIndicator && (
+                    <div className={`mb-2 px-2 py-1 rounded-md border text-xs font-medium flex items-center gap-1.5 ${criticalIndicator.color}`}>
+                      {criticalIndicator.type === 'overdue' ? (
+                        <AlertTriangle className="h-3 w-3" />
+                      ) : (
+                        <Clock className="h-3 w-3" />
+                      )}
+                      {criticalIndicator.label}
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <Factory className="h-4 w-4" />
-                    {house.machine_number} ({house.machine_type})
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Set: {new Date(house.set_date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    {units.find(u => u.id === house.unit_id)?.name || 'Unassigned'}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {house.total_eggs_set.toLocaleString()} eggs
+                  
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Package2 className="h-4 w-4" />
+                      {house.flock_number} - {house.flock_name}
+                    </div>
+                    {house.technician_name && (
+                      <div className="flex items-center gap-2">
+                        <Factory className="h-4 w-4" />
+                        <span className="font-medium text-primary">Technician: {house.technician_name}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Factory className="h-4 w-4" />
+                      {house.machine_number} ({house.machine_type})
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Set: {new Date(house.set_date).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {units.find(u => u.id === house.unit_id)?.name || 'Unassigned'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {house.total_eggs_set.toLocaleString()} eggs
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {houses.length === 0 && (
             <div className="text-center py-12">
