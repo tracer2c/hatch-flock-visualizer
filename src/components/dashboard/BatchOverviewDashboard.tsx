@@ -338,15 +338,16 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="w-full space-y-4">
+        <div className="w-full space-y-5">
           {/* Compact Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/20 border">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-card via-card to-muted/30 border shadow-sm">
             {/* Left Section: Analytics Navigation + Hatchery Filter */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {/* Analytics Navigation Dropdown */}
               <Select 
                 value="" 
                 onValueChange={(value) => {
+                  if (value === 'live-tracking') navigate('/live-tracking');
                   if (value === 'house-flow') navigate('/house-flow');
                   if (value === 'process-flow') navigate('/process-flow');
                   if (value === 'machine-utilization') navigate('/machine-utilization');
@@ -357,6 +358,7 @@ const BatchOverviewDashboard = () => {
                   <span className="text-sm">Analytics</span>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="live-tracking">Live Tracking</SelectItem>
                   <SelectItem value="house-flow">House Flow</SelectItem>
                   <SelectItem value="process-flow">Process Flow</SelectItem>
                   <SelectItem value="machine-utilization">Machine Utilization</SelectItem>
@@ -402,7 +404,7 @@ const BatchOverviewDashboard = () => {
           </div>
 
           {/* KPI Cards Section */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatCard
               title="All Houses"
               value={totalBatchesCount.toString()}
@@ -483,14 +485,14 @@ const BatchOverviewDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Active Houses Pipeline */}
             <div className="lg:col-span-8">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden">
-                {/* Single Blue Accent */}
-                <div className="h-0.5 bg-gradient-to-r from-primary to-primary/60 flex-shrink-0" />
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden bg-gradient-to-br from-card to-muted/20 hover:shadow-lg transition-shadow">
+                {/* Bold Blue Accent Bar */}
+                <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/50 flex-shrink-0" />
                 
-                <CardHeader className="py-3 px-4 flex-shrink-0">
+                <CardHeader className="py-3 px-4 flex-shrink-0 border-b border-border/50">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-primary/10">
+                      <div className="p-2 rounded-lg bg-primary/10 ring-1 ring-primary/20">
                         <Building2 className="h-4 w-4 text-primary" />
                       </div>
                       <CardTitle className="text-sm md:text-base font-semibold">
@@ -616,14 +618,14 @@ const BatchOverviewDashboard = () => {
 
             {/* QA Alerts / Machine Utilization */}
             <div className="lg:col-span-4">
-              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden">
-                {/* Single Blue Accent */}
-                <div className="h-0.5 bg-gradient-to-r from-primary to-primary/60 flex-shrink-0" />
+              <Card className="flex flex-col h-[400px] md:h-[500px] lg:h-[calc(100vh-340px)] overflow-hidden bg-gradient-to-br from-card to-muted/20 hover:shadow-lg transition-shadow">
+                {/* Bold Blue Accent Bar */}
+                <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/50 flex-shrink-0" />
                 
-                <CardHeader className="py-3 px-4 flex-shrink-0">
+                <CardHeader className="py-3 px-4 flex-shrink-0 border-b border-border/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-primary/10">
+                      <div className="p-2 rounded-lg bg-primary/10 ring-1 ring-primary/20">
                         {showQAAlerts ? (
                           <Activity className="h-4 w-4 text-primary" />
                         ) : (

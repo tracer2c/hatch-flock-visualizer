@@ -50,12 +50,6 @@ const navigationItems = [
     requiresAuth: true
   },
   {
-    path: '/bulk-import',
-    label: 'Bulk Import',
-    icon: Upload,
-    requiresAuth: true
-  },
-  {
     path: '/embrex-data-sheet',
     label: 'Data Sheet',
     icon: FileSpreadsheet,
@@ -65,12 +59,6 @@ const navigationItems = [
     path: '/embrex-timeline',
     label: 'Timeline',
     icon: TrendingUp,
-    requiresAuth: true
-  },
-  {
-    path: '/live-tracking',
-    label: 'Live Tracking',
-    icon: Activity,
     requiresAuth: true
   },
   {
@@ -95,6 +83,20 @@ const navigationItems = [
 ];
 
 const advancedAnalyticsItems = [
+  {
+    path: '/live-tracking',
+    label: 'Live Tracking',
+    icon: Activity,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
+  {
+    path: '/bulk-import',
+    label: 'Bulk Import',
+    icon: Upload,
+    requiresAuth: true,
+    requiredRole: undefined
+  },
   {
     path: '/process-flow',
     label: 'Process Flow',
