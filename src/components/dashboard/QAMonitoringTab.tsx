@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Filter, ChevronDown, X } from "lucide-react";
+import { Edit, Trash2, Filter, ChevronDown, X, Thermometer } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import Setter18PointDisplay from "./Setter18PointDisplay";
 
 interface QAMonitoringTabProps {
   data: any[];
@@ -230,6 +231,10 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
             <TableHead>Check Date</TableHead>
             <TableHead>Day of Incubation</TableHead>
             <TableHead>Temperature (°F)</TableHead>
+            <TableHead>Temp Avg Overall</TableHead>
+            <TableHead>Temp Avg Front</TableHead>
+            <TableHead>Temp Avg Middle</TableHead>
+            <TableHead>Temp Avg Back</TableHead>
             <TableHead>Humidity (%)</TableHead>
             <TableHead>CO2 Level (ppm)</TableHead>
             <TableHead>Ventilation Rate</TableHead>
@@ -264,6 +269,22 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
                 </TableCell>
                 <TableCell>{item.day_of_incubation || "-"}</TableCell>
                 <TableCell>{item.temperature || "-"}</TableCell>
+                <TableCell>
+                  {item.temp_avg_overall != null ? (
+                    <Badge variant="outline" className={
+                      item.temp_avg_overall >= 99.5 && item.temp_avg_overall <= 100.5 
+                        ? 'bg-green-100 text-green-800' 
+                        : item.temp_avg_overall >= 99.0 && item.temp_avg_overall <= 101.0
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                    }>
+                      {item.temp_avg_overall.toFixed(1)}°F
+                    </Badge>
+                  ) : "-"}
+                </TableCell>
+                <TableCell>{item.temp_avg_front?.toFixed(1) || "-"}</TableCell>
+                <TableCell>{item.temp_avg_middle?.toFixed(1) || "-"}</TableCell>
+                <TableCell>{item.temp_avg_back?.toFixed(1) || "-"}</TableCell>
                 <TableCell>{item.humidity || "-"}</TableCell>
                 <TableCell>{item.co2_level || "-"}</TableCell>
                 <TableCell>{item.ventilation_rate || "-"}</TableCell>

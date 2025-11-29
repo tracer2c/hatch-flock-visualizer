@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SetterTempTable from "./SetterTempTable";
+import Setter18PointTempGrid from "./Setter18PointTempGrid";
+import Setter18PointDisplay from "./Setter18PointDisplay";
 
 interface BatchInfo {
   id: string;
@@ -168,6 +170,56 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
       setSetterAngles(prev => ({ ...prev, setterNumber: currentMachine.machine_number }));
     }
   }, [currentMachine]);
+
+  // Handler for new 18-point temperature grid
+  const handle18PointTempSubmit = (gridData: { values: Record<string, number>; averages: { overall: number | null; front: number | null; middle: number | null; back: number | null } }) => {
+    // Validate technician name
+    if (!globalTechnicianName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Technician name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate all 18 fields are filled
+    const allFieldsFilled = Object.values(gridData.values).every(v => v !== undefined && !isNaN(v));
+    if (!allFieldsFilled) {
+      toast({
+        title: "Validation Error",
+        description: "All 18 temperature fields must be filled with valid numbers",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newEntry = {
+      id: Date.now(),
+      type: 'setter_temperature_18point',
+      setterNumber: setterTemps.setterNumber,
+      checkDate: setterTemps.checkDate,
+      technicianName: globalTechnicianName,
+      notes: globalNotes || null,
+      timestamp: new Date().toISOString(),
+      // 18 temperature points
+      ...gridData.values,
+      // Calculated averages
+      temp_avg_overall: gridData.averages.overall,
+      temp_avg_front: gridData.averages.front,
+      temp_avg_middle: gridData.averages.middle,
+      temp_avg_back: gridData.averages.back,
+      isWithinRange: gridData.averages.overall !== null && gridData.averages.overall >= 99.5 && gridData.averages.overall <= 100.5
+    };
+
+    const updatedData = [...data, newEntry];
+    onDataUpdate(updatedData);
+
+    toast({
+      title: "18-Point Temperature Added",
+      description: `Added temperature readings for Setter ${newEntry.setterNumber}. Overall Avg: ${gridData.averages.overall?.toFixed(1)}°F`,
+    });
+  };
 
   const handleAddSetterTemp = () => {
     // Validate technician name
@@ -723,143 +775,43 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
             </TabsList>
 
             <TabsContent value="setter-temps" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Setter Temperature Monitoring</CardTitle>
-                  <p className="text-sm text-gray-600">Ideal range: 99.5–100.5°F</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="setter-number">Setter Machine</Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={setterTemps.setterNumber}
-                        onChange={(e) => setSetterTemps({...setterTemps, setterNumber: e.target.value})}
-                      >
-                        <option value="">Select setter machine</option>
-                        {setterMachines.map((machine) => (
-                          <option key={machine.id} value={machine.machine_number}>
-                            {machine.machine_number} - {machine.location} ({machine.status})
-                          </option>
-                        ))}
-                      </select>
-                      {currentMachine && (
-                        <p className="text-xs text-muted-foreground">
-                          Current batch machine: {currentMachine.machine_number}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="time-of-day">Time of Day</Label>
-                      <select
-                        id="time-of-day"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={setterTemps.timeOfDay}
-                        onChange={(e) => setSetterTemps({...setterTemps, timeOfDay: e.target.value})}
-                      >
-                        <option value="morning">Morning</option>
-                        <option value="afternoon">Afternoon</option>
-                        <option value="evening">Evening</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="check-date">Check Date</Label>
-                      <Input
-                        id="check-date"
-                        type="date"
-                        value={setterTemps.checkDate}
-                        onChange={(e) => setSetterTemps({...setterTemps, checkDate: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Left Side Temperatures (°F)</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="left-top">Top</Label>
-                          <Input
-                            id="left-top"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.leftTopTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, leftTopTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
+              {/* New 18-Point Temperature Grid */}
+              <Setter18PointTempGrid
+                onSubmit={handle18PointTempSubmit}
+                checkDate={setterTemps.checkDate}
+                onCheckDateChange={(date) => setSetterTemps({...setterTemps, checkDate: date})}
+                setterNumber={setterTemps.setterNumber}
+                onSetterNumberChange={(num) => setSetterTemps({...setterTemps, setterNumber: num})}
+                setterMachines={setterMachines}
+                currentMachine={currentMachine}
+              />
+
+              {/* Display existing 18-point records */}
+              {data.filter(r => r.type === 'setter_temperature_18point').length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Recent 18-Point Temperature Records</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {data.filter(r => r.type === 'setter_temperature_18point').slice(0, 3).map((record: any) => (
+                      <div key={record.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium">{record.setterNumber} - {record.checkDate}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => deleteEntry(record.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="left-middle">Middle</Label>
-                          <Input
-                            id="left-middle"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.leftMiddleTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, leftMiddleTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="left-bottom">Bottom</Label>
-                          <Input
-                            id="left-bottom"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.leftBottomTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, leftBottomTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
-                        </div>
+                        <Setter18PointDisplay data={record} />
                       </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Right Side Temperatures (°F)</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="right-top">Top</Label>
-                          <Input
-                            id="right-top"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.rightTopTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, rightTopTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="right-middle">Middle</Label>
-                          <Input
-                            id="right-middle"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.rightMiddleTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, rightMiddleTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="right-bottom">Bottom</Label>
-                          <Input
-                            id="right-bottom"
-                            type="number"
-                            step="0.1"
-                            value={setterTemps.rightBottomTemp}
-                            onChange={(e) => setSetterTemps({...setterTemps, rightBottomTemp: e.target.value})}
-                            placeholder="100.0"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button onClick={handleAddSetterTemp} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Setter Temperature Reading
-                  </Button>
-                </CardContent>
-              </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="rectal-temps" className="space-y-4">

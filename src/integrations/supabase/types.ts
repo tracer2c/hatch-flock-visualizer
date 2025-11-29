@@ -1012,6 +1012,28 @@ export type Database = {
           inspector_name: string
           mortality_count: number | null
           notes: string | null
+          temp_avg_back: number | null
+          temp_avg_front: number | null
+          temp_avg_middle: number | null
+          temp_avg_overall: number | null
+          temp_back_bottom_left: number | null
+          temp_back_bottom_right: number | null
+          temp_back_mid_left: number | null
+          temp_back_mid_right: number | null
+          temp_back_top_left: number | null
+          temp_back_top_right: number | null
+          temp_front_bottom_left: number | null
+          temp_front_bottom_right: number | null
+          temp_front_mid_left: number | null
+          temp_front_mid_right: number | null
+          temp_front_top_left: number | null
+          temp_front_top_right: number | null
+          temp_middle_bottom_left: number | null
+          temp_middle_bottom_right: number | null
+          temp_middle_mid_left: number | null
+          temp_middle_mid_right: number | null
+          temp_middle_top_left: number | null
+          temp_middle_top_right: number | null
           temperature: number
           turning_frequency: number | null
           ventilation_rate: number | null
@@ -1035,6 +1057,28 @@ export type Database = {
           inspector_name: string
           mortality_count?: number | null
           notes?: string | null
+          temp_avg_back?: number | null
+          temp_avg_front?: number | null
+          temp_avg_middle?: number | null
+          temp_avg_overall?: number | null
+          temp_back_bottom_left?: number | null
+          temp_back_bottom_right?: number | null
+          temp_back_mid_left?: number | null
+          temp_back_mid_right?: number | null
+          temp_back_top_left?: number | null
+          temp_back_top_right?: number | null
+          temp_front_bottom_left?: number | null
+          temp_front_bottom_right?: number | null
+          temp_front_mid_left?: number | null
+          temp_front_mid_right?: number | null
+          temp_front_top_left?: number | null
+          temp_front_top_right?: number | null
+          temp_middle_bottom_left?: number | null
+          temp_middle_bottom_right?: number | null
+          temp_middle_mid_left?: number | null
+          temp_middle_mid_right?: number | null
+          temp_middle_top_left?: number | null
+          temp_middle_top_right?: number | null
           temperature: number
           turning_frequency?: number | null
           ventilation_rate?: number | null
@@ -1058,6 +1102,28 @@ export type Database = {
           inspector_name?: string
           mortality_count?: number | null
           notes?: string | null
+          temp_avg_back?: number | null
+          temp_avg_front?: number | null
+          temp_avg_middle?: number | null
+          temp_avg_overall?: number | null
+          temp_back_bottom_left?: number | null
+          temp_back_bottom_right?: number | null
+          temp_back_mid_left?: number | null
+          temp_back_mid_right?: number | null
+          temp_back_top_left?: number | null
+          temp_back_top_right?: number | null
+          temp_front_bottom_left?: number | null
+          temp_front_bottom_right?: number | null
+          temp_front_mid_left?: number | null
+          temp_front_mid_right?: number | null
+          temp_front_top_left?: number | null
+          temp_front_top_right?: number | null
+          temp_middle_bottom_left?: number | null
+          temp_middle_bottom_right?: number | null
+          temp_middle_mid_left?: number | null
+          temp_middle_mid_right?: number | null
+          temp_middle_top_left?: number | null
+          temp_middle_top_right?: number | null
           temperature?: number
           turning_frequency?: number | null
           ventilation_rate?: number | null

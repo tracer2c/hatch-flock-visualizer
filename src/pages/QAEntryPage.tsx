@@ -118,6 +118,39 @@ const QAEntryPage = () => {
       };
 
       // Transform based on record type
+      if (recordType === 'setter_temperature_18point') {
+        return {
+          ...baseProps,
+          type: 'setter_temperature_18point',
+          setterNumber: candlingData.setterNumber,
+          // 18 temperature points
+          temp_front_top_left: record.temp_front_top_left,
+          temp_front_top_right: record.temp_front_top_right,
+          temp_front_mid_left: record.temp_front_mid_left,
+          temp_front_mid_right: record.temp_front_mid_right,
+          temp_front_bottom_left: record.temp_front_bottom_left,
+          temp_front_bottom_right: record.temp_front_bottom_right,
+          temp_middle_top_left: record.temp_middle_top_left,
+          temp_middle_top_right: record.temp_middle_top_right,
+          temp_middle_mid_left: record.temp_middle_mid_left,
+          temp_middle_mid_right: record.temp_middle_mid_right,
+          temp_middle_bottom_left: record.temp_middle_bottom_left,
+          temp_middle_bottom_right: record.temp_middle_bottom_right,
+          temp_back_top_left: record.temp_back_top_left,
+          temp_back_top_right: record.temp_back_top_right,
+          temp_back_mid_left: record.temp_back_mid_left,
+          temp_back_mid_right: record.temp_back_mid_right,
+          temp_back_bottom_left: record.temp_back_bottom_left,
+          temp_back_bottom_right: record.temp_back_bottom_right,
+          // Calculated averages
+          temp_avg_overall: record.temp_avg_overall,
+          temp_avg_front: record.temp_avg_front,
+          temp_avg_middle: record.temp_avg_middle,
+          temp_avg_back: record.temp_avg_back,
+          isWithinRange: record.temp_avg_overall >= 99.5 && record.temp_avg_overall <= 100.5
+        };
+      }
+
       if (recordType === 'setter_temperature') {
         return {
           ...baseProps,
@@ -262,6 +295,41 @@ const QAEntryPage = () => {
         };
 
         // Add type-specific fields
+        if (record.type === 'setter_temperature_18point') {
+          return {
+            ...baseRecord,
+            temperature: record.temp_avg_overall || 0,
+            // 18 temperature point columns
+            temp_front_top_left: record.temp_front_top_left,
+            temp_front_top_right: record.temp_front_top_right,
+            temp_front_mid_left: record.temp_front_mid_left,
+            temp_front_mid_right: record.temp_front_mid_right,
+            temp_front_bottom_left: record.temp_front_bottom_left,
+            temp_front_bottom_right: record.temp_front_bottom_right,
+            temp_middle_top_left: record.temp_middle_top_left,
+            temp_middle_top_right: record.temp_middle_top_right,
+            temp_middle_mid_left: record.temp_middle_mid_left,
+            temp_middle_mid_right: record.temp_middle_mid_right,
+            temp_middle_bottom_left: record.temp_middle_bottom_left,
+            temp_middle_bottom_right: record.temp_middle_bottom_right,
+            temp_back_top_left: record.temp_back_top_left,
+            temp_back_top_right: record.temp_back_top_right,
+            temp_back_mid_left: record.temp_back_mid_left,
+            temp_back_mid_right: record.temp_back_mid_right,
+            temp_back_bottom_left: record.temp_back_bottom_left,
+            temp_back_bottom_right: record.temp_back_bottom_right,
+            // Calculated averages
+            temp_avg_overall: record.temp_avg_overall,
+            temp_avg_front: record.temp_avg_front,
+            temp_avg_middle: record.temp_avg_middle,
+            temp_avg_back: record.temp_avg_back,
+            candling_results: JSON.stringify({
+              type: 'setter_temperature_18point',
+              setterNumber: record.setterNumber
+            })
+          };
+        }
+
         if (record.type === 'setter_temperature') {
           return {
             ...baseRecord,
