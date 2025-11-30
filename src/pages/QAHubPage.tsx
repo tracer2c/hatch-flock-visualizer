@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Thermometer, Settings, Clock, ClipboardCheck, ArrowRight } from "lucide-react";
-import { useSingleSetterHouses, useMultiSetterMachines, useQAStats } from '@/hooks/useQAHubData';
+import { useSingleSetterMachines, useMultiSetterMachines, useQAStats } from '@/hooks/useQAHubData';
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
@@ -12,11 +12,12 @@ import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
 const QAHubPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
   
-  const { data: singleSetterHouses } = useSingleSetterHouses();
+  const { data: singleSetterMachines } = useSingleSetterMachines();
   const { data: multiSetterMachines } = useMultiSetterMachines();
   const { data: stats } = useQAStats();
 
-  const singleSetterCount = singleSetterHouses?.length || 0;
+  const singleSetterCount = singleSetterMachines?.length || 0;
+  const occupiedSingleSetters = singleSetterMachines?.filter(m => m.hasOccupant).length || 0;
   const multiSetterCount = multiSetterMachines?.length || 0;
 
   return (
@@ -57,17 +58,17 @@ const QAHubPage: React.FC = () => {
                 <Thermometer className="h-6 w-6 text-blue-600" strokeWidth={1.5} />
               </div>
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                {singleSetterCount} houses
+                {occupiedSingleSetters}/{singleSetterCount} machines
               </Badge>
             </div>
             <CardTitle className="text-lg mt-3">Single Setter QA</CardTitle>
             <CardDescription className="text-sm">
-              <span className="font-medium text-foreground">(per house)</span> — Enter QA for houses in single-setter machines
+              <span className="font-medium text-foreground">(per machine)</span> — Enter QA for single-setter machines. System auto-links to the house currently loaded.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground mb-4">
-              Select a house and enter 18-point temperature readings. Each house is tracked individually.
+              Select a machine and enter 18-point temperature readings. QA is automatically linked to the one house in that machine.
             </p>
             <Button 
               className="w-full group-hover:bg-blue-600 transition-colors"
@@ -92,12 +93,12 @@ const QAHubPage: React.FC = () => {
             </div>
             <CardTitle className="text-lg mt-3">Multi Setter QA</CardTitle>
             <CardDescription className="text-sm">
-              <span className="font-medium text-foreground">(per machine/positions)</span> — Enter QA per machine with position-level flock mapping
+              <span className="font-medium text-foreground">(per machine)</span> — Enter QA per machine with position-level flock mapping
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground mb-4">
-              Select a machine to view all 18 positions with their flock assignments. Enter temperatures once for all positions.
+              Select a machine to enter QA. Temps linked by position, angles/humidity linked to all flocks in that machine.
             </p>
             <Button 
               variant="outline"
