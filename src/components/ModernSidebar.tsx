@@ -9,7 +9,8 @@ import {
   PanelLeft,
   Home,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ClipboardCheck
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,12 @@ const navigationItems = [
     path: '/',
     label: 'Dashboard',
     icon: Home,
+    requiresAuth: true
+  },
+  {
+    path: '/qa-hub',
+    label: 'QA Hub',
+    icon: ClipboardCheck,
     requiresAuth: true
   },
   {
