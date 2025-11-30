@@ -26,6 +26,7 @@ import {
 import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { submitSpecificGravityTest, submitWeightTracking } from '@/services/qaSubmissionService';
 import Setter18PointTempGrid from '@/components/dashboard/Setter18PointTempGrid';
 import RectalTempEntry from './RectalTempEntry';
 import TrayWashEntry from './TrayWashEntry';
@@ -184,7 +185,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  const handleSubmitCullCheck = async (data: { flockNumber: string; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
+  // Fixed: Now saves to qa_monitoring with proper flock/batch linkage
+  const handleSubmitCullCheck = async (data: { flock_id: string; batch_id: string | null; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
@@ -200,7 +202,7 @@ const SingleSetterQAWorkflow: React.FC = () => {
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'cull_check', flockNumber: data.flockNumber, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType })
+        candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType })
       });
       if (error) throw error;
       toast.success('Cull check saved!');
@@ -211,25 +213,25 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  const handleSubmitSpecificGravity = async (data: { flockNumber: string; age: number; floatPercentage: number; testDate: string }) => {
+  // Fixed: Now saves to specific_gravity_tests table
+  const handleSubmitSpecificGravity = async (data: { flock_id: string; batch_id: string | null; age: number; sampleSize: number; floatCount: number; floatPercentage: number; testDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const result = await submitSpecificGravityTest({
+        flock_id: data.flock_id,
         batch_id: selectedMachine.currentHouse.id,
-        machine_id: selectedMachine.id,
-        check_date: data.testDate,
-        check_time: new Date().toTimeString().split(' ')[0],
-        day_of_incubation: selectedMachine.daysInIncubation,
-        temperature: 100,
-        humidity: data.floatPercentage,
-        inspector_name: technicianName,
-        notes: notes || null,
-        entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'specific_gravity', flockNumber: data.flockNumber, age: data.age, floatPercentage: data.floatPercentage })
+        test_date: data.testDate,
+        age_weeks: data.age,
+        sample_size: data.sampleSize,
+        float_count: data.floatCount,
+        float_percentage: data.floatPercentage,
+        notes: notes || null
       });
-      if (error) throw error;
-      toast.success('Specific gravity test saved!');
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Specific gravity test saved to dedicated table!');
+      setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -269,7 +271,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  const handleSubmitHatchProgression = async (data: { flockNumber: string; stage: string; percentageOut: number; totalCount: number; hatchedCount: number; checkHour: number; hatchDate: string }) => {
+  // Fixed: Now saves with proper flock/batch linkage
+  const handleSubmitHatchProgression = async (data: { flock_id: string; batch_id: string | null; stage: string; percentageOut: number; totalCount: number; hatchedCount: number; checkHour: number; hatchDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
@@ -284,7 +287,7 @@ const SingleSetterQAWorkflow: React.FC = () => {
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'hatch_progression', flockNumber: data.flockNumber, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour })
+        candling_results: JSON.stringify({ type: 'hatch_progression', flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour })
       });
       if (error) throw error;
       toast.success('Hatch progression saved!');
@@ -295,25 +298,25 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  const handleSubmitMoistureLoss = async (data: { flockNumber: string; day1Weight: number; day18Weight: number; lossPercentage: number; testDate: string }) => {
+  // Fixed: Now saves to weight_tracking table
+  const handleSubmitMoistureLoss = async (data: { flock_id: string; batch_id: string | null; machine_id: string | null; day1Weight: number; day18Weight: number; lossPercentage: number; dayOfIncubation: number; testDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const result = await submitWeightTracking({
         batch_id: selectedMachine.currentHouse.id,
+        flock_id: selectedMachine.currentHouse.flock?.id || null,
         machine_id: selectedMachine.id,
         check_date: data.testDate,
-        check_time: new Date().toTimeString().split(' ')[0],
-        day_of_incubation: selectedMachine.daysInIncubation,
-        temperature: 100,
-        humidity: data.lossPercentage,
-        inspector_name: technicianName,
-        notes: notes || null,
-        entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'moisture_loss', flockNumber: data.flockNumber, day1Weight: data.day1Weight, day18Weight: data.day18Weight, lossPercentage: data.lossPercentage })
+        day_of_incubation: data.dayOfIncubation,
+        total_weight: data.day1Weight,
+        percent_loss: data.lossPercentage,
+        notes: notes ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}` : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`
       });
-      if (error) throw error;
-      toast.success('Moisture loss saved!');
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Moisture loss saved to weight tracking table!');
+      setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -527,11 +530,27 @@ const SingleSetterQAWorkflow: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="culls">
-          <CullChecksEntry technicianName={technicianName} checkDate={checkDate} flockNumber={selectedMachine.currentHouse?.flock?.flock_number} onSubmit={handleSubmitCullCheck} />
+          <CullChecksEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            flockId={selectedMachine.currentHouse?.flock?.id}
+            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
+            flockName={selectedMachine.currentHouse?.flock?.flock_name}
+            batchId={selectedMachine.currentHouse?.id}
+            onSubmit={handleSubmitCullCheck} 
+          />
         </TabsContent>
 
         <TabsContent value="gravity">
-          <SpecificGravityEntry technicianName={technicianName} checkDate={checkDate} flockNumber={selectedMachine.currentHouse?.flock?.flock_number} onSubmit={handleSubmitSpecificGravity} />
+          <SpecificGravityEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            flockId={selectedMachine.currentHouse?.flock?.id}
+            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
+            flockName={selectedMachine.currentHouse?.flock?.flock_name}
+            batchId={selectedMachine.currentHouse?.id}
+            onSubmit={handleSubmitSpecificGravity} 
+          />
         </TabsContent>
 
         <TabsContent value="angles">
@@ -539,11 +558,29 @@ const SingleSetterQAWorkflow: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="hatch">
-          <HatchProgressionEntry technicianName={technicianName} checkDate={checkDate} flockNumber={selectedMachine.currentHouse?.flock?.flock_number} onSubmit={handleSubmitHatchProgression} />
+          <HatchProgressionEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            flockId={selectedMachine.currentHouse?.flock?.id}
+            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
+            flockName={selectedMachine.currentHouse?.flock?.flock_name}
+            batchId={selectedMachine.currentHouse?.id}
+            onSubmit={handleSubmitHatchProgression} 
+          />
         </TabsContent>
 
         <TabsContent value="moisture">
-          <MoistureLossEntry technicianName={technicianName} checkDate={checkDate} flockNumber={selectedMachine.currentHouse?.flock?.flock_number} onSubmit={handleSubmitMoistureLoss} />
+          <MoistureLossEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            flockId={selectedMachine.currentHouse?.flock?.id}
+            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
+            flockName={selectedMachine.currentHouse?.flock?.flock_name}
+            batchId={selectedMachine.currentHouse?.id}
+            machineId={selectedMachine.id}
+            daysInIncubation={selectedMachine.daysInIncubation}
+            onSubmit={handleSubmitMoistureLoss} 
+          />
         </TabsContent>
       </Tabs>
 

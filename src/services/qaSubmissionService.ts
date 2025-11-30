@@ -309,6 +309,190 @@ export async function submitMachineWideQA(
 }
 
 /**
+ * Submit generic QA record with machine-wide linkage to all flocks
+ * Used for rectal temps, tray wash, culls, hatch progression in multi-setter mode
+ */
+export async function submitGenericQAWithLinkage(
+  machineId: string,
+  inspectorName: string,
+  checkDate: string,
+  qaType: string,
+  qaData: Record<string, any>,
+  uniqueFlocks: FlockLinkage[],
+  notes?: string | null
+): Promise<SubmissionResult> {
+  try {
+    const qaMonitoringRecord: any = {
+      batch_id: null,
+      machine_id: machineId,
+      inspector_name: inspectorName,
+      check_date: checkDate,
+      check_time: new Date().toTimeString().split(' ')[0],
+      day_of_incubation: 0,
+      temperature: qaData.temperature || 100,
+      humidity: qaData.humidity || 55,
+      mortality_count: qaData.mortalityCount || null,
+      notes: notes || null,
+      entry_mode: 'machine',
+      candling_results: JSON.stringify({ type: qaType, ...qaData })
+    };
+
+    const { data: result, error: qaError } = await supabase
+      .from('qa_monitoring')
+      .insert(qaMonitoringRecord)
+      .select('id')
+      .single();
+
+    if (qaError) throw qaError;
+
+    const qaMonitoringId = result.id;
+
+    // Create machine-wide linkage for ALL flocks in machine
+    if (uniqueFlocks.length > 0) {
+      const linkageRecords = uniqueFlocks.map(flock => ({
+        qa_monitoring_id: qaMonitoringId,
+        position: 'machine_wide',
+        temperature: 0,
+        linkage_type: 'machine_wide',
+        multi_setter_set_id: null,
+        resolved_flock_id: flock.flock_id,
+        resolved_batch_id: flock.batch_id
+      }));
+
+      const { error: linkageError } = await supabase
+        .from('qa_position_linkage')
+        .insert(linkageRecords);
+
+      if (linkageError) throw linkageError;
+    }
+
+    return { success: true, qaMonitoringId };
+  } catch (err: any) {
+    console.error('Error submitting generic QA with linkage:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Submit specific gravity test to dedicated table
+ */
+export async function submitSpecificGravityTest(data: {
+  flock_id: string;
+  batch_id: string | null;
+  test_date: string;
+  age_weeks: number;
+  sample_size: number;
+  float_count: number;
+  float_percentage: number;
+  notes?: string | null;
+}): Promise<SubmissionResult> {
+  try {
+    const sinkCount = data.sample_size - data.float_count;
+    const threshold = data.age_weeks >= 25 && data.age_weeks <= 40 ? 10 : 15;
+    const meetsStandard = data.float_percentage < threshold;
+
+    const { error } = await supabase.from('specific_gravity_tests').insert({
+      flock_id: data.flock_id,
+      batch_id: data.batch_id,
+      test_date: data.test_date,
+      age_weeks: data.age_weeks,
+      sample_size: data.sample_size,
+      float_count: data.float_count,
+      sink_count: sinkCount,
+      float_percentage: data.float_percentage,
+      meets_standard: meetsStandard,
+      standard_min: 0,
+      standard_max: threshold,
+      difference: data.float_percentage - threshold,
+      notes: data.notes || null
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error submitting specific gravity test:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Submit moisture loss / weight tracking to dedicated table
+ */
+export async function submitWeightTracking(data: {
+  batch_id: string;
+  flock_id: string | null;
+  machine_id: string | null;
+  check_date: string;
+  day_of_incubation: number;
+  total_weight: number;
+  percent_loss: number;
+  notes?: string | null;
+}): Promise<SubmissionResult> {
+  try {
+    const { error } = await supabase.from('weight_tracking').insert({
+      batch_id: data.batch_id,
+      flock_id: data.flock_id,
+      machine_id: data.machine_id,
+      check_date: data.check_date,
+      day_of_incubation: data.day_of_incubation,
+      total_weight: data.total_weight,
+      percent_loss: data.percent_loss,
+      notes: data.notes || null
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error submitting weight tracking:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Submit weight tracking for multiple flocks (multi-setter mode)
+ */
+export async function submitWeightTrackingMulti(
+  machineId: string,
+  checkDate: string,
+  dayOfIncubation: number,
+  totalWeight: number,
+  percentLoss: number,
+  flocks: FlockLinkage[],
+  notes?: string | null
+): Promise<SubmissionResult> {
+  try {
+    const records = flocks.map(flock => ({
+      batch_id: flock.batch_id || '00000000-0000-0000-0000-000000000000', // Placeholder if no batch
+      flock_id: flock.flock_id,
+      machine_id: machineId,
+      check_date: checkDate,
+      day_of_incubation: dayOfIncubation,
+      total_weight: totalWeight,
+      percent_loss: percentLoss,
+      notes: notes || null
+    }));
+
+    // Filter out records without valid batch_id (weight_tracking requires batch_id)
+    const validRecords = records.filter(r => r.batch_id && r.batch_id !== '00000000-0000-0000-0000-000000000000');
+
+    if (validRecords.length === 0) {
+      return { success: false, error: 'No valid batches to link weight tracking' };
+    }
+
+    const { error } = await supabase.from('weight_tracking').insert(validRecords);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error submitting weight tracking multi:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Fetch machine-level QA records for a specific machine
  * Used to display read-only QA data on house pages
  */
