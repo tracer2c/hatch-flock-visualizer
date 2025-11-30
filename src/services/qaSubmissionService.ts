@@ -207,28 +207,25 @@ export async function fetchPositionLinkage(qaMonitoringId: string) {
   return data;
 }
 
-interface MachineWideQARecord {
+export interface MachineWideQARecord {
   machine_id: string;
   inspector_name: string;
   check_date: string;
   check_time: string;
   qa_type: 'angles' | 'humidity';
-  // For angles
-  angles?: {
-    top_left: number;
-    mid_left: number;
-    bottom_left: number;
-    top_right: number;
-    mid_right: number;
-    bottom_right: number;
-  };
-  // For humidity
-  humidity?: number;
-  temperature?: number;
+  temperature: number;
+  humidity: number;
   notes?: string | null;
+  // For angles - individual fields
+  angle_top_left?: number;
+  angle_mid_left?: number;
+  angle_bottom_left?: number;
+  angle_top_right?: number;
+  angle_mid_right?: number;
+  angle_bottom_right?: number;
 }
 
-interface FlockLinkage {
+export interface FlockLinkage {
   flock_id: string;
   batch_id: string | null;
 }
@@ -257,13 +254,13 @@ export async function submitMachineWideQA(
     };
 
     // Add angles if provided
-    if (record.qa_type === 'angles' && record.angles) {
-      qaMonitoringRecord.angle_top_left = record.angles.top_left;
-      qaMonitoringRecord.angle_mid_left = record.angles.mid_left;
-      qaMonitoringRecord.angle_bottom_left = record.angles.bottom_left;
-      qaMonitoringRecord.angle_top_right = record.angles.top_right;
-      qaMonitoringRecord.angle_mid_right = record.angles.mid_right;
-      qaMonitoringRecord.angle_bottom_right = record.angles.bottom_right;
+    if (record.qa_type === 'angles') {
+      qaMonitoringRecord.angle_top_left = record.angle_top_left;
+      qaMonitoringRecord.angle_mid_left = record.angle_mid_left;
+      qaMonitoringRecord.angle_bottom_left = record.angle_bottom_left;
+      qaMonitoringRecord.angle_top_right = record.angle_top_right;
+      qaMonitoringRecord.angle_mid_right = record.angle_mid_right;
+      qaMonitoringRecord.angle_bottom_right = record.angle_bottom_right;
       qaMonitoringRecord.candling_results = JSON.stringify({
         type: 'setter_angles',
         entry_mode: 'machine'
