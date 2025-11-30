@@ -138,7 +138,7 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-96">
+                <ScrollArea className="h-96">
                   <div className="space-y-4">
                     {requiredItems.map((item) => {
                       const isCompleted = completedItemIds.has(item.id);
@@ -230,7 +230,7 @@ const DailyChecklist = ({ selectedBatchId }: DailyChecklistProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="max-h-64">
+                <ScrollArea className="h-64">
                   <div className="space-y-4">
                     {optionalItems.map((item) => {
                       const isCompleted = completedItemIds.has(item.id);
