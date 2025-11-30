@@ -10,15 +10,29 @@ export default function InitializeApp({ children }: InitializeAppProps) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      // Create default admin user if it doesn't exist
-      await createDefaultAdmin();
+    // Set a maximum timeout to ensure app always initializes
+    const maxTimeout = setTimeout(() => {
+      console.log('InitializeApp: Max timeout reached, forcing initialization');
       setIsInitialized(true);
+    }, 3000);
+
+    const initializeApp = async () => {
+      try {
+        // Create default admin user if it doesn't exist
+        await createDefaultAdmin();
+      } catch (error) {
+        console.error('InitializeApp: Admin creation error (non-blocking):', error);
+      } finally {
+        clearTimeout(maxTimeout);
+        setIsInitialized(true);
+      }
     };
 
     if (!loading) {
       initializeApp();
     }
+
+    return () => clearTimeout(maxTimeout);
   }, [loading, createDefaultAdmin]);
 
   if (loading || !isInitialized) {

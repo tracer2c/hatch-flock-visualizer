@@ -267,10 +267,21 @@ export const useAuth = () => {
   };
 
   const createDefaultAdmin = async () => {
-    // Skip if we've already attempted and failed
-    const hasTriedCreation = localStorage.getItem('admin_creation_attempted');
-    if (hasTriedCreation) {
-      return { error: null };
+    // Check localStorage flag FIRST (sync check) to avoid any async operations
+    try {
+      const hasTriedCreation = localStorage.getItem('admin_creation_attempted');
+      if (hasTriedCreation === 'true') {
+        return { error: null };
+      }
+    } catch {
+      // localStorage might not be available, continue anyway
+    }
+
+    // Mark attempt immediately to prevent race conditions
+    try {
+      localStorage.setItem('admin_creation_attempted', 'true');
+    } catch {
+      // Ignore localStorage errors
     }
 
     try {
@@ -285,35 +296,14 @@ export const useAuth = () => {
         return { error: null };
       }
       
-      // Use a proper email format for local development
-      const { error } = await supabase.auth.signUp({
-        email: 'admin@hatchery.local',
-        password: 'admin123',
-        options: {
-          data: {
-            first_name: 'Default',
-            last_name: 'Admin',
-          }
-        }
-      });
-      
-      if (error) {
-        // Mark that we've attempted creation to avoid repeated failures
-        localStorage.setItem('admin_creation_attempted', 'true');
-        if (!error.message.includes('already been registered') && !error.message.includes('invalid')) {
-          throw error;
-        }
-      }
-      
+      // Skip admin creation entirely - let users create accounts manually
+      // This prevents email validation errors with invalid domains
+      console.log('No users found, but skipping auto-admin creation');
       return { error: null };
     } catch (error: any) {
-      // Mark attempt and prevent future attempts
-      localStorage.setItem('admin_creation_attempted', 'true');
-      // Only log truly unexpected errors
-      if (!error.message?.includes('already been registered') && !error.message?.includes('invalid')) {
-        console.error('Error creating default admin:', error);
-      }
-      return { error };
+      // Non-blocking error - just log and continue
+      console.log('createDefaultAdmin check completed with note:', error?.message || 'unknown');
+      return { error: null };
     }
   };
 
