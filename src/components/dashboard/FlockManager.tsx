@@ -496,51 +496,7 @@ const FlockManager = () => {
                 </DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Flock Number *</Label>
-                  <Input
-                    type="number"
-                    value={formData.flock_number}
-                    onChange={(e) => setFormData(prev => ({ ...prev, flock_number: e.target.value }))}
-                    placeholder="e.g., 6367"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Flock Name *</Label>
-                  <Input
-                    value={formData.flock_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, flock_name: e.target.value }))}
-                    placeholder="e.g., Bertha Valley"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Age (Weeks) *</Label>
-                  <Input
-                    type="number"
-                    value={formData.age_weeks}
-                    onChange={(e) => setFormData(prev => ({ ...prev, age_weeks: e.target.value }))}
-                    placeholder="e.g., 56"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Arrival Date *</Label>
-                  <Input
-                    type="date"
-                    value={formData.arrival_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, arrival_date: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Total Birds</Label>
-                  <Input
-                    type="number"
-                    value={formData.total_birds}
-                    onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
-                    placeholder="e.g., 25000"
-                  />
-                </div>
-
-                {/* Hatchery selection */}
+                {/* 1. Hatchery selection (first) */}
                 <div className="space-y-2 md:col-span-2">
                   <Label>Hatchery *</Label>
                   <Select
@@ -577,8 +533,62 @@ const FlockManager = () => {
                   )}
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Technician Name *</Label>
+                {/* 2. Flock Number */}
+                <div className="space-y-2">
+                  <Label>Flock Number *</Label>
+                  <Input
+                    type="number"
+                    value={formData.flock_number}
+                    onChange={(e) => setFormData(prev => ({ ...prev, flock_number: e.target.value }))}
+                    placeholder="e.g., 6367"
+                  />
+                </div>
+
+                {/* 3. Flock Name */}
+                <div className="space-y-2">
+                  <Label>Flock Name *</Label>
+                  <Input
+                    value={formData.flock_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, flock_name: e.target.value }))}
+                    placeholder="e.g., Bertha Valley"
+                  />
+                </div>
+
+                {/* 4. Age (Weeks) */}
+                <div className="space-y-2">
+                  <Label>Age (Weeks) *</Label>
+                  <Input
+                    type="number"
+                    value={formData.age_weeks}
+                    onChange={(e) => setFormData(prev => ({ ...prev, age_weeks: e.target.value }))}
+                    placeholder="e.g., 56"
+                  />
+                </div>
+
+                {/* 5. Arrival Date */}
+                <div className="space-y-2">
+                  <Label>Arrival Date *</Label>
+                  <Input
+                    type="date"
+                    value={formData.arrival_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, arrival_date: e.target.value }))}
+                  />
+                </div>
+
+                {/* 6. Total Birds */}
+                <div className="space-y-2">
+                  <Label>Total Birds</Label>
+                  <Input
+                    type="number"
+                    value={formData.total_birds}
+                    onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
+                    placeholder="e.g., 25000"
+                  />
+                </div>
+
+                {/* 7. Technician Name */}
+                <div className="space-y-2">
+                  <Label>Technician Name</Label>
                   <Input
                     value={formData.technician_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, technician_name: e.target.value }))}
@@ -586,6 +596,7 @@ const FlockManager = () => {
                   />
                 </div>
 
+                {/* 8. Notes */}
                 <div className="space-y-2 md:col-span-2">
                   <Label>Notes</Label>
                   <Input

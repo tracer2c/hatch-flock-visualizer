@@ -50,14 +50,14 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
     flockNumber: batchInfo.flock_number,
     houseNumber: batchInfo.house_number || '1',
     totalEggsPulled: 648,
-    stained: 0,
-    dirty: 0,
-    small: 0,
-    cracked: 0,
-    abnormal: 0,
-    contaminated: 0,
+    stained: undefined,
+    dirty: undefined,
+    small: undefined,
+    cracked: undefined,
+    abnormal: undefined,
+    contaminated: undefined,
     totalSampled: 648,
-    usd: 0,
+    usd: undefined,
     setWeek: '',
     hatchWeek: ''
   });
@@ -305,9 +305,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="stained"
                   type="number"
-                  value={newEntry.stained}
-                  onChange={(e) => setNewEntry({...newEntry, stained: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.stained ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, stained: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -315,9 +315,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="dirty"
                   type="number"
-                  value={newEntry.dirty}
-                  onChange={(e) => setNewEntry({...newEntry, dirty: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.dirty ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, dirty: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -325,9 +325,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="small"
                   type="number"
-                  value={newEntry.small}
-                  onChange={(e) => setNewEntry({...newEntry, small: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.small ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, small: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -335,9 +335,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="cracked"
                   type="number"
-                  value={newEntry.cracked}
-                  onChange={(e) => setNewEntry({...newEntry, cracked: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.cracked ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, cracked: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -345,9 +345,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="abnormal"
                   type="number"
-                  value={newEntry.abnormal}
-                  onChange={(e) => setNewEntry({...newEntry, abnormal: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.abnormal ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, abnormal: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -355,9 +355,9 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="contaminated"
                   type="number"
-                  value={newEntry.contaminated}
-                  onChange={(e) => setNewEntry({...newEntry, contaminated: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.contaminated ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, contaminated: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
@@ -365,18 +365,18 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 <Input
                   id="usd"
                   type="number"
-                  value={newEntry.usd}
-                  onChange={(e) => setNewEntry({...newEntry, usd: parseInt(e.target.value) || 0})}
-                  placeholder="0"
+                  value={newEntry.usd ?? ''}
+                  onChange={(e) => setNewEntry({...newEntry, usd: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="Enter count"
                 />
               </div>
               <div>
-                <Label htmlFor="setWeek">Set Week</Label>
+                <Label htmlFor="setWeek">Production Week</Label>
                 <Input
                   id="setWeek"
                   value={newEntry.setWeek}
                   onChange={(e) => setNewEntry({...newEntry, setWeek: e.target.value})}
-                  placeholder="Week 1"
+                  placeholder="e.g., Week 45"
                 />
               </div>
               <div className="md:col-span-2">

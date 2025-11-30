@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Eye, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays, format, parseISO } from 'date-fns';
+import { differenceInDays, format, parseISO, addDays } from 'date-fns';
 
 interface ResidueSchedule {
   id: string;
@@ -26,15 +32,54 @@ interface ResidueSchedule {
   };
 }
 
+interface Batch {
+  id: string;
+  batch_number: string;
+  set_date: string;
+  flock: {
+    flock_name: string;
+  };
+}
+
 export const ResidueScheduleManager = () => {
   const [schedules, setSchedules] = useState<ResidueSchedule[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'completed'>('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<ResidueSchedule | null>(null);
+  const [formData, setFormData] = useState({
+    batch_id: '',
+    scheduled_date: '',
+    due_date: '',
+    notes: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     loadSchedules();
+    loadBatches();
   }, []);
+
+  const loadBatches = async () => {
+    const { data, error } = await supabase
+      .from('batches')
+      .select(`
+        id,
+        batch_number,
+        set_date,
+        flock:flocks(flock_name)
+      `)
+      .in('status', ['setting', 'incubating', 'hatching'])
+      .order('set_date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading batches:', error);
+    } else {
+      setBatches(data as any || []);
+    }
+  };
 
   const loadSchedules = async () => {
     try {
@@ -53,7 +98,6 @@ export const ResidueScheduleManager = () => {
 
       if (error) throw error;
 
-      // Update overdue status
       const today = new Date().toISOString().split('T')[0];
       const updatedSchedules = data.map(schedule => ({
         ...schedule,
@@ -70,6 +114,80 @@ export const ResidueScheduleManager = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateSchedule = async () => {
+    if (!formData.batch_id || !formData.scheduled_date || !formData.due_date) {
+      toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('residue_analysis_schedule')
+      .insert({
+        batch_id: formData.batch_id,
+        scheduled_date: formData.scheduled_date,
+        due_date: formData.due_date,
+        notes: formData.notes || null,
+        status: 'pending'
+      });
+
+    if (error) {
+      toast({ title: "Error creating schedule", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Schedule created successfully" });
+      setShowCreateDialog(false);
+      setFormData({ batch_id: '', scheduled_date: '', due_date: '', notes: '' });
+      loadSchedules();
+    }
+  };
+
+  const handleEditSchedule = (schedule: ResidueSchedule) => {
+    setEditingSchedule(schedule);
+    setFormData({
+      batch_id: schedule.batch_id,
+      scheduled_date: schedule.scheduled_date,
+      due_date: schedule.due_date,
+      notes: schedule.notes || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateSchedule = async () => {
+    if (!editingSchedule) return;
+
+    const { error } = await supabase
+      .from('residue_analysis_schedule')
+      .update({
+        scheduled_date: formData.scheduled_date,
+        due_date: formData.due_date,
+        notes: formData.notes || null
+      })
+      .eq('id', editingSchedule.id);
+
+    if (error) {
+      toast({ title: "Error updating schedule", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Schedule updated successfully" });
+      setShowEditDialog(false);
+      setEditingSchedule(null);
+      setFormData({ batch_id: '', scheduled_date: '', due_date: '', notes: '' });
+      loadSchedules();
+    }
+  };
+
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    const { error } = await supabase
+      .from('residue_analysis_schedule')
+      .delete()
+      .eq('id', scheduleId);
+
+    if (error) {
+      toast({ title: "Error deleting schedule", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Schedule deleted successfully" });
+      loadSchedules();
     }
   };
 
@@ -143,6 +261,12 @@ export const ResidueScheduleManager = () => {
     completed: schedules.filter(s => s.status === 'completed').length
   };
 
+  // Auto-fill due date when scheduled date changes (2 days after scheduled)
+  const handleScheduledDateChange = (date: string) => {
+    const dueDate = addDays(new Date(date), 2).toISOString().split('T')[0];
+    setFormData(prev => ({ ...prev, scheduled_date: date, due_date: dueDate }));
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -155,9 +279,69 @@ export const ResidueScheduleManager = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Residue Analysis Schedule</h2>
-        <p className="text-muted-foreground">Track scheduled and completed residue analyses</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Residue Analysis Schedule</h2>
+          <p className="text-muted-foreground">Track scheduled and completed residue analyses</p>
+        </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Schedule
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Residue Analysis Schedule</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Select House *</Label>
+                <Select value={formData.batch_id} onValueChange={(value) => setFormData(prev => ({ ...prev, batch_id: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a house" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {batches.map((batch: any) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.batch_number} - {batch.flock?.flock_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Scheduled Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.scheduled_date}
+                  onChange={(e) => handleScheduledDateChange(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Due Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any notes..."
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateSchedule}>Create Schedule</Button>
+                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Statistics Cards */}
@@ -283,9 +467,30 @@ export const ResidueScheduleManager = () => {
                             Mark Complete
                           </Button>
                         )}
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
+                        <Button variant="outline" size="sm" onClick={() => handleEditSchedule(schedule)}>
+                          <Edit className="h-4 w-4" />
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Schedule?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete this schedule. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteSchedule(schedule.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -303,6 +508,49 @@ export const ResidueScheduleManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Schedule</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>House</Label>
+              <Input value={editingSchedule?.batch.batch_number || ''} disabled className="bg-muted" />
+            </div>
+            <div>
+              <Label>Scheduled Date *</Label>
+              <Input
+                type="date"
+                value={formData.scheduled_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, scheduled_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Due Date *</Label>
+              <Input
+                type="date"
+                value={formData.due_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Add any notes..."
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleUpdateSchedule}>Save Changes</Button>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

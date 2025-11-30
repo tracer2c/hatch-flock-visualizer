@@ -9,18 +9,29 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSOPTemplates, useCreateSOPTemplate, useDailyChecklistItems, useCreateChecklistItem } from "@/hooks/useSOPData";
 import { FileText, Plus, Edit, Calendar, CheckSquare, Settings, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from '@tanstack/react-query';
 
 const SOPManager = () => {
   const { data: sopTemplates, isLoading: templatesLoading } = useSOPTemplates();
   const { data: checklistItems, isLoading: itemsLoading } = useDailyChecklistItems();
   const createSOPTemplate = useCreateSOPTemplate();
   const createChecklistItem = useCreateChecklistItem();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [showNewTemplateDialog, setShowNewTemplateDialog] = useState(false);
   const [showNewItemDialog, setShowNewItemDialog] = useState(false);
+  const [showEditTemplateDialog, setShowEditTemplateDialog] = useState(false);
+  const [showEditItemDialog, setShowEditItemDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  
   const [newTemplate, setNewTemplate] = useState({
     title: '',
     description: '',
@@ -51,13 +62,112 @@ const SOPManager = () => {
     setNewItem({ title: '', description: '', is_required: true, applicable_days: [], sop_template_id: '' });
   };
 
-  const toggleApplicableDay = (day: number) => {
-    setNewItem(prev => ({
-      ...prev,
-      applicable_days: prev.applicable_days.includes(day)
-        ? prev.applicable_days.filter(d => d !== day)
-        : [...prev.applicable_days, day].sort((a, b) => a - b)
-    }));
+  const handleEditTemplate = (template: any) => {
+    setEditingTemplate({
+      ...template,
+      day_of_incubation: template.day_of_incubation || undefined
+    });
+    setShowEditTemplateDialog(true);
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!editingTemplate) return;
+    
+    const { error } = await supabase
+      .from('sop_templates')
+      .update({
+        title: editingTemplate.title,
+        description: editingTemplate.description,
+        category: editingTemplate.category,
+        day_of_incubation: editingTemplate.day_of_incubation || null
+      })
+      .eq('id', editingTemplate.id);
+
+    if (error) {
+      toast({ title: "Error updating template", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Template updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['sop-templates'] });
+      setShowEditTemplateDialog(false);
+      setEditingTemplate(null);
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    const { error } = await supabase
+      .from('sop_templates')
+      .delete()
+      .eq('id', templateId);
+
+    if (error) {
+      toast({ title: "Error deleting template", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Template deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['sop-templates'] });
+    }
+  };
+
+  const handleEditItem = (item: any) => {
+    setEditingItem({
+      ...item,
+      applicable_days: item.applicable_days || []
+    });
+    setShowEditItemDialog(true);
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editingItem) return;
+    
+    const { error } = await supabase
+      .from('daily_checklist_items')
+      .update({
+        title: editingItem.title,
+        description: editingItem.description,
+        is_required: editingItem.is_required,
+        applicable_days: editingItem.applicable_days
+      })
+      .eq('id', editingItem.id);
+
+    if (error) {
+      toast({ title: "Error updating item", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Checklist item updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['daily-checklist-items'] });
+      setShowEditItemDialog(false);
+      setEditingItem(null);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    const { error } = await supabase
+      .from('daily_checklist_items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) {
+      toast({ title: "Error deleting item", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Checklist item deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['daily-checklist-items'] });
+    }
+  };
+
+  const toggleApplicableDay = (day: number, isEdit = false) => {
+    if (isEdit && editingItem) {
+      setEditingItem((prev: any) => ({
+        ...prev,
+        applicable_days: prev.applicable_days.includes(day)
+          ? prev.applicable_days.filter((d: number) => d !== day)
+          : [...prev.applicable_days, day].sort((a, b) => a - b)
+      }));
+    } else {
+      setNewItem(prev => ({
+        ...prev,
+        applicable_days: prev.applicable_days.includes(day)
+          ? prev.applicable_days.filter(d => d !== day)
+          : [...prev.applicable_days, day].sort((a, b) => a - b)
+      }));
+    }
   };
 
   if (templatesLoading || itemsLoading) {
@@ -174,12 +284,30 @@ const SOPManager = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditTemplate(template)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Template?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete "{template.title}". This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteTemplate(template.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </div>
@@ -277,12 +405,30 @@ const SOPManager = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditItem(item)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Checklist Item?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete "{item.title}". This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteItem(item.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </div>
@@ -291,6 +437,125 @@ const SOPManager = () => {
             </ScrollArea>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Template Dialog */}
+        <Dialog open={showEditTemplateDialog} onOpenChange={setShowEditTemplateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit SOP Template</DialogTitle>
+            </DialogHeader>
+            {editingTemplate && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-title">Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={editingTemplate.title}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editingTemplate.description || ''}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-category">Category</Label>
+                  <Select 
+                    value={editingTemplate.category} 
+                    onValueChange={(value) => setEditingTemplate({ ...editingTemplate, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily_checklist">Daily Checklist</SelectItem>
+                      <SelectItem value="troubleshooting">Troubleshooting</SelectItem>
+                      <SelectItem value="training">Training</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-day">Specific Day (Optional)</Label>
+                  <Input
+                    id="edit-day"
+                    type="number"
+                    min="1"
+                    max="21"
+                    value={editingTemplate.day_of_incubation || ''}
+                    onChange={(e) => setEditingTemplate({ 
+                      ...editingTemplate, 
+                      day_of_incubation: e.target.value ? parseInt(e.target.value) : undefined 
+                    })}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleUpdateTemplate}>Save Changes</Button>
+                  <Button variant="outline" onClick={() => setShowEditTemplateDialog(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Checklist Item Dialog */}
+        <Dialog open={showEditItemDialog} onOpenChange={setShowEditItemDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Checklist Item</DialogTitle>
+            </DialogHeader>
+            {editingItem && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-item-title">Title</Label>
+                  <Input
+                    id="edit-item-title"
+                    value={editingItem.title}
+                    onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-item-description">Description</Label>
+                  <Textarea
+                    id="edit-item-description"
+                    value={editingItem.description || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingItem.is_required}
+                    onCheckedChange={(checked) => setEditingItem({ ...editingItem, is_required: checked })}
+                  />
+                  <Label>Required Item</Label>
+                </div>
+                <div>
+                  <Label>Applicable Days (1-21)</Label>
+                  <div className="grid grid-cols-7 gap-2 mt-2">
+                    {Array.from({ length: 21 }, (_, i) => i + 1).map((day) => (
+                      <Button
+                        key={day}
+                        variant={editingItem.applicable_days.includes(day) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleApplicableDay(day, true)}
+                      >
+                        {day}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleUpdateItem}>Save Changes</Button>
+                  <Button variant="outline" onClick={() => setShowEditItemDialog(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
