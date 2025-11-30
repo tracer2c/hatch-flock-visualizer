@@ -87,10 +87,15 @@ export const useComparisonData = (filters: ComparisonFilters) => {
 
       // Process and enrich the data
       const processedData = (data || []).map((batch: any) => {
-        const fertility = batch.fertility_analysis?.[0];
+        // Handle both array and object returns from Supabase (UNIQUE constraint)
+        const fertility = Array.isArray(batch.fertility_analysis) 
+          ? batch.fertility_analysis?.[0] 
+          : batch.fertility_analysis;
         const eggQuality = batch.egg_pack_quality?.[0];
         const qaData = batch.qa_monitoring || [];
-        const residue = batch.residue_analysis?.[0];
+        const residue = Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0] 
+          : batch.residue_analysis;
 
         // Filter by house numbers if specified
         if (filters.houseNumbers.length > 0) {
