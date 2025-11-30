@@ -672,16 +672,18 @@ async function executeTool(toolName: string, parameters: any) {
         const housesFilter: string[] = Array.isArray(parameters.houses) ? parameters.houses : [];
         const limit: number = parameters.limit || 200;
 
-        const allowed = new Set(["fertility_percent","hatch_percent","hof_percent","residue_percent"]);
+        const allowed = new Set(["fertility_percent","hatch_percent","hof_percent","hoi_percent","if_dev_percent","residue_percent"]);
         if (!allowed.has(metric)) {
           return { error: `Unsupported metric: ${metric}`, allowed: Array.from(allowed) };
         }
 
-        const isResidue = metric === 'residue_percent';
-        const table = isResidue ? 'residue_analysis' : 'fertility_analysis';
-        const cols = isResidue
-          ? 'id, batch_id, analysis_date, residue_percent, total_residue_count'
-          : 'id, batch_id, analysis_date, sample_size, fertility_percent, hatch_percent, hof_percent';
+        // Route hatchability metrics to residue_analysis where actual data exists
+        const residueMetrics = new Set(['residue_percent', 'hatch_percent', 'hof_percent', 'hoi_percent', 'if_dev_percent']);
+        const useResidueTable = residueMetrics.has(metric);
+        const table = useResidueTable ? 'residue_analysis' : 'fertility_analysis';
+        const cols = useResidueTable
+          ? 'id, batch_id, analysis_date, sample_size, residue_percent, hatch_percent, hof_percent, hoi_percent, if_dev_percent'
+          : 'id, batch_id, analysis_date, sample_size, fertility_percent';
 
         let q = supabase.from(table).select(cols);
         if (typeof daysBack === 'number' && daysBack > 0) {
