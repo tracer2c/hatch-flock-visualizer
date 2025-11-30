@@ -615,7 +615,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <CullChecksEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            availableFlocks={getAvailableFlocks()}
+            flockOptions={getAvailableFlocks()}
             onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
@@ -633,7 +633,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <HatchProgressionEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            availableFlocks={getAvailableFlocks()}
+            flockOptions={getAvailableFlocks()}
             onSubmit={handleSubmitHatchProgression} 
           />
         </TabsContent>
@@ -643,7 +643,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
             technicianName={technicianName} 
             checkDate={checkDate} 
             machineId={selectedMachine.id}
-            availableFlocks={getAvailableFlocks()}
+            flockOptions={getAvailableFlocks()}
             onSubmit={handleSubmitMoistureLoss} 
           />
         </TabsContent>
