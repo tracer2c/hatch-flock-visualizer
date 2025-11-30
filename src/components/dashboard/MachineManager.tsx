@@ -106,10 +106,10 @@ const MachineManager = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.machine_number || !formData.machine_type || !formData.capacity) {
+    if (!formData.machine_number || !formData.machine_type || !formData.capacity || !formData.unit_id) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Hatchery, Machine Type, Machine Number, Capacity)",
         variant: "destructive"
       });
       return;
@@ -120,8 +120,13 @@ const MachineManager = () => {
       ? (formData.setter_mode || 'multi_setter') 
       : null;
 
+    // Add SS prefix for single setter machines
+    const machineNumber = setterMode === 'single_setter' 
+      ? `SS${formData.machine_number}` 
+      : formData.machine_number;
+
     const machineData = {
-      machine_number: formData.machine_number,
+      machine_number: machineNumber,
       machine_type: formData.machine_type as 'setter' | 'hatcher' | 'combo',
       setter_mode: setterMode,
       capacity: parseInt(formData.capacity),
@@ -356,14 +361,22 @@ const MachineManager = () => {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 1. Hatchery Selection (first) */}
                   <div className="space-y-2">
-                    <Label>Machine Number *</Label>
-                    <Input
-                      value={formData.machine_number}
-                      onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
-                      placeholder="e.g., INC-001"
-                    />
+                    <Label>Hatchery *</Label>
+                    <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select hatchery" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map(unit => (
+                          <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {/* 2. Machine Type */}
                   <div className="space-y-2">
                     <Label>Machine Type *</Label>
                     <Select 
@@ -371,7 +384,6 @@ const MachineManager = () => {
                       onValueChange={(value) => setFormData(prev => ({ 
                         ...prev, 
                         machine_type: value,
-                        // Reset setter_mode to default when changing type
                         setter_mode: (value === 'setter' || value === 'combo') ? 'multi_setter' : ''
                       }))}
                     >
@@ -386,7 +398,7 @@ const MachineManager = () => {
                     </Select>
                   </div>
                   
-                  {/* Setter Mode - only shown for setter/combo */}
+                  {/* 3. Setter Mode - only shown for setter/combo */}
                   {showSetterMode && (
                     <div className="space-y-2">
                       <Label>Setter Mode *</Label>
@@ -398,19 +410,41 @@ const MachineManager = () => {
                           <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="single_setter">Single Setter</SelectItem>
+                          <SelectItem value="single_setter">Single Setter (SS prefix)</SelectItem>
                           <SelectItem value="multi_setter">Multi Setter</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
                         {formData.setter_mode === 'multi_setter' 
                           ? 'Multi setter machines can hold multiple flock sets in different zones.'
-                          : 'Single setter machines load all eggs together as one set.'
+                          : 'Single setter machines load all eggs together as one set. Machine number will be prefixed with SS.'
                         }
                       </p>
                     </div>
                   )}
+
+                  {/* 4. Machine Number */}
+                  <div className="space-y-2">
+                    <Label>Machine Number *</Label>
+                    <div className="flex items-center gap-2">
+                      {formData.setter_mode === 'single_setter' && (
+                        <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1.5 rounded">SS</span>
+                      )}
+                      <Input
+                        value={formData.machine_number}
+                        onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
+                        placeholder={formData.setter_mode === 'single_setter' ? "e.g., 001" : "e.g., INC-001"}
+                        className="flex-1"
+                      />
+                    </div>
+                    {formData.setter_mode === 'single_setter' && formData.machine_number && (
+                      <p className="text-xs text-muted-foreground">
+                        Full number: SS{formData.machine_number}
+                      </p>
+                    )}
+                  </div>
                   
+                  {/* 5. Capacity */}
                   <div className="space-y-2">
                     <Label>Capacity *</Label>
                     <Input
@@ -420,27 +454,8 @@ const MachineManager = () => {
                       placeholder="e.g., 50000"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Hatchery</Label>
-                    <Select value={formData.unit_id} onValueChange={(value) => setFormData(prev => ({ ...prev, unit_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select hatchery" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map(unit => (
-                          <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <Input
-                      value={formData.location}
-                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                      placeholder="e.g., Building A"
-                    />
-                  </div>
+
+                  {/* 6. Status */}
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
@@ -455,6 +470,8 @@ const MachineManager = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* 7. Last Maintenance */}
                   <div className="space-y-2">
                     <Label>Last Maintenance</Label>
                     <Input
@@ -463,6 +480,18 @@ const MachineManager = () => {
                       onChange={(e) => setFormData(prev => ({ ...prev, last_maintenance: e.target.value }))}
                     />
                   </div>
+
+                  {/* 8. Location */}
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="e.g., Building A"
+                    />
+                  </div>
+
+                  {/* 9. Notes */}
                   <div className="space-y-2 md:col-span-2">
                     <Label>Notes</Label>
                     <Input

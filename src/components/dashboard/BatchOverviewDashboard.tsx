@@ -97,11 +97,16 @@ const BatchOverviewDashboard = () => {
   };
 
   const machinesList = useMemo(() => {
-    return machineUtilization?.map((machine: any) => ({
+    // Filter machines by selected hatchery
+    const filtered = hatcheryFilter === "all" 
+      ? machineUtilization 
+      : machineUtilization?.filter((machine: any) => machine.unit_id === hatcheryFilter);
+    
+    return filtered?.map((machine: any) => ({
       id: machine.id,
       name: machine.name || `Machine ${machine.id}`
     })) || [];
-  }, [machineUtilization]);
+  }, [machineUtilization, hatcheryFilter]);
 
   const isWithinRange = (dateStr: string) => {
     if (!selectedDateRange.from || !selectedDateRange.to) return true;

@@ -90,6 +90,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     setTime: getCurrentTime(),
     totalEggs: '',
     customHouseNumber: '',
+    technicianName: '',
   });
   
   // Edit state
@@ -439,6 +440,24 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       return;
     }
 
+    if (!formData.totalEggs || parseInt(formData.totalEggs) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter the total eggs set (required)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.technicianName || formData.technicianName.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Please enter the technician name",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const selectedFlock = flocks.find(f => f.id === formData.flockId);
     
     if (!selectedFlock) {
@@ -518,6 +537,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         setTime: getCurrentTime(),
         totalEggs: '',
         customHouseNumber: '',
+        technicianName: '',
       });
       loadHouses();
       onHouseSelect(data.id);
@@ -676,12 +696,22 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Total Eggs Set</Label>
+                <Label>Total Eggs Set *</Label>
                 <Input
                   type="number"
                   placeholder="e.g., 45000"
                   value={formData.totalEggs}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Technician Name *</Label>
+                <Input
+                  placeholder="Enter technician name"
+                  value={formData.technicianName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, technicianName: e.target.value }))}
+                  required
                 />
               </div>
             </div>
