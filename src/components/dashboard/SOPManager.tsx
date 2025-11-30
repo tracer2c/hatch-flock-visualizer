@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSOPTemplates, useCreateSOPTemplate, useDailyChecklistItems, useCreateChecklistItem } from "@/hooks/useSOPData";
-import { FileText, Plus, Edit, Calendar, CheckSquare, Settings, Trash2 } from "lucide-react";
+import { FileText, Plus, Edit, Calendar, CheckSquare, Settings, Trash2, Building2, ArrowRightLeft, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,6 +24,7 @@ const SOPManager = () => {
   const createChecklistItem = useCreateChecklistItem();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [machines, setMachines] = useState<any[]>([]);
 
   const [showNewTemplateDialog, setShowNewTemplateDialog] = useState(false);
   const [showNewItemDialog, setShowNewItemDialog] = useState(false);
@@ -43,8 +44,19 @@ const SOPManager = () => {
     description: '',
     is_required: true,
     applicable_days: [] as number[],
-    sop_template_id: ''
+    sop_template_id: '',
+    target_type: 'batch' as 'batch' | 'machine' | 'transfer' | 'alert',
+    machine_id: '' as string
   });
+
+  // Fetch machines for machine-specific checklists
+  useEffect(() => {
+    const fetchMachines = async () => {
+      const { data } = await supabase.from('machines').select('id, machine_number, machine_type').order('machine_number');
+      setMachines(data || []);
+    };
+    fetchMachines();
+  }, []);
 
   const handleCreateTemplate = async () => {
     await createSOPTemplate.mutateAsync(newTemplate);
@@ -54,12 +66,22 @@ const SOPManager = () => {
 
   const handleCreateItem = async () => {
     const orderIndex = (checklistItems?.length || 0) + 1;
-    await createChecklistItem.mutateAsync({
+    const insertData: any = {
       ...newItem,
       order_index: orderIndex,
-    });
-    setShowNewItemDialog(false);
-    setNewItem({ title: '', description: '', is_required: true, applicable_days: [], sop_template_id: '' });
+      machine_id: newItem.target_type === 'machine' && newItem.machine_id ? newItem.machine_id : null
+    };
+    
+    const { error } = await supabase.from('daily_checklist_items').insert(insertData);
+    
+    if (error) {
+      toast({ title: "Error creating item", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Checklist Item Created", description: "New checklist item has been created." });
+      queryClient.invalidateQueries({ queryKey: ['daily-checklist-items'] });
+      setShowNewItemDialog(false);
+      setNewItem({ title: '', description: '', is_required: true, applicable_days: [], sop_template_id: '', target_type: 'batch', machine_id: '' });
+    }
   };
 
   const handleEditTemplate = (template: any) => {
@@ -357,6 +379,36 @@ const SOPManager = () => {
                       <Label>Required Item</Label>
                     </div>
                     <div>
+                      <Label>Target Type</Label>
+                      <Select value={newItem.target_type} onValueChange={(value: any) => setNewItem({ ...newItem, target_type: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="batch">House (Daily Checklist)</SelectItem>
+                          <SelectItem value="machine">Machine (Maintenance)</SelectItem>
+                          <SelectItem value="transfer">Transfer Protocol</SelectItem>
+                          <SelectItem value="alert">Alert/Notification</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newItem.target_type === 'machine' && (
+                      <div>
+                        <Label>Assign to Machine</Label>
+                        <Select value={newItem.machine_id} onValueChange={(value) => setNewItem({ ...newItem, machine_id: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select machine (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All Machines</SelectItem>
+                            {machines.map(m => (
+                              <SelectItem key={m.id} value={m.id}>{m.machine_number} ({m.machine_type})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
                       <Label>Applicable Days (1-21)</Label>
                       <div className="grid grid-cols-7 gap-2 mt-2">
                         {Array.from({ length: 21 }, (_, i) => i + 1).map((day) => (
@@ -381,18 +433,26 @@ const SOPManager = () => {
 
             <ScrollArea className="h-80">
               <div className="space-y-3">
-                {checklistItems?.map((item) => (
+                {checklistItems?.map((item: any) => (
                   <div key={item.id} className="p-4 border rounded-lg hover:bg-muted/50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium">{item.title}</h4>
                           {item.is_required && <Badge variant="destructive">Required</Badge>}
+                          {item.target_type && item.target_type !== 'batch' && (
+                            <Badge variant="outline" className="text-xs">
+                              {item.target_type === 'machine' && <Settings className="h-3 w-3 mr-1" />}
+                              {item.target_type === 'transfer' && <ArrowRightLeft className="h-3 w-3 mr-1" />}
+                              {item.target_type === 'alert' && <Bell className="h-3 w-3 mr-1" />}
+                              {item.target_type}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                         <div className="flex items-center gap-1 mt-2">
                           <span className="text-xs text-muted-foreground">Days:</span>
-                          {item.applicable_days.slice(0, 5).map((day) => (
+                          {item.applicable_days.slice(0, 5).map((day: number) => (
                             <Badge key={day} variant="outline" className="text-xs">
                               {day}
                             </Badge>
