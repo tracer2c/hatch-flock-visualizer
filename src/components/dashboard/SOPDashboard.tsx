@@ -127,7 +127,7 @@ const SOPDashboard = () => {
   };
 
   const handleNavigateToChecklist = (batchId: string) => {
-    navigate(`/checklist/${batchId}`);
+    navigate(`/checklist/house/${batchId}`);
   };
 
   if (batchesLoading) {
