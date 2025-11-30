@@ -22,8 +22,17 @@ export const useCriticalEvents = () => {
       
       const batchesWithFlags = batches.map(b => ({
         ...b,
-        fertility_analysis_completed: Array.isArray(b.fertility_analysis) && b.fertility_analysis.length > 0,
-        residue_analysis_completed: Array.isArray(b.residue_analysis) && b.residue_analysis.length > 0,
+        // Handle both object (UNIQUE constraint) and array returns from Supabase
+        fertility_analysis_completed: Boolean(
+          Array.isArray(b.fertility_analysis) 
+            ? b.fertility_analysis.length > 0 
+            : b.fertility_analysis?.id
+        ),
+        residue_analysis_completed: Boolean(
+          Array.isArray(b.residue_analysis) 
+            ? b.residue_analysis.length > 0 
+            : b.residue_analysis?.id
+        ),
         transferred: b.status === 'hatching'
       }));
       
