@@ -1160,13 +1160,14 @@ export type Database = {
           angle_mid_right: number | null
           angle_top_left: number | null
           angle_top_right: number | null
-          batch_id: string
+          batch_id: string | null
           candling_results: string | null
           check_date: string
           check_time: string
           co2_level: number | null
           created_at: string
           day_of_incubation: number
+          entry_mode: string
           humidity: number
           id: string
           inspector_name: string
@@ -1206,13 +1207,14 @@ export type Database = {
           angle_mid_right?: number | null
           angle_top_left?: number | null
           angle_top_right?: number | null
-          batch_id: string
+          batch_id?: string | null
           candling_results?: string | null
           check_date?: string
           check_time?: string
           co2_level?: number | null
           created_at?: string
           day_of_incubation: number
+          entry_mode?: string
           humidity: number
           id?: string
           inspector_name: string
@@ -1252,13 +1254,14 @@ export type Database = {
           angle_mid_right?: number | null
           angle_top_left?: number | null
           angle_top_right?: number | null
-          batch_id?: string
+          batch_id?: string | null
           candling_results?: string | null
           check_date?: string
           check_time?: string
           co2_level?: number | null
           created_at?: string
           day_of_incubation?: number
+          entry_mode?: string
           humidity?: number
           id?: string
           inspector_name?: string
@@ -1311,6 +1314,75 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_position_linkage: {
+        Row: {
+          created_at: string
+          id: string
+          multi_setter_set_id: string | null
+          position: string
+          qa_monitoring_id: string
+          resolved_batch_id: string | null
+          resolved_flock_id: string | null
+          temperature: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          multi_setter_set_id?: string | null
+          position: string
+          qa_monitoring_id: string
+          resolved_batch_id?: string | null
+          resolved_flock_id?: string | null
+          temperature: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          multi_setter_set_id?: string | null
+          position?: string
+          qa_monitoring_id?: string
+          resolved_batch_id?: string | null
+          resolved_flock_id?: string | null
+          temperature?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_position_linkage_multi_setter_set_id_fkey"
+            columns: ["multi_setter_set_id"]
+            isOneToOne: false
+            referencedRelation: "multi_setter_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_position_linkage_qa_monitoring_id_fkey"
+            columns: ["qa_monitoring_id"]
+            isOneToOne: false
+            referencedRelation: "qa_monitoring"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_position_linkage_resolved_batch_id_fkey"
+            columns: ["resolved_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_position_linkage_resolved_batch_id_fkey"
+            columns: ["resolved_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_position_linkage_resolved_flock_id_fkey"
+            columns: ["resolved_flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
             referencedColumns: ["id"]
           },
         ]
