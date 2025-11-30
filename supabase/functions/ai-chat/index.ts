@@ -502,31 +502,61 @@ async function executeTool(toolName: string, parameters: any) {
           const groupBy = explicitGroup || (parameters.group_by_house ? 'house' : null);
           const housesFilter: string[] = Array.isArray(parameters.houses) ? parameters.houses : [];
 
+          // Query batches with LEFT JOINs to get fertility from fertility_analysis 
+          // and hatch/hof from residue_analysis (where actual values are stored)
           let q = supabase
-            .from('fertility_analysis')
-            .select('id, batch_id, analysis_date, fertility_percent, hatch_percent, hof_percent');
+            .from('batches')
+            .select(`
+              id,
+              batch_number,
+              unit_id,
+              flock_id,
+              set_date,
+              fertility_analysis!left(fertility_percent, analysis_date),
+              residue_analysis!left(hatch_percent, hof_percent, hoi_percent)
+            `);
 
           if (parameters.batch_id) {
-            q = q.eq('batch_id', parameters.batch_id);
+            q = q.eq('id', parameters.batch_id);
           }
           if (daysBack && typeof daysBack === 'number') {
             const start = new Date();
             start.setDate(start.getDate() - daysBack);
-            q = q.gte('analysis_date', start.toISOString().split('T')[0]);
+            q = q.gte('set_date', start.toISOString().split('T')[0]);
           }
 
-          q = q.order('analysis_date', { ascending: false }).limit(parameters.limit || 200);
+          q = q.order('set_date', { ascending: false }).limit(parameters.limit || 200);
 
-          const { data: fert, error: fertError } = await q;
-          if (fertError) throw fertError;
+          const { data: batchData, error: batchError } = await q;
+          if (batchError) throw batchError;
 
-          if (!fert || fert.length === 0) {
-            return { message: "No fertility analysis data found", data: [] };
+          if (!batchData || batchData.length === 0) {
+            return { message: "No batch data found", data: [] };
           }
+
+          // Enrich with actual values from correct tables
+          const fert = batchData.map((b: any) => ({
+            id: b.id,
+            batch_id: b.id,
+            batch_number: b.batch_number,
+            unit_id: b.unit_id,
+            flock_id: b.flock_id,
+            analysis_date: b.fertility_analysis?.analysis_date || b.set_date,
+            // fertility_percent from fertility_analysis
+            fertility_percent: Number(b.fertility_analysis?.fertility_percent || 0),
+            // hatch_percent and hof_percent from residue_analysis (where they actually exist)
+            hatch_percent: Number(b.residue_analysis?.hatch_percent || 0),
+            hof_percent: Number(b.residue_analysis?.hof_percent || 0),
+            hoi_percent: Number(b.residue_analysis?.hoi_percent || 0),
+            // Use batch_number as House label
+            label: b.batch_number || `House ${b.id?.slice?.(0, 8) || ''}`
+          }));
+
+          console.log('[get_fertility_rates] Enriched data sample:', fert.slice(0, 3));
 
           if (!groupBy) {
             return {
-              message: `Found ${fert.length} fertility analysis records`,
+              message: `Found ${fert.length} house records with fertility data`,
               data: fert
             };
           }
@@ -2327,8 +2357,9 @@ function generateChartsFromData(message: string, toolResults: any[]) {
 function generateFertilityCharts(message: string, fertilityData: any[], preferredType?: 'bar' | 'line' | 'pie' | 'radar' | 'scatter' | 'area') {
   const charts: any[] = [];
 
+  // Use label field (House identifier) from the data, fallback to batch_number
   const houseData = fertilityData.slice(0, 10).map(item => ({
-    name: item.unit_name || item.batches?.batch_number || `Batch ${item.id?.slice?.(0, 8) || ''}`,
+    name: item.label || item.batch_number || item.batches?.batch_number || `House ${item.id?.slice?.(0, 8) || ''}`,
     fertility: Number(item.fertility_percent || 0),
     hatch: Number(item.hatch_percent || 0),
     hof: Number(item.hof_percent || 0)
@@ -2345,7 +2376,7 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
     charts.push({
       type: 'bar',
       title: 'Fertility Rates Comparison',
-      description: 'Comparison of fertility and hatch rates across batches',
+      description: 'Comparison of fertility and hatch rates across houses',
       data: houseData,
       config: {
         xKey: 'name',
@@ -2355,7 +2386,7 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
           { key: 'hof', name: 'HOF %', color: 'hsl(var(--chart-3))' }
         ]
       },
-      insights: `Showing fertility performance across ${houseData.length} batches`
+      insights: `Showing fertility performance across ${houseData.length} houses`
     });
   }
 
@@ -2369,7 +2400,7 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
     charts.push({
       type: 'pie',
       title: 'Fertility Performance Distribution',
-      description: 'Distribution of batches by fertility performance category',
+      description: 'Distribution of houses by fertility performance category',
       data: [
         { name: 'Excellent (90%+)', value: excellent, fill: 'hsl(var(--chart-1))' },
         { name: 'Good (80-89%)', value: good, fill: 'hsl(var(--chart-2))' },
@@ -2377,7 +2408,7 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
         { name: 'Poor (<70%)', value: poor, fill: 'hsl(var(--chart-4))' }
       ],
       config: { valueKey: 'value', nameKey: 'name' },
-      insights: `${excellent} batches achieving excellent fertility rates`
+      insights: `${excellent} houses achieving excellent fertility rates`
     });
   }
 
@@ -2385,8 +2416,8 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
   if (want('line', 'line', 'trend')) {
     charts.push({
       type: 'line',
-      title: 'Fertility and Hatch Trends by Batch',
-      description: 'Trend view of fertility, hatch, and HOF across batches',
+      title: 'Fertility and Hatch Trends by House',
+      description: 'Trend view of fertility, hatch, and HOF across houses',
       data: houseData,
       config: {
         xKey: 'name',
@@ -2404,7 +2435,7 @@ function generateFertilityCharts(message: string, fertilityData: any[], preferre
     charts.push({
       type: 'area',
       title: 'Fertility Area View',
-      description: 'Area visualization across batches',
+      description: 'Area visualization across houses',
       data: houseData,
       config: {
         xKey: 'name',
