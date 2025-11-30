@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, Clock, AlertTriangle, Home, Settings, ArrowRightLeft, Bell, ListChecks } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Home, Settings, ArrowRightLeft, Bell, ListChecks, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays } from 'date-fns';
-import { useCompleteChecklistItem } from '@/hooks/useSOPData';
 import { useToast } from '@/components/ui/use-toast';
 
 const SOPDashboard = () => {
   const { toast } = useToast();
-  const completeItem = useCompleteChecklistItem();
+  const navigate = useNavigate();
 
   // Fetch active batches with their checklist status
   const { data: activeBatches, isLoading: batchesLoading } = useQuery({
