@@ -17,15 +17,26 @@ import {
   Layers,
   Thermometer,
   Ruler,
-  Droplets
+  Droplets,
+  AlertTriangle,
+  Scale,
+  RotateCcw,
+  Timer
 } from "lucide-react";
 import { useHatcheries, useMultiSetterMachines } from '@/hooks/useQAHubData';
 import { usePositionOccupancy } from '@/hooks/usePositionOccupancy';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { submitMachineLevelQA, submitMachineWideQA, type FlockLinkage } from '@/services/qaSubmissionService';
 import MultiSetterQAEntry from '@/components/dashboard/MultiSetterQAEntry';
 import MachineWideAnglesEntry from '@/components/qa-hub/MachineWideAnglesEntry';
 import MachineWideHumidityEntry from '@/components/qa-hub/MachineWideHumidityEntry';
+import RectalTempEntry from './RectalTempEntry';
+import TrayWashEntry from './TrayWashEntry';
+import CullChecksEntry from './CullChecksEntry';
+import SpecificGravityEntry from './SpecificGravityEntry';
+import HatchProgressionEntry from './HatchProgressionEntry';
+import MoistureLossEntry from './MoistureLossEntry';
 import { OccupancyInfo } from '@/utils/setterPositionMapping';
 
 interface SelectedMachine {
@@ -52,7 +63,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
   );
 
-  // Get position occupancy for the selected machine and date
   const { uniqueFlockDetails } = usePositionOccupancy(
     selectedMachine?.id || null,
     checkDate
@@ -98,29 +108,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
         data.positionOccupancy
       );
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast.success('Machine-level temperature QA saved successfully!');
+      if (!result.success) throw new Error(result.error);
+      toast.success('Machine-level temperature QA saved!');
       setNotes('');
       refetch();
     } catch (error: any) {
-      toast.error(`Failed to save QA: ${error.message}`);
+      toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSubmitAngles = async (data: {
-    angles: {
-      angle_top_left: number;
-      angle_mid_left: number;
-      angle_bottom_left: number;
-      angle_top_right: number;
-      angle_mid_right: number;
-      angle_bottom_right: number;
-    };
+    angles: { angle_top_left: number; angle_mid_left: number; angle_bottom_left: number; angle_top_right: number; angle_mid_right: number; angle_bottom_right: number };
     checkDate: string;
     uniqueFlocks: { flock_id: string; batch_id: string | null; flock_name: string; flock_number: number }[];
   }) => {
@@ -131,10 +131,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({
-        flock_id: f.flock_id,
-        batch_id: f.batch_id
-      }));
+      const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({ flock_id: f.flock_id, batch_id: f.batch_id }));
 
       const result = await submitMachineWideQA(
         {
@@ -156,15 +153,12 @@ const MultiSetterQAWorkflow: React.FC = () => {
         flockLinkages
       );
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast.success('Machine-wide angles saved successfully!');
+      if (!result.success) throw new Error(result.error);
+      toast.success('Machine-wide angles saved!');
       setNotes('');
       refetch();
     } catch (error: any) {
-      toast.error(`Failed to save angles: ${error.message}`);
+      toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -183,10 +177,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({
-        flock_id: f.flock_id,
-        batch_id: f.batch_id
-      }));
+      const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({ flock_id: f.flock_id, batch_id: f.batch_id }));
 
       const result = await submitMachineWideQA(
         {
@@ -202,15 +193,47 @@ const MultiSetterQAWorkflow: React.FC = () => {
         flockLinkages
       );
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      toast.success('Machine-wide humidity saved successfully!');
+      if (!result.success) throw new Error(result.error);
+      toast.success('Machine-wide humidity saved!');
       setNotes('');
       refetch();
     } catch (error: any) {
-      toast.error(`Failed to save humidity: ${error.message}`);
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Generic handler for other QA types (stored in qa_monitoring with candling_results JSON)
+  const handleSubmitGenericQA = async (type: string, data: any) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('qa_monitoring').insert({
+        machine_id: selectedMachine.id,
+        batch_id: null,
+        check_date: data.checkDate || checkDate,
+        check_time: new Date().toTimeString().split(' ')[0],
+        day_of_incubation: 0,
+        temperature: data.temperature || 100,
+        humidity: data.humidity || 55,
+        mortality_count: data.mortalityCount || null,
+        inspector_name: technicianName,
+        notes: notes || null,
+        entry_mode: 'machine',
+        candling_results: JSON.stringify({ type, ...data })
+      });
+
+      if (error) throw error;
+      toast.success(`${type.replace('_', ' ')} saved!`);
+      setNotes('');
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -220,7 +243,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
   if (!selectedMachine) {
     return (
       <div className="space-y-4">
-        {/* Filters */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -235,106 +257,62 @@ const MultiSetterQAWorkflow: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Hatchery
+                  <Building2 className="h-4 w-4" />Hatchery
                 </Label>
                 <Select value={selectedHatcheryId} onValueChange={setSelectedHatcheryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select hatchery" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select hatchery" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Hatcheries</SelectItem>
-                    {hatcheries?.map(h => (
-                      <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
-                    ))}
+                    {hatcheries?.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Search Machines
+                  <Search className="h-4 w-4" />Search Machines
                 </Label>
-                <Input
-                  placeholder="Search by machine number or location..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <Input placeholder="Search by machine number or location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Machines List */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                Multi-Setter Machines
-              </CardTitle>
-              <Badge variant="secondary">
-                {filteredMachines?.length || 0} machines
-              </Badge>
+              <CardTitle className="text-base">Multi-Setter Machines</CardTitle>
+              <Badge variant="secondary">{filteredMachines?.length || 0} machines</Badge>
             </div>
           </CardHeader>
           <CardContent>
             {machinesLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-24 w-full" />
-                ))}
-              </div>
+              <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
             ) : filteredMachines?.length === 0 ? (
-              <Alert>
-                <AlertDescription>
-                  No multi-setter machines found for the selected criteria.
-                </AlertDescription>
-              </Alert>
+              <Alert><AlertDescription>No multi-setter machines found.</AlertDescription></Alert>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredMachines?.map(machine => (
-                  <Card 
-                    key={machine.id}
-                    className="cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group"
-                    onClick={() => setSelectedMachine(machine)}
-                  >
+                  <Card key={machine.id} className="cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group" onClick={() => setSelectedMachine(machine)}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Settings className="h-4 w-4 text-purple-600" />
-                          <span className="font-medium">
-                            {machine.machine_number}
-                          </span>
+                          <span className="font-medium">{machine.machine_number}</span>
                         </div>
-                        <Badge 
-                          variant="outline"
-                          className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                        >
-                          Multi-Setter
-                        </Badge>
+                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Multi-Setter</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {machine.location || 'No location set'}
-                      </p>
+                      <p className="text-xs text-muted-foreground mb-2">{machine.location || 'No location set'}</p>
                       <div className="flex items-center gap-2 mb-2">
                         <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-purple-500 h-full transition-all"
-                            style={{ width: `${(machine.occupiedPositions / machine.totalPositions) * 100}%` }}
-                          />
+                          <div className="bg-purple-500 h-full transition-all" style={{ width: `${(machine.occupiedPositions / machine.totalPositions) * 100}%` }} />
                         </div>
-                        <span className="text-xs font-medium">
-                          {machine.occupiedPositions}/{machine.totalPositions}
-                        </span>
+                        <span className="text-xs font-medium">{machine.occupiedPositions}/{machine.totalPositions}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Layers className="h-3 w-3" />
-                          {machine.activeFlocks} flocks
+                          <Layers className="h-3 w-3" />{machine.activeFlocks} flocks
                         </div>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs group-hover:bg-purple-100">
-                          Select
-                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs group-hover:bg-purple-100">Select</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -347,16 +325,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
     );
   }
 
-  // QA Entry View with Tabs
+  // QA Entry View with 8 Tabs
   return (
     <div className="space-y-4">
-      {/* Header with Back Button */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => setSelectedMachine(null)} className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Machines
+              <ArrowLeft className="h-4 w-4" />Back to Machines
             </Button>
             <div className="flex items-center gap-4">
               <div className="text-right">
@@ -371,53 +347,53 @@ const MultiSetterQAWorkflow: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Technician Info & Check Date */}
       <Card>
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Technician Name *</Label>
-              <Input
-                value={technicianName}
-                onChange={(e) => setTechnicianName(e.target.value)}
-                placeholder="Enter your name"
-              />
+              <Input value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Enter your name" />
             </div>
             <div className="space-y-2">
               <Label>Check Date</Label>
-              <Input
-                type="date"
-                value={checkDate}
-                onChange={(e) => setCheckDate(e.target.value)}
-              />
+              <Input type="date" value={checkDate} onChange={(e) => setCheckDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any observations..."
-                className="h-10 resize-none"
-              />
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add observations..." className="h-10 resize-none" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* QA Type Tabs */}
       <Tabs defaultValue="temperatures" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="temperatures" className="flex items-center gap-2">
-            <Thermometer className="h-4 w-4" />
-            18-Point Temps
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
+          <TabsTrigger value="temperatures" className="flex items-center gap-1 text-xs">
+            <Thermometer className="h-3 w-3" />Temps
           </TabsTrigger>
-          <TabsTrigger value="angles" className="flex items-center gap-2">
-            <Ruler className="h-4 w-4" />
-            Setter Angles
+          <TabsTrigger value="angles" className="flex items-center gap-1 text-xs">
+            <Ruler className="h-3 w-3" />Angles
           </TabsTrigger>
-          <TabsTrigger value="humidity" className="flex items-center gap-2">
-            <Droplets className="h-4 w-4" />
-            Humidity
+          <TabsTrigger value="humidity" className="flex items-center gap-1 text-xs">
+            <Droplets className="h-3 w-3" />Humidity
+          </TabsTrigger>
+          <TabsTrigger value="rectal" className="flex items-center gap-1 text-xs">
+            <Thermometer className="h-3 w-3" />Rectal
+          </TabsTrigger>
+          <TabsTrigger value="wash" className="flex items-center gap-1 text-xs">
+            <Droplets className="h-3 w-3" />Wash
+          </TabsTrigger>
+          <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
+            <AlertTriangle className="h-3 w-3" />Culls
+          </TabsTrigger>
+          <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
+            <Scale className="h-3 w-3" />Gravity
+          </TabsTrigger>
+          <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
+            <Timer className="h-3 w-3" />Hatch
+          </TabsTrigger>
+          <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
+            <Droplets className="h-3 w-3" />Moisture
           </TabsTrigger>
         </TabsList>
 
@@ -449,6 +425,54 @@ const MultiSetterQAWorkflow: React.FC = () => {
             checkDate={checkDate}
             uniqueFlocks={uniqueFlockDetails}
             onSubmit={handleSubmitHumidity}
+          />
+        </TabsContent>
+
+        <TabsContent value="rectal">
+          <RectalTempEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('rectal_temperature', { ...data, temperature: data.temperature })} 
+          />
+        </TabsContent>
+
+        <TabsContent value="wash">
+          <TrayWashEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('tray_wash', data)} 
+          />
+        </TabsContent>
+
+        <TabsContent value="culls">
+          <CullChecksEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('cull_check', { ...data, mortalityCount: data.maleCount + data.femaleCount })} 
+          />
+        </TabsContent>
+
+        <TabsContent value="gravity">
+          <SpecificGravityEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('specific_gravity', { ...data, humidity: data.floatPercentage })} 
+          />
+        </TabsContent>
+
+        <TabsContent value="hatch">
+          <HatchProgressionEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('hatch_progression', { ...data, humidity: data.percentageOut })} 
+          />
+        </TabsContent>
+
+        <TabsContent value="moisture">
+          <MoistureLossEntry 
+            technicianName={technicianName} 
+            checkDate={checkDate} 
+            onSubmit={(data) => handleSubmitGenericQA('moisture_loss', data)} 
           />
         </TabsContent>
       </Tabs>
