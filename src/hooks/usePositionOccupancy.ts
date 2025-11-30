@@ -9,6 +9,13 @@ import {
   type MultiSetterSet 
 } from '@/utils/setterPositionMapping';
 
+interface FlockDetail {
+  flock_id: string;
+  batch_id: string | null;
+  flock_name: string;
+  flock_number: number;
+}
+
 interface UsePositionOccupancyResult {
   occupancyMap: Map<string, OccupancyInfo>;
   isLoading: boolean;
@@ -17,6 +24,7 @@ interface UsePositionOccupancyResult {
   unoccupiedCount: number;
   unoccupiedPositions: string[];
   uniqueFlocks: string[];
+  uniqueFlockDetails: FlockDetail[];
   refetch: () => Promise<void>;
 }
 
@@ -114,6 +122,22 @@ export function usePositionOccupancy(
     return ALL_POSITION_KEYS.filter(key => !occupancyMap.has(key));
   }, [occupancyMap]);
 
+  // Get unique flock details for machine-wide QA linkage
+  const uniqueFlockDetails = useMemo(() => {
+    const seen = new Map<string, FlockDetail>();
+    occupancyMap.forEach(info => {
+      if (!seen.has(info.flock_id)) {
+        seen.set(info.flock_id, {
+          flock_id: info.flock_id,
+          batch_id: info.batch_id,
+          flock_name: info.flock_name,
+          flock_number: info.flock_number
+        });
+      }
+    });
+    return Array.from(seen.values());
+  }, [occupancyMap]);
+
   return {
     occupancyMap,
     isLoading,
@@ -122,6 +146,7 @@ export function usePositionOccupancy(
     unoccupiedCount: stats.unoccupied,
     unoccupiedPositions,
     uniqueFlocks,
+    uniqueFlockDetails,
     refetch: fetchSets
   };
 }

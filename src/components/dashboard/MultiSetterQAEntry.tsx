@@ -243,11 +243,35 @@ const MultiSetterQAEntry: React.FC<MultiSetterQAEntryProps> = ({
       <CardContent className="space-y-4">
         {/* Warning Banner for Unoccupied Positions */}
         {unoccupiedCount > 0 && (
-          <Alert variant="destructive" className="bg-orange-50 border-orange-200">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
-              {unoccupiedCount} of 18 positions have no mapped flock/house for this date. 
-              QA data for these positions will be saved without flock linkage.
+          <Alert variant="default" className="bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              <div className="space-y-2">
+                <p className="font-medium">
+                  {unoccupiedCount} of 18 positions have no mapped flock/house for {checkDate}.
+                </p>
+                <p className="text-sm">
+                  QA data for these positions will be saved without flock linkage.
+                  To properly link QA readings to flocks, configure all occupied positions in the Multi-Setter Sets Manager.
+                </p>
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-amber-700 hover:underline">
+                    Show unmapped positions
+                  </summary>
+                  <p className="mt-1 text-amber-600">
+                    {unoccupiedPositions.map(p => p.replace(/_/g, ' ')).join(', ')}
+                  </p>
+                </details>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 text-amber-700 border-amber-300 hover:bg-amber-100"
+                  onClick={() => window.location.href = '/management?section=machines'}
+                >
+                  <Settings className="h-3 w-3 mr-1" />
+                  Configure Sets →
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         )}
