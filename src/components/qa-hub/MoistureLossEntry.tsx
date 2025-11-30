@@ -3,18 +3,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Droplets, CheckCircle2, AlertTriangle } from "lucide-react";
+
+interface FlockOption {
+  flock_id: string;
+  batch_id: string;
+  flock_name: string;
+  flock_number: number;
+}
 
 interface MoistureLossEntryProps {
   technicianName: string;
   checkDate: string;
-  flockNumber?: number;
+  machineId: string;
+  dayOfIncubation?: number;
+  flockOptions?: FlockOption[];
+  defaultFlockId?: string;
+  defaultBatchId?: string;
   onSubmit: (data: {
-    flockNumber: string;
+    flock_id: string;
+    batch_id: string;
+    machine_id: string;
     day1Weight: number;
     day18Weight: number;
     lossPercentage: number;
+    dayOfIncubation: number;
     testDate: string;
   }) => void;
 }
@@ -24,14 +39,22 @@ const OPTIMAL_MAX = 12;
 
 const MoistureLossEntry: React.FC<MoistureLossEntryProps> = ({ 
   technicianName, 
-  checkDate, 
-  flockNumber: defaultFlockNumber,
+  checkDate,
+  machineId,
+  dayOfIncubation: defaultDayOfIncubation = 18,
+  flockOptions = [],
+  defaultFlockId,
+  defaultBatchId,
   onSubmit 
 }) => {
-  const [flockNumber, setFlockNumber] = useState(defaultFlockNumber?.toString() || '');
+  const [selectedFlockId, setSelectedFlockId] = useState(defaultFlockId || '');
   const [day1Weight, setDay1Weight] = useState('');
   const [day18Weight, setDay18Weight] = useState('');
   const [lossPercentage, setLossPercentage] = useState('');
+  const [dayOfIncubation, setDayOfIncubation] = useState(defaultDayOfIncubation.toString());
+
+  const selectedFlock = flockOptions.find(f => f.flock_id === selectedFlockId);
+  const batchId = selectedFlock?.batch_id || defaultBatchId || '';
 
   // Auto-calculate loss percentage
   useEffect(() => {
@@ -50,13 +73,16 @@ const MoistureLossEntry: React.FC<MoistureLossEntryProps> = ({
 
   const handleSubmit = () => {
     if (!technicianName.trim()) return;
-    if (!flockNumber || !day1Weight || !day18Weight) return;
+    if (!selectedFlockId || !batchId || !day1Weight || !day18Weight) return;
 
     onSubmit({
-      flockNumber,
+      flock_id: selectedFlockId,
+      batch_id: batchId,
+      machine_id: machineId,
       day1Weight: parseFloat(day1Weight),
       day18Weight: parseFloat(day18Weight),
       lossPercentage: lossPct,
+      dayOfIncubation: parseInt(dayOfIncubation) || defaultDayOfIncubation,
       testDate: checkDate
     });
 
@@ -84,13 +110,39 @@ const MoistureLossEntry: React.FC<MoistureLossEntryProps> = ({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Flock Number</Label>
+            <Label>Flock</Label>
+            {flockOptions.length > 0 ? (
+              <Select value={selectedFlockId} onValueChange={setSelectedFlockId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select flock" />
+                </SelectTrigger>
+                <SelectContent>
+                  {flockOptions.map(f => (
+                    <SelectItem key={f.flock_id} value={f.flock_id}>
+                      {f.flock_name} ({f.flock_number})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={selectedFlock?.flock_name || 'Auto-linked'}
+                disabled
+                className="bg-muted/50"
+              />
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Day of Incubation</Label>
             <Input
-              value={flockNumber}
-              onChange={(e) => setFlockNumber(e.target.value)}
-              placeholder="e.g., 1234"
+              type="number"
+              min="1"
+              max="21"
+              value={dayOfIncubation}
+              onChange={(e) => setDayOfIncubation(e.target.value)}
+              placeholder="18"
             />
           </div>
           <div className="space-y-2">
@@ -104,6 +156,9 @@ const MoistureLossEntry: React.FC<MoistureLossEntryProps> = ({
               placeholder="e.g., 65.5"
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Day 18 Weight (g)</Label>
             <Input
@@ -130,7 +185,7 @@ const MoistureLossEntry: React.FC<MoistureLossEntryProps> = ({
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || !flockNumber || !day1Weight || !day18Weight}
+              disabled={!technicianName.trim() || (!selectedFlockId && !defaultFlockId) || !day1Weight || !day18Weight}
               className="w-full"
             >
               Add Record

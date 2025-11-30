@@ -6,12 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Timer } from "lucide-react";
 
+interface FlockOption {
+  flock_id: string;
+  batch_id: string;
+  flock_name: string;
+  flock_number: number;
+}
+
 interface HatchProgressionEntryProps {
   technicianName: string;
   checkDate: string;
-  flockNumber?: number;
+  flockOptions?: FlockOption[];
+  defaultFlockId?: string;
+  defaultBatchId?: string;
   onSubmit: (data: {
-    flockNumber: string;
+    flock_id: string;
+    batch_id: string;
     stage: string;
     percentageOut: number;
     totalCount: number;
@@ -29,16 +39,21 @@ const stages = [
 
 const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({ 
   technicianName, 
-  checkDate, 
-  flockNumber: defaultFlockNumber,
+  checkDate,
+  flockOptions = [],
+  defaultFlockId,
+  defaultBatchId,
   onSubmit 
 }) => {
-  const [flockNumber, setFlockNumber] = useState(defaultFlockNumber?.toString() || '');
+  const [selectedFlockId, setSelectedFlockId] = useState(defaultFlockId || '');
   const [stage, setStage] = useState('A');
   const [totalCount, setTotalCount] = useState('');
   const [hatchedCount, setHatchedCount] = useState('');
   const [checkHour, setCheckHour] = useState('');
   const [percentageOut, setPercentageOut] = useState('');
+
+  const selectedFlock = flockOptions.find(f => f.flock_id === selectedFlockId);
+  const batchId = selectedFlock?.batch_id || defaultBatchId || '';
 
   // Auto-calculate percentage when counts change
   useEffect(() => {
@@ -52,10 +67,11 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
 
   const handleSubmit = () => {
     if (!technicianName.trim()) return;
-    if (!flockNumber) return;
+    if (!selectedFlockId || !batchId) return;
 
     onSubmit({
-      flockNumber,
+      flock_id: selectedFlockId,
+      batch_id: batchId,
       stage,
       percentageOut: parseFloat(percentageOut) || 0,
       totalCount: parseInt(totalCount) || 0,
@@ -82,12 +98,27 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Flock Number</Label>
-            <Input
-              value={flockNumber}
-              onChange={(e) => setFlockNumber(e.target.value)}
-              placeholder="e.g., 1234"
-            />
+            <Label>Flock</Label>
+            {flockOptions.length > 0 ? (
+              <Select value={selectedFlockId} onValueChange={setSelectedFlockId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select flock" />
+                </SelectTrigger>
+                <SelectContent>
+                  {flockOptions.map(f => (
+                    <SelectItem key={f.flock_id} value={f.flock_id}>
+                      {f.flock_name} ({f.flock_number})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={selectedFlock?.flock_name || 'Auto-linked'}
+                disabled
+                className="bg-muted/50"
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label>Stage</Label>
@@ -150,7 +181,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || !flockNumber}
+              disabled={!technicianName.trim() || (!selectedFlockId && !defaultFlockId)}
               className="w-full"
             >
               Add Record

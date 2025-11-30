@@ -533,10 +533,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
           <CullChecksEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            flockId={selectedMachine.currentHouse?.flock?.id}
-            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
-            flockName={selectedMachine.currentHouse?.flock?.flock_name}
-            batchId={selectedMachine.currentHouse?.id}
+            defaultFlockId={selectedMachine.currentHouse?.flock?.id}
+            defaultBatchId={selectedMachine.currentHouse?.id}
             onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
@@ -561,10 +559,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
           <HatchProgressionEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            flockId={selectedMachine.currentHouse?.flock?.id}
-            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
-            flockName={selectedMachine.currentHouse?.flock?.flock_name}
-            batchId={selectedMachine.currentHouse?.id}
+            defaultFlockId={selectedMachine.currentHouse?.flock?.id}
+            defaultBatchId={selectedMachine.currentHouse?.id}
             onSubmit={handleSubmitHatchProgression} 
           />
         </TabsContent>
@@ -573,12 +569,10 @@ const SingleSetterQAWorkflow: React.FC = () => {
           <MoistureLossEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            flockId={selectedMachine.currentHouse?.flock?.id}
-            flockNumber={selectedMachine.currentHouse?.flock?.flock_number}
-            flockName={selectedMachine.currentHouse?.flock?.flock_name}
-            batchId={selectedMachine.currentHouse?.id}
+            defaultFlockId={selectedMachine.currentHouse?.flock?.id}
+            defaultBatchId={selectedMachine.currentHouse?.id}
             machineId={selectedMachine.id}
-            daysInIncubation={selectedMachine.daysInIncubation}
+            dayOfIncubation={selectedMachine.daysInIncubation}
             onSubmit={handleSubmitMoistureLoss} 
           />
         </TabsContent>
