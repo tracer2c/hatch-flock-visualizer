@@ -539,8 +539,10 @@ export type Database = {
           description: string | null
           id: string
           is_required: boolean
+          machine_id: string | null
           order_index: number
           sop_template_id: string | null
+          target_type: string | null
           title: string
           updated_at: string
         }
@@ -551,8 +553,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_required?: boolean
+          machine_id?: string | null
           order_index?: number
           sop_template_id?: string | null
+          target_type?: string | null
           title: string
           updated_at?: string
         }
@@ -563,8 +567,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_required?: boolean
+          machine_id?: string | null
           order_index?: number
           sop_template_id?: string | null
+          target_type?: string | null
           title?: string
           updated_at?: string
         }
@@ -574,6 +580,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_checklist_items_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
             referencedColumns: ["id"]
           },
           {

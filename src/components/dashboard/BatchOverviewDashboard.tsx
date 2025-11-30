@@ -104,7 +104,7 @@ const BatchOverviewDashboard = () => {
     
     return filtered?.map((machine: any) => ({
       id: machine.id,
-      name: machine.name || `Machine ${machine.id}`
+      name: machine.machine_number || `Machine ${machine.id}`
     })) || [];
   }, [machineUtilization, hatcheryFilter]);
 

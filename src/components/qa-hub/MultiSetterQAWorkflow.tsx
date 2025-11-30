@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   Scale,
   RotateCcw,
-  Timer
+  Timer,
+  Eye
 } from "lucide-react";
 import { useHatcheries, useMultiSetterMachines } from '@/hooks/useQAHubData';
 import { usePositionOccupancy } from '@/hooks/usePositionOccupancy';
@@ -44,6 +45,8 @@ import CullChecksEntry from './CullChecksEntry';
 import SpecificGravityEntry from './SpecificGravityEntry';
 import HatchProgressionEntry from './HatchProgressionEntry';
 import MoistureLossEntry from './MoistureLossEntry';
+import CandlingEntry from './CandlingEntry';
+import { submitCandlingQAMulti } from '@/services/qaSubmissionService';
 import { OccupancyInfo } from '@/utils/setterPositionMapping';
 
 interface SelectedMachine {
@@ -406,6 +409,38 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
+  // Candling QA handler for multi-setter mode
+  const handleSubmitCandling = async (data: { flock_id: string; batch_id: string | null; checkDate: string; sampleSize: number; fertileEggs: number; infertileEggs: number; fertilityPercent: number; notes: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitCandlingQAMulti(
+        selectedMachine.id,
+        technicianName,
+        data.checkDate,
+        data.sampleSize,
+        data.fertileEggs,
+        data.infertileEggs,
+        data.fertilityPercent,
+        getFlockLinkages(),
+        data.notes || notes || null
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Candling results saved with machine-wide flock linkage!');
+      setNotes('');
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Machine Selection View
   if (!selectedMachine) {
     return (
@@ -562,6 +597,9 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
             <Droplets className="h-3 w-3" />Moisture
           </TabsTrigger>
+          <TabsTrigger value="candling" className="flex items-center gap-1 text-xs">
+            <Eye className="h-3 w-3" />Candling
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="temperatures">
@@ -645,6 +683,15 @@ const MultiSetterQAWorkflow: React.FC = () => {
             machineId={selectedMachine.id}
             flockOptions={getAvailableFlocks()}
             onSubmit={handleSubmitMoistureLoss} 
+          />
+        </TabsContent>
+
+        <TabsContent value="candling">
+          <CandlingEntry 
+            availableFlocks={getAvailableFlocks()}
+            onSubmit={handleSubmitCandling}
+            isSubmitting={isSubmitting}
+            mode="multi"
           />
         </TabsContent>
       </Tabs>

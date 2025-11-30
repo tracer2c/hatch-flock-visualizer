@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   Scale,
   RotateCcw,
-  Timer
+  Timer,
+  Eye
 } from "lucide-react";
 import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
@@ -35,6 +36,8 @@ import SpecificGravityEntry from './SpecificGravityEntry';
 import SetterAnglesEntry from './SetterAnglesEntry';
 import HatchProgressionEntry from './HatchProgressionEntry';
 import MoistureLossEntry from './MoistureLossEntry';
+import CandlingEntry from './CandlingEntry';
+import { submitCandlingQA } from '@/services/qaSubmissionService';
 
 interface SelectedMachine {
   id: string;
@@ -324,6 +327,35 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
+  // Candling QA handler
+  const handleSubmitCandling = async (data: { flock_id: string; batch_id: string | null; checkDate: string; sampleSize: number; fertileEggs: number; infertileEggs: number; fertilityPercent: number; notes: string }) => {
+    if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitCandlingQA({
+        batch_id: selectedMachine.currentHouse.id,
+        flock_id: selectedMachine.currentHouse.flock?.id || '',
+        machine_id: selectedMachine.id,
+        inspector_name: technicianName,
+        check_date: data.checkDate,
+        sample_size: data.sampleSize,
+        fertile_eggs: data.fertileEggs,
+        infertile_eggs: data.infertileEggs,
+        fertility_percent: data.fertilityPercent,
+        notes: data.notes || notes || null
+      });
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Candling results saved with flock/house linkage!');
+      setNotes('');
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Machine Selection View
   if (!selectedMachine) {
     return (
@@ -507,6 +539,9 @@ const SingleSetterQAWorkflow: React.FC = () => {
           <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
             <Droplets className="h-3 w-3" />Moisture
           </TabsTrigger>
+          <TabsTrigger value="candling" className="flex items-center gap-1 text-xs">
+            <Eye className="h-3 w-3" />Candling
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="setter-temps">
@@ -574,6 +609,16 @@ const SingleSetterQAWorkflow: React.FC = () => {
             machineId={selectedMachine.id}
             dayOfIncubation={selectedMachine.daysInIncubation}
             onSubmit={handleSubmitMoistureLoss} 
+          />
+        </TabsContent>
+
+        <TabsContent value="candling">
+          <CandlingEntry 
+            defaultFlockId={selectedMachine.currentHouse?.flock?.id}
+            defaultBatchId={selectedMachine.currentHouse?.id}
+            onSubmit={handleSubmitCandling}
+            isSubmitting={isSubmitting}
+            mode="single"
           />
         </TabsContent>
       </Tabs>

@@ -493,6 +493,126 @@ export async function submitWeightTrackingMulti(
 }
 
 /**
+ * Submit candling QA for single-setter mode
+ * Links directly to batch_id and flock_id
+ */
+export async function submitCandlingQA(data: {
+  batch_id: string;
+  flock_id: string;
+  machine_id: string | null;
+  inspector_name: string;
+  check_date: string;
+  sample_size: number;
+  fertile_eggs: number;
+  infertile_eggs: number;
+  fertility_percent: number;
+  notes?: string | null;
+}): Promise<SubmissionResult> {
+  try {
+    const { data: result, error } = await supabase
+      .from('qa_monitoring')
+      .insert({
+        batch_id: data.batch_id,
+        machine_id: data.machine_id,
+        check_date: data.check_date,
+        check_time: new Date().toTimeString().split(' ')[0],
+        day_of_incubation: 0,
+        temperature: 100,
+        humidity: 55,
+        inspector_name: data.inspector_name,
+        notes: data.notes || null,
+        entry_mode: 'house',
+        candling_results: JSON.stringify({
+          type: 'candling',
+          flock_id: data.flock_id,
+          sample_size: data.sample_size,
+          fertile_eggs: data.fertile_eggs,
+          infertile_eggs: data.infertile_eggs,
+          fertility_percent: data.fertility_percent
+        })
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return { success: true, qaMonitoringId: result.id };
+  } catch (err: any) {
+    console.error('Error submitting candling QA:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Submit candling QA for multi-setter mode
+ * Creates qa_monitoring record + qa_position_linkage for each flock
+ */
+export async function submitCandlingQAMulti(
+  machineId: string,
+  inspectorName: string,
+  checkDate: string,
+  sampleSize: number,
+  fertileEggs: number,
+  infertileEggs: number,
+  fertilityPercent: number,
+  flocks: FlockLinkage[],
+  notes?: string | null
+): Promise<SubmissionResult> {
+  try {
+    const { data: result, error: qaError } = await supabase
+      .from('qa_monitoring')
+      .insert({
+        batch_id: null,
+        machine_id: machineId,
+        check_date: checkDate,
+        check_time: new Date().toTimeString().split(' ')[0],
+        day_of_incubation: 0,
+        temperature: 100,
+        humidity: 55,
+        inspector_name: inspectorName,
+        notes: notes || null,
+        entry_mode: 'machine',
+        candling_results: JSON.stringify({
+          type: 'candling',
+          sample_size: sampleSize,
+          fertile_eggs: fertileEggs,
+          infertile_eggs: infertileEggs,
+          fertility_percent: fertilityPercent
+        })
+      })
+      .select('id')
+      .single();
+
+    if (qaError) throw qaError;
+
+    const qaMonitoringId = result.id;
+
+    // Create machine-wide linkage for all flocks
+    if (flocks.length > 0) {
+      const linkageRecords = flocks.map(flock => ({
+        qa_monitoring_id: qaMonitoringId,
+        position: 'machine_wide',
+        temperature: 0,
+        linkage_type: 'machine_wide',
+        multi_setter_set_id: null,
+        resolved_flock_id: flock.flock_id,
+        resolved_batch_id: flock.batch_id
+      }));
+
+      const { error: linkageError } = await supabase
+        .from('qa_position_linkage')
+        .insert(linkageRecords);
+
+      if (linkageError) throw linkageError;
+    }
+
+    return { success: true, qaMonitoringId };
+  } catch (err: any) {
+    console.error('Error submitting candling QA multi:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Fetch machine-level QA records for a specific machine
  * Used to display read-only QA data on house pages
  */
