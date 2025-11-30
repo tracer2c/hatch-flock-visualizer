@@ -27,7 +27,14 @@ import { useHatcheries, useMultiSetterMachines } from '@/hooks/useQAHubData';
 import { usePositionOccupancy } from '@/hooks/usePositionOccupancy';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { submitMachineLevelQA, submitMachineWideQA, type FlockLinkage } from '@/services/qaSubmissionService';
+import { 
+  submitMachineLevelQA, 
+  submitMachineWideQA, 
+  submitGenericQAWithLinkage,
+  submitSpecificGravityTest,
+  submitWeightTrackingMulti,
+  type FlockLinkage 
+} from '@/services/qaSubmissionService';
 import MultiSetterQAEntry from '@/components/dashboard/MultiSetterQAEntry';
 import MachineWideAnglesEntry from '@/components/qa-hub/MachineWideAnglesEntry';
 import MachineWideHumidityEntry from '@/components/qa-hub/MachineWideHumidityEntry';
@@ -76,6 +83,24 @@ const MultiSetterQAWorkflow: React.FC = () => {
     );
   });
 
+  // Convert uniqueFlockDetails to FlockLinkage array
+  const getFlockLinkages = (): FlockLinkage[] => {
+    return uniqueFlockDetails.map(f => ({ 
+      flock_id: f.flock_id, 
+      batch_id: f.batch_id || null 
+    }));
+  };
+
+  // Convert to format for entry components
+  const getAvailableFlocks = () => {
+    return uniqueFlockDetails.map(f => ({
+      flock_id: f.flock_id,
+      flock_name: f.flock_name,
+      flock_number: f.flock_number,
+      batch_id: f.batch_id || null
+    }));
+  };
+
   const handleSubmitTemperatures = async (data: {
     temperatures: Record<string, number>;
     averages: { overall: number | null; front: number | null; middle: number | null; back: number | null };
@@ -109,7 +134,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-level temperature QA saved!');
+      toast.success('Machine-level temperature QA saved with position linkage!');
       setNotes('');
       refetch();
     } catch (error: any) {
@@ -154,7 +179,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-wide angles saved!');
+      toast.success('Machine-wide angles saved with flock linkage!');
       setNotes('');
       refetch();
     } catch (error: any) {
@@ -194,7 +219,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-wide humidity saved!');
+      toast.success('Machine-wide humidity saved with flock linkage!');
       setNotes('');
       refetch();
     } catch (error: any) {
@@ -204,8 +229,8 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Generic handler for other QA types (stored in qa_monitoring with candling_results JSON)
-  const handleSubmitGenericQA = async (type: string, data: any) => {
+  // Fixed: Rectal temp with machine-wide flock linkage
+  const handleSubmitRectalTemp = async (data: { location: string; temperature: number; checkTime: string; checkDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
       return;
@@ -213,25 +238,167 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('qa_monitoring').insert({
-        machine_id: selectedMachine.id,
-        batch_id: null,
-        check_date: data.checkDate || checkDate,
-        check_time: new Date().toTimeString().split(' ')[0],
-        day_of_incubation: 0,
-        temperature: data.temperature || 100,
-        humidity: data.humidity || 55,
-        mortality_count: data.mortalityCount || null,
-        inspector_name: technicianName,
-        notes: notes || null,
-        entry_mode: 'machine',
-        candling_results: JSON.stringify({ type, ...data })
+      const result = await submitGenericQAWithLinkage(
+        selectedMachine.id,
+        technicianName,
+        data.checkDate,
+        'rectal_temperature',
+        { location: data.location, temperature: data.temperature, checkTime: data.checkTime },
+        getFlockLinkages(),
+        notes
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Rectal temperature saved with flock linkage!');
+      setNotes('');
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fixed: Tray wash with machine-wide flock linkage
+  const handleSubmitTrayWash = async (data: { firstCheck: number; secondCheck: number; thirdCheck: number; washDate: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const avgTemp = (data.firstCheck + data.secondCheck + data.thirdCheck) / 3;
+      const result = await submitGenericQAWithLinkage(
+        selectedMachine.id,
+        technicianName,
+        data.washDate,
+        'tray_wash',
+        { firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck, temperature: avgTemp },
+        getFlockLinkages(),
+        notes
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Tray wash saved with flock linkage!');
+      setNotes('');
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fixed: Cull checks with flock linkage
+  const handleSubmitCullCheck = async (data: { flock_id: string; batch_id: string | null; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitGenericQAWithLinkage(
+        selectedMachine.id,
+        technicianName,
+        data.checkDate,
+        'cull_check',
+        { flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType, mortalityCount: data.maleCount + data.femaleCount },
+        [{ flock_id: data.flock_id, batch_id: data.batch_id }], // Link to specific flock
+        notes
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Cull check saved with flock linkage!');
+      setNotes('');
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fixed: Specific gravity saves to dedicated table
+  const handleSubmitSpecificGravity = async (data: { flock_id: string; batch_id: string | null; age: number; sampleSize: number; floatCount: number; floatPercentage: number; testDate: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitSpecificGravityTest({
+        flock_id: data.flock_id,
+        batch_id: data.batch_id,
+        test_date: data.testDate,
+        age_weeks: data.age,
+        sample_size: data.sampleSize,
+        float_count: data.floatCount,
+        float_percentage: data.floatPercentage,
+        notes: notes || null
       });
 
-      if (error) throw error;
-      toast.success(`${type.replace('_', ' ')} saved!`);
+      if (!result.success) throw new Error(result.error);
+      toast.success('Specific gravity saved to dedicated table!');
       setNotes('');
-      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fixed: Hatch progression with flock linkage
+  const handleSubmitHatchProgression = async (data: { flock_id: string; batch_id: string | null; stage: string; percentageOut: number; totalCount: number; hatchedCount: number; checkHour: number; hatchDate: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitGenericQAWithLinkage(
+        selectedMachine.id,
+        technicianName,
+        data.hatchDate,
+        'hatch_progression',
+        { flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour, humidity: data.percentageOut },
+        [{ flock_id: data.flock_id, batch_id: data.batch_id }], // Link to specific flock
+        notes
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Hatch progression saved with flock linkage!');
+      setNotes('');
+    } catch (error: any) {
+      toast.error(`Failed to save: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fixed: Moisture loss saves to weight_tracking table for all flocks
+  const handleSubmitMoistureLoss = async (data: { flock_id: string; batch_id: string | null; machine_id: string | null; day1Weight: number; day18Weight: number; lossPercentage: number; dayOfIncubation: number; testDate: string }) => {
+    if (!selectedMachine || !technicianName.trim()) {
+      toast.error('Please enter technician name');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save to weight_tracking for the selected flock
+      const result = await submitWeightTrackingMulti(
+        selectedMachine.id,
+        data.testDate,
+        data.dayOfIncubation,
+        data.day1Weight,
+        data.lossPercentage,
+        [{ flock_id: data.flock_id, batch_id: data.batch_id }],
+        notes ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}` : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`
+      );
+
+      if (!result.success) throw new Error(result.error);
+      toast.success('Moisture loss saved to weight tracking table!');
+      setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -325,7 +492,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
     );
   }
 
-  // QA Entry View with 8 Tabs
+  // QA Entry View with 9 Tabs
   return (
     <div className="space-y-4">
       <Card>
@@ -367,7 +534,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
       </Card>
 
       <Tabs defaultValue="temperatures" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
           <TabsTrigger value="temperatures" className="flex items-center gap-1 text-xs">
             <Thermometer className="h-3 w-3" />Temps
           </TabsTrigger>
@@ -432,7 +599,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <RectalTempEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('rectal_temperature', { ...data, temperature: data.temperature })} 
+            onSubmit={handleSubmitRectalTemp} 
           />
         </TabsContent>
 
@@ -440,7 +607,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <TrayWashEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('tray_wash', data)} 
+            onSubmit={handleSubmitTrayWash} 
           />
         </TabsContent>
 
@@ -448,7 +615,8 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <CullChecksEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('cull_check', { ...data, mortalityCount: data.maleCount + data.femaleCount })} 
+            availableFlocks={getAvailableFlocks()}
+            onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
 
@@ -456,7 +624,8 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <SpecificGravityEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('specific_gravity', { ...data, humidity: data.floatPercentage })} 
+            availableFlocks={getAvailableFlocks()}
+            onSubmit={handleSubmitSpecificGravity} 
           />
         </TabsContent>
 
@@ -464,7 +633,8 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <HatchProgressionEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('hatch_progression', { ...data, humidity: data.percentageOut })} 
+            availableFlocks={getAvailableFlocks()}
+            onSubmit={handleSubmitHatchProgression} 
           />
         </TabsContent>
 
@@ -472,7 +642,9 @@ const MultiSetterQAWorkflow: React.FC = () => {
           <MoistureLossEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
-            onSubmit={(data) => handleSubmitGenericQA('moisture_loss', data)} 
+            machineId={selectedMachine.id}
+            availableFlocks={getAvailableFlocks()}
+            onSubmit={handleSubmitMoistureLoss} 
           />
         </TabsContent>
       </Tabs>
