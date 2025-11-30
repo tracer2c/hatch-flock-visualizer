@@ -126,19 +126,8 @@ const SOPDashboard = () => {
     return { total: applicableItems.length, completed };
   };
 
-  const handleCompleteItem = async (batchId: string, itemId: string, day: number) => {
-    try {
-      await completeItem.mutateAsync({
-        batchId,
-        checklistItemId: itemId,
-        dayOfIncubation: day,
-        completedBy: 'Current User'
-      });
-      refetchCompletions();
-      toast({ title: "Item completed" });
-    } catch (error) {
-      toast({ title: "Error completing item", variant: "destructive" });
-    }
+  const handleNavigateToChecklist = (batchId: string) => {
+    navigate(`/checklist/${batchId}`);
   };
 
   if (batchesLoading) {
@@ -235,7 +224,11 @@ const SOPDashboard = () => {
               );
 
               return (
-                <Card key={batch.id}>
+                <Card 
+                  key={batch.id} 
+                  className="cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => handleNavigateToChecklist(batch.id)}
+                >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">
@@ -268,20 +261,22 @@ const SOPDashboard = () => {
                               <span className={completedIds.has(item.id) ? 'line-through text-muted-foreground' : ''}>
                                 {item.title}
                               </span>
-                              {!completedIds.has(item.id) && (
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost" 
-                                  className="h-6 px-2"
-                                  onClick={() => handleCompleteItem(batch.id, item.id, day)}
-                                >
-                                  <CheckCircle className="h-3 w-3" />
-                                </Button>
+                              {completedIds.has(item.id) && (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
                               )}
                             </div>
                           ))}
                         </div>
                       )}
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full mt-2"
+                        onClick={(e) => { e.stopPropagation(); handleNavigateToChecklist(batch.id); }}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        View Full Checklist
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

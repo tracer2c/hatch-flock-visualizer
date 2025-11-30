@@ -8,7 +8,8 @@ import UserManager from "@/components/dashboard/UserManager";
 import UnitManager from "@/components/dashboard/UnitManager";
 import { TargetManager } from "@/components/management/TargetManager";
 import { ResidueScheduleManager } from "@/components/management/ResidueScheduleManager";
-import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home, Target, Calendar, ListChecks } from "lucide-react";
+import ReportsManager from "@/components/management/ReportsManager";
+import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home, Target, Calendar, ListChecks, Download } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const ManagementPage = () => {
@@ -163,6 +164,21 @@ const ManagementPage = () => {
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-6">
             <ResidueScheduleManager />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="reports" className="bg-white rounded-lg shadow-sm border">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <Download className="h-5 w-5 text-cyan-600" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg">Reports</h3>
+                <p className="text-gray-600 text-sm">Generate and download PDF reports for houses and weekly summaries</p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <ReportsManager />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
