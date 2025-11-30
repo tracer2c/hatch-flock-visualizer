@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe, ArrowRightLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe, ArrowRightLeft, ClipboardCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import TransferManager from "@/components/dashboard/TransferManager";
@@ -70,8 +71,6 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
         variant: "destructive"
       });
     } else {
-      // Extract house number from batch_number if not in flocks table
-      // batch_number format: "FlockName #HouseNumber"
       let houseNumber = data.flocks?.house_number || '';
       if (!houseNumber && data.batch_number.includes('#')) {
         const parts = data.batch_number.split('#');
@@ -105,7 +104,6 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
       supabase.from('batches').select('eggs_cleared, eggs_injected').eq('id', houseId).single()
     ]);
 
-    // For clears & injected, check if either value exists and is not null
     const clearsInjectedCount = clearsInjectedResult.data && 
       ((clearsInjectedResult.data as any).eggs_cleared !== null || (clearsInjectedResult.data as any).eggs_injected !== null) ? 1 : 0;
 
@@ -148,15 +146,6 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
       color: 'from-green-500 to-green-600',
       count: dataCounts.fertility,
       route: `/data-entry/house/${houseId}/fertility`
-    },
-    {
-      id: 'qa',
-      title: 'Quality Assurance',
-      description: 'Monitor temperature, humidity, and incubation conditions',
-      icon: Activity,
-      color: 'from-purple-500 to-purple-600',
-      count: dataCounts.qa,
-      route: `/data-entry/house/${houseId}/qa`
     },
     {
       id: 'residue',
@@ -234,6 +223,24 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
             </div>
           </div>
         </div>
+
+        {/* QA Hub Redirect Banner */}
+        <Alert className="mb-6 border-primary/50 bg-primary/5">
+          <ClipboardCheck className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              <strong>Quality Assurance:</strong> For machine-level QA monitoring (18-point temps, angles, humidity), please use the dedicated QA Hub.
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/qa-hub')}
+              className="ml-4 shrink-0"
+            >
+              Go to QA Hub
+            </Button>
+          </AlertDescription>
+        </Alert>
 
         {/* Machine Transfer Card */}
         <Card className="mb-6 bg-white">
@@ -318,7 +325,7 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           <p className="text-gray-600 mb-6">Choose what type of data you want to enter for this house</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {dataTypes.map((dataType) => {
             const IconComponent = dataType.icon;
             return (

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useViewMode } from '@/contexts/ViewModeContext';
 
 export interface ProcessFlowFilters {
   dateFrom?: string;
@@ -15,16 +14,13 @@ export interface ProcessFlowMetrics {
 }
 
 export const useProcessFlowMetrics = (filters: ProcessFlowFilters) => {
-  const { viewMode } = useViewMode();
-
   return useQuery({
-    queryKey: ['process-flow-metrics', filters, viewMode],
+    queryKey: ['process-flow-metrics', filters],
     queryFn: async (): Promise<ProcessFlowMetrics> => {
       // Houses that entered setters (set_date in date range)
       let setterQuery = supabase
         .from('batches')
-        .select('id', { count: 'exact' })
-        .eq('data_type', viewMode);
+        .select('id', { count: 'exact' });
 
       if (filters.dateFrom) {
         setterQuery = setterQuery.gte('set_date', filters.dateFrom);
@@ -58,7 +54,6 @@ export const useProcessFlowMetrics = (filters: ProcessFlowFilters) => {
       let hatchQuery = supabase
         .from('batches')
         .select('id', { count: 'exact' })
-        .eq('data_type', viewMode)
         .eq('status', 'completed');
 
       if (filters.dateFrom) {

@@ -1,13 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useViewMode } from '@/contexts/ViewModeContext';
 
 // Fetch all hatcheries (units)
 export function useHatcheries() {
-  const { viewMode } = useViewMode();
-  
   return useQuery({
-    queryKey: ['hatcheries', viewMode],
+    queryKey: ['hatcheries'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('units')
@@ -23,10 +20,8 @@ export function useHatcheries() {
 
 // Fetch houses in single-setter machines (setter_mode = 'single_setter' or null)
 export function useSingleSetterHouses(hatcheryId?: string) {
-  const { viewMode } = useViewMode();
-  
   return useQuery({
-    queryKey: ['single-setter-houses', hatcheryId, viewMode],
+    queryKey: ['single-setter-houses', hatcheryId],
     queryFn: async () => {
       let query = supabase
         .from('batches')
@@ -55,7 +50,6 @@ export function useSingleSetterHouses(hatcheryId?: string) {
             code
           )
         `)
-        .eq('data_type', viewMode)
         .in('status', ['incubating', 'hatching']);
       
       if (hatcheryId) {
@@ -77,10 +71,8 @@ export function useSingleSetterHouses(hatcheryId?: string) {
 
 // Fetch single-setter machines with their current house occupant
 export function useSingleSetterMachines(hatcheryId?: string) {
-  const { viewMode } = useViewMode();
-  
   return useQuery({
-    queryKey: ['single-setter-machines', hatcheryId, viewMode],
+    queryKey: ['single-setter-machines', hatcheryId],
     queryFn: async () => {
       // Get single-setter machines (setter_mode is null or 'single_setter')
       let query = supabase
@@ -99,7 +91,6 @@ export function useSingleSetterMachines(hatcheryId?: string) {
             code
           )
         `)
-        .eq('data_type', viewMode)
         .in('machine_type', ['setter', 'combo']);
       
       if (hatcheryId) {
@@ -135,7 +126,6 @@ export function useSingleSetterMachines(hatcheryId?: string) {
               )
             `)
             .eq('machine_id', machine.id)
-            .eq('data_type', viewMode)
             .in('status', ['incubating', 'hatching'])
             .lte('set_date', today)
             .order('set_date', { ascending: false })
@@ -167,10 +157,8 @@ export function useSingleSetterMachines(hatcheryId?: string) {
 
 // Fetch multi-setter machines with occupancy count
 export function useMultiSetterMachines(hatcheryId?: string) {
-  const { viewMode } = useViewMode();
-  
   return useQuery({
-    queryKey: ['multi-setter-machines', hatcheryId, viewMode],
+    queryKey: ['multi-setter-machines', hatcheryId],
     queryFn: async () => {
       let query = supabase
         .from('machines')
@@ -188,7 +176,6 @@ export function useMultiSetterMachines(hatcheryId?: string) {
             code
           )
         `)
-        .eq('data_type', viewMode)
         .eq('setter_mode', 'multi_setter')
         .in('machine_type', ['setter', 'combo']);
       
@@ -238,10 +225,8 @@ export function useMultiSetterMachines(hatcheryId?: string) {
 
 // Fetch recent QA entries with pagination
 export function useRecentQAEntries(limit: number = 20, offset: number = 0) {
-  const { viewMode } = useViewMode();
-  
   return useQuery({
-    queryKey: ['recent-qa-entries', limit, offset, viewMode],
+    queryKey: ['recent-qa-entries', limit, offset],
     queryFn: async () => {
       const { data, error, count } = await supabase
         .from('qa_monitoring')
