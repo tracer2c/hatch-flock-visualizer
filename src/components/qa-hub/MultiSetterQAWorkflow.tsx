@@ -22,7 +22,7 @@ import {
 import { useHatcheries, useMultiSetterMachines } from '@/hooks/useQAHubData';
 import { usePositionOccupancy } from '@/hooks/usePositionOccupancy';
 import { toast } from 'sonner';
-import { submitMachineLevelQA, submitMachineWideQA, FlockLinkage } from '@/services/qaSubmissionService';
+import { submitMachineLevelQA, submitMachineWideQA, type FlockLinkage } from '@/services/qaSubmissionService';
 import MultiSetterQAEntry from '@/components/dashboard/MultiSetterQAEntry';
 import MachineWideAnglesEntry from '@/components/qa-hub/MachineWideAnglesEntry';
 import MachineWideHumidityEntry from '@/components/qa-hub/MachineWideHumidityEntry';
@@ -141,13 +141,17 @@ const MultiSetterQAWorkflow: React.FC = () => {
           machine_id: selectedMachine.id,
           check_date: data.checkDate,
           check_time: new Date().toTimeString().split(' ')[0],
-          day_of_incubation: 0,
-          temperature: 100, // Placeholder
-          humidity: 55, // Placeholder
+          temperature: 100,
+          humidity: 55,
           inspector_name: technicianName,
           notes: notes || undefined,
           qa_type: 'angles',
-          ...data.angles,
+          angle_top_left: data.angles.angle_top_left,
+          angle_mid_left: data.angles.angle_mid_left,
+          angle_bottom_left: data.angles.angle_bottom_left,
+          angle_top_right: data.angles.angle_top_right,
+          angle_mid_right: data.angles.angle_mid_right,
+          angle_bottom_right: data.angles.angle_bottom_right,
         },
         flockLinkages
       );
@@ -189,7 +193,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
           machine_id: selectedMachine.id,
           check_date: data.checkDate,
           check_time: new Date().toTimeString().split(' ')[0],
-          day_of_incubation: 0,
           temperature: data.temperature,
           humidity: data.humidity,
           inspector_name: technicianName,
