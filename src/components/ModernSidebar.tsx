@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useIsTablet } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +84,6 @@ export function ModernSidebar() {
   const { open, setOpen, toggleSidebar, isMobile: isMobileContext, openMobile } = useSidebar();
   const collapsed = isMobileContext ? !openMobile : !open;
   const { user, hasRole } = useAuth();
-  const { viewMode } = useViewMode();
   const location = useLocation();
   const currentPath = location.pathname;
   const previousSidebarState = useRef<boolean>(open);
@@ -251,11 +249,11 @@ export function ModernSidebar() {
           <div className="mt-auto pt-4">
             {!collapsed ? (
               <div className="px-3 py-2 text-center">
-                <span className="text-xs text-muted-foreground">v1.1</span>
+                <span className="text-xs text-muted-foreground">v1.2</span>
               </div>
             ) : (
               <div className="px-2 py-2 text-center">
-                <span className="text-xs text-muted-foreground">1.1</span>
+                <span className="text-xs text-muted-foreground">1.2</span>
               </div>
             )}
           </div>

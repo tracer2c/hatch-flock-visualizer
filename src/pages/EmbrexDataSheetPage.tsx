@@ -13,7 +13,6 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ExportService } from "@/services/exportService";
-import { useViewMode } from "@/contexts/ViewModeContext";
 
 const EmbrexDataSheetPage = () => {
   const [activeTab, setActiveTab] = useState("embrex");
@@ -21,7 +20,6 @@ const EmbrexDataSheetPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportData, setExportData] = useState<any[]>([]);
   const { showPercentages, setShowPercentages } = usePercentageToggle();
-  const { viewMode } = useViewMode();
   const navigate = useNavigate();
 
   // Filter state

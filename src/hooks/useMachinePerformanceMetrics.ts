@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useViewMode } from '@/contexts/ViewModeContext';
 
 export interface MachinePerformanceFilters {
   dateFrom?: string;
@@ -47,16 +46,13 @@ export interface PerformanceSummary {
 }
 
 export const useMachinePerformanceMetrics = (filters: MachinePerformanceFilters) => {
-  const { viewMode } = useViewMode();
-
   return useQuery({
-    queryKey: ['machine-performance-metrics', filters, viewMode],
+    queryKey: ['machine-performance-metrics', filters],
     queryFn: async (): Promise<PerformanceSummary> => {
       // Fetch machines
       let machinesQuery = supabase
         .from('machines')
-        .select('id, machine_number, machine_type, unit_id, capacity')
-        .eq('data_type', viewMode);
+        .select('id, machine_number, machine_type, unit_id, capacity');
 
       if (filters.unitId) {
         machinesQuery = machinesQuery.eq('unit_id', filters.unitId);
@@ -91,7 +87,6 @@ export const useMachinePerformanceMetrics = (filters: MachinePerformanceFilters)
             hoi_percent
           )
         `)
-        .eq('data_type', viewMode)
         .in('status', ['completed', 'hatching', 'incubating']);
 
       if (filters.dateFrom) {

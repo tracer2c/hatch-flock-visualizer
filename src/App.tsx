@@ -34,7 +34,6 @@ import MachineUtilizationPage from "./pages/MachineUtilizationPage";
 import QAHubPage from "./pages/QAHubPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
-import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { HelpProvider } from "./contexts/HelpContext";
 import ContextualHelpBot from "./components/ContextualHelpBot";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
@@ -42,10 +41,10 @@ import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000, // Data fresh for 30 seconds
-      gcTime: 300000, // Garbage collection time for 5 minutes
-      refetchOnWindowFocus: false, // Don't refetch on tab switch
-      retry: 1, // Only retry once on failure
+      staleTime: 30000,
+      gcTime: 300000,
+      refetchOnWindowFocus: false,
+      retry: 1,
     },
   },
 });
@@ -61,60 +60,58 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <InitializeApp>
-            <ViewModeProvider>
-              <HelpProvider>
+            <HelpProvider>
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/*" element={
                   <ProtectedRoute>
                     <SidebarProvider defaultOpen={!isMobile && !isTablet}>
-                    <div className="flex min-h-screen w-full bg-background">
-                      <ModernSidebar />
-                      <div className="flex-1 flex flex-col overflow-hidden">
-                        <TopBar />
-                        <main className="flex-1 overflow-auto">
-                          <Routes>
-                            <Route path="/" element={<Index />} />
-                            <Route path="/performance" element={<PerformancePage />} />
-                            <Route path="/process-flow" element={<ProcessFlowPage />} />
-                            <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
-                            <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
-                            <Route path="/live-tracking" element={<LiveTrackingPage />} />
-                            <Route path="/machine-utilization" element={<MachineUtilizationPage />} />
-                            <Route path="/analytics" element={<AnalyticsDashboard />} />
-                            <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
-                            <Route path="/house-flow" element={<HouseFlowPage />} />
-                            <Route path="/qa-hub" element={<QAHubPage />} />
-                            <Route path="/data-entry" element={<DataEntryPage />} />
-                            <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
-                            <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
-                            <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
-                            <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
-                            <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
-                            <Route path="/data-entry/house/:houseId/clears-injected" element={<ClearsInjectedEntryPage />} />
-                            <Route path="/checklist" element={<ChecklistPage />} />
-                            <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
-                            <Route path="/management" element={<ManagementPage />} />
-                            <Route path="/bulk-import" element={<BulkDataImportPage />} />
-                            <Route path="/report" element={<ProjectReport />} />
-                            <Route path="/chat" element={<ChatPage />} />
-                            <Route path="/profile" element={<UserProfilePage />} />
-                            <Route path="*" element={<NotFound />} />
-                          </Routes>
-                        </main>
-                        <ContextualHelpBot />
+                      <div className="flex min-h-screen w-full bg-background">
+                        <ModernSidebar />
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                          <TopBar />
+                          <main className="flex-1 overflow-auto">
+                            <Routes>
+                              <Route path="/" element={<Index />} />
+                              <Route path="/performance" element={<PerformancePage />} />
+                              <Route path="/process-flow" element={<ProcessFlowPage />} />
+                              <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
+                              <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
+                              <Route path="/live-tracking" element={<LiveTrackingPage />} />
+                              <Route path="/machine-utilization" element={<MachineUtilizationPage />} />
+                              <Route path="/analytics" element={<AnalyticsDashboard />} />
+                              <Route path="/residue-breakout" element={<ResidueBreakoutPage />} />
+                              <Route path="/house-flow" element={<HouseFlowPage />} />
+                              <Route path="/qa-hub" element={<QAHubPage />} />
+                              <Route path="/data-entry" element={<DataEntryPage />} />
+                              <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
+                              <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
+                              <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
+                              <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
+                              <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
+                              <Route path="/data-entry/house/:houseId/clears-injected" element={<ClearsInjectedEntryPage />} />
+                              <Route path="/checklist" element={<ChecklistPage />} />
+                              <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
+                              <Route path="/management" element={<ManagementPage />} />
+                              <Route path="/bulk-import" element={<BulkDataImportPage />} />
+                              <Route path="/report" element={<ProjectReport />} />
+                              <Route path="/chat" element={<ChatPage />} />
+                              <Route path="/profile" element={<UserProfilePage />} />
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </main>
+                          <ContextualHelpBot />
+                        </div>
                       </div>
-                    </div>
-                  </SidebarProvider>
-                </ProtectedRoute>
-              } />
-            </Routes>
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } />
+              </Routes>
             </HelpProvider>
-          </ViewModeProvider>
-        </InitializeApp>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+          </InitializeApp>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

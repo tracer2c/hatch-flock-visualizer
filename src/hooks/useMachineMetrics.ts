@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useViewMode } from '@/contexts/ViewModeContext';
 
 export interface MachineMetricsFilters {
   dateFrom?: string;
@@ -38,10 +37,8 @@ export interface MachineKPIs {
 }
 
 export const useMachineMetrics = (filters: MachineMetricsFilters) => {
-  const { viewMode } = useViewMode();
-
   return useQuery({
-    queryKey: ['machine-metrics', filters, viewMode],
+    queryKey: ['machine-metrics', filters],
     queryFn: async () => {
       // Fetch machines with unit info
       let machinesQuery = supabase
@@ -56,8 +53,7 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
           location,
           unit_id,
           units(name)
-        `)
-        .eq('data_type', viewMode);
+        `);
 
       if (filters.unitId && filters.unitId !== 'all') {
         machinesQuery = machinesQuery.eq('unit_id', filters.unitId);
@@ -79,7 +75,6 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
       let batchesQuery = supabase
         .from('batches')
         .select('id, machine_id, total_eggs_set, status, set_date')
-        .eq('data_type', viewMode)
         .in('status', ['setting', 'incubating', 'hatching']);
 
       if (filters.dateFrom) {
@@ -191,16 +186,13 @@ export interface DailyUtilizationFilters {
 }
 
 export const useDailyUtilizationMetrics = (filters: DailyUtilizationFilters) => {
-  const { viewMode } = useViewMode();
-
   return useQuery({
-    queryKey: ['daily-utilization-metrics', filters, viewMode],
+    queryKey: ['daily-utilization-metrics', filters],
     queryFn: async (): Promise<DailyUtilization[]> => {
       // Get all machines for capacity calculation
       let machinesQuery = supabase
         .from('machines')
-        .select('id, machine_type, capacity')
-        .eq('data_type', viewMode);
+        .select('id, machine_type, capacity');
 
       if (filters.unitId) {
         machinesQuery = machinesQuery.eq('unit_id', filters.unitId);
@@ -227,7 +219,6 @@ export const useDailyUtilizationMetrics = (filters: DailyUtilizationFilters) => 
       let batchesQuery = supabase
         .from('batches')
         .select('id, machine_id, total_eggs_set, status, set_date, expected_hatch_date')
-        .eq('data_type', viewMode)
         .lte('set_date', filters.dateTo)
         .or(`expected_hatch_date.gte.${filters.dateFrom},status.eq.setting,status.eq.incubating,status.eq.hatching`);
 
