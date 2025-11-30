@@ -31,6 +31,7 @@ import BulkDataImportPage from "./pages/BulkDataImportPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import LiveTrackingPage from "./pages/LiveTrackingPage";
 import MachineUtilizationPage from "./pages/MachineUtilizationPage";
+import QAHubPage from "./pages/QAHubPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -83,6 +84,7 @@ const App = () => {
                             <Route path="/analytics" element={<AnalyticsDashboard />} />
                             <Route path="/residue-breakout" element={<EmbrexDataSheetPage />} />
                             <Route path="/house-flow" element={<HouseFlowPage />} />
+                            <Route path="/qa-hub" element={<QAHubPage />} />
                             <Route path="/data-entry" element={<DataEntryPage />} />
                             <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
                             <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
