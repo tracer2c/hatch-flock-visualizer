@@ -80,12 +80,15 @@ function formatBatchForDisplay(batch: any) {
 // Retrieval helpers: schema awareness, validation, enrichment
 const DB_SCHEMA = {
   tables: {
-    batches: ['id','batch_number','unit_id','flock_id','set_date','expected_hatch_date','status','total_eggs_set','chicks_hatched','company_id'],
-    fertility_analysis: ['id','batch_id','analysis_date','fertility_percent','hatch_percent','hof_percent'],
-    residue_analysis: ['id','batch_id','analysis_date','residue_percent'],
-    qa_monitoring: ['id','batch_id','check_date','temperature','humidity'],
-    units: ['id','name','code'],
-    flocks: ['id','flock_name','breed','house_number']
+    batches: ['id','batch_number','unit_id','flock_id','machine_id','set_date','expected_hatch_date','status','total_eggs_set','eggs_injected','eggs_cleared','chicks_hatched','company_id'],
+    fertility_analysis: ['id','batch_id','analysis_date','sample_size','fertile_eggs','infertile_eggs','fertility_percent'],
+    residue_analysis: ['id','batch_id','analysis_date','sample_size','infertile_eggs','early_dead','mid_dead','late_dead','cull_chicks','live_pip_number','dead_pip_number','hatch_percent','hof_percent','hoi_percent','if_dev_percent','residue_percent'],
+    qa_monitoring: ['id','batch_id','machine_id','check_date','check_time','day_of_incubation','temperature','humidity','co2_level','turning_frequency','ventilation_rate','inspector_name','entry_mode','temp_avg_overall','temp_avg_front','temp_avg_middle','temp_avg_back','angle_top_left','angle_mid_left','angle_bottom_left','angle_top_right','angle_mid_right','angle_bottom_right','temp_front_top_left','temp_front_top_right','temp_front_mid_left','temp_front_mid_right','temp_front_bottom_left','temp_front_bottom_right','temp_middle_top_left','temp_middle_top_right','temp_middle_mid_left','temp_middle_mid_right','temp_middle_bottom_left','temp_middle_bottom_right','temp_back_top_left','temp_back_top_right','temp_back_mid_left','temp_back_mid_right','temp_back_bottom_left','temp_back_bottom_right'],
+    weight_tracking: ['id','batch_id','flock_id','machine_id','check_date','day_of_incubation','top_weight','middle_weight','bottom_weight','total_weight','percent_loss','target_loss_min','target_loss_max'],
+    specific_gravity_tests: ['id','flock_id','batch_id','test_date','age_weeks','float_count','sink_count','sample_size','float_percentage','meets_standard','concentration'],
+    units: ['id','name','code','status'],
+    flocks: ['id','flock_name','breed','house_number','age_weeks','unit_id'],
+    machines: ['id','machine_number','machine_type','setter_mode','unit_id','capacity','status']
   }
 } as const;
 
@@ -258,8 +261,7 @@ const tools = [
         required: ["metric"]
       }
     }
-  }
-,
+  },
   {
     type: "function",
     function: {
@@ -285,6 +287,103 @@ const tools = [
           days_back: { type: "number", description: "Days to look back for temperature data (default 7)" },
           aggregation: { type: "string", description: "Type of aggregation: 'latest' for most recent reading per house, 'average' for period average (default: latest)" },
           limit: { type: "number", description: "Maximum number of houses to return (default 20)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_qa_performance",
+      description: "Get comprehensive QA monitoring data including 18-point temperatures, humidity, angles, and zone averages. Use for QA analysis, temperature trends, setter performance.",
+      parameters: {
+        type: "object",
+        properties: {
+          days_back: { type: "number", description: "Days to look back (default 30)" },
+          machine_id: { type: "string", description: "Optional: Filter by specific machine ID" },
+          flock_id: { type: "string", description: "Optional: Filter by specific flock ID" },
+          group_by: { type: "string", description: "Group results by: machine, flock, day, or none (default: none)" },
+          limit: { type: "number", description: "Max records to return (default 100)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_moisture_loss_trends",
+      description: "Get weight tracking and moisture loss data for batches. Shows weight progression and percent loss over incubation days.",
+      parameters: {
+        type: "object",
+        properties: {
+          days_back: { type: "number", description: "Days to look back (default 30)" },
+          flock_id: { type: "string", description: "Optional: Filter by specific flock ID" },
+          batch_id: { type: "string", description: "Optional: Filter by specific batch ID" },
+          group_by: { type: "string", description: "Group by: flock, batch, day (default: batch)" },
+          limit: { type: "number", description: "Max records (default 100)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_specific_gravity_data",
+      description: "Get specific gravity test results for flocks. Shows float/sink counts, percentages, and age-based trends.",
+      parameters: {
+        type: "object",
+        properties: {
+          days_back: { type: "number", description: "Days to look back (default 60)" },
+          flock_id: { type: "string", description: "Optional: Filter by specific flock ID" },
+          group_by: { type: "string", description: "Group by: flock, age_weeks (default: flock)" },
+          limit: { type: "number", description: "Max records (default 100)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_flock_performance",
+      description: "Get comprehensive flock performance metrics including hatch%, temps, moisture loss, specific gravity, cull%, and mortality. Aggregates all QA data for each flock.",
+      parameters: {
+        type: "object",
+        properties: {
+          flock_id: { type: "string", description: "Optional: Filter by specific flock ID" },
+          hatchery_id: { type: "string", description: "Optional: Filter by hatchery (unit) ID" },
+          days_back: { type: "number", description: "Days to look back (default 90)" },
+          limit: { type: "number", description: "Max flocks to return (default 50)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_machine_performance",
+      description: "Get machine-level performance analytics including temperature variance by zone, angle deviations, humidity patterns, and batch outcomes.",
+      parameters: {
+        type: "object",
+        properties: {
+          machine_id: { type: "string", description: "Optional: Filter by specific machine ID" },
+          hatchery_id: { type: "string", description: "Optional: Filter by hatchery (unit) ID" },
+          machine_type: { type: "string", description: "Optional: Filter by machine type (setter, hatcher, combo)" },
+          days_back: { type: "number", description: "Days to look back (default 60)" },
+          limit: { type: "number", description: "Max machines to return (default 20)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_hatchery_summary",
+      description: "Get hatchery-level summary with total eggs, hatch rates, mortality, average SG, moisture loss, temperatures, and machine rankings.",
+      parameters: {
+        type: "object",
+        properties: {
+          hatchery_id: { type: "string", description: "Optional: Filter by specific hatchery (unit) ID" },
+          days_back: { type: "number", description: "Days to look back (default 30)" }
         }
       }
     }
@@ -749,7 +848,7 @@ async function executeTool(toolName: string, parameters: any) {
               const raw = Number(r[metric]);
               const value = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : null;
               if (value === null) return null;
-              const weight = isResidue
+              const weight = useResidueTable
                 ? Number(r.total_residue_count ?? 1)
                 : Number(r.sample_size ?? 1);
               return {
@@ -776,7 +875,7 @@ async function executeTool(toolName: string, parameters: any) {
             const raw = Number(r[metric]);
             if (!Number.isFinite(raw)) continue;
             const val = Math.max(0, Math.min(100, raw));
-            const w = isResidue ? Number(r.total_residue_count ?? 1) : Number(r.sample_size ?? 1);
+            const w = useResidueTable ? Number(r.total_residue_count ?? 1) : Number(r.sample_size ?? 1);
             const weight = Number.isFinite(w) && w > 0 ? w : 1;
             const label = labelFor(r.batch_id, mode);
             if (!groups[label]) groups[label] = { label, count: 0, vsum: 0, wsum: 0 };
@@ -998,6 +1097,563 @@ async function executeTool(toolName: string, parameters: any) {
             y_label: "Temperature (°F)"
           }
         };
+
+      case "get_qa_performance": {
+        const daysBack = parameters.days_back || 30;
+        const groupBy = parameters.group_by || 'none';
+        const limit = parameters.limit || 100;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        let query = supabase
+          .from('qa_monitoring')
+          .select(`
+            id, batch_id, machine_id, check_date, check_time, day_of_incubation,
+            temperature, humidity, co2_level, turning_frequency, ventilation_rate,
+            inspector_name, entry_mode,
+            temp_avg_overall, temp_avg_front, temp_avg_middle, temp_avg_back,
+            angle_top_left, angle_mid_left, angle_bottom_left,
+            angle_top_right, angle_mid_right, angle_bottom_right,
+            batches!left(batch_number, flock_id, flocks(flock_name, house_number)),
+            machines!left(machine_number, machine_type, unit_id, units(name))
+          `)
+          .gte('check_date', startDate.toISOString().split('T')[0])
+          .order('check_date', { ascending: false })
+          .limit(limit);
+        
+        if (parameters.machine_id) query = query.eq('machine_id', parameters.machine_id);
+        if (parameters.flock_id) {
+          const { data: batchIds } = await supabase.from('batches').select('id').eq('flock_id', parameters.flock_id);
+          if (batchIds && batchIds.length > 0) {
+            query = query.in('batch_id', batchIds.map(b => b.id));
+          }
+        }
+        
+        const { data: qaData, error: qaError } = await query;
+        if (qaError) throw qaError;
+        
+        if (!qaData || qaData.length === 0) {
+          return { type: 'qa_performance', message: 'No QA monitoring data found', data: [] };
+        }
+        
+        // Process and enrich data
+        const enrichedData = qaData.map((qa: any) => ({
+          ...qa,
+          flock_name: qa.batches?.flocks?.flock_name || 'Unknown',
+          house_number: qa.batches?.flocks?.house_number || qa.batches?.batch_number || 'Unknown',
+          machine_name: qa.machines?.machine_number || 'Unknown',
+          hatchery_name: qa.machines?.units?.name || 'Unknown',
+          avg_angle: qa.angle_top_left && qa.angle_top_right 
+            ? ((qa.angle_top_left + qa.angle_mid_left + qa.angle_bottom_left + qa.angle_top_right + qa.angle_mid_right + qa.angle_bottom_right) / 6).toFixed(1)
+            : null
+        }));
+        
+        // Group if requested
+        if (groupBy === 'machine') {
+          const groups: Record<string, any> = {};
+          for (const row of enrichedData) {
+            const key = row.machine_name;
+            if (!groups[key]) groups[key] = { machine: key, hatchery: row.hatchery_name, records: 0, temp_sum: 0, humidity_sum: 0, angle_count: 0, angle_sum: 0 };
+            groups[key].records++;
+            groups[key].temp_sum += Number(row.temp_avg_overall || row.temperature || 0);
+            groups[key].humidity_sum += Number(row.humidity || 0);
+            if (row.avg_angle) { groups[key].angle_count++; groups[key].angle_sum += Number(row.avg_angle); }
+          }
+          const aggregated = Object.values(groups).map((g: any) => ({
+            machine: g.machine,
+            hatchery: g.hatchery,
+            record_count: g.records,
+            avg_temperature: g.records > 0 ? (g.temp_sum / g.records).toFixed(1) : null,
+            avg_humidity: g.records > 0 ? (g.humidity_sum / g.records).toFixed(1) : null,
+            avg_angle: g.angle_count > 0 ? (g.angle_sum / g.angle_count).toFixed(1) : null
+          }));
+          return { type: 'qa_performance', message: `QA data grouped by machine (${aggregated.length} machines)`, grouped: 'machine', data: aggregated };
+        }
+        
+        if (groupBy === 'flock') {
+          const groups: Record<string, any> = {};
+          for (const row of enrichedData) {
+            const key = row.flock_name;
+            if (!groups[key]) groups[key] = { flock: key, house: row.house_number, records: 0, temp_sum: 0, humidity_sum: 0 };
+            groups[key].records++;
+            groups[key].temp_sum += Number(row.temp_avg_overall || row.temperature || 0);
+            groups[key].humidity_sum += Number(row.humidity || 0);
+          }
+          const aggregated = Object.values(groups).map((g: any) => ({
+            flock: g.flock,
+            house: g.house,
+            record_count: g.records,
+            avg_temperature: g.records > 0 ? (g.temp_sum / g.records).toFixed(1) : null,
+            avg_humidity: g.records > 0 ? (g.humidity_sum / g.records).toFixed(1) : null
+          }));
+          return { type: 'qa_performance', message: `QA data grouped by flock (${aggregated.length} flocks)`, grouped: 'flock', data: aggregated };
+        }
+        
+        console.log('[get_qa_performance]', { records: enrichedData.length, groupBy });
+        return { type: 'qa_performance', message: `Found ${enrichedData.length} QA monitoring records`, data: enrichedData.slice(0, 50) };
+      }
+
+      case "get_moisture_loss_trends": {
+        const daysBack = parameters.days_back || 30;
+        const groupBy = parameters.group_by || 'batch';
+        const limit = parameters.limit || 100;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        let query = supabase
+          .from('weight_tracking')
+          .select(`
+            id, batch_id, flock_id, machine_id, check_date, day_of_incubation,
+            top_weight, middle_weight, bottom_weight, total_weight,
+            percent_loss, target_loss_min, target_loss_max,
+            batches!left(batch_number, flocks(flock_name)),
+            flocks!left(flock_name, house_number)
+          `)
+          .gte('check_date', startDate.toISOString().split('T')[0])
+          .order('check_date', { ascending: false })
+          .limit(limit);
+        
+        if (parameters.batch_id) query = query.eq('batch_id', parameters.batch_id);
+        if (parameters.flock_id) query = query.eq('flock_id', parameters.flock_id);
+        
+        const { data: weightData, error: weightError } = await query;
+        if (weightError) throw weightError;
+        
+        if (!weightData || weightData.length === 0) {
+          return { type: 'moisture_loss', message: 'No weight tracking data found', data: [] };
+        }
+        
+        const enriched = weightData.map((w: any) => ({
+          ...w,
+          flock_name: w.flocks?.flock_name || w.batches?.flocks?.flock_name || 'Unknown',
+          batch_number: w.batches?.batch_number || 'Unknown',
+          within_target: w.percent_loss !== null && w.target_loss_min !== null && w.target_loss_max !== null
+            ? (w.percent_loss >= w.target_loss_min && w.percent_loss <= w.target_loss_max)
+            : null
+        }));
+        
+        if (groupBy === 'flock') {
+          const groups: Record<string, any> = {};
+          for (const row of enriched) {
+            const key = row.flock_name;
+            if (!groups[key]) groups[key] = { flock: key, records: 0, loss_sum: 0, loss_count: 0, within_target_count: 0 };
+            groups[key].records++;
+            if (row.percent_loss !== null) { groups[key].loss_sum += Number(row.percent_loss); groups[key].loss_count++; }
+            if (row.within_target === true) groups[key].within_target_count++;
+          }
+          const aggregated = Object.values(groups).map((g: any) => ({
+            flock: g.flock,
+            record_count: g.records,
+            avg_percent_loss: g.loss_count > 0 ? (g.loss_sum / g.loss_count).toFixed(2) : null,
+            within_target_pct: g.records > 0 ? ((g.within_target_count / g.records) * 100).toFixed(1) : null
+          }));
+          return { type: 'moisture_loss', message: `Moisture loss by flock (${aggregated.length} flocks)`, grouped: 'flock', data: aggregated };
+        }
+        
+        console.log('[get_moisture_loss_trends]', { records: enriched.length });
+        return { type: 'moisture_loss', message: `Found ${enriched.length} weight tracking records`, data: enriched.slice(0, 50) };
+      }
+
+      case "get_specific_gravity_data": {
+        const daysBack = parameters.days_back || 60;
+        const groupBy = parameters.group_by || 'flock';
+        const limit = parameters.limit || 100;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        let query = supabase
+          .from('specific_gravity_tests')
+          .select(`
+            id, flock_id, batch_id, test_date, age_weeks,
+            float_count, sink_count, sample_size, float_percentage,
+            meets_standard, concentration,
+            flocks!left(flock_name, house_number, breed)
+          `)
+          .gte('test_date', startDate.toISOString().split('T')[0])
+          .order('test_date', { ascending: false })
+          .limit(limit);
+        
+        if (parameters.flock_id) query = query.eq('flock_id', parameters.flock_id);
+        
+        const { data: sgData, error: sgError } = await query;
+        if (sgError) throw sgError;
+        
+        if (!sgData || sgData.length === 0) {
+          return { type: 'specific_gravity', message: 'No specific gravity test data found', data: [] };
+        }
+        
+        const enriched = sgData.map((sg: any) => ({
+          ...sg,
+          flock_name: sg.flocks?.flock_name || 'Unknown',
+          house_number: sg.flocks?.house_number || 'Unknown',
+          breed: sg.flocks?.breed || 'Unknown'
+        }));
+        
+        if (groupBy === 'flock') {
+          const groups: Record<string, any> = {};
+          for (const row of enriched) {
+            const key = row.flock_name;
+            if (!groups[key]) groups[key] = { flock: key, house: row.house_number, tests: 0, float_sum: 0, meets_std_count: 0 };
+            groups[key].tests++;
+            groups[key].float_sum += Number(row.float_percentage || 0);
+            if (row.meets_standard) groups[key].meets_std_count++;
+          }
+          const aggregated = Object.values(groups).map((g: any) => ({
+            flock: g.flock,
+            house: g.house,
+            test_count: g.tests,
+            avg_float_percentage: g.tests > 0 ? (g.float_sum / g.tests).toFixed(2) : null,
+            meets_standard_pct: g.tests > 0 ? ((g.meets_std_count / g.tests) * 100).toFixed(1) : null
+          }));
+          return { type: 'specific_gravity', message: `SG data by flock (${aggregated.length} flocks)`, grouped: 'flock', data: aggregated };
+        }
+        
+        if (groupBy === 'age_weeks') {
+          const groups: Record<number, any> = {};
+          for (const row of enriched) {
+            const key = row.age_weeks || 0;
+            if (!groups[key]) groups[key] = { age_weeks: key, tests: 0, float_sum: 0, meets_std_count: 0 };
+            groups[key].tests++;
+            groups[key].float_sum += Number(row.float_percentage || 0);
+            if (row.meets_standard) groups[key].meets_std_count++;
+          }
+          const aggregated = Object.values(groups).map((g: any) => ({
+            age_weeks: g.age_weeks,
+            test_count: g.tests,
+            avg_float_percentage: g.tests > 0 ? (g.float_sum / g.tests).toFixed(2) : null,
+            meets_standard_pct: g.tests > 0 ? ((g.meets_std_count / g.tests) * 100).toFixed(1) : null
+          })).sort((a: any, b: any) => a.age_weeks - b.age_weeks);
+          return { type: 'specific_gravity', message: `SG data by age (${aggregated.length} age groups)`, grouped: 'age_weeks', data: aggregated };
+        }
+        
+        console.log('[get_specific_gravity_data]', { records: enriched.length });
+        return { type: 'specific_gravity', message: `Found ${enriched.length} SG test records`, data: enriched.slice(0, 50) };
+      }
+
+      case "get_flock_performance": {
+        const daysBack = parameters.days_back || 90;
+        const limit = parameters.limit || 50;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        // Get flocks with their batches
+        let flockQuery = supabase
+          .from('flocks')
+          .select(`
+            id, flock_name, house_number, breed, age_weeks, unit_id,
+            units!left(name, code)
+          `)
+          .limit(limit);
+        
+        if (parameters.flock_id) flockQuery = flockQuery.eq('id', parameters.flock_id);
+        if (parameters.hatchery_id) flockQuery = flockQuery.eq('unit_id', parameters.hatchery_id);
+        
+        const { data: flocks, error: flockError } = await flockQuery;
+        if (flockError) throw flockError;
+        
+        if (!flocks || flocks.length === 0) {
+          return { type: 'flock_performance', message: 'No flocks found', data: [] };
+        }
+        
+        const flockIds = flocks.map(f => f.id);
+        
+        // Parallel fetch related data
+        const [batchesRes, qaRes, weightRes, sgRes] = await Promise.all([
+          supabase.from('batches').select('id, flock_id, total_eggs_set, chicks_hatched, eggs_injected, set_date, status').in('flock_id', flockIds),
+          supabase.from('qa_monitoring').select('batch_id, temperature, humidity, temp_avg_overall').gte('check_date', startDate.toISOString().split('T')[0]),
+          supabase.from('weight_tracking').select('flock_id, percent_loss').in('flock_id', flockIds),
+          supabase.from('specific_gravity_tests').select('flock_id, float_percentage, meets_standard').in('flock_id', flockIds)
+        ]);
+        
+        // Index batches by flock
+        const batchesByFlock: Record<string, any[]> = {};
+        for (const b of batchesRes.data || []) {
+          if (!batchesByFlock[b.flock_id]) batchesByFlock[b.flock_id] = [];
+          batchesByFlock[b.flock_id].push(b);
+        }
+        
+        // Index QA by batch
+        const qaByBatch: Record<string, any[]> = {};
+        for (const qa of qaRes.data || []) {
+          if (qa.batch_id) {
+            if (!qaByBatch[qa.batch_id]) qaByBatch[qa.batch_id] = [];
+            qaByBatch[qa.batch_id].push(qa);
+          }
+        }
+        
+        // Index weight by flock
+        const weightByFlock: Record<string, any[]> = {};
+        for (const w of weightRes.data || []) {
+          if (!weightByFlock[w.flock_id]) weightByFlock[w.flock_id] = [];
+          weightByFlock[w.flock_id].push(w);
+        }
+        
+        // Index SG by flock
+        const sgByFlock: Record<string, any[]> = {};
+        for (const sg of sgRes.data || []) {
+          if (!sgByFlock[sg.flock_id]) sgByFlock[sg.flock_id] = [];
+          sgByFlock[sg.flock_id].push(sg);
+        }
+        
+        // Build comprehensive flock performance
+        const flockPerformance = flocks.map((flock: any) => {
+          const batches = batchesByFlock[flock.id] || [];
+          const totalEggs = batches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+          const totalChicks = batches.reduce((sum, b) => sum + (b.chicks_hatched || 0), 0);
+          const totalInjected = batches.reduce((sum, b) => sum + (b.eggs_injected || 0), 0);
+          
+          // Get QA data for this flock's batches
+          const flockQA: any[] = [];
+          for (const b of batches) {
+            flockQA.push(...(qaByBatch[b.id] || []));
+          }
+          
+          const weights = weightByFlock[flock.id] || [];
+          const sgTests = sgByFlock[flock.id] || [];
+          
+          const avgTemp = flockQA.length > 0
+            ? (flockQA.reduce((sum, qa) => sum + Number(qa.temp_avg_overall || qa.temperature || 0), 0) / flockQA.length).toFixed(1)
+            : null;
+          
+          const avgMoistureLoss = weights.length > 0
+            ? (weights.reduce((sum, w) => sum + Number(w.percent_loss || 0), 0) / weights.length).toFixed(2)
+            : null;
+          
+          const avgSG = sgTests.length > 0
+            ? (sgTests.reduce((sum, sg) => sum + Number(sg.float_percentage || 0), 0) / sgTests.length).toFixed(2)
+            : null;
+          
+          return {
+            flock_id: flock.id,
+            flock_name: flock.flock_name,
+            house_number: flock.house_number,
+            breed: flock.breed,
+            age_weeks: flock.age_weeks,
+            hatchery: flock.units?.name || 'Unknown',
+            batch_count: batches.length,
+            total_eggs_set: totalEggs,
+            total_chicks_hatched: totalChicks,
+            hatch_percent: totalEggs > 0 ? ((totalChicks / totalEggs) * 100).toFixed(1) : null,
+            hoi_percent: totalInjected > 0 ? ((totalChicks / totalInjected) * 100).toFixed(1) : null,
+            qa_checks: flockQA.length,
+            avg_temperature: avgTemp,
+            moisture_checks: weights.length,
+            avg_moisture_loss: avgMoistureLoss,
+            sg_tests: sgTests.length,
+            avg_sg_float_pct: avgSG
+          };
+        });
+        
+        console.log('[get_flock_performance]', { flocks: flockPerformance.length });
+        return { type: 'flock_performance', message: `Comprehensive performance for ${flockPerformance.length} flocks`, data: flockPerformance };
+      }
+
+      case "get_machine_performance": {
+        const daysBack = parameters.days_back || 60;
+        const limit = parameters.limit || 20;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        let machineQuery = supabase
+          .from('machines')
+          .select(`
+            id, machine_number, machine_type, setter_mode, capacity, status, unit_id,
+            units!left(name, code)
+          `)
+          .limit(limit);
+        
+        if (parameters.machine_id) machineQuery = machineQuery.eq('id', parameters.machine_id);
+        if (parameters.hatchery_id) machineQuery = machineQuery.eq('unit_id', parameters.hatchery_id);
+        if (parameters.machine_type) machineQuery = machineQuery.eq('machine_type', parameters.machine_type);
+        
+        const { data: machines, error: machineError } = await machineQuery;
+        if (machineError) throw machineError;
+        
+        if (!machines || machines.length === 0) {
+          return { type: 'machine_performance', message: 'No machines found', data: [] };
+        }
+        
+        const machineIds = machines.map(m => m.id);
+        
+        // Parallel fetch related data
+        const [batchesRes, qaRes] = await Promise.all([
+          supabase.from('batches').select('id, machine_id, total_eggs_set, chicks_hatched, status').in('machine_id', machineIds),
+          supabase.from('qa_monitoring').select('machine_id, temperature, humidity, temp_avg_overall, temp_avg_front, temp_avg_middle, temp_avg_back, angle_top_left, angle_top_right').in('machine_id', machineIds).gte('check_date', startDate.toISOString().split('T')[0])
+        ]);
+        
+        // Index by machine
+        const batchesByMachine: Record<string, any[]> = {};
+        for (const b of batchesRes.data || []) {
+          if (!batchesByMachine[b.machine_id]) batchesByMachine[b.machine_id] = [];
+          batchesByMachine[b.machine_id].push(b);
+        }
+        
+        const qaByMachine: Record<string, any[]> = {};
+        for (const qa of qaRes.data || []) {
+          if (qa.machine_id) {
+            if (!qaByMachine[qa.machine_id]) qaByMachine[qa.machine_id] = [];
+            qaByMachine[qa.machine_id].push(qa);
+          }
+        }
+        
+        const machinePerformance = machines.map((machine: any) => {
+          const batches = batchesByMachine[machine.id] || [];
+          const qaRecords = qaByMachine[machine.id] || [];
+          
+          const totalEggs = batches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+          const totalChicks = batches.reduce((sum, b) => sum + (b.chicks_hatched || 0), 0);
+          const completedBatches = batches.filter(b => b.status === 'completed');
+          
+          const avgTemp = qaRecords.length > 0
+            ? (qaRecords.reduce((sum, qa) => sum + Number(qa.temp_avg_overall || qa.temperature || 0), 0) / qaRecords.length).toFixed(1)
+            : null;
+          
+          const avgHumidity = qaRecords.length > 0
+            ? (qaRecords.reduce((sum, qa) => sum + Number(qa.humidity || 0), 0) / qaRecords.length).toFixed(1)
+            : null;
+          
+          // Calculate zone variances
+          const zoneTemps = { front: [] as number[], middle: [] as number[], back: [] as number[] };
+          for (const qa of qaRecords) {
+            if (qa.temp_avg_front) zoneTemps.front.push(Number(qa.temp_avg_front));
+            if (qa.temp_avg_middle) zoneTemps.middle.push(Number(qa.temp_avg_middle));
+            if (qa.temp_avg_back) zoneTemps.back.push(Number(qa.temp_avg_back));
+          }
+          
+          const calcAvg = (arr: number[]) => arr.length > 0 ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : null;
+          
+          return {
+            machine_id: machine.id,
+            machine_number: machine.machine_number,
+            machine_type: machine.machine_type,
+            setter_mode: machine.setter_mode,
+            hatchery: machine.units?.name || 'Unknown',
+            capacity: machine.capacity,
+            batch_count: batches.length,
+            completed_batches: completedBatches.length,
+            total_eggs_processed: totalEggs,
+            total_chicks_hatched: totalChicks,
+            hatch_percent: totalEggs > 0 ? ((totalChicks / totalEggs) * 100).toFixed(1) : null,
+            qa_checks: qaRecords.length,
+            avg_temperature: avgTemp,
+            avg_humidity: avgHumidity,
+            avg_temp_front: calcAvg(zoneTemps.front),
+            avg_temp_middle: calcAvg(zoneTemps.middle),
+            avg_temp_back: calcAvg(zoneTemps.back)
+          };
+        });
+        
+        console.log('[get_machine_performance]', { machines: machinePerformance.length });
+        return { type: 'machine_performance', message: `Performance data for ${machinePerformance.length} machines`, data: machinePerformance };
+      }
+
+      case "get_hatchery_summary": {
+        const daysBack = parameters.days_back || 30;
+        
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
+        
+        let hatcheryQuery = supabase.from('units').select('id, name, code, status');
+        if (parameters.hatchery_id) hatcheryQuery = hatcheryQuery.eq('id', parameters.hatchery_id);
+        
+        const { data: hatcheries, error: hatcheryError } = await hatcheryQuery;
+        if (hatcheryError) throw hatcheryError;
+        
+        if (!hatcheries || hatcheries.length === 0) {
+          return { type: 'hatchery_summary', message: 'No hatcheries found', data: [] };
+        }
+        
+        const hatcheryIds = hatcheries.map(h => h.id);
+        
+        // Fetch all related data
+        const [batchesRes, machinesRes, qaRes, sgRes, weightRes] = await Promise.all([
+          supabase.from('batches').select('id, unit_id, total_eggs_set, chicks_hatched, eggs_injected, status, set_date').in('unit_id', hatcheryIds).gte('set_date', startDate.toISOString().split('T')[0]),
+          supabase.from('machines').select('id, unit_id, machine_type').in('unit_id', hatcheryIds),
+          supabase.from('qa_monitoring').select('id, machine_id, temperature, humidity').gte('check_date', startDate.toISOString().split('T')[0]),
+          supabase.from('specific_gravity_tests').select('flock_id, float_percentage, flocks!inner(unit_id)').gte('test_date', startDate.toISOString().split('T')[0]),
+          supabase.from('weight_tracking').select('flock_id, percent_loss, flocks!inner(unit_id)').gte('check_date', startDate.toISOString().split('T')[0])
+        ]);
+        
+        // Index machines by hatchery
+        const machinesByHatchery: Record<string, any[]> = {};
+        for (const m of machinesRes.data || []) {
+          if (!machinesByHatchery[m.unit_id]) machinesByHatchery[m.unit_id] = [];
+          machinesByHatchery[m.unit_id].push(m);
+        }
+        
+        // Index batches by hatchery
+        const batchesByHatchery: Record<string, any[]> = {};
+        for (const b of batchesRes.data || []) {
+          if (!batchesByHatchery[b.unit_id]) batchesByHatchery[b.unit_id] = [];
+          batchesByHatchery[b.unit_id].push(b);
+        }
+        
+        // Build summary for each hatchery
+        const summaries = hatcheries.map((hatchery: any) => {
+          const batches = batchesByHatchery[hatchery.id] || [];
+          const machines = machinesByHatchery[hatchery.id] || [];
+          
+          const totalEggsSet = batches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
+          const totalChicksHatched = batches.reduce((sum, b) => sum + (b.chicks_hatched || 0), 0);
+          const totalInjected = batches.reduce((sum, b) => sum + (b.eggs_injected || 0), 0);
+          const completedBatches = batches.filter(b => b.status === 'completed').length;
+          
+          // Get QA data for this hatchery's machines
+          const hatcheryMachineIds = machines.map(m => m.id);
+          const hatcheryQA = (qaRes.data || []).filter((qa: any) => hatcheryMachineIds.includes(qa.machine_id));
+          
+          const avgTemp = hatcheryQA.length > 0
+            ? (hatcheryQA.reduce((sum: number, qa: any) => sum + Number(qa.temperature || 0), 0) / hatcheryQA.length).toFixed(1)
+            : null;
+          
+          const avgHumidity = hatcheryQA.length > 0
+            ? (hatcheryQA.reduce((sum: number, qa: any) => sum + Number(qa.humidity || 0), 0) / hatcheryQA.length).toFixed(1)
+            : null;
+          
+          // Get SG and weight for this hatchery
+          const hatcherySG = (sgRes.data || []).filter((sg: any) => sg.flocks?.unit_id === hatchery.id);
+          const hatcheryWeight = (weightRes.data || []).filter((w: any) => w.flocks?.unit_id === hatchery.id);
+          
+          const avgSG = hatcherySG.length > 0
+            ? (hatcherySG.reduce((sum: number, sg: any) => sum + Number(sg.float_percentage || 0), 0) / hatcherySG.length).toFixed(2)
+            : null;
+          
+          const avgMoistureLoss = hatcheryWeight.length > 0
+            ? (hatcheryWeight.reduce((sum: number, w: any) => sum + Number(w.percent_loss || 0), 0) / hatcheryWeight.length).toFixed(2)
+            : null;
+          
+          return {
+            hatchery_id: hatchery.id,
+            hatchery_name: hatchery.name,
+            hatchery_code: hatchery.code,
+            status: hatchery.status,
+            machine_count: machines.length,
+            setter_count: machines.filter(m => m.machine_type === 'setter' || m.machine_type === 'combo').length,
+            hatcher_count: machines.filter(m => m.machine_type === 'hatcher' || m.machine_type === 'combo').length,
+            batch_count: batches.length,
+            completed_batches: completedBatches,
+            total_eggs_set: totalEggsSet,
+            total_chicks_hatched: totalChicksHatched,
+            hatch_percent: totalEggsSet > 0 ? ((totalChicksHatched / totalEggsSet) * 100).toFixed(1) : null,
+            hoi_percent: totalInjected > 0 ? ((totalChicksHatched / totalInjected) * 100).toFixed(1) : null,
+            qa_checks: hatcheryQA.length,
+            avg_temperature: avgTemp,
+            avg_humidity: avgHumidity,
+            sg_tests: hatcherySG.length,
+            avg_sg_float_pct: avgSG,
+            moisture_checks: hatcheryWeight.length,
+            avg_moisture_loss: avgMoistureLoss
+          };
+        });
+        
+        console.log('[get_hatchery_summary]', { hatcheries: summaries.length });
+        return { type: 'hatchery_summary', message: `Summary for ${summaries.length} hatcheries`, data: summaries };
+      }
 
       default:
         return { error: "Unknown tool", requested_tool: toolName };
