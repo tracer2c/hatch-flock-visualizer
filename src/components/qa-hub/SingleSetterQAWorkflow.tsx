@@ -14,26 +14,30 @@ import {
   Calendar, 
   ArrowLeft, 
   Search,
-  Egg,
-  CheckCircle2
+  Settings,
+  MapPin
 } from "lucide-react";
-import { useHatcheries, useSingleSetterHouses } from '@/hooks/useQAHubData';
+import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import Setter18PointTempGrid from '@/components/dashboard/Setter18PointTempGrid';
-import { differenceInDays, parseISO } from 'date-fns';
 
-interface SelectedHouse {
+interface SelectedMachine {
   id: string;
-  batch_number: string;
-  set_date: string;
-  flock: { flock_name: string; flock_number: number } | null;
-  machine: { id: string; machine_number: string } | null;
+  machine_number: string;
+  location: string | null;
+  currentHouse: {
+    id: string;
+    batch_number: string;
+    set_date: string;
+    flock: { id: string; flock_name: string; flock_number: number } | null;
+  } | null;
+  daysInIncubation: number;
 }
 
 const SingleSetterQAWorkflow: React.FC = () => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
-  const [selectedHouse, setSelectedHouse] = useState<SelectedHouse | null>(null);
+  const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [technicianName, setTechnicianName] = useState('');
   const [notes, setNotes] = useState('');
@@ -41,41 +45,41 @@ const SingleSetterQAWorkflow: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: hatcheries, isLoading: hatcheriesLoading } = useHatcheries();
-  const { data: houses, isLoading: housesLoading, refetch } = useSingleSetterHouses(
+  const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
     selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
   );
 
-  const filteredHouses = houses?.filter(house => {
+  const filteredMachines = machines?.filter(machine => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      house.batch_number?.toLowerCase().includes(searchLower) ||
-      house.flock?.flock_name?.toLowerCase().includes(searchLower) ||
-      house.machine?.machine_number?.toLowerCase().includes(searchLower)
+      machine.machine_number?.toLowerCase().includes(searchLower) ||
+      machine.currentHouse?.flock?.flock_name?.toLowerCase().includes(searchLower) ||
+      machine.currentHouse?.batch_number?.toLowerCase().includes(searchLower) ||
+      machine.location?.toLowerCase().includes(searchLower)
     );
   });
 
-  const getDaysInIncubation = (setDate: string) => {
-    return differenceInDays(new Date(), parseISO(setDate)) + 1;
-  };
-
   const handleSubmitQA = async (data: { values: Record<string, number>; averages: { overall: number | null; front: number | null; middle: number | null; back: number | null } }) => {
-    if (!selectedHouse || !technicianName.trim()) {
+    if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
+      return;
+    }
+
+    if (!selectedMachine.currentHouse) {
+      toast.error('No house loaded in this machine');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const dayOfIncubation = getDaysInIncubation(selectedHouse.set_date);
-
       const { error } = await supabase.from('qa_monitoring').insert({
-        batch_id: selectedHouse.id,
-        machine_id: selectedHouse.machine?.id || null,
+        batch_id: selectedMachine.currentHouse.id,
+        machine_id: selectedMachine.id,
         check_date: checkDate,
         check_time: new Date().toTimeString().split(' ')[0],
-        day_of_incubation: dayOfIncubation,
+        day_of_incubation: selectedMachine.daysInIncubation,
         temperature: data.averages.overall || 0,
-        humidity: 55, // Default value
+        humidity: 55,
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
@@ -103,12 +107,16 @@ const SingleSetterQAWorkflow: React.FC = () => {
         temp_avg_front: data.averages.front,
         temp_avg_middle: data.averages.middle,
         temp_avg_back: data.averages.back,
+        candling_results: JSON.stringify({
+          type: 'setter_temperature_18point',
+          setterNumber: selectedMachine.machine_number
+        })
       });
 
       if (error) throw error;
 
       toast.success('QA entry saved successfully!');
-      setSelectedHouse(null);
+      setSelectedMachine(null);
       setNotes('');
       refetch();
     } catch (error: any) {
@@ -118,8 +126,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // House Selection View
-  if (!selectedHouse) {
+  // Machine Selection View
+  if (!selectedMachine) {
     return (
       <div className="space-y-4">
         {/* Filters */}
@@ -127,10 +135,10 @@ const SingleSetterQAWorkflow: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Thermometer className="h-5 w-5 text-blue-600" strokeWidth={1.5} />
-              Single Setter QA (per house)
+              Single Setter QA (per machine)
             </CardTitle>
             <CardDescription>
-              Select a hatchery and house to enter QA readings
+              Select a single-setter machine to enter QA readings. System auto-links to the house currently loaded.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -155,10 +163,10 @@ const SingleSetterQAWorkflow: React.FC = () => {
               <div className="space-y-2 md:col-span-2">
                 <Label className="flex items-center gap-2">
                   <Search className="h-4 w-4" />
-                  Search Houses
+                  Search Machines
                 </Label>
                 <Input
-                  placeholder="Search by house, flock, or machine..."
+                  placeholder="Search by machine, flock, or house..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -167,71 +175,98 @@ const SingleSetterQAWorkflow: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Houses List */}
+        {/* Machines List */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Houses in Single-Setter Machines
+                Single-Setter Machines
               </CardTitle>
               <Badge variant="secondary">
-                {filteredHouses?.length || 0} houses
+                {filteredMachines?.length || 0} machines
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            {housesLoading ? (
+            {machinesLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
                   <Skeleton key={i} className="h-24 w-full" />
                 ))}
               </div>
-            ) : filteredHouses?.length === 0 ? (
+            ) : filteredMachines?.length === 0 ? (
               <Alert>
                 <AlertDescription>
-                  No houses found in single-setter machines for the selected criteria.
+                  No single-setter machines found for the selected criteria.
                 </AlertDescription>
               </Alert>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredHouses?.map(house => (
+                {filteredMachines?.map(machine => (
                   <Card 
-                    key={house.id}
-                    className="cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
-                    onClick={() => setSelectedHouse(house as SelectedHouse)}
+                    key={machine.id}
+                    className={`cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group ${
+                      !machine.hasOccupant ? 'opacity-60' : ''
+                    }`}
+                    onClick={() => machine.hasOccupant && setSelectedMachine(machine as SelectedMachine)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Egg className="h-4 w-4 text-muted-foreground" />
+                          <Settings className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium text-sm">
-                            {house.flock?.flock_name || 'Unknown'}
+                            {machine.machine_number}
                           </span>
                         </div>
                         <Badge 
-                          variant={house.status === 'incubating' ? 'default' : 'secondary'}
+                          variant={machine.hasOccupant ? 'default' : 'outline'}
                           className="text-xs"
                         >
-                          {house.status}
+                          {machine.hasOccupant ? 'Occupied' : 'Empty'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        House: {house.batch_number}
-                      </p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Machine: {house.machine?.machine_number || '-'}
-                        </span>
-                        <span className="font-medium text-blue-600">
-                          Day {getDaysInIncubation(house.set_date)}
-                        </span>
-                      </div>
-                      <div className="mt-2 pt-2 border-t flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          Set: {new Date(house.set_date).toLocaleDateString()}
-                        </span>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs group-hover:bg-blue-100">
-                          Select
+                      
+                      {machine.location && (
+                        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {machine.location}
+                        </p>
+                      )}
+
+                      {machine.currentHouse ? (
+                        <div className="bg-muted/50 rounded-md p-2 mt-2">
+                          <p className="text-xs font-medium text-foreground">Current House:</p>
+                          <p className="text-sm font-medium text-primary">
+                            {machine.currentHouse.flock?.flock_name || 'Unknown Flock'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            House: {machine.currentHouse.batch_number}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              Set: {new Date(machine.currentHouse.set_date).toLocaleDateString()}
+                            </span>
+                            <span className="font-medium text-xs text-blue-600">
+                              Day {machine.daysInIncubation}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-muted/30 rounded-md p-2 mt-2">
+                          <p className="text-xs text-muted-foreground text-center">
+                            No house currently loaded
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="mt-3 pt-2 border-t">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="w-full h-7 text-xs group-hover:bg-blue-100"
+                          disabled={!machine.hasOccupant}
+                        >
+                          {machine.hasOccupant ? 'Select Machine' : 'No House to QA'}
                         </Button>
                       </div>
                     </CardContent>
@@ -252,17 +287,19 @@ const SingleSetterQAWorkflow: React.FC = () => {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setSelectedHouse(null)} className="gap-2">
+            <Button variant="ghost" onClick={() => setSelectedMachine(null)} className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Houses
+              Back to Machines
             </Button>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="font-medium">{selectedHouse.flock?.flock_name}</p>
-                <p className="text-sm text-muted-foreground">House: {selectedHouse.batch_number}</p>
+                <p className="font-medium">{selectedMachine.machine_number}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedMachine.currentHouse?.flock?.flock_name} - House {selectedMachine.currentHouse?.batch_number}
+                </p>
               </div>
               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                Day {getDaysInIncubation(selectedHouse.set_date)}
+                Day {selectedMachine.daysInIncubation}
               </Badge>
             </div>
           </div>
@@ -307,10 +344,10 @@ const SingleSetterQAWorkflow: React.FC = () => {
         onSubmit={handleSubmitQA}
         checkDate={checkDate}
         onCheckDateChange={setCheckDate}
-        setterNumber={selectedHouse.machine?.machine_number || ''}
+        setterNumber={selectedMachine.machine_number}
         onSetterNumberChange={() => {}}
         setterMachines={[]}
-        currentMachine={selectedHouse.machine}
+        currentMachine={{ machine_number: selectedMachine.machine_number }}
       />
 
       {isSubmitting && (

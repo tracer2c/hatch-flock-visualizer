@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Activity, Info, Settings } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Activity, Info, Settings, AlertTriangle, ExternalLink, Thermometer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import QADataEntry from "@/components/dashboard/QADataEntry";
-import { submitMachineLevelQA } from "@/services/qaSubmissionService";
+import { submitMachineLevelQA, fetchMachineQARecords } from "@/services/qaSubmissionService";
 import type { OccupancyInfo } from "@/utils/setterPositionMapping";
 
 
@@ -615,17 +616,23 @@ const QAEntryPage = () => {
           </Card>
         </div>
 
-        {/* Multi-Setter Mode Indicator */}
+        {/* Multi-Setter Mode Banner */}
         {houseInfo.setter_mode === 'multi_setter' && (
-          <Card className="mb-4 border-primary/30 bg-primary/5">
-            <CardContent className="py-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Settings className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">Multi-Setter Mode Active</span>
-                <span className="text-muted-foreground">- QA readings will be linked to specific flocks at each position</span>
-              </div>
-            </CardContent>
-          </Card>
+          <Alert className="mb-4 border-amber-300 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Multi-Setter Machine</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              <p className="mb-2">
+                This house is in a multi-setter machine. Machine-level QA (18-point temps, angles, humidity) should be entered via the QA Hub.
+              </p>
+              <Button asChild variant="outline" size="sm" className="border-amber-400 text-amber-700 hover:bg-amber-100">
+                <Link to="/qa-hub">
+                  Go to QA Hub
+                  <ExternalLink className="h-3 w-3 ml-2" />
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* QA Data Entry Component */}

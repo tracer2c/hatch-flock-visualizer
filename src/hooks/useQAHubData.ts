@@ -75,6 +75,96 @@ export function useSingleSetterHouses(hatcheryId?: string) {
   });
 }
 
+// Fetch single-setter machines with their current house occupant
+export function useSingleSetterMachines(hatcheryId?: string) {
+  const { viewMode } = useViewMode();
+  
+  return useQuery({
+    queryKey: ['single-setter-machines', hatcheryId, viewMode],
+    queryFn: async () => {
+      // Get single-setter machines (setter_mode is null or 'single_setter')
+      let query = supabase
+        .from('machines')
+        .select(`
+          id,
+          machine_number,
+          machine_type,
+          setter_mode,
+          location,
+          capacity,
+          status,
+          unit:units!machines_unit_id_fkey(
+            id,
+            name,
+            code
+          )
+        `)
+        .eq('data_type', viewMode)
+        .in('machine_type', ['setter', 'combo']);
+      
+      if (hatcheryId) {
+        query = query.eq('unit_id', hatcheryId);
+      }
+      
+      const { data: machines, error: machineError } = await query.order('machine_number');
+      
+      if (machineError) throw machineError;
+      
+      // Filter to single-setter machines only
+      const singleSetterMachines = (machines || []).filter(m => 
+        m.setter_mode === null || m.setter_mode === 'single_setter'
+      );
+      
+      // For each machine, find the current house (batch) loaded
+      const today = new Date().toISOString().split('T')[0];
+      const machinesWithOccupant = await Promise.all(
+        singleSetterMachines.map(async (machine) => {
+          // Find active batch in this machine
+          const { data: batches } = await supabase
+            .from('batches')
+            .select(`
+              id,
+              batch_number,
+              set_date,
+              status,
+              total_eggs_set,
+              flock:flocks!batches_flock_id_fkey(
+                id,
+                flock_name,
+                flock_number
+              )
+            `)
+            .eq('machine_id', machine.id)
+            .eq('data_type', viewMode)
+            .in('status', ['incubating', 'hatching'])
+            .lte('set_date', today)
+            .order('set_date', { ascending: false })
+            .limit(1);
+          
+          const currentHouse = batches?.[0] || null;
+          
+          // Calculate days in incubation
+          let daysInIncubation = 0;
+          if (currentHouse?.set_date) {
+            const setDate = new Date(currentHouse.set_date);
+            const now = new Date();
+            daysInIncubation = Math.floor((now.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          }
+          
+          return {
+            ...machine,
+            currentHouse,
+            daysInIncubation,
+            hasOccupant: !!currentHouse
+          };
+        })
+      );
+      
+      return machinesWithOccupant;
+    }
+  });
+}
+
 // Fetch multi-setter machines with occupancy count
 export function useMultiSetterMachines(hatcheryId?: string) {
   const { viewMode } = useViewMode();

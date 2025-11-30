@@ -1322,6 +1322,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          linkage_type: string
           multi_setter_set_id: string | null
           position: string
           qa_monitoring_id: string
@@ -1332,6 +1333,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          linkage_type?: string
           multi_setter_set_id?: string | null
           position: string
           qa_monitoring_id: string
@@ -1342,6 +1344,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          linkage_type?: string
           multi_setter_set_id?: string | null
           position?: string
           qa_monitoring_id?: string
