@@ -3,11 +3,12 @@ import MachineManager from "@/components/dashboard/MachineManager";
 import DataCleanup from "@/components/dashboard/DataCleanup";
 import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import SOPManager from "@/components/dashboard/SOPManager";
+import SOPDashboard from "@/components/dashboard/SOPDashboard";
 import UserManager from "@/components/dashboard/UserManager";
 import UnitManager from "@/components/dashboard/UnitManager";
 import { TargetManager } from "@/components/management/TargetManager";
 import { ResidueScheduleManager } from "@/components/management/ResidueScheduleManager";
-import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home, Target, Calendar } from "lucide-react";
+import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home, Target, Calendar, ListChecks } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const ManagementPage = () => {
@@ -15,6 +16,21 @@ const ManagementPage = () => {
     <div className="p-6">
       {/* Management Sections */}
       <Accordion type="single" collapsible className="space-y-4">
+        <AccordionItem value="sop-dashboard" className="bg-white rounded-lg shadow-sm border">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <ListChecks className="h-5 w-5 text-blue-600" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg">Daily SOP Dashboard</h3>
+                <p className="text-gray-600 text-sm">View today's SOPs for houses, machines, transfers, and alerts</p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <SOPDashboard />
+          </AccordionContent>
+        </AccordionItem>
+
         <AccordionItem value="unit-manager" className="bg-white rounded-lg shadow-sm border">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center gap-3">

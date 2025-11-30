@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, AlertTriangle, Eye, Plus, Edit, Trash2, Building2 } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertTriangle, Eye, Plus, Edit, Trash2, Building2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,17 +17,20 @@ import { differenceInDays, format, parseISO, addDays } from 'date-fns';
 interface ResidueSchedule {
   id: string;
   batch_id: string;
+  flock_id?: string;
   scheduled_date: string;
   due_date: string;
   status: 'pending' | 'completed' | 'overdue';
   completed_at?: string;
   completed_by?: string;
   notes?: string;
+  technician_name?: string;
   batch: {
     batch_number: string;
     set_date: string;
     flock: {
       flock_name: string;
+      id: string;
     };
   };
 }
@@ -37,26 +40,40 @@ interface Batch {
   batch_number: string;
   set_date: string;
   unit_id?: string;
+  flock_id?: string;
   flock: {
+    id: string;
     flock_name: string;
   };
+}
+
+interface Flock {
+  id: string;
+  flock_name: string;
+  flock_number: number;
+  unit_id?: string;
 }
 
 export const ResidueScheduleManager = () => {
   const [schedules, setSchedules] = useState<ResidueSchedule[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [flocks, setFlocks] = useState<Flock[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'completed'>('all');
   const [selectedHatchery, setSelectedHatchery] = useState<string>('all');
+  const [selectedFlock, setSelectedFlock] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ResidueSchedule | null>(null);
   const [formData, setFormData] = useState({
     batch_id: '',
+    flock_id: '',
     scheduled_date: '',
     due_date: '',
-    notes: ''
+    notes: '',
+    technician_name: ''
   });
   const { toast } = useToast();
 
@@ -64,11 +81,20 @@ export const ResidueScheduleManager = () => {
     loadSchedules();
     loadBatches();
     loadUnits();
+    loadFlocks();
   }, []);
 
   const loadUnits = async () => {
     const { data } = await supabase.from('units').select('id, name').order('name');
     setUnits(data || []);
+  };
+
+  const loadFlocks = async () => {
+    const { data } = await supabase
+      .from('flocks')
+      .select('id, flock_name, flock_number, unit_id')
+      .order('flock_name');
+    setFlocks(data || []);
   };
 
   const loadBatches = async () => {
@@ -79,7 +105,8 @@ export const ResidueScheduleManager = () => {
         batch_number,
         set_date,
         unit_id,
-        flock:flocks(flock_name)
+        flock_id,
+        flock:flocks(id, flock_name)
       `)
       .in('status', ['setting', 'incubating', 'hatching'])
       .order('set_date', { ascending: false });
@@ -102,7 +129,7 @@ export const ResidueScheduleManager = () => {
             batch_number,
             set_date,
             unit_id,
-            flock:flocks(flock_name),
+            flock:flocks(id, flock_name),
             unit:units(name)
           )
         `)
@@ -111,10 +138,10 @@ export const ResidueScheduleManager = () => {
       if (error) throw error;
 
       const today = new Date().toISOString().split('T')[0];
-      const updatedSchedules = data.map(schedule => ({
+      const updatedSchedules = (data || []).map(schedule => ({
         ...schedule,
         status: (schedule.status === 'pending' && schedule.due_date < today ? 'overdue' : schedule.status) as 'pending' | 'completed' | 'overdue'
-      }));
+      })) as ResidueSchedule[];
 
       setSchedules(updatedSchedules);
     } catch (error) {
@@ -135,13 +162,19 @@ export const ResidueScheduleManager = () => {
       return;
     }
 
+    // Get flock_id from the selected batch
+    const selectedBatch = batches.find(b => b.id === formData.batch_id);
+    const flockId = selectedBatch?.flock_id || formData.flock_id || null;
+
     const { error } = await supabase
       .from('residue_analysis_schedule')
       .insert({
         batch_id: formData.batch_id,
+        flock_id: flockId,
         scheduled_date: formData.scheduled_date,
         due_date: formData.due_date,
         notes: formData.notes || null,
+        technician_name: formData.technician_name || null,
         status: 'pending'
       });
 
@@ -150,7 +183,9 @@ export const ResidueScheduleManager = () => {
     } else {
       toast({ title: "Schedule created successfully" });
       setShowCreateDialog(false);
-      setFormData({ batch_id: '', scheduled_date: '', due_date: '', notes: '' });
+      setFormData({ batch_id: '', flock_id: '', scheduled_date: '', due_date: '', notes: '', technician_name: '' });
+      setSelectedHatchery('all');
+      setSelectedFlock('all');
       loadSchedules();
     }
   };
@@ -159,9 +194,11 @@ export const ResidueScheduleManager = () => {
     setEditingSchedule(schedule);
     setFormData({
       batch_id: schedule.batch_id,
+      flock_id: schedule.flock_id || '',
       scheduled_date: schedule.scheduled_date,
       due_date: schedule.due_date,
-      notes: schedule.notes || ''
+      notes: schedule.notes || '',
+      technician_name: schedule.technician_name || ''
     });
     setShowEditDialog(true);
   };
@@ -184,7 +221,7 @@ export const ResidueScheduleManager = () => {
       toast({ title: "Schedule updated successfully" });
       setShowEditDialog(false);
       setEditingSchedule(null);
-      setFormData({ batch_id: '', scheduled_date: '', due_date: '', notes: '' });
+      setFormData({ batch_id: '', flock_id: '', scheduled_date: '', due_date: '', notes: '', technician_name: '' });
       loadSchedules();
     }
   };
@@ -262,8 +299,19 @@ export const ResidueScheduleManager = () => {
   };
 
   const filteredSchedules = schedules.filter(schedule => {
-    if (filter === 'all') return true;
-    return schedule.status === filter;
+    // Status filter
+    if (filter !== 'all' && schedule.status !== filter) return false;
+    
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      const matchesHouse = schedule.batch.batch_number.toLowerCase().includes(search);
+      const matchesFlock = schedule.batch.flock.flock_name.toLowerCase().includes(search);
+      const matchesTechnician = schedule.technician_name?.toLowerCase().includes(search);
+      if (!matchesHouse && !matchesFlock && !matchesTechnician) return false;
+    }
+    
+    return true;
   });
 
   const stats = {
@@ -303,7 +351,7 @@ export const ResidueScheduleManager = () => {
               Create Schedule
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Create Residue Analysis Schedule</DialogTitle>
             </DialogHeader>
@@ -311,17 +359,42 @@ export const ResidueScheduleManager = () => {
               <div>
                 <Label className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Filter by Hatchery
+                  Hatchery *
                 </Label>
-                <Select value={selectedHatchery} onValueChange={setSelectedHatchery}>
+                <Select value={selectedHatchery} onValueChange={(val) => {
+                  setSelectedHatchery(val);
+                  setSelectedFlock('all');
+                  setFormData(prev => ({ ...prev, batch_id: '' }));
+                }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Hatcheries" />
+                    <SelectValue placeholder="Select Hatchery" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Hatcheries</SelectItem>
                     {units.map(unit => (
                       <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Flock</Label>
+                <Select value={selectedFlock} onValueChange={(val) => {
+                  setSelectedFlock(val);
+                  setFormData(prev => ({ ...prev, flock_id: val === 'all' ? '' : val, batch_id: '' }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Flocks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Flocks</SelectItem>
+                    {flocks
+                      .filter(f => selectedHatchery === 'all' || f.unit_id === selectedHatchery)
+                      .map(flock => (
+                        <SelectItem key={flock.id} value={flock.id}>
+                          #{flock.flock_number} - {flock.flock_name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -333,7 +406,11 @@ export const ResidueScheduleManager = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {batches
-                      .filter((batch: any) => selectedHatchery === 'all' || batch.unit_id === selectedHatchery)
+                      .filter((batch: any) => {
+                        if (selectedHatchery !== 'all' && batch.unit_id !== selectedHatchery) return false;
+                        if (selectedFlock !== 'all' && batch.flock_id !== selectedFlock) return false;
+                        return true;
+                      })
                       .map((batch: any) => (
                         <SelectItem key={batch.id} value={batch.id}>
                           {batch.batch_number} - {batch.flock?.flock_name}
@@ -342,20 +419,30 @@ export const ResidueScheduleManager = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Scheduled Date *</Label>
-                <Input
-                  type="date"
-                  value={formData.scheduled_date}
-                  onChange={(e) => handleScheduledDateChange(e.target.value)}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Scheduled Date *</Label>
+                  <Input
+                    type="date"
+                    value={formData.scheduled_date}
+                    onChange={(e) => handleScheduledDateChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Due Date *</Label>
+                  <Input
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                  />
+                </div>
               </div>
               <div>
-                <Label>Due Date *</Label>
+                <Label>Technician Name</Label>
                 <Input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                  value={formData.technician_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, technician_name: e.target.value }))}
+                  placeholder="Enter technician name"
                 />
               </div>
               <div>
@@ -373,6 +460,18 @@ export const ResidueScheduleManager = () => {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search by house, flock, or technician..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -452,6 +551,7 @@ export const ResidueScheduleManager = () => {
                 <TableHead>House</TableHead>
                 <TableHead>Flock</TableHead>
                 <TableHead>Hatchery</TableHead>
+                <TableHead>Technician</TableHead>
                 <TableHead>Set Date</TableHead>
                 <TableHead>Scheduled Date</TableHead>
                 <TableHead>Due Date</TableHead>
@@ -472,6 +572,7 @@ export const ResidueScheduleManager = () => {
                     <TableCell>
                       <Badge variant="outline">{(schedule.batch as any).unit?.name || 'N/A'}</Badge>
                     </TableCell>
+                    <TableCell>{schedule.technician_name || 'N/A'}</TableCell>
                     <TableCell>{format(parseISO(schedule.batch.set_date), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>{format(parseISO(schedule.scheduled_date), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>

@@ -64,6 +64,11 @@ export class AgeRangeService {
     ) || ranges[0];
   }
   
+  // Alias for getAgeRange - used in age-based analytics
+  static getAgeRangeForAge(ageWeeks: number): AgeRangeDefinition {
+    return this.getAgeRange(ageWeeks);
+  }
+  
   static getAgeRangeLabel(ageWeeks: number): string {
     return this.getAgeRange(ageWeeks).label;
   }

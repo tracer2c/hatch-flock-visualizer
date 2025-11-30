@@ -1546,10 +1546,12 @@ export type Database = {
           completed_by: string | null
           created_at: string
           due_date: string
+          flock_id: string | null
           id: string
           notes: string | null
           scheduled_date: string
           status: string
+          technician_name: string | null
           updated_at: string
         }
         Insert: {
@@ -1559,10 +1561,12 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           due_date: string
+          flock_id?: string | null
           id?: string
           notes?: string | null
           scheduled_date: string
           status?: string
+          technician_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -1572,10 +1576,12 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           due_date?: string
+          flock_id?: string | null
           id?: string
           notes?: string | null
           scheduled_date?: string
           status?: string
+          technician_name?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1591,6 +1597,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residue_analysis_schedule_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
             referencedColumns: ["id"]
           },
         ]

@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ScatterChart, Scatter, ZAxis } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
 import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
-import { Users, Filter, Info, Download, Image, Calendar } from "lucide-react";
+import { Users, Filter, Info, Download, Image, Calendar, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
@@ -88,6 +88,68 @@ const AgeBasedAnalytics = () => {
   
   // Metrics are already filtered by the hook, just use them directly
   const filteredMetrics = metrics;
+
+  // Fetch candling data by age
+  const { data: candlingData } = useQuery({
+    queryKey: ['candling-by-age', selectedUnit, selectedFlock],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('qa_monitoring')
+        .select(`
+          id, candling_results, day_of_incubation, check_date,
+          batch:batches(
+            id, batch_number, set_date,
+            flock:flocks(id, flock_name, age_weeks, unit_id)
+          )
+        `)
+        .not('candling_results', 'is', null)
+        .order('check_date', { ascending: false })
+        .limit(200);
+      
+      if (error) throw error;
+      
+      // Group by flock age and calculate averages
+      const ageGroups: Record<string, { fertile: number; infertile: number; count: number }> = {};
+      
+      data?.forEach(record => {
+        const batch = record.batch as any;
+        if (!batch?.flock) return;
+        
+        // Apply filters
+        if (selectedUnit !== 'all' && batch.flock.unit_id !== selectedUnit) return;
+        if (selectedFlock !== 'all' && batch.flock.id !== selectedFlock) return;
+        
+        const ageWeeks = batch.flock.age_weeks;
+        const ageRange = AgeRangeService.getAgeRangeForAge(ageWeeks);
+        
+        // Parse candling results (format: "fertile: X, infertile: Y" or similar)
+        let fertile = 0, infertile = 0;
+        const results = record.candling_results?.toLowerCase() || '';
+        const fertileMatch = results.match(/fertile[:\s]*(\d+)/);
+        const infertileMatch = results.match(/infertile[:\s]*(\d+)/);
+        if (fertileMatch) fertile = parseInt(fertileMatch[1]);
+        if (infertileMatch) infertile = parseInt(infertileMatch[1]);
+        
+        if (!ageGroups[ageRange.label]) {
+          ageGroups[ageRange.label] = { fertile: 0, infertile: 0, count: 0 };
+        }
+        ageGroups[ageRange.label].fertile += fertile;
+        ageGroups[ageRange.label].infertile += infertile;
+        ageGroups[ageRange.label].count += 1;
+      });
+      
+      return Object.entries(ageGroups).map(([label, data]) => ({
+        label,
+        avgFertile: data.count > 0 ? Math.round(data.fertile / data.count) : 0,
+        avgInfertile: data.count > 0 ? Math.round(data.infertile / data.count) : 0,
+        totalChecks: data.count,
+        fertilityRate: data.fertile + data.infertile > 0 
+          ? Math.round((data.fertile / (data.fertile + data.infertile)) * 100) 
+          : 0
+      }));
+    },
+    enabled: true
+  });
 
   // Export handlers
   const handleExportCSV = () => {
@@ -354,6 +416,53 @@ const AgeBasedAnalytics = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Candling Results by Age Chart */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Candling Results by Flock Age
+            </CardTitle>
+            <ChartDownloadButton chartId="candling-age-chart" filename="candling-by-age" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {candlingData && candlingData.length > 0 ? (
+            <div id="candling-age-chart">
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={candlingData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis yAxisId="left" label={{ value: 'Avg Count', angle: -90, position: 'insideLeft' }} />
+                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Fertility %', angle: 90, position: 'insideRight' }} domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="avgFertile" fill="hsl(var(--chart-2))" name="Avg Fertile" />
+                  <Bar yAxisId="left" dataKey="avgInfertile" fill="hsl(var(--chart-4))" name="Avg Infertile" />
+                  <Line yAxisId="right" type="monotone" dataKey="fertilityRate" stroke="hsl(var(--chart-1))" name="Fertility Rate %" strokeWidth={2} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                {candlingData.map(item => (
+                  <div key={item.label} className="p-3 bg-muted rounded-lg">
+                    <p className="font-medium">{item.label}</p>
+                    <p className="text-muted-foreground">{item.totalChecks} checks</p>
+                    <p className="text-green-600 font-semibold">{item.fertilityRate}% fertility</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No candling data available</p>
+              <p className="text-sm mt-1">Enter candling results in QA monitoring to see analysis</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
