@@ -53,6 +53,8 @@ interface House {
   unit_id?: string | null;
   technician_name?: string | null;
   data_type?: 'original' | 'dummy';
+  fertility_completed?: boolean;
+  residue_completed?: boolean;
 }
 
 interface Unit {
@@ -129,15 +131,17 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     // Skip completed or cancelled batches
     if (house.status === 'completed' || house.status === 'cancelled') return null;
     
-    // Fertility window: Days 10-14
-    if (daysSinceSet >= 8 && daysSinceSet < 10) {
-      return { type: 'upcoming', label: `Fertility in ${10 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
-    }
-    if (daysSinceSet >= 10 && daysSinceSet <= 14) {
-      return { type: 'due', label: 'Fertility due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
-    }
-    if (daysSinceSet > 14 && daysSinceSet < 18) {
-      return { type: 'overdue', label: 'Fertility overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+    // Fertility window: Days 10-14 - only show if NOT completed
+    if (!house.fertility_completed) {
+      if (daysSinceSet >= 8 && daysSinceSet < 10) {
+        return { type: 'upcoming', label: `Fertility in ${10 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
+      }
+      if (daysSinceSet >= 10 && daysSinceSet <= 14) {
+        return { type: 'due', label: 'Fertility due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+      }
+      if (daysSinceSet > 14 && daysSinceSet < 18) {
+        return { type: 'overdue', label: 'Fertility overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+      }
     }
     
     // Transfer: Day 18
@@ -148,15 +152,17 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       return { type: 'due', label: 'Transfer today', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
     
-    // Residue window: Days 22-23
-    if (daysSinceSet >= 20 && daysSinceSet < 22) {
-      return { type: 'upcoming', label: `Residue in ${22 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
-    }
-    if (daysSinceSet >= 22 && daysSinceSet <= 23) {
-      return { type: 'due', label: 'Residue due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
-    }
-    if (daysSinceSet > 23) {
-      return { type: 'overdue', label: 'Residue overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+    // Residue window: Days 22-23 - only show if NOT completed
+    if (!house.residue_completed) {
+      if (daysSinceSet >= 20 && daysSinceSet < 22) {
+        return { type: 'upcoming', label: `Residue in ${22 - daysSinceSet}d`, color: 'bg-blue-100 text-blue-700 border-blue-200' };
+      }
+      if (daysSinceSet >= 22 && daysSinceSet <= 23) {
+        return { type: 'due', label: 'Residue due', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+      }
+      if (daysSinceSet > 23) {
+        return { type: 'overdue', label: 'Residue overdue', color: 'bg-red-100 text-red-700 border-red-200' };
+      }
     }
     
     return null;
@@ -219,7 +225,9 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       .select(`
         *,
         flocks(flock_name, flock_number, house_number, technician_name),
-        machines(machine_number, machine_type)
+        machines(machine_number, machine_type),
+        fertility_analysis!left(id),
+        residue_analysis!left(id)
       `)
       .order('set_date', { ascending: false });
     
@@ -239,6 +247,18 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
           houseNumber = parts[1]?.trim() || '';
         }
         
+        // Handle both array and object returns from Supabase (UNIQUE constraint)
+        const fertilityCompleted = Boolean(
+          Array.isArray(batch.fertility_analysis) 
+            ? batch.fertility_analysis.length > 0 
+            : batch.fertility_analysis?.id
+        );
+        const residueCompleted = Boolean(
+          Array.isArray(batch.residue_analysis) 
+            ? batch.residue_analysis.length > 0 
+            : batch.residue_analysis?.id
+        );
+        
         return {
           id: batch.id,
           batch_number: batch.batch_number,
@@ -254,6 +274,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
           unit_id: batch.unit_id ?? null,
           technician_name: batch.flocks?.technician_name || null,
           data_type: batch.data_type as 'original' | 'dummy' || 'original',
+          fertility_completed: fertilityCompleted,
+          residue_completed: residueCompleted,
         };
       }) || [];
       setHouses(formattedHouses);

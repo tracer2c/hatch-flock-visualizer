@@ -92,8 +92,13 @@ const ResidueBreakoutPage = () => {
         const houseMatch = batch.batch_number.match(/#(\d+)/);
         const houseNumber = houseMatch ? `#${houseMatch[1]}` : "-";
 
-        const fertility = batch.fertility_analysis?.[0];
-        const residue = batch.residue_analysis?.[0];
+        // Handle both array and object returns from Supabase (UNIQUE constraint)
+        const fertility = Array.isArray(batch.fertility_analysis) 
+          ? batch.fertility_analysis?.[0] 
+          : batch.fertility_analysis;
+        const residue = Array.isArray(batch.residue_analysis) 
+          ? batch.residue_analysis?.[0] 
+          : batch.residue_analysis;
         const flock = batch.flocks;
 
         return {
