@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Activity, Info } from "lucide-react";
+import { ArrowLeft, Activity, Info, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import QADataEntry from "@/components/dashboard/QADataEntry";
+import { submitMachineLevelQA } from "@/services/qaSubmissionService";
+import type { OccupancyInfo } from "@/utils/setterPositionMapping";
 
 
 interface HouseInfo {
@@ -21,6 +23,7 @@ interface HouseInfo {
   expected_hatch_date: string;
   total_eggs_set: number;
   status: string;
+  setter_mode?: 'single_setter' | 'multi_setter' | null;
 }
 
 const QAEntryPage = () => {
@@ -45,7 +48,7 @@ const QAEntryPage = () => {
       .select(`
         *,
         flocks(flock_name, flock_number, house_number),
-        machines(id, machine_number, machine_type, location)
+        machines(id, machine_number, machine_type, location, setter_mode)
       `)
       .eq('id', houseId)
       .single();
@@ -79,7 +82,8 @@ const QAEntryPage = () => {
         set_date: data.set_date,
         expected_hatch_date: data.expected_hatch_date,
         total_eggs_set: data.total_eggs_set,
-        status: data.status
+        status: data.status,
+        setter_mode: data.machines?.setter_mode || null
       });
     }
   };
@@ -279,6 +283,57 @@ const QAEntryPage = () => {
     setQAData(transformedData);
   };
 
+  // Handle machine-level QA submission for multi-setter machines
+  const handleMachineLevelSubmit = async (submitData: {
+    temperatures: Record<string, number>;
+    averages: { overall: number | null; front: number | null; middle: number | null; back: number | null };
+    checkDate: string;
+    positionOccupancy: Map<string, OccupancyInfo>;
+    technicianName: string;
+    notes: string;
+    machineId: string;
+  }) => {
+    try {
+      const result = await submitMachineLevelQA(
+        {
+          machine_id: submitData.machineId,
+          inspector_name: submitData.technicianName,
+          check_date: submitData.checkDate,
+          check_time: new Date().toISOString().split('T')[1].split('.')[0],
+          day_of_incubation: 0,
+          temperature: submitData.averages.overall || 0,
+          humidity: 0,
+          notes: submitData.notes || null,
+          temperatures: submitData.temperatures,
+          temp_avg_overall: submitData.averages.overall,
+          temp_avg_front: submitData.averages.front,
+          temp_avg_middle: submitData.averages.middle,
+          temp_avg_back: submitData.averages.back
+        },
+        submitData.positionOccupancy
+      );
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: "Machine-Level QA Saved",
+        description: `18-point temperature reading saved with position-level flock linkage`
+      });
+
+      // Reload data from database
+      await loadQAData();
+    } catch (error: any) {
+      console.error('Error saving machine-level QA:', error);
+      toast({
+        title: "Error Saving QA Data",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleQADataUpdate = async (newData: any[]) => {
     try {
       // Map QA records with proper database schema
@@ -292,7 +347,8 @@ const QAEntryPage = () => {
           day_of_incubation: record.dayOfIncubation || 0,
           temperature: record.temperature || 0,
           humidity: record.humidity || 0,
-          notes: record.notes || null
+          notes: record.notes || null,
+          entry_mode: 'house' // Single-setter/house-level entry
         };
 
         // Add type-specific fields
@@ -559,6 +615,19 @@ const QAEntryPage = () => {
           </Card>
         </div>
 
+        {/* Multi-Setter Mode Indicator */}
+        {houseInfo.setter_mode === 'multi_setter' && (
+          <Card className="mb-4 border-primary/30 bg-primary/5">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Settings className="h-4 w-4 text-primary" />
+                <span className="font-medium text-primary">Multi-Setter Mode Active</span>
+                <span className="text-muted-foreground">- QA readings will be linked to specific flocks at each position</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* QA Data Entry Component */}
         <QADataEntry 
           data={qaData} 
@@ -571,6 +640,8 @@ const QAEntryPage = () => {
             machine_id: houseInfo.machine_id,
             house_number: houseInfo.house_number
           }}
+          machineSetterMode={houseInfo.setter_mode}
+          onMachineLevelSubmit={handleMachineLevelSubmit}
         />
       </div>
     </div>

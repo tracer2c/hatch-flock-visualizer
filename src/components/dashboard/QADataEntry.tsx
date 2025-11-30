@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin } from "lucide-react";
+import { Plus, Save, Trash2, Thermometer, Activity, Droplets, RotateCcw, Timer, Scale, AlertTriangle, Building, MapPin, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SetterTempTable from "./SetterTempTable";
 import Setter18PointTempGrid from "./Setter18PointTempGrid";
 import Setter18PointDisplay from "./Setter18PointDisplay";
+import MultiSetterQAEntry from "./MultiSetterQAEntry";
+import { submitMachineLevelQA } from "@/services/qaSubmissionService";
+import type { OccupancyInfo } from "@/utils/setterPositionMapping";
 
 interface BatchInfo {
   id: string;
@@ -26,15 +29,18 @@ interface Machine {
   machine_type: string;
   location: string;
   status: string;
+  setter_mode?: 'single_setter' | 'multi_setter' | null;
 }
 
 interface QADataEntryProps {
   data: any[];
   onDataUpdate: (data: any[]) => void;
   batchInfo: BatchInfo;
+  machineSetterMode?: 'single_setter' | 'multi_setter' | null;
+  onMachineLevelSubmit?: (data: any) => Promise<void>;
 }
 
-const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo }) => {
+const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo, machineSetterMode, onMachineLevelSubmit }) => {
   const { toast } = useToast();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [currentMachine, setCurrentMachine] = useState<Machine | null>(null);
@@ -775,16 +781,45 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
             </TabsList>
 
             <TabsContent value="setter-temps" className="space-y-4">
-              {/* New 18-Point Temperature Grid */}
-              <Setter18PointTempGrid
-                onSubmit={handle18PointTempSubmit}
-                checkDate={setterTemps.checkDate}
-                onCheckDateChange={(date) => setSetterTemps({...setterTemps, checkDate: date})}
-                setterNumber={setterTemps.setterNumber}
-                onSetterNumberChange={(num) => setSetterTemps({...setterTemps, setterNumber: num})}
-                setterMachines={setterMachines}
-                currentMachine={currentMachine}
-              />
+              {/* Multi-Setter vs Single-Setter QA Entry */}
+              {machineSetterMode === 'multi_setter' && currentMachine ? (
+                <MultiSetterQAEntry
+                  machine={{ id: currentMachine.id, machine_number: currentMachine.machine_number }}
+                  technicianName={globalTechnicianName}
+                  notes={globalNotes}
+                  onSubmit={async (submitData) => {
+                    if (!globalTechnicianName.trim()) {
+                      toast({
+                        title: "Validation Error",
+                        description: "Technician name is required",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
+                    // Call the machine-level submit handler from parent
+                    if (onMachineLevelSubmit) {
+                      await onMachineLevelSubmit({
+                        ...submitData,
+                        technicianName: globalTechnicianName,
+                        notes: globalNotes,
+                        machineId: currentMachine.id
+                      });
+                    }
+                  }}
+                />
+              ) : (
+                /* Standard 18-Point Temperature Grid for single-setter */
+                <Setter18PointTempGrid
+                  onSubmit={handle18PointTempSubmit}
+                  checkDate={setterTemps.checkDate}
+                  onCheckDateChange={(date) => setSetterTemps({...setterTemps, checkDate: date})}
+                  setterNumber={setterTemps.setterNumber}
+                  onSetterNumberChange={(num) => setSetterTemps({...setterTemps, setterNumber: num})}
+                  setterMachines={setterMachines}
+                  currentMachine={currentMachine}
+                />
+              )}
 
               {/* Display existing 18-point records */}
               {data.filter(r => r.type === 'setter_temperature_18point').length > 0 && (
