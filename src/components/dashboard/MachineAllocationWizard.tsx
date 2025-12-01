@@ -87,9 +87,16 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
   const allocatedEggs = allocations.reduce((sum, a) => sum + a.eggsAllocated, 0);
   const remainingEggs = totalEggs - allocatedEggs;
 
-  // Auto-suggest allocations when eggs change
+  // Show machine selector by default when entering allocation step with no allocations
   useEffect(() => {
-    if (step === 'allocation' && totalEggs > 0 && allocations.length === 0 && machines.length > 0) {
+    if (step === 'allocation' && allocations.length === 0) {
+      setShowMachineSelector(true);
+    }
+  }, [step]);
+
+  // Optional: Suggest allocations when user clicks the button
+  const handleSuggestAllocation = () => {
+    if (totalEggs > 0 && machines.length > 0) {
       const suggestions = suggestSplit(totalEggs);
       const newAllocations: AllocationEntry[] = suggestions.map(s => {
         const machineInfo = machines.find(m => m.machine.id === s.machine.id)!;
@@ -100,8 +107,9 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
         };
       });
       setAllocations(newAllocations);
+      setShowMachineSelector(false);
     }
-  }, [step, totalEggs, machines]);
+  };
 
   const selectedFlock = flocks.find(f => f.id === formData.flockId);
   const selectedUnit = units.find(u => u.id === formData.unitId);
@@ -403,11 +411,18 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Machine Allocations</Label>
-              {remainingEggs > 0 && (
-                <Button size="sm" variant="outline" onClick={() => setShowMachineSelector(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> Add Machine
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {allocations.length > 0 && (
+                  <Button size="sm" variant="ghost" onClick={handleSuggestAllocation} disabled={machinesLoading}>
+                    Suggest
+                  </Button>
+                )}
+                {remainingEggs > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => setShowMachineSelector(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Machine
+                  </Button>
+                )}
+              </div>
             </div>
 
             {allocations.map((allocation, index) => {
@@ -495,14 +510,19 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
               );
             })}
 
-            {allocations.length === 0 && (
+            {allocations.length === 0 && !showMachineSelector && (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center">
                   <Package2 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">No machines allocated yet</p>
-                  <Button className="mt-3" variant="outline" onClick={() => setShowMachineSelector(true)}>
-                    <Plus className="h-4 w-4 mr-1" /> Add Machine
-                  </Button>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <Button variant="outline" onClick={() => setShowMachineSelector(true)}>
+                      <Plus className="h-4 w-4 mr-1" /> Add Machine
+                    </Button>
+                    <Button variant="secondary" onClick={handleSuggestAllocation} disabled={machinesLoading || machines.length === 0}>
+                      Suggest Allocation
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
