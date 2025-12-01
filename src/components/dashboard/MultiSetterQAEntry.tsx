@@ -180,8 +180,10 @@ const MultiSetterQAEntry: React.FC<MultiSetterQAEntryProps> = ({
       return { text: 'No set mapped', color: 'text-orange-600' };
     }
     const flockColor = getFlockColor(occupancy.flock_id, uniqueFlocks);
+    // Show flock name with house number if available
+    const houseInfo = occupancy.batch_number ? ` (${occupancy.batch_number})` : '';
     return { 
-      text: `${occupancy.flock_name} (${occupancy.flock_number})`, 
+      text: `${occupancy.flock_name}${houseInfo}`, 
       color: flockColor.split(' ')[0].replace('bg-', 'text-').replace('-100', '-700')
     };
   };
@@ -301,20 +303,21 @@ const MultiSetterQAEntry: React.FC<MultiSetterQAEntryProps> = ({
           </div>
         </div>
 
-        {/* Flock Legend */}
+        {/* Flock & House Legend */}
         {uniqueFlocks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-lg">
-            <span className="text-xs font-medium text-muted-foreground">Flocks:</span>
-            {uniqueFlocks.map(flockId => {
-              const occupancy = Array.from(occupancyMap.values()).find(o => o.flock_id === flockId);
+            <span className="text-xs font-medium text-muted-foreground">Flocks & Houses:</span>
+            {Array.from(new Set(Array.from(occupancyMap.values()).map(o => `${o.flock_id}_${o.batch_id || 'no-batch'}`))).map(key => {
+              const occupancy = Array.from(occupancyMap.values()).find(o => `${o.flock_id}_${o.batch_id || 'no-batch'}` === key);
               if (!occupancy) return null;
+              const houseLabel = occupancy.batch_number ? ` - ${occupancy.batch_number}` : '';
               return (
                 <Badge 
-                  key={flockId} 
+                  key={key} 
                   variant="outline" 
-                  className={getFlockColor(flockId, uniqueFlocks)}
+                  className={getFlockColor(occupancy.flock_id, uniqueFlocks)}
                 >
-                  {occupancy.flock_name} ({occupancy.flock_number})
+                  {occupancy.flock_name} ({occupancy.flock_number}){houseLabel}
                 </Badge>
               );
             })}
