@@ -76,14 +76,20 @@ export function useAvailableMachineCapacity(
     }
   });
 
-  // Fetch active multi-setter sets (not yet transferred)
+  // Fetch active multi-setter sets (not yet transferred and within 21 days)
   const setsQuery = useQuery({
     queryKey: ['active-multi-setter-sets', targetSetDate],
     queryFn: async () => {
-      // Get all multi-setter sets
+      // Calculate date cutoff (21 days ago - incubation period)
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 21);
+      const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
+
+      // Get multi-setter sets that are within incubation period
       const { data: sets, error: setsError } = await supabase
         .from('multi_setter_sets')
-        .select('*');
+        .select('*')
+        .gte('set_date', cutoffDateStr);
 
       if (setsError) throw setsError;
 
@@ -94,14 +100,35 @@ export function useAvailableMachineCapacity(
 
       if (transfersError) throw transfersError;
 
-      // A set is active if its batch hasn't been transferred from its machine
+      // Get batches that are completed or hatching (no longer in setter)
+      const { data: completedBatches, error: batchError } = await supabase
+        .from('batches')
+        .select('id')
+        .in('status', ['completed', 'hatching']);
+
+      if (batchError) throw batchError;
+
+      const completedBatchIds = new Set((completedBatches || []).map(b => b.id));
+
+      // A set is active if:
+      // 1. Its batch hasn't been transferred from its machine
+      // 2. Its batch isn't completed/hatching
+      // 3. It's within 21 days of set_date
       const transferredBatchMachines = new Set(
         (transfers || []).map(t => `${t.batch_id}-${t.from_machine_id}`)
       );
 
       const activeSets = (sets || []).filter(s => {
+        // Filter out if batch is completed/hatching
+        if (s.batch_id && completedBatchIds.has(s.batch_id)) {
+          return false;
+        }
+        // Filter out if transferred
         const key = `${s.batch_id}-${s.machine_id}`;
-        return !transferredBatchMachines.has(key);
+        if (transferredBatchMachines.has(key)) {
+          return false;
+        }
+        return true;
       });
 
       return activeSets as MultiSetterSet[];
