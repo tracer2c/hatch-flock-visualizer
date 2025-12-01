@@ -49,7 +49,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                   {title}
                 </CardTitle>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
+              <TooltipContent side="top" sideOffset={8} className="max-w-xs z-[100]">
                 <p>{description}</p>
               </TooltipContent>
             </Tooltip>
