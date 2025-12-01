@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle, Wand2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Baby } from "lucide-react";
+import { MachineAllocationWizard } from "./MachineAllocationWizard";
 
 interface Flock {
   id: string;
@@ -623,124 +624,44 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Create New House */}
-      <Card>
-        <CardHeader>
+      {/* Create New House with Allocation Wizard */}
+      <Card className="border-primary/20">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Plus className="h-5 w-5 text-primary" />
+              </div>
               House Management
             </span>
             <Button 
               onClick={() => setShowCreateForm(!showCreateForm)}
               variant={showCreateForm ? "outline" : "default"}
+              className="gap-2"
             >
-              {showCreateForm ? "Cancel" : "New House"}
+              {showCreateForm ? (
+                <>Cancel</>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4" />
+                  New House (with Allocation)
+                </>
+              )}
             </Button>
           </CardTitle>
         </CardHeader>
         {showCreateForm && (
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Select Hatchery *</Label>
-                <Select value={formData.unitId} onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a hatchery" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Select Flock *</Label>
-                <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a flock" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {flocks.map((flock) => (
-                      <SelectItem key={flock.id} value={flock.id}>
-                        {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label>House Number *</Label>
-                <Input
-                  type="text"
-                  placeholder="e.g., 5, 10A, #12-B"
-                  value={formData.customHouseNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, customHouseNumber: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Select Machine *</Label>
-                <Select value={formData.machineId} onValueChange={(value) => setFormData(prev => ({ ...prev, machineId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a machine" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {machines.filter(m => m.status === 'available').map((machine) => (
-                      <SelectItem key={machine.id} value={machine.id}>
-                        {machine.machine_number} - {machine.machine_type} (Cap: {machine.capacity.toLocaleString()})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Set Date *</Label>
-                <Input
-                  type="date"
-                  value={formData.setDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, setDate: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Set Time *</Label>
-                <Input
-                  type="time"
-                  value={formData.setTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, setTime: e.target.value }))}
-                  placeholder="Automatically set to current time"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Auto-set to your current local time. You can change it if needed.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>Total Eggs Set *</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 45000"
-                  value={formData.totalEggs}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalEggs: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Technician Name *</Label>
-                <Input
-                  placeholder="Enter technician name"
-                  value={formData.technicianName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, technicianName: e.target.value }))}
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button onClick={createHouse}>Create House</Button>
-              <Button variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
-            </div>
+          <CardContent className="pt-6">
+            <MachineAllocationWizard
+              flocks={flocks}
+              units={units}
+              onComplete={(batchId) => {
+                setShowCreateForm(false);
+                loadHouses();
+                onHouseSelect(batchId);
+              }}
+              onCancel={() => setShowCreateForm(false)}
+            />
           </CardContent>
         )}
       </Card>
