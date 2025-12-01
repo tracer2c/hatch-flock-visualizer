@@ -12,6 +12,7 @@ import {
 interface FlockDetail {
   flock_id: string;
   batch_id: string | null;
+  batch_number: string | null;
   flock_name: string;
   flock_number: number;
 }
@@ -122,14 +123,17 @@ export function usePositionOccupancy(
     return ALL_POSITION_KEYS.filter(key => !occupancyMap.has(key));
   }, [occupancyMap]);
 
-  // Get unique flock details for machine-wide QA linkage
+  // Get unique flock+house details for machine-wide QA linkage
   const uniqueFlockDetails = useMemo(() => {
     const seen = new Map<string, FlockDetail>();
     occupancyMap.forEach(info => {
-      if (!seen.has(info.flock_id)) {
-        seen.set(info.flock_id, {
+      // Group by flock_id + batch_id combination so each flock-house pair gets its own entry
+      const key = `${info.flock_id}_${info.batch_id || 'no-batch'}`;
+      if (!seen.has(key)) {
+        seen.set(key, {
           flock_id: info.flock_id,
           batch_id: info.batch_id,
+          batch_number: info.batch_number,
           flock_name: info.flock_name,
           flock_number: info.flock_number
         });
