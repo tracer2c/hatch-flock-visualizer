@@ -71,6 +71,7 @@ const FlockManager = () => {
     technician_name: ''
   });
   const [selectedHatcheries, setSelectedHatcheries] = useState<string[]>([]);
+  const [birdCountsPerHatchery, setBirdCountsPerHatchery] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   // Units
@@ -160,6 +161,7 @@ const FlockManager = () => {
       technician_name: '',
     });
     setSelectedHatcheries([]);
+    setBirdCountsPerHatchery({});
     setEditingFlock(null);
   };
 
@@ -217,21 +219,25 @@ const FlockManager = () => {
     if (!editingFlock) {
       const groupId = selectedHatcheries.length > 1 ? crypto.randomUUID() : null;
       
-      const flocksToCreate = selectedHatcheries.map(unitId => ({
-        flock_number: parseInt(formData.flock_number),
-        flock_name: formData.flock_name,
-        age_weeks: parseInt(formData.age_weeks),
-        arrival_date: formData.arrival_date,
-        total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
-        notes: formData.notes || null,
-        unit_id: unitId,
-        flock_group_id: groupId,
-        technician_name: formData.technician_name || null,
-        data_type: 'original' as const,
-        created_by: user?.id,
-        updated_by: user?.id,
-        breed: 'broiler' as const
-      }));
+      const flocksToCreate = selectedHatcheries.map(unitId => {
+        // Use per-hatchery bird count if available, otherwise use global value
+        const birdCount = birdCountsPerHatchery[unitId] || formData.total_birds;
+        return {
+          flock_number: parseInt(formData.flock_number),
+          flock_name: formData.flock_name,
+          age_weeks: parseInt(formData.age_weeks),
+          arrival_date: formData.arrival_date,
+          total_birds: birdCount ? parseInt(birdCount) : null,
+          notes: formData.notes || null,
+          unit_id: unitId,
+          flock_group_id: groupId,
+          technician_name: formData.technician_name || null,
+          data_type: 'original' as const,
+          created_by: user?.id,
+          updated_by: user?.id,
+          breed: 'broiler' as const
+        };
+      });
       
       const { data, error } = await supabase
         .from('flocks')
@@ -615,16 +621,43 @@ const FlockManager = () => {
                   />
                 </div>
 
-                {/* 6. Total Birds */}
-                <div className="space-y-2">
-                  <Label>Total Birds</Label>
-                  <Input
-                    type="number"
-                    value={formData.total_birds}
-                    onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
-                    placeholder="e.g., 25000"
-                  />
-                </div>
+                {/* 6. Total Birds - Show per-hatchery inputs when multiple selected */}
+                {!editingFlock && selectedHatcheries.length > 1 ? (
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Total Birds per Hatchery</Label>
+                    <div className="border rounded-lg p-3 space-y-2">
+                      {selectedHatcheries.map(unitId => {
+                        const unit = activeUnits.find(u => u.id === unitId);
+                        return (
+                          <div key={unitId} className="flex items-center gap-3">
+                            <span className="w-24 text-sm font-medium">{unit?.name}:</span>
+                            <Input
+                              type="number"
+                              className="flex-1"
+                              value={birdCountsPerHatchery[unitId] || ''}
+                              onChange={(e) => setBirdCountsPerHatchery(prev => ({
+                                ...prev,
+                                [unitId]: e.target.value
+                              }))}
+                              placeholder="e.g., 25000"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Enter the bird count for each hatchery separately</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Total Birds</Label>
+                    <Input
+                      type="number"
+                      value={formData.total_birds}
+                      onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
+                      placeholder="e.g., 25000"
+                    />
+                  </div>
+                )}
 
                 {/* 7. Technician Name */}
                 <div className="space-y-2">
