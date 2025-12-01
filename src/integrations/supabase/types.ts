@@ -306,7 +306,7 @@ export type Database = {
           hoi_technician_name: string | null
           humidity_avg: number | null
           id: string
-          machine_id: string
+          machine_id: string | null
           notes: string | null
           set_date: string
           set_time: string | null
@@ -333,7 +333,7 @@ export type Database = {
           hoi_technician_name?: string | null
           humidity_avg?: number | null
           id?: string
-          machine_id: string
+          machine_id?: string | null
           notes?: string | null
           set_date: string
           set_time?: string | null
@@ -360,7 +360,7 @@ export type Database = {
           hoi_technician_name?: string | null
           humidity_avg?: number | null
           id?: string
-          machine_id?: string
+          machine_id?: string | null
           notes?: string | null
           set_date?: string
           set_time?: string | null
@@ -904,8 +904,76 @@ export type Database = {
           },
         ]
       }
+      house_machine_allocations: {
+        Row: {
+          allocation_date: string
+          allocation_time: string | null
+          batch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          eggs_allocated: number
+          id: string
+          machine_id: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocation_date: string
+          allocation_time?: string | null
+          batch_id: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          eggs_allocated: number
+          id?: string
+          machine_id: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocation_date?: string
+          allocation_time?: string | null
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          eggs_allocated?: number
+          id?: string
+          machine_id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_machine_allocations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_machine_allocations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_machine_allocations_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machine_transfers: {
         Row: {
+          allocation_id: string | null
           batch_id: string
           company_id: string
           created_at: string
@@ -920,6 +988,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allocation_id?: string | null
           batch_id: string
           company_id?: string
           created_at?: string
@@ -934,6 +1003,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allocation_id?: string | null
           batch_id?: string
           company_id?: string
           created_at?: string
@@ -948,6 +1018,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "machine_transfers_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "house_machine_allocations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "machine_transfers_batch_id_fkey"
             columns: ["batch_id"]
@@ -1046,6 +1123,7 @@ export type Database = {
       }
       multi_setter_sets: {
         Row: {
+          allocation_id: string | null
           batch_id: string | null
           capacity: number
           company_id: string
@@ -1063,6 +1141,7 @@ export type Database = {
           zone: Database["public"]["Enums"]["zone_type"]
         }
         Insert: {
+          allocation_id?: string | null
           batch_id?: string | null
           capacity: number
           company_id?: string
@@ -1080,6 +1159,7 @@ export type Database = {
           zone: Database["public"]["Enums"]["zone_type"]
         }
         Update: {
+          allocation_id?: string | null
           batch_id?: string | null
           capacity?: number
           company_id?: string
@@ -1097,6 +1177,13 @@ export type Database = {
           zone?: Database["public"]["Enums"]["zone_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "multi_setter_sets_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "house_machine_allocations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "multi_setter_sets_batch_id_fkey"
             columns: ["batch_id"]
