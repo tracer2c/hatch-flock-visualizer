@@ -111,11 +111,11 @@ export const BatchStatusSettings = () => {
                   <TableCell className="font-medium">{rule.rule_name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={getStatusColor(rule.from_status)}>
+                      <Badge className={`${getStatusColor(rule.from_status)} text-white`}>
                         {getStatusLabel(rule.from_status)}
                       </Badge>
                       <span>→</span>
-                      <Badge variant="outline" className={getStatusColor(rule.to_status)}>
+                      <Badge className={`${getStatusColor(rule.to_status)} text-white`}>
                         {getStatusLabel(rule.to_status)}
                       </Badge>
                     </div>
@@ -124,7 +124,12 @@ export const BatchStatusSettings = () => {
                     <Input
                       type="number"
                       value={rule.min_days_after_set}
-                      onChange={(e) => handleRuleUpdate(rule.id, { min_days_after_set: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value) && value >= 0) {
+                          handleRuleUpdate(rule.id, { min_days_after_set: value });
+                        }
+                      }}
                       className="w-20"
                       min="0"
                     />
@@ -203,11 +208,11 @@ export const BatchStatusSettings = () => {
                   <TableCell className="font-medium">{entry.batches.batch_number}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={getStatusColor(entry.from_status)}>
+                      <Badge className={`${getStatusColor(entry.from_status)} text-white`}>
                         {getStatusLabel(entry.from_status)}
                       </Badge>
                       <span>→</span>
-                      <Badge variant="outline" className={getStatusColor(entry.to_status)}>
+                      <Badge className={`${getStatusColor(entry.to_status)} text-white`}>
                         {getStatusLabel(entry.to_status)}
                       </Badge>
                     </div>
