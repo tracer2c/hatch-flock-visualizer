@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,9 +68,9 @@ const FlockManager = () => {
     arrival_date: new Date().toISOString().split('T')[0],
     total_birds: '',
     notes: '',
-    unitId: '',
     technician_name: ''
   });
+  const [selectedHatcheries, setSelectedHatcheries] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Units
@@ -156,10 +157,28 @@ const FlockManager = () => {
       arrival_date: new Date().toISOString().split('T')[0],
       total_birds: '',
       notes: '',
-      unitId: '',
       technician_name: '',
     });
+    setSelectedHatcheries([]);
     setEditingFlock(null);
+  };
+
+  const activeUnits = useMemo(() => units.filter(u => u.status === 'active'), [units]);
+
+  const toggleAllHatcheries = () => {
+    if (selectedHatcheries.length === activeUnits.length) {
+      setSelectedHatcheries([]);
+    } else {
+      setSelectedHatcheries(activeUnits.map(u => u.id));
+    }
+  };
+
+  const toggleHatchery = (unitId: string) => {
+    setSelectedHatcheries(prev => 
+      prev.includes(unitId) 
+        ? prev.filter(id => id !== unitId)
+        : [...prev, unitId]
+    );
   };
 
   const handleSubmit = async () => {
@@ -167,6 +186,16 @@ const FlockManager = () => {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Require at least one hatchery when creating
+    if (!editingFlock && selectedHatcheries.length === 0) {
+      toast({
+        title: "Hatchery Required",
+        description: "Please select at least one hatchery",
         variant: "destructive"
       });
       return;
@@ -184,30 +213,21 @@ const FlockManager = () => {
 
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (formData.unitId === 'all-hatcheries') {
-      const groupId = crypto.randomUUID();
-      const activeUnits = units.filter(u => u.status === 'active');
+    // Creating new flock(s)
+    if (!editingFlock) {
+      const groupId = selectedHatcheries.length > 1 ? crypto.randomUUID() : null;
       
-      if (activeUnits.length === 0) {
-        toast({
-          title: "No active hatcheries",
-          description: "There are no active hatcheries to create flocks in.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const flocksToCreate = activeUnits.map(unit => ({
+      const flocksToCreate = selectedHatcheries.map(unitId => ({
         flock_number: parseInt(formData.flock_number),
         flock_name: formData.flock_name,
         age_weeks: parseInt(formData.age_weeks),
         arrival_date: formData.arrival_date,
         total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
         notes: formData.notes || null,
-        unit_id: unit.id,
+        unit_id: unitId,
         flock_group_id: groupId,
         technician_name: formData.technician_name || null,
-        data_type: 'original',
+        data_type: 'original' as const,
         created_by: user?.id,
         updated_by: user?.id,
         breed: 'broiler' as const
@@ -225,9 +245,22 @@ const FlockManager = () => {
           variant: "destructive"
         });
       } else {
+        // Log creation history
+        if (data) {
+          for (const flock of data) {
+            await FlockHistoryService.logFlockCreation(
+              flock.id,
+              user?.id || '',
+              formData.technician_name || ''
+            );
+          }
+        }
+        
         toast({ 
           title: "Flocks created successfully",
-          description: `Created ${data.length} flocks across all hatcheries`
+          description: selectedHatcheries.length > 1 
+            ? `Created ${data?.length || 0} flocks across ${selectedHatcheries.length} hatcheries`
+            : "Flock created successfully"
         });
         setShowDialog(false);
         resetForm();
@@ -236,138 +269,98 @@ const FlockManager = () => {
       return;
     }
 
-    if (editingFlock) {
-      // Track changes for history
-      const changes: any[] = [];
-      
-      if (parseInt(formData.flock_number) !== editingFlock.flock_number) {
-        changes.push({
-          field_changed: 'flock_number',
-          old_value: editingFlock.flock_number.toString(),
-          new_value: formData.flock_number
-        });
-      }
-      if (formData.flock_name !== editingFlock.flock_name) {
-        changes.push({
-          field_changed: 'flock_name',
-          old_value: editingFlock.flock_name,
-          new_value: formData.flock_name
-        });
-      }
-      if (parseInt(formData.age_weeks) !== editingFlock.age_weeks) {
-        changes.push({
-          field_changed: 'age_weeks',
-          old_value: editingFlock.age_weeks.toString(),
-          new_value: formData.age_weeks
-        });
-      }
-      if (formData.arrival_date !== editingFlock.arrival_date) {
-        changes.push({
-          field_changed: 'arrival_date',
-          old_value: editingFlock.arrival_date,
-          new_value: formData.arrival_date
-        });
-      }
-      if (formData.total_birds !== (editingFlock.total_birds?.toString() || '')) {
-        changes.push({
-          field_changed: 'total_birds',
-          old_value: editingFlock.total_birds?.toString() || 'null',
-          new_value: formData.total_birds || 'null'
-        });
-      }
-      if (formData.notes !== (editingFlock.notes || '')) {
-        changes.push({
-          field_changed: 'notes',
-          old_value: editingFlock.notes || 'null',
-          new_value: formData.notes || 'null'
-        });
-      }
-      if (formData.unitId !== (editingFlock.unit_id || '')) {
-        changes.push({
-          field_changed: 'unit',
-          old_value: editingFlock.unit?.name || 'null',
-          new_value: units.find(u => u.id === formData.unitId)?.name || 'null'
-        });
-      }
+    // Editing existing flock
+    // Track changes for history
+    const changes: any[] = [];
+    const newUnitId = selectedHatcheries[0] || null;
+    
+    if (parseInt(formData.flock_number) !== editingFlock.flock_number) {
+      changes.push({
+        field_changed: 'flock_number',
+        old_value: editingFlock.flock_number.toString(),
+        new_value: formData.flock_number
+      });
+    }
+    if (formData.flock_name !== editingFlock.flock_name) {
+      changes.push({
+        field_changed: 'flock_name',
+        old_value: editingFlock.flock_name,
+        new_value: formData.flock_name
+      });
+    }
+    if (parseInt(formData.age_weeks) !== editingFlock.age_weeks) {
+      changes.push({
+        field_changed: 'age_weeks',
+        old_value: editingFlock.age_weeks.toString(),
+        new_value: formData.age_weeks
+      });
+    }
+    if (formData.arrival_date !== editingFlock.arrival_date) {
+      changes.push({
+        field_changed: 'arrival_date',
+        old_value: editingFlock.arrival_date,
+        new_value: formData.arrival_date
+      });
+    }
+    if (formData.total_birds !== (editingFlock.total_birds?.toString() || '')) {
+      changes.push({
+        field_changed: 'total_birds',
+        old_value: editingFlock.total_birds?.toString() || 'null',
+        new_value: formData.total_birds || 'null'
+      });
+    }
+    if (formData.notes !== (editingFlock.notes || '')) {
+      changes.push({
+        field_changed: 'notes',
+        old_value: editingFlock.notes || 'null',
+        new_value: formData.notes || 'null'
+      });
+    }
+    if (newUnitId !== (editingFlock.unit_id || null)) {
+      changes.push({
+        field_changed: 'unit',
+        old_value: editingFlock.unit?.name || 'null',
+        new_value: units.find(u => u.id === newUnitId)?.name || 'null'
+      });
+    }
 
-      const { error } = await supabase
-        .from('flocks')
-        .update({
-          flock_number: parseInt(formData.flock_number),
-          flock_name: formData.flock_name,
-          age_weeks: parseInt(formData.age_weeks),
-          arrival_date: formData.arrival_date,
-          total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
-          notes: formData.notes || null,
-          unit_id: formData.unitId || null,
-          technician_name: formData.technician_name || null,
-          updated_by: user?.id,
-          last_modified_at: new Date().toISOString()
-        })
-        .eq('id', editingFlock.id);
+    const { error } = await supabase
+      .from('flocks')
+      .update({
+        flock_number: parseInt(formData.flock_number),
+        flock_name: formData.flock_name,
+        age_weeks: parseInt(formData.age_weeks),
+        arrival_date: formData.arrival_date,
+        total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
+        notes: formData.notes || null,
+        unit_id: newUnitId,
+        technician_name: formData.technician_name || null,
+        updated_by: user?.id,
+        last_modified_at: new Date().toISOString()
+      })
+      .eq('id', editingFlock.id);
 
-      if (error) {
-        toast({
-          title: "Error updating flock",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        // Log changes to history
-        if (changes.length > 0) {
-          await FlockHistoryService.logFlockUpdate(
-            editingFlock.id,
-            changes,
-            user?.id || '',
-            formData.technician_name || 'Unknown'
-          );
-        }
-        
-        toast({ title: "Flock updated successfully" });
-        setShowDialog(false);
-        resetForm();
-        loadFlocks();
-      }
+    if (error) {
+      toast({
+        title: "Error updating flock",
+        description: error.message,
+        variant: "destructive"
+      });
     } else {
-      const { data, error } = await supabase
-        .from('flocks')
-        .insert({
-          flock_number: parseInt(formData.flock_number),
-          flock_name: formData.flock_name,
-          age_weeks: parseInt(formData.age_weeks),
-          arrival_date: formData.arrival_date,
-          total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
-          notes: formData.notes || null,
-          unit_id: formData.unitId || null,
-          technician_name: formData.technician_name || null,
-          data_type: 'original',
-          created_by: user?.id,
-          updated_by: user?.id,
-          breed: 'broiler' as const
-        })
-        .select();
-
-      if (error) {
-        toast({
-          title: "Error creating flock",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        // Log creation to history
-        if (data && data.length > 0) {
-          await FlockHistoryService.logFlockCreation(
-            data[0].id,
-            user?.id || '',
-            formData.technician_name || ''
-          );
-        }
-        
-        toast({ title: "Flock created successfully" });
-        setShowDialog(false);
-        resetForm();
-        loadFlocks();
+      // Log changes to history
+      if (changes.length > 0) {
+        await FlockHistoryService.logFlockUpdate(
+          editingFlock.id,
+          changes,
+          user?.id || '',
+          formData.technician_name || 'Unknown'
+        );
       }
+      
+      toast({ title: "Flock updated successfully" });
+      setShowDialog(false);
+      resetForm();
+      loadFlocks();
     }
   };
 
@@ -380,9 +373,9 @@ const FlockManager = () => {
       arrival_date: flock.arrival_date,
       total_birds: flock.total_birds?.toString() || '',
       notes: flock.notes || '',
-      unitId: flock.unit_id || '',
       technician_name: flock.technician_name || '',
     });
+    setSelectedHatcheries(flock.unit_id ? [flock.unit_id] : []);
     setShowDialog(true);
   };
 
@@ -498,36 +491,83 @@ const FlockManager = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. Hatchery selection (first) */}
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Hatchery *</Label>
-                  <Select
-                    value={formData.unitId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select hatchery" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all-hatcheries">🌍 All Hatcheries</SelectItem>
-                      {units.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formData.unitId === 'all-hatcheries' && (
+                  <Label>Hatchery * {!editingFlock && <span className="text-muted-foreground text-xs">(select one or more)</span>}</Label>
+                  
+                  {editingFlock ? (
+                    // Single select for editing
+                    <Select
+                      value={selectedHatcheries[0] || ''}
+                      onValueChange={(value) => setSelectedHatcheries([value])}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select hatchery" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeUnits.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    // Multi-select checkboxes for creating
+                    <div className="border rounded-lg p-3 space-y-3">
+                      {/* Select All */}
+                      <div className="flex items-center space-x-2 pb-2 border-b">
+                        <Checkbox
+                          id="select-all"
+                          checked={selectedHatcheries.length === activeUnits.length && activeUnits.length > 0}
+                          onCheckedChange={toggleAllHatcheries}
+                        />
+                        <label
+                          htmlFor="select-all"
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          Select All Hatcheries
+                        </label>
+                        {selectedHatcheries.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto">
+                            {selectedHatcheries.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Individual hatcheries */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {activeUnits.map((unit) => (
+                          <div key={unit.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`hatchery-${unit.id}`}
+                              checked={selectedHatcheries.includes(unit.id)}
+                              onCheckedChange={() => toggleHatchery(unit.id)}
+                            />
+                            <label
+                              htmlFor={`hatchery-${unit.id}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {unit.name} {unit.code ? `(${unit.code})` : ''}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Summary of flocks to create */}
+                  {!editingFlock && selectedHatcheries.length > 1 && (
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-sm">
                       <p className="font-medium text-primary">Multiple Flocks Will Be Created:</p>
                       <p className="text-muted-foreground mt-1">
-                        One flock will be created in each of the following hatcheries:
+                        One flock will be created in each selected hatchery:
                       </p>
                       <ul className="mt-2 space-y-1 text-foreground">
-                        {units.filter(u => u.status === 'active').map(unit => (
+                        {activeUnits.filter(u => selectedHatcheries.includes(u.id)).map(unit => (
                           <li key={unit.id}>• {unit.name} {unit.code ? `(${unit.code})` : ''}</li>
                         ))}
                       </ul>
                       <p className="text-primary mt-2 font-medium">
-                        Total flocks to create: {units.filter(u => u.status === 'active').length}
+                        Total flocks to create: {selectedHatcheries.length}
                       </p>
                     </div>
                   )}
