@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 interface StatCardProps {
   title: string;
@@ -42,18 +42,25 @@ export const StatCard: React.FC<StatCardProps> = ({
       
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
         {description ? (
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
+          <TooltipPrimitive.Provider delayDuration={100}>
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
                 <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground cursor-help">
                   {title}
                 </CardTitle>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={8} className="max-w-xs z-[100]">
-                <p>{description}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content
+                  side="top"
+                  sideOffset={12}
+                  className="z-[9999] max-w-xs rounded-md border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95"
+                >
+                  <p>{description}</p>
+                  <TooltipPrimitive.Arrow className="fill-popover" />
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
+          </TooltipPrimitive.Provider>
         ) : (
           <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
             {title}
