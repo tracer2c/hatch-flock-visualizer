@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -40,14 +41,29 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/50" />
       
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-        <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-          {title}
-        </CardTitle>
-          {icon && (
-            <div className="text-primary/70 group-hover:text-primary transition-colors [&>svg]:stroke-[1.5]">
-              {icon}
-            </div>
-          )}
+        {description ? (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground cursor-help">
+                  {title}
+                </CardTitle>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>{description}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+            {title}
+          </CardTitle>
+        )}
+        {icon && (
+          <div className="text-primary/70 group-hover:text-primary transition-colors [&>svg]:stroke-[1.5]">
+            {icon}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="px-4 pb-4">
         <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
