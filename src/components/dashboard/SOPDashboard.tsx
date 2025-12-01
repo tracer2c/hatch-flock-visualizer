@@ -115,10 +115,10 @@ const SOPDashboard = () => {
         .order('set_date', { ascending: true })
         .limit(10);
       if (error) throw error;
-      // Calculate days in setter - houses ready for transfer (day 18+)
+      // Calculate days in setter - houses ready for transfer (day 18+, no upper limit)
       return data?.filter(b => {
         const daysSinceSet = differenceInDays(new Date(), new Date(b.set_date));
-        return daysSinceSet >= 17 && daysSinceSet <= 20;
+        return daysSinceSet >= 18;
       });
     }
   });
