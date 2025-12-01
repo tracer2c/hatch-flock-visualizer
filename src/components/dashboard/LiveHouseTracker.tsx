@@ -85,19 +85,25 @@ const LiveHouseTracker = () => {
   const getPhaseInfo = (daysSinceSet: number, status: string) => {
     if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
     if (status === 'scheduled' || daysSinceSet < 0) return { phase: 'Scheduled', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50', nextPhase: 'In Setter', daysToNext: Math.abs(daysSinceSet) };
-    if (daysSinceSet < 18) return { phase: 'In Setter', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50', nextPhase: 'In Hatcher', daysToNext: 18 - daysSinceSet };
+    if (daysSinceSet < 18) return { phase: 'In Setter', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', nextPhase: 'In Hatcher', daysToNext: 18 - daysSinceSet };
     if (daysSinceSet < 21) return { phase: 'In Hatcher', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50', nextPhase: 'Complete', daysToNext: 21 - daysSinceSet };
     return { phase: 'Complete', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: null, daysToNext: 0 };
   };
 
   const getCriticalDayInfo = (daysSinceSet: number) => {
-    const criticalDays = [
-      { day: 7, label: 'Fertility Check', description: 'Candling to check fertility' },
-      { day: 14, label: 'Second Candling', description: 'Remove clear eggs' },
-      { day: 18, label: 'Transfer Day', description: 'Move to hatcher' },
-      { day: 21, label: 'Hatch Day', description: 'Expected hatching' }
-    ];
-    return criticalDays.find(cd => Math.abs(cd.day - daysSinceSet) <= 1);
+    // Candling is done once between Day 10-13
+    if (daysSinceSet >= 10 && daysSinceSet <= 13) {
+      return { day: daysSinceSet, label: 'Candling', description: 'Candling to check fertility (Day 10-13)' };
+    }
+    // Transfer Day (Day 18)
+    if (Math.abs(18 - daysSinceSet) <= 1) {
+      return { day: 18, label: 'Transfer Day', description: 'Move to hatcher' };
+    }
+    // Hatch Day (Day 21)
+    if (Math.abs(21 - daysSinceSet) <= 1) {
+      return { day: 21, label: 'Hatch Day', description: 'Expected hatching' };
+    }
+    return null;
   };
 
   const housesWithProgress = useMemo(() => {
@@ -247,11 +253,11 @@ const LiveHouseTracker = () => {
               <div className="text-xs text-gray-600">Scheduled</div>
             </CardContent>
           </Card>
-          <Card className="bg-amber-50 border-amber-200">
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4 text-center">
-              <Clock className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-amber-700">{summaryStats.inSetter}</div>
-              <div className="text-xs text-amber-600">In Setter</div>
+              <Clock className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-blue-700">{summaryStats.inSetter}</div>
+              <div className="text-xs text-blue-600">In Setter</div>
             </CardContent>
           </Card>
           <Card className="bg-orange-50 border-orange-200">
@@ -405,7 +411,7 @@ const LiveHouseTracker = () => {
             <span>Scheduled</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-amber-500 rounded"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded"></div>
             <span>In Setter (Day 0-18)</span>
           </div>
           <div className="flex items-center gap-2">
