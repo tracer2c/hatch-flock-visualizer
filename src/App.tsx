@@ -92,6 +92,7 @@ const App = () => {
                               <Route path="/data-entry/house/:houseId/clears-injected" element={<ClearsInjectedEntryPage />} />
                               <Route path="/checklist" element={<ChecklistPage />} />
                               <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
+                              <Route path="/checklist/machine/:machineId" element={<ChecklistPage />} />
                               <Route path="/management" element={<ManagementPage />} />
                               <Route path="/bulk-import" element={<BulkDataImportPage />} />
                               <Route path="/report" element={<ProjectReport />} />
