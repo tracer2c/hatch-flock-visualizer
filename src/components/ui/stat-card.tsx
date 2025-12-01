@@ -1,9 +1,8 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Info } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -41,23 +40,9 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/50" />
       
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-        <div className="flex items-center gap-1.5">
-          <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-            {title}
-          </CardTitle>
-          {description && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help opacity-0 group-hover:opacity-100 transition-opacity" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p>{description}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+          {title}
+        </CardTitle>
           {icon && (
             <div className="text-primary/70 group-hover:text-primary transition-colors [&>svg]:stroke-[1.5]">
               {icon}
