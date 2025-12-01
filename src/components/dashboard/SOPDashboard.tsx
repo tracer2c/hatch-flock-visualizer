@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, Clock, AlertTriangle, Home, Settings, ArrowRightLeft, Bell, ListChecks, ExternalLink, X, Check, Wrench } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Home, Settings, ArrowRightLeft, Bell, ListChecks, ExternalLink, X, Check } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays } from 'date-fns';
@@ -37,24 +37,6 @@ const SOPDashboard = () => {
         .eq('is_enabled', true)
         .maybeSingle();
       return data?.maintenance_days_interval || 30;
-    }
-  });
-
-  // Mutation to mark maintenance complete
-  const updateMaintenance = useMutation({
-    mutationFn: async (machineId: string) => {
-      const { error } = await supabase
-        .from('machines')
-        .update({ last_maintenance: new Date().toISOString().split('T')[0] })
-        .eq('id', machineId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machines-maintenance'] });
-      toast({ title: "Maintenance Recorded", description: "Machine maintenance has been marked as complete." });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update maintenance record.", variant: "destructive" });
     }
   });
 
@@ -347,6 +329,8 @@ const SOPDashboard = () => {
         <TabsContent value="machines" className="space-y-4">
           <div className="text-sm text-muted-foreground mb-2">
             Maintenance interval: <span className="font-medium">{maintenanceInterval} days</span>
+            <span className="mx-2">•</span>
+            Click a machine to complete maintenance tasks
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {machinesMaintenance?.map(machine => {
@@ -356,7 +340,11 @@ const SOPDashboard = () => {
               const needsMaintenance = daysSinceMaintenance > maintenanceInterval;
 
               return (
-                <Card key={machine.id} className={needsMaintenance ? 'border-orange-500' : ''}>
+                <Card 
+                  key={machine.id} 
+                  className={`cursor-pointer hover:border-primary transition-colors ${needsMaintenance ? 'border-orange-500' : ''}`}
+                  onClick={() => navigate(`/checklist/machine/${machine.id}`)}
+                >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">
@@ -387,13 +375,12 @@ const SOPDashboard = () => {
                       )}
                       <Button 
                         size="sm" 
-                        variant={needsMaintenance ? "default" : "outline"}
+                        variant="outline"
                         className="w-full mt-3"
-                        onClick={() => updateMaintenance.mutate(machine.id)}
-                        disabled={updateMaintenance.isPending}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/checklist/machine/${machine.id}`); }}
                       >
-                        <Wrench className="h-3 w-3 mr-2" />
-                        {updateMaintenance.isPending ? 'Updating...' : 'Mark Maintenance Complete'}
+                        <ListChecks className="h-3 w-3 mr-2" />
+                        View Maintenance Tasks
                       </Button>
                     </div>
                   </CardContent>

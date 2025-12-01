@@ -403,33 +403,36 @@ export type Database = {
       }
       checklist_completions: {
         Row: {
-          batch_id: string
+          batch_id: string | null
           checklist_item_id: string
           completed_at: string
           completed_by: string
           created_at: string
           day_of_incubation: number
           id: string
+          machine_id: string | null
           notes: string | null
         }
         Insert: {
-          batch_id: string
+          batch_id?: string | null
           checklist_item_id: string
           completed_at?: string
           completed_by: string
           created_at?: string
           day_of_incubation: number
           id?: string
+          machine_id?: string | null
           notes?: string | null
         }
         Update: {
-          batch_id?: string
+          batch_id?: string | null
           checklist_item_id?: string
           completed_at?: string
           completed_by?: string
           created_at?: string
           day_of_incubation?: number
           id?: string
+          machine_id?: string | null
           notes?: string | null
         }
         Relationships: [
@@ -452,6 +455,13 @@ export type Database = {
             columns: ["checklist_item_id"]
             isOneToOne: false
             referencedRelation: "daily_checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
             referencedColumns: ["id"]
           },
         ]

@@ -238,3 +238,134 @@ export const useBatchChecklistProgress = (batchId: string, dayOfIncubation: numb
     enabled: !!batchId,
   });
 };
+
+// Machine-specific checklist hooks
+export const useMachineChecklistItems = () => {
+  return useQuery({
+    queryKey: ['machine-checklist-items'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daily_checklist_items')
+        .select('*')
+        .eq('target_type', 'machine')
+        .order('order_index', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
+
+export const useMachineChecklistCompletions = (machineId?: string) => {
+  return useQuery({
+    queryKey: ['machine-checklist-completions', machineId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('checklist_completions')
+        .select(`
+          *,
+          daily_checklist_items (
+            title,
+            description,
+            is_required
+          )
+        `)
+        .eq('machine_id', machineId)
+        .gte('completed_at', today)
+        .order('completed_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!machineId,
+  });
+};
+
+export const useCompleteMachineChecklistItem = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      checklistItemId,
+      machineId,
+      completedBy,
+      notes
+    }: {
+      checklistItemId: string;
+      machineId: string;
+      completedBy: string;
+      notes?: string;
+    }) => {
+      const { error } = await supabase
+        .from('checklist_completions')
+        .insert({
+          checklist_item_id: checklistItemId,
+          machine_id: machineId,
+          day_of_incubation: 1, // Machine maintenance uses day 1
+          completed_by: completedBy,
+          notes: notes || null,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machine-checklist-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['machines-maintenance'] });
+      toast({
+        title: "Checklist Item Completed",
+        description: "Machine maintenance task has been marked as complete.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to complete checklist item.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useMachineChecklistProgress = (machineId: string) => {
+  return useQuery({
+    queryKey: ['machine-checklist-progress', machineId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get machine-specific checklist items
+      const { data: items, error: itemsError } = await supabase
+        .from('daily_checklist_items')
+        .select('*')
+        .eq('target_type', 'machine');
+
+      if (itemsError) throw itemsError;
+
+      // Get today's completions for this machine
+      const { data: completions, error: completionsError } = await supabase
+        .from('checklist_completions')
+        .select('checklist_item_id')
+        .eq('machine_id', machineId)
+        .gte('completed_at', today);
+
+      if (completionsError) throw completionsError;
+
+      const completedItemIds = new Set(completions?.map(c => c.checklist_item_id) || []);
+      const requiredItems = items?.filter(item => item.is_required) || [];
+      const completedRequired = requiredItems.filter(item => completedItemIds.has(item.id));
+
+      return {
+        totalItems: items?.length || 0,
+        completedItems: completions?.length || 0,
+        requiredItems: requiredItems.length,
+        completedRequired: completedRequired.length,
+        progressPercent: requiredItems.length > 0 ? 
+          (completedRequired.length / requiredItems.length) * 100 : 100,
+        isComplete: requiredItems.length > 0 ? 
+          completedRequired.length === requiredItems.length : true,
+      };
+    },
+    enabled: !!machineId,
+  });
+};
