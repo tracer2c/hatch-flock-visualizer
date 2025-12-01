@@ -16,13 +16,24 @@ export const BatchStatusSettings = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      planned: "bg-gray-500",
-      setting: "bg-blue-500",
-      incubating: "bg-yellow-500",
-      hatching: "bg-orange-500",
+      scheduled: "bg-gray-500",
+      in_setter: "bg-amber-500",
+      in_hatcher: "bg-orange-500",
       completed: "bg-green-500",
+      cancelled: "bg-red-500",
     };
     return colors[status] || "bg-gray-500";
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      scheduled: "Scheduled",
+      in_setter: "In Setter (Day 0-18)",
+      in_hatcher: "In Hatcher (Day 18-21)",
+      completed: "Completed",
+      cancelled: "Cancelled",
+    };
+    return labels[status] || status;
   };
 
   const handleRuleUpdate = (ruleId: string, updates: any) => {
@@ -101,11 +112,11 @@ export const BatchStatusSettings = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={getStatusColor(rule.from_status)}>
-                        {rule.from_status}
+                        {getStatusLabel(rule.from_status)}
                       </Badge>
                       <span>→</span>
                       <Badge variant="outline" className={getStatusColor(rule.to_status)}>
-                        {rule.to_status}
+                        {getStatusLabel(rule.to_status)}
                       </Badge>
                     </div>
                   </TableCell>
@@ -179,7 +190,7 @@ export const BatchStatusSettings = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Batch</TableHead>
+                <TableHead>House</TableHead>
                 <TableHead>Change</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Rule/User</TableHead>
@@ -193,11 +204,11 @@ export const BatchStatusSettings = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={getStatusColor(entry.from_status)}>
-                        {entry.from_status}
+                        {getStatusLabel(entry.from_status)}
                       </Badge>
                       <span>→</span>
                       <Badge variant="outline" className={getStatusColor(entry.to_status)}>
-                        {entry.to_status}
+                        {getStatusLabel(entry.to_status)}
                       </Badge>
                     </div>
                   </TableCell>
@@ -233,17 +244,15 @@ export const BatchStatusSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle>Status Flow</CardTitle>
-          <CardDescription>Visual representation of batch progression</CardDescription>
+          <CardDescription>Visual representation of house progression (USDA-accurate)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge className="bg-gray-500">Planned</Badge>
+            <Badge className="bg-gray-500">Scheduled</Badge>
             <span>→</span>
-            <Badge className="bg-blue-500">Setting</Badge>
+            <Badge className="bg-amber-500">In Setter (Day 0-18)</Badge>
             <span>→</span>
-            <Badge className="bg-yellow-500">Incubating</Badge>
-            <span>→</span>
-            <Badge className="bg-orange-500">Hatching</Badge>
+            <Badge className="bg-orange-500">In Hatcher (Day 18-21)</Badge>
             <span>→</span>
             <Badge className="bg-green-500">Completed</Badge>
           </div>

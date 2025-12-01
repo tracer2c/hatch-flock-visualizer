@@ -57,7 +57,7 @@ export const useActiveBatches = () => {
           flocks (flock_number, flock_name, age_weeks),
           machines (machine_number, machine_type, status)
         `)
-        .in('status', ['setting', 'incubating', 'hatching'])
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher'])
         .order('set_date', { ascending: true });
 
       if (error) throw error;
@@ -193,7 +193,7 @@ export const useOngoingBatchMetrics = () => {
             check_date
           )
         `)
-        .in('status', ['setting', 'incubating', 'hatching'])
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher'])
         .order('set_date', { ascending: false });
 
       if (error) throw error;
@@ -348,7 +348,7 @@ export const useActiveBatchFlowData = () => {
             mid_dead
           )
         `)
-        .in('status', ['setting', 'incubating', 'hatching'])
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher'])
         .order('set_date', { ascending: false });
 
       if (error) throw error;
@@ -410,7 +410,7 @@ export const useMachineUtilization = () => {
       const { data: activeBatches, error: batchesError } = await supabase
         .from('batches')
         .select('machine_id, status, total_eggs_set')
-        .in('status', ['setting', 'incubating', 'hatching']);
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher']);
 
       if (batchesError) throw batchesError;
 

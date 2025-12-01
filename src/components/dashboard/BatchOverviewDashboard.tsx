@@ -45,7 +45,7 @@ const BatchOverviewDashboard = () => {
   const [selectedDateRange, setSelectedDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [selectedMachine, setSelectedMachine] = useState<string | "all">("all");
   const [showQAAlerts, setShowQAAlerts] = useState(true);
-  const [pipelineView, setPipelineView] = useState<"active" | "all" | "completed" | "incubating">("active");
+  const [pipelineView, setPipelineView] = useState<"active" | "all" | "completed" | "in_setter">("active");
 
   const isLoading = batchesLoading || metricsLoading || machinesLoading || alertsLoading;
 
@@ -116,9 +116,9 @@ const BatchOverviewDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "setting": return "bg-blue-500/10 text-blue-700 border-blue-200";
-      case "incubating": return "bg-amber-500/10 text-amber-700 border-amber-200";
-      case "hatching": return "bg-green-500/10 text-green-700 border-green-200";
+      case "scheduled": return "bg-gray-500/10 text-gray-700 border-gray-200";
+      case "in_setter": return "bg-amber-500/10 text-amber-700 border-amber-200";
+      case "in_hatcher": return "bg-orange-500/10 text-orange-700 border-orange-200";
       case "completed": return "bg-slate-500/10 text-slate-600 border-slate-200";
       default: return "bg-muted text-muted-foreground";
     }
@@ -126,9 +126,9 @@ const BatchOverviewDashboard = () => {
 
   const getStatusBorderColor = (status: string) => {
     switch (status) {
-      case "setting": return "border-l-blue-500";
-      case "incubating": return "border-l-amber-500";
-      case "hatching": return "border-l-green-500";
+      case "scheduled": return "border-l-gray-500";
+      case "in_setter": return "border-l-amber-500";
+      case "in_hatcher": return "border-l-orange-500";
       case "completed": return "border-l-slate-400";
       default: return "border-l-muted";
     }
@@ -155,7 +155,7 @@ const BatchOverviewDashboard = () => {
       // Apply pipeline view filter
       if (pipelineView === "active" && batch.status === "completed") return false;
       if (pipelineView === "completed" && batch.status !== "completed") return false;
-      if (pipelineView === "incubating" && batch.status !== "incubating") return false;
+      if (pipelineView === "in_setter" && batch.status !== "in_setter" && batch.status !== "in_hatcher") return false;
       
       // When "all" is selected, show everything without other filters
       if (pipelineView === "all") {
@@ -510,7 +510,7 @@ const BatchOverviewDashboard = () => {
                         {pipelineView === "all" && "All Houses"}
                         {pipelineView === "active" && "Active Houses Pipeline"}
                         {pipelineView === "completed" && "Completed Houses"}
-                        {pipelineView === "incubating" && "Incubating Houses"}
+                        {pipelineView === "in_setter" && "In Setter/Hatcher Houses"}
                       </CardTitle>
                       <Badge variant="secondary" className="text-xs rounded-full px-3">{listForDisplay.length} houses</Badge>
                     </div>
@@ -522,7 +522,7 @@ const BatchOverviewDashboard = () => {
                         <SelectContent>
                           <SelectItem value="all">All Houses</SelectItem>
                           <SelectItem value="active">Active Pipeline</SelectItem>
-                          <SelectItem value="incubating">Incubating</SelectItem>
+                          <SelectItem value="in_setter">In Setter/Hatcher</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                         </SelectContent>
                       </Select>

@@ -42,10 +42,9 @@ interface BatchOverviewDisplayProps {
 }
 
 const statusColors = {
-  planned: 'bg-muted text-muted-foreground',
-  setting: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  incubating: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-  hatching: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  scheduled: 'bg-muted text-muted-foreground',
+  in_setter: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  in_hatcher: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
   completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
 };
 
