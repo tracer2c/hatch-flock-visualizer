@@ -2184,6 +2184,9 @@ export type Database = {
         | "hatching"
         | "completed"
         | "cancelled"
+        | "scheduled"
+        | "in_setter"
+        | "in_hatcher"
       breed_type: "broiler" | "layer" | "breeder"
       company_status: "active" | "suspended" | "cancelled"
       level_type: "Top" | "Middle" | "Bottom"
@@ -2344,6 +2347,9 @@ export const Constants = {
         "hatching",
         "completed",
         "cancelled",
+        "scheduled",
+        "in_setter",
+        "in_hatcher",
       ],
       breed_type: ["broiler", "layer", "breeder"],
       company_status: ["active", "suspended", "cancelled"],
