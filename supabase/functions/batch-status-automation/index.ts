@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     const { trigger } = await req.json().catch(() => ({ trigger: 'manual' }));
     
-    console.log(`Batch status automation triggered: ${trigger}`);
+    console.log(`House status automation triggered: ${trigger}`);
 
     // Fetch all enabled automation rules
     const { data: rules, error: rulesError } = await supabase
@@ -55,29 +55,29 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${rules?.length || 0} enabled automation rules`);
 
-    // Fetch batches that might need status updates
+    // Fetch houses that might need status updates (using new USDA statuses)
     const { data: batches, error: batchesError } = await supabase
       .from('batches')
       .select('id, batch_number, status, set_date, company_id')
-      .in('status', ['setting', 'incubating', 'hatching']);
+      .in('status', ['scheduled', 'in_setter', 'in_hatcher']);
 
     if (batchesError) {
-      console.error('Error fetching batches:', batchesError);
+      console.error('Error fetching houses:', batchesError);
       throw batchesError;
     }
 
-    console.log(`Processing ${batches?.length || 0} active batches`);
+    console.log(`Processing ${batches?.length || 0} active houses`);
 
     let updatedCount = 0;
     const results = [];
 
-    // Process each batch
+    // Process each house
     for (const batch of batches || []) {
       const daysSinceSet = Math.floor(
         (new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      // Find applicable rules for this batch's current status
+      // Find applicable rules for this house's current status
       const applicableRules = rules?.filter(
         (rule: AutomationRule) => 
           rule.from_status === batch.status &&
@@ -97,16 +97,16 @@ Deno.serve(async (req) => {
         );
 
         if (dataValidation.passed) {
-          // Update batch status
+          // Update house status
           const { error: updateError } = await supabase
             .from('batches')
             .update({ status: rule.to_status })
             .eq('id', batch.id);
 
           if (updateError) {
-            console.error(`Error updating batch ${batch.batch_number}:`, updateError);
+            console.error(`Error updating house ${batch.batch_number}:`, updateError);
             results.push({
-              batch: batch.batch_number,
+              house: batch.batch_number,
               success: false,
               error: updateError.message
             });
@@ -128,10 +128,10 @@ Deno.serve(async (req) => {
               notes: `Automatically transitioned by rule: ${rule.rule_name}`
             });
 
-          console.log(`Updated batch ${batch.batch_number}: ${batch.status} -> ${rule.to_status}`);
+          console.log(`Updated house ${batch.batch_number}: ${batch.status} -> ${rule.to_status}`);
           updatedCount++;
           results.push({
-            batch: batch.batch_number,
+            house: batch.batch_number,
             from_status: batch.status,
             to_status: rule.to_status,
             rule: rule.rule_name,
@@ -139,12 +139,12 @@ Deno.serve(async (req) => {
             success: true
           });
 
-          // Only apply first matching rule per batch
+          // Only apply first matching rule per house
           break;
         } else {
-          console.log(`Batch ${batch.batch_number} needs more data: ${dataValidation.reason}`);
+          console.log(`House ${batch.batch_number} needs more data: ${dataValidation.reason}`);
           results.push({
-            batch: batch.batch_number,
+            house: batch.batch_number,
             status: batch.status,
             rule: rule.rule_name,
             success: false,
@@ -159,8 +159,8 @@ Deno.serve(async (req) => {
       success: true,
       trigger,
       timestamp: new Date().toISOString(),
-      batches_processed: batches?.length || 0,
-      batches_updated: updatedCount,
+      houses_processed: batches?.length || 0,
+      houses_updated: updatedCount,
       results
     };
 
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in batch-status-automation:', error);
+    console.error('Error in house-status-automation:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

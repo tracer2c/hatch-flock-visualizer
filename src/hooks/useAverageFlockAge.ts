@@ -14,7 +14,7 @@ export const useAverageFlockAge = () => {
             age_weeks
           )
         `)
-        .in('status', ['setting', 'incubating', 'hatching']);
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher']);
 
       if (error) throw error;
 

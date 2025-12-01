@@ -149,8 +149,8 @@ serve(async (req: Request) => {
         }
       }
 
-      // Check for overdue transfers (Day 22+ still incubating)
-      if (daysSinceSet >= 22 && batch.status === 'incubating') {
+      // Check for overdue transfers (Day 22+ still in setter)
+      if (daysSinceSet >= 22 && batch.status === 'in_setter') {
         const existingTransferAlert = await supabase
           .from('alerts')
           .select('id')

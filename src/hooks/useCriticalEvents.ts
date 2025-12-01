@@ -16,7 +16,7 @@ export const useCriticalEvents = () => {
           fertility_analysis!left(id),
           residue_analysis!left(id)
         `)
-        .in('status', ['setting', 'incubating', 'hatching']);
+        .in('status', ['scheduled', 'in_setter', 'in_hatcher']);
       
       if (error) throw error;
       
@@ -33,7 +33,7 @@ export const useCriticalEvents = () => {
             ? b.residue_analysis.length > 0 
             : b.residue_analysis?.id
         ),
-        transferred: b.status === 'hatching'
+        transferred: b.status === 'in_hatcher'
       }));
       
       return CriticalEventsService.calculateCriticalEvents(batchesWithFlags);

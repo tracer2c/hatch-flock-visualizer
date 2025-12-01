@@ -26,7 +26,7 @@ const LiveHouseTracker = () => {
     queryKey: ['houses-tracking', activeTab],
     queryFn: async () => {
       const statusFilter = activeTab === 'active' 
-        ? ['setting', 'incubating', 'hatching'] as const
+        ? ['scheduled', 'in_setter', 'in_hatcher'] as const
         : ['completed'] as const;
       
       const { data, error } = await supabase
@@ -84,9 +84,10 @@ const LiveHouseTracker = () => {
 
   const getPhaseInfo = (daysSinceSet: number, status: string) => {
     if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
-    if (daysSinceSet <= 0) return { phase: 'Setting', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', nextPhase: 'Incubating', daysToNext: 1 - daysSinceSet };
-    if (daysSinceSet <= 18) return { phase: 'Incubating', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50', nextPhase: 'Hatching', daysToNext: 19 - daysSinceSet };
-    return { phase: 'Hatching', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: 'Complete', daysToNext: 22 - daysSinceSet };
+    if (status === 'scheduled' || daysSinceSet < 0) return { phase: 'Scheduled', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50', nextPhase: 'In Setter', daysToNext: Math.abs(daysSinceSet) };
+    if (daysSinceSet < 18) return { phase: 'In Setter', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50', nextPhase: 'In Hatcher', daysToNext: 18 - daysSinceSet };
+    if (daysSinceSet < 21) return { phase: 'In Hatcher', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50', nextPhase: 'Complete', daysToNext: 21 - daysSinceSet };
+    return { phase: 'Complete', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: null, daysToNext: 0 };
   };
 
   const getCriticalDayInfo = (daysSinceSet: number) => {
@@ -201,15 +202,15 @@ const LiveHouseTracker = () => {
       return { total: housesWithProgress.length, avgFertility, avgHOF, avgHOI };
     }
     
-    const setting = housesWithProgress.filter(h => h.phaseInfo.phase === 'Setting').length;
-    const incubating = housesWithProgress.filter(h => h.phaseInfo.phase === 'Incubating').length;
-    const hatching = housesWithProgress.filter(h => h.phaseInfo.phase === 'Hatching').length;
+    const scheduled = housesWithProgress.filter(h => h.phaseInfo.phase === 'Scheduled').length;
+    const inSetter = housesWithProgress.filter(h => h.phaseInfo.phase === 'In Setter').length;
+    const inHatcher = housesWithProgress.filter(h => h.phaseInfo.phase === 'In Hatcher').length;
     const criticalAlerts = housesWithProgress.filter(h => h.criticalDay).length;
     const avgProgress = housesWithProgress.length > 0 
       ? Math.round(housesWithProgress.reduce((sum, h) => sum + h.progressPercentage, 0) / housesWithProgress.length)
       : 0;
     
-    return { setting, incubating, hatching, criticalAlerts, avgProgress };
+    return { scheduled, inSetter, inHatcher, criticalAlerts, avgProgress };
   }, [housesWithProgress, activeTab]);
 
   if (isLoading) {
@@ -239,25 +240,25 @@ const LiveHouseTracker = () => {
       {/* Summary Statistics - Different for Active vs Completed */}
       {activeTab === 'active' ? (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-gray-50 border-gray-200">
             <CardContent className="p-4 text-center">
-              <Egg className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-blue-700">{summaryStats.setting}</div>
-              <div className="text-xs text-blue-600">Setting</div>
+              <Egg className="h-6 w-6 text-gray-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-700">{summaryStats.scheduled}</div>
+              <div className="text-xs text-gray-600">Scheduled</div>
             </CardContent>
           </Card>
           <Card className="bg-amber-50 border-amber-200">
             <CardContent className="p-4 text-center">
               <Clock className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-amber-700">{summaryStats.incubating}</div>
-              <div className="text-xs text-amber-600">Incubating</div>
+              <div className="text-2xl font-bold text-amber-700">{summaryStats.inSetter}</div>
+              <div className="text-xs text-amber-600">In Setter</div>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-orange-50 border-orange-200">
             <CardContent className="p-4 text-center">
-              <Activity className="h-6 w-6 text-green-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-green-700">{summaryStats.hatching}</div>
-              <div className="text-xs text-green-600">Hatching</div>
+              <Activity className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-orange-700">{summaryStats.inHatcher}</div>
+              <div className="text-xs text-orange-600">In Hatcher</div>
             </CardContent>
           </Card>
           <Card className="bg-orange-50 border-orange-200">
@@ -336,9 +337,9 @@ const LiveHouseTracker = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="setting">Setting</SelectItem>
-                  <SelectItem value="incubating">Incubating</SelectItem>
-                  <SelectItem value="hatching">Hatching</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_setter">In Setter</SelectItem>
+                  <SelectItem value="in_hatcher">In Hatcher</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -400,16 +401,16 @@ const LiveHouseTracker = () => {
       {activeTab === 'active' && (
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span>Setting (Day 0)</span>
+            <div className="w-3 h-3 bg-gray-500 rounded"></div>
+            <span>Scheduled</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-amber-500 rounded"></div>
-            <span>Incubating (Days 1-18)</span>
+            <span>In Setter (Day 0-18)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded"></div>
-            <span>Hatching (Days 19-21)</span>
+            <div className="w-3 h-3 bg-orange-500 rounded"></div>
+            <span>In Hatcher (Day 18-21)</span>
           </div>
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-3 h-3 text-orange-500" />

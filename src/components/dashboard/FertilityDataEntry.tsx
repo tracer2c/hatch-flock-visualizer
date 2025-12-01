@@ -210,10 +210,8 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       if (daysSinceSet >= 21 && batch.status !== 'completed') {
         // After 21 days and fertility data is recorded, mark as completed
         newStatus = 'completed';
-      } else if (daysSinceSet >= 18 && batch.status === 'incubating') {
-        newStatus = 'hatching';
-      } else if (daysSinceSet >= 1 && batch.status === 'setting') {
-        newStatus = 'incubating';
+      } else if (daysSinceSet >= 18 && batch.status === 'in_setter') {
+        newStatus = 'in_hatcher';
       }
 
       if (newStatus !== batch.status) {

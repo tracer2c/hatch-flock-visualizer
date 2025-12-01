@@ -84,7 +84,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [houseView, setHouseView] = useState<"all" | "active" | "completed" | "incubating">("all");
+  const [houseView, setHouseView] = useState<"all" | "active" | "completed" | "in_setter">("all");
   const [formData, setFormData] = useState({
     flockId: '',
     machineId: '',
@@ -105,7 +105,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     totalEggs: '',
     machineId: '',
     unitId: '',
-    status: 'planned' as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled',
+    status: 'scheduled' as 'scheduled' | 'in_setter' | 'in_hatcher' | 'completed' | 'cancelled',
     notes: '',
   });
   
@@ -393,7 +393,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       totalEggs: data.total_eggs_set.toString(),
       machineId: data.machine_id,
       unitId: data.unit_id || '',
-      status: data.status as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled',
+      status: data.status as 'scheduled' | 'in_setter' | 'in_hatcher' | 'completed' | 'cancelled',
       notes: data.notes || '',
     });
     setShowEditDialog(true);
@@ -535,7 +535,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
-        status: 'setting'
+        status: 'in_setter'
       })
       .select()
       .single();
@@ -569,10 +569,9 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'planned': return 'bg-gray-100 text-gray-800';
-      case 'setting': return 'bg-blue-100 text-blue-800';
-      case 'incubating': return 'bg-yellow-100 text-yellow-800';
-      case 'hatching': return 'bg-orange-100 text-orange-800';
+      case 'scheduled': return 'bg-gray-100 text-gray-800';
+      case 'in_setter': return 'bg-amber-100 text-amber-800';
+      case 'in_hatcher': return 'bg-orange-100 text-orange-800';
       case 'completed': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -585,7 +584,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       if (houseView === "all") return true;
       if (houseView === "active") return h.status !== "completed";
       if (houseView === "completed") return h.status === "completed";
-      if (houseView === "incubating") return h.status === "incubating";
+      if (houseView === "in_setter") return h.status === "in_setter";
       return true;
     })
     // Date range filter (only apply when user explicitly applies filters)
@@ -882,19 +881,19 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                 {houseView === "all" && "All Houses"}
                 {houseView === "active" && "Active Houses"}
                 {houseView === "completed" && "Completed Houses"}
-                {houseView === "incubating" && "Incubating Houses"}
+                {houseView === "in_setter" && "In Setter Houses"}
               </CardTitle>
               <Badge variant="secondary">{filteredHouses.length} houses</Badge>
             </div>
             <div className="flex items-center gap-3">
-              <Select value={houseView} onValueChange={(value: any) => setHouseView(value)}>
+                <Select value={houseView} onValueChange={(value: any) => setHouseView(value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Houses</SelectItem>
                   <SelectItem value="active">Active Pipeline</SelectItem>
-                  <SelectItem value="incubating">Incubating</SelectItem>
+                  <SelectItem value="in_setter">In Setter</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
@@ -1093,15 +1092,14 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
                 <div className="space-y-2">
                   <Label>Status *</Label>
-                  <Select value={editFormData.status} onValueChange={(value: any) => setEditFormData(prev => ({ ...prev, status: value as 'planned' | 'setting' | 'incubating' | 'hatching' | 'completed' | 'cancelled' }))}>
+                  <Select value={editFormData.status} onValueChange={(value: any) => setEditFormData(prev => ({ ...prev, status: value as 'scheduled' | 'in_setter' | 'in_hatcher' | 'completed' | 'cancelled' }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="planned">Planned</SelectItem>
-                      <SelectItem value="setting">Setting</SelectItem>
-                      <SelectItem value="incubating">Incubating</SelectItem>
-                      <SelectItem value="hatching">Hatching</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="in_setter">In Setter (Day 0-18)</SelectItem>
+                      <SelectItem value="in_hatcher">In Hatcher (Day 18-21)</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>

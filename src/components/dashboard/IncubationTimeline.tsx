@@ -15,18 +15,18 @@ const IncubationTimeline = ({ className }: IncubationTimelineProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'setting': return 'bg-blue-500';
-      case 'incubating': return 'bg-yellow-500';
-      case 'hatching': return 'bg-green-500';
+      case 'scheduled': return 'bg-gray-500';
+      case 'in_setter': return 'bg-amber-500';
+      case 'in_hatcher': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'setting': return 'secondary';
-      case 'incubating': return 'default';
-      case 'hatching': return 'default';
+      case 'scheduled': return 'secondary';
+      case 'in_setter': return 'default';
+      case 'in_hatcher': return 'default';
       default: return 'outline';
     }
   };
