@@ -5,14 +5,48 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveAlerts, useCheckAlerts } from "@/hooks/useAlerts";
 import { Bell, RefreshCw, AlertTriangle, Thermometer, Droplets, Calendar, Wrench, Check, X, Clock, CheckSquare } from "lucide-react";
 import { useAcknowledgeAlert, useResolveAlert, useDismissAlert } from "@/hooks/useAlerts";
+import { useNavigate } from 'react-router-dom';
 
 const NotificationBell = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const { data: alerts, isLoading } = useActiveAlerts();
   const checkAlerts = useCheckAlerts();
   const acknowledgeAlert = useAcknowledgeAlert();
   const resolveAlert = useResolveAlert();
   const dismissAlert = useDismissAlert();
+
+  // Smart navigation based on alert type
+  const handleAlertClick = (alert: any) => {
+    setIsOpen(false);
+    
+    const houseId = alert.batch_id;
+    const machineId = alert.machine_id;
+    
+    switch (alert.alert_type) {
+      case 'critical_day':
+        // Check message content for specific day type
+        if (alert.message?.toLowerCase().includes('candling')) {
+          navigate(`/qa-hub?houseId=${houseId}&action=candling`);
+        } else if (alert.message?.toLowerCase().includes('transfer')) {
+          navigate(`/data-entry/house/${houseId}?action=transfer`);
+        } else if (alert.message?.toLowerCase().includes('hatch')) {
+          navigate(`/data-entry/house/${houseId}/residue`);
+        } else if (houseId) {
+          navigate(`/data-entry/house/${houseId}`);
+        }
+        break;
+      case 'temperature':
+      case 'humidity':
+        if (houseId) navigate(`/data-entry/house/${houseId}/qa`);
+        break;
+      case 'machine_maintenance':
+        if (machineId) navigate(`/checklist/machine/${machineId}`);
+        break;
+      default:
+        if (houseId) navigate(`/data-entry/house/${houseId}`);
+    }
+  };
 
   const alertCount = alerts?.length || 0;
   const criticalCount = alerts?.filter(alert => alert.severity === 'critical').length || 0;
@@ -104,7 +138,11 @@ const NotificationBell = () => {
                 ) : alerts && alerts.length > 0 ? (
                   <div className="divide-y divide-border">
                     {alerts.slice(0, 10).map((alert) => (
-                    <div key={alert.id} className={`p-3 hover:bg-muted/50 ${getSeverityColor(alert.severity)}`}>
+                    <div 
+                      key={alert.id} 
+                      className={`p-3 hover:bg-muted/50 cursor-pointer ${getSeverityColor(alert.severity)}`}
+                      onClick={() => handleAlertClick(alert)}
+                    >
                       <div className="flex items-start gap-3">
                         <div className="mt-1">
                           {getAlertIcon(alert.alert_type)}

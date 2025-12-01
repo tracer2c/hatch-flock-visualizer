@@ -48,6 +48,7 @@ const LiveHouseTracker = () => {
   // Filters
   const [hatcheryFilter, setHatcheryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [criticalDayFilter, setCriticalDayFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<string>('daysSinceSet');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -144,6 +145,24 @@ const LiveHouseTracker = () => {
     });
   }, [houses, performanceData, activeTab]);
 
+  // Smart navigation based on critical day
+  const handleHouseClick = (house: any) => {
+    if (house.criticalDay) {
+      switch (house.criticalDay.label) {
+        case 'Candling':
+          navigate(`/qa-hub?houseId=${house.id}&action=candling`);
+          return;
+        case 'Transfer Day':
+          navigate(`/data-entry/house/${house.id}?action=transfer`);
+          return;
+        case 'Hatch Day':
+          navigate(`/data-entry/house/${house.id}/residue`);
+          return;
+      }
+    }
+    navigate(`/data-entry/house/${house.id}`);
+  };
+
   // Apply filters
   const filteredHouses = useMemo(() => {
     let result = housesWithProgress;
@@ -152,8 +171,25 @@ const LiveHouseTracker = () => {
       result = result.filter(h => h.unit_id === hatcheryFilter);
     }
 
+    // Filter by calculated phase instead of database status
     if (statusFilter !== 'all') {
-      result = result.filter(h => h.status === statusFilter);
+      result = result.filter(h => {
+        if (statusFilter === 'scheduled') return h.phaseInfo.phase === 'Scheduled';
+        if (statusFilter === 'in_setter') return h.phaseInfo.phase === 'In Setter';
+        if (statusFilter === 'in_hatcher') return h.phaseInfo.phase === 'In Hatcher';
+        return true;
+      });
+    }
+
+    // Filter by critical day type
+    if (criticalDayFilter !== 'all') {
+      result = result.filter(h => {
+        if (!h.criticalDay) return false;
+        if (criticalDayFilter === 'candling') return h.criticalDay.label === 'Candling';
+        if (criticalDayFilter === 'transfer') return h.criticalDay.label === 'Transfer Day';
+        if (criticalDayFilter === 'hatch') return h.criticalDay.label === 'Hatch Day';
+        return true;
+      });
     }
 
     if (searchTerm) {
@@ -191,7 +227,7 @@ const LiveHouseTracker = () => {
     });
 
     return result;
-  }, [housesWithProgress, hatcheryFilter, statusFilter, searchTerm, sortBy, sortOrder]);
+  }, [housesWithProgress, hatcheryFilter, statusFilter, criticalDayFilter, searchTerm, sortBy, sortOrder]);
 
   // Summary statistics
   const summaryStats = useMemo(() => {
@@ -337,17 +373,31 @@ const LiveHouseTracker = () => {
             </Select>
 
             {activeTab === 'active' && (
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="in_setter">In Setter</SelectItem>
-                  <SelectItem value="in_hatcher">In Hatcher</SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="All Phases" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Phases</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="in_setter">In Setter</SelectItem>
+                    <SelectItem value="in_hatcher">In Hatcher</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={criticalDayFilter} onValueChange={setCriticalDayFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Critical Days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Critical Days</SelectItem>
+                    <SelectItem value="candling">Candling (Day 10-13)</SelectItem>
+                    <SelectItem value="transfer">Transfer Day (Day 17-19)</SelectItem>
+                    <SelectItem value="hatch">Hatch Day (Day 20-22)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
             )}
 
             <div className="relative flex-1 min-w-[200px]">
@@ -451,7 +501,7 @@ const LiveHouseTracker = () => {
                 "overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer",
                 house.criticalDay && "ring-2 ring-orange-400"
               )}
-              onClick={() => navigate(`/data-entry/house/${house.id}`)}
+              onClick={() => handleHouseClick(house)}
             >
               <CardHeader className={cn("py-3 px-4", house.phaseInfo.bgLight)}>
                 <div className="flex items-center justify-between">
