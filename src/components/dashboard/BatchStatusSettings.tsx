@@ -28,8 +28,8 @@ export const BatchStatusSettings = () => {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       scheduled: "Scheduled",
-      in_setter: "In Setter (Day 0-18)",
-      in_hatcher: "In Hatcher (Day 18-21)",
+      in_setter: "In Setter",
+      in_hatcher: "In Hatcher",
       completed: "Completed",
       cancelled: "Cancelled",
     };
@@ -111,11 +111,11 @@ export const BatchStatusSettings = () => {
                   <TableCell className="font-medium">{rule.rule_name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Badge className={`${getStatusColor(rule.from_status)} text-white`}>
+                      <Badge className={`${getStatusColor(rule.from_status)} text-white whitespace-nowrap rounded-md px-2.5 py-0.5`}>
                         {getStatusLabel(rule.from_status)}
                       </Badge>
                       <span>→</span>
-                      <Badge className={`${getStatusColor(rule.to_status)} text-white`}>
+                      <Badge className={`${getStatusColor(rule.to_status)} text-white whitespace-nowrap rounded-md px-2.5 py-0.5`}>
                         {getStatusLabel(rule.to_status)}
                       </Badge>
                     </div>
@@ -208,11 +208,11 @@ export const BatchStatusSettings = () => {
                   <TableCell className="font-medium">{entry.batches.batch_number}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Badge className={`${getStatusColor(entry.from_status)} text-white`}>
+                      <Badge className={`${getStatusColor(entry.from_status)} text-white whitespace-nowrap rounded-md px-2.5 py-0.5`}>
                         {getStatusLabel(entry.from_status)}
                       </Badge>
                       <span>→</span>
-                      <Badge className={`${getStatusColor(entry.to_status)} text-white`}>
+                      <Badge className={`${getStatusColor(entry.to_status)} text-white whitespace-nowrap rounded-md px-2.5 py-0.5`}>
                         {getStatusLabel(entry.to_status)}
                       </Badge>
                     </div>
