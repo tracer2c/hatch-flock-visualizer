@@ -148,6 +148,38 @@ serve(async (req: Request) => {
           }
         }
       }
+
+      // Check for overdue transfers (Day 22+ still incubating)
+      if (daysSinceSet >= 22 && batch.status === 'incubating') {
+        const existingTransferAlert = await supabase
+          .from('alerts')
+          .select('id')
+          .eq('batch_id', batch.id)
+          .eq('alert_type', 'transfer_overdue')
+          .eq('status', 'active');
+
+        if (!existingTransferAlert.data?.length) {
+          const daysOverdue = daysSinceSet - 18; // Transfer should happen on Day 18
+          const alert = {
+            alert_type: 'transfer_overdue',
+            batch_id: batch.id,
+            severity: daysOverdue >= 7 ? 'critical' : 'warning',
+            title: `Transfer Overdue - ${batch.batch_number}`,
+            message: `House ${batch.batch_number} is ${daysOverdue} days overdue for transfer (Day ${daysSinceSet}, should transfer on Day 18)`,
+            batch_day: daysSinceSet,
+            status: 'active'
+          };
+
+          const { error: insertError } = await supabase
+            .from('alerts')
+            .insert(alert);
+
+          if (!insertError) {
+            alertsGenerated.push(alert);
+            console.log(`Generated transfer overdue alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
+          }
+        }
+      }
     }
 
     // Check for incomplete checklists
