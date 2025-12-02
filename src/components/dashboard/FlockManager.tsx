@@ -494,8 +494,8 @@ const FlockManager = () => {
                   {editingFlock ? 'Edit Flock' : 'Create New Flock'}
                 </DialogTitle>
               </DialogHeader>
-              <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+              <div className="flex-1 overflow-y-auto pr-4 -mr-4 max-h-[calc(90vh-180px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 pr-4">
                 {/* 1. Hatchery selection (first) */}
                 <div className="space-y-2 md:col-span-2">
                   <Label>Hatchery * {!editingFlock && <span className="text-muted-foreground text-xs">(select one or more)</span>}</Label>
@@ -680,7 +680,7 @@ const FlockManager = () => {
                   />
                 </div>
               </div>
-              </ScrollArea>
+              </div>
               <div className="flex gap-2 pt-4 border-t bg-background shrink-0">
                 <Button onClick={handleSubmit}>
                   {editingFlock ? 'Update' : 'Create'} Flock

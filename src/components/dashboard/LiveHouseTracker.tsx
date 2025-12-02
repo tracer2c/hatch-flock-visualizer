@@ -96,12 +96,16 @@ const LiveHouseTracker = () => {
     if (daysSinceSet >= 10 && daysSinceSet <= 13) {
       return { day: daysSinceSet, label: 'Candling', description: 'Candling to check fertility (Day 10-13)' };
     }
-    // Transfer Day (Day 18)
-    if (Math.abs(18 - daysSinceSet) <= 1) {
+    // Candling Overdue (Day 14-15) - show as past due
+    if (daysSinceSet >= 14 && daysSinceSet <= 15) {
+      return { day: daysSinceSet, label: 'Candling Overdue', description: 'Candling past due (should be Day 10-13)' };
+    }
+    // Transfer Day (Day 17-19)
+    if (daysSinceSet >= 17 && daysSinceSet <= 19) {
       return { day: 18, label: 'Transfer Day', description: 'Move to hatcher' };
     }
-    // Hatch Day (Day 21)
-    if (Math.abs(21 - daysSinceSet) <= 1) {
+    // Hatch Day (Day 20-22)
+    if (daysSinceSet >= 20 && daysSinceSet <= 22) {
       return { day: 21, label: 'Hatch Day', description: 'Expected hatching' };
     }
     return null;
@@ -150,6 +154,7 @@ const LiveHouseTracker = () => {
     if (house.criticalDay) {
       switch (house.criticalDay.label) {
         case 'Candling':
+        case 'Candling Overdue':
           navigate(`/qa-hub?houseId=${house.id}&action=candling`);
           return;
         case 'Transfer Day':
@@ -185,7 +190,7 @@ const LiveHouseTracker = () => {
     if (criticalDayFilter !== 'all') {
       result = result.filter(h => {
         if (!h.criticalDay) return false;
-        if (criticalDayFilter === 'candling') return h.criticalDay.label === 'Candling';
+        if (criticalDayFilter === 'candling') return h.criticalDay.label === 'Candling' || h.criticalDay.label === 'Candling Overdue';
         if (criticalDayFilter === 'transfer') return h.criticalDay.label === 'Transfer Day';
         if (criticalDayFilter === 'hatch') return h.criticalDay.label === 'Hatch Day';
         return true;
