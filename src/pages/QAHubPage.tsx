@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +11,22 @@ import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
 
 const QAHubPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const houseIdFromUrl = searchParams.get('houseId');
+  const actionFromUrl = searchParams.get('action');
+  
   const [activeTab, setActiveTab] = useState<string>('overview');
   
   const { data: singleSetterMachines } = useSingleSetterMachines();
   const { data: multiSetterMachines } = useMultiSetterMachines();
   const { data: stats } = useQAStats();
+
+  // Auto-switch to single-setter tab if houseId is in URL
+  useEffect(() => {
+    if (houseIdFromUrl || actionFromUrl === 'candling') {
+      setActiveTab('single-setter');
+    }
+  }, [houseIdFromUrl, actionFromUrl]);
 
   const singleSetterCount = singleSetterMachines?.length || 0;
   const occupiedSingleSetters = singleSetterMachines?.filter(m => m.hasOccupant).length || 0;
@@ -147,7 +159,10 @@ const QAHubPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="single-setter">
-          <SingleSetterQAWorkflow />
+          <SingleSetterQAWorkflow 
+            preSelectedHouseId={houseIdFromUrl}
+            preSelectedAction={actionFromUrl}
+          />
         </TabsContent>
 
         <TabsContent value="multi-setter">
