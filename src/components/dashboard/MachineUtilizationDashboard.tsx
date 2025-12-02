@@ -394,7 +394,7 @@ const MachineUtilizationDashboard: React.FC = () => {
             {isLoading ? <Skeleton className="h-12 w-24" /> : (
               <div>
                 <p className="text-4xl font-bold text-blue-600">{kpis?.housesInSetters || 0}</p>
-                <p className="text-sm text-muted-foreground mt-2">Setting or Incubating</p>
+                <p className="text-sm text-muted-foreground mt-2">In Setter (Day 0-17)</p>
               </div>
             )}
           </CardContent>
@@ -413,7 +413,7 @@ const MachineUtilizationDashboard: React.FC = () => {
             {isLoading ? <Skeleton className="h-12 w-24" /> : (
               <div>
                 <p className="text-4xl font-bold text-purple-600">{kpis?.housesInHatchers || 0}</p>
-                <p className="text-sm text-muted-foreground mt-2">Currently Hatching</p>
+                <p className="text-sm text-muted-foreground mt-2">In Hatcher (Day 18-21)</p>
               </div>
             )}
           </CardContent>
