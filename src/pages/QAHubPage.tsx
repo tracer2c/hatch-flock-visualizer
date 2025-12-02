@@ -73,9 +73,9 @@ const QAHubPage: React.FC = () => {
                 {occupiedSingleSetters}/{singleSetterCount} machines
               </Badge>
             </div>
-            <CardTitle className="text-lg mt-3">Single Setter QA</CardTitle>
+            <CardTitle className="text-lg mt-3">Single Stage Setter QA</CardTitle>
             <CardDescription className="text-sm">
-              <span className="font-medium text-foreground">(per machine)</span> — Enter QA for single-setter machines. System auto-links to the house currently loaded.
+              <span className="font-medium text-foreground">(per machine)</span> — Enter QA for single stage setter machines. System auto-links to the house currently loaded.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -86,7 +86,7 @@ const QAHubPage: React.FC = () => {
               className="w-full group-hover:bg-blue-600 transition-colors"
               onClick={() => setActiveTab('single-setter')}
             >
-              Start Single Setter QA
+              Start Single Stage Setter QA
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>
@@ -103,7 +103,7 @@ const QAHubPage: React.FC = () => {
                 {multiSetterCount} machines
               </Badge>
             </div>
-            <CardTitle className="text-lg mt-3">Multi Setter QA</CardTitle>
+            <CardTitle className="text-lg mt-3">Multi Stage Setter QA</CardTitle>
             <CardDescription className="text-sm">
               <span className="font-medium text-foreground">(per machine)</span> — Enter QA per machine with position-level flock mapping
             </CardDescription>
@@ -117,7 +117,7 @@ const QAHubPage: React.FC = () => {
               className="w-full border-purple-300 text-purple-700 hover:bg-purple-50 transition-colors"
               onClick={() => setActiveTab('multi-setter')}
             >
-              Start Multi Setter QA
+              Start Multi Stage Setter QA
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>
@@ -133,11 +133,11 @@ const QAHubPage: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="single-setter" className="gap-2">
             <Thermometer className="h-4 w-4" />
-            <span className="hidden sm:inline">Single Setter</span>
+            <span className="hidden sm:inline">Single Stage Setter</span>
           </TabsTrigger>
           <TabsTrigger value="multi-setter" className="gap-2">
             <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Multi Setter</span>
+            <span className="hidden sm:inline">Multi Stage Setter</span>
           </TabsTrigger>
         </TabsList>
 
