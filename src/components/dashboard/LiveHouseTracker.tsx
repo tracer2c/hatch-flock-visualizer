@@ -83,6 +83,23 @@ const LiveHouseTracker = () => {
     }
   });
 
+  // Fetch candling completions to check which houses already have candling done
+  const { data: candlingData } = useQuery({
+    queryKey: ['candling-completions'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('qa_monitoring')
+        .select('batch_id, candling_results')
+        .not('candling_results', 'is', null);
+      return data || [];
+    }
+  });
+
+  // Set of batch_ids that have candling done
+  const housesWithCandling = useMemo(() => {
+    return new Set(candlingData?.map(c => c.batch_id).filter(Boolean) || []);
+  }, [candlingData]);
+
   const getPhaseInfo = (daysSinceSet: number, status: string) => {
     if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
     if (status === 'scheduled' || daysSinceSet < 0) return { phase: 'Scheduled', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50', nextPhase: 'In Setter', daysToNext: Math.abs(daysSinceSet) };
@@ -91,13 +108,13 @@ const LiveHouseTracker = () => {
     return { phase: 'Complete', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: null, daysToNext: 0 };
   };
 
-  const getCriticalDayInfo = (daysSinceSet: number) => {
-    // Candling is done once between Day 10-13
-    if (daysSinceSet >= 10 && daysSinceSet <= 13) {
+  const getCriticalDayInfo = (daysSinceSet: number, hasCandlingDone: boolean = false) => {
+    // Candling is done once between Day 10-13 - only show if NOT already done
+    if (daysSinceSet >= 10 && daysSinceSet <= 13 && !hasCandlingDone) {
       return { day: daysSinceSet, label: 'Candling', description: 'Candling to check fertility (Day 10-13)' };
     }
-    // Candling Overdue (Day 14-15) - show as past due
-    if (daysSinceSet >= 14 && daysSinceSet <= 15) {
+    // Candling Overdue (Day 14-15) - show as past due ONLY if candling NOT done
+    if (daysSinceSet >= 14 && daysSinceSet <= 15 && !hasCandlingDone) {
       return { day: daysSinceSet, label: 'Candling Overdue', description: 'Candling past due (should be Day 10-13)' };
     }
     // Transfer Day (Day 17-19)
@@ -118,7 +135,10 @@ const LiveHouseTracker = () => {
       const daysSinceSet = Math.max(0, differenceInDays(new Date(), new Date(house.set_date)));
       const expectedHatchDate = addDays(new Date(house.set_date), 21);
       const phaseInfo = getPhaseInfo(daysSinceSet, house.status);
-      const criticalDay = activeTab === 'active' ? getCriticalDayInfo(daysSinceSet) : null;
+      
+      // Check if this house has candling done
+      const hasCandlingDone = housesWithCandling.has(house.id);
+      const criticalDay = activeTab === 'active' ? getCriticalDayInfo(daysSinceSet, hasCandlingDone) : null;
       const progressPercentage = Math.min(100, (daysSinceSet / 21) * 100);
       
       // Get performance metrics
@@ -147,7 +167,7 @@ const LiveHouseTracker = () => {
         unitName: (house as any).units?.name || 'Unknown'
       };
     });
-  }, [houses, performanceData, activeTab]);
+  }, [houses, performanceData, activeTab, housesWithCandling]);
 
   // Smart navigation based on critical day
   const handleHouseClick = (house: any) => {

@@ -50,7 +50,7 @@ export function useSingleSetterHouses(hatcheryId?: string) {
             code
           )
         `)
-        .in('status', ['incubating', 'hatching']);
+        .in('status', ['in_setter', 'in_hatcher']);
       
       if (hatcheryId) {
         query = query.eq('unit_id', hatcheryId);
@@ -126,7 +126,7 @@ export function useSingleSetterMachines(hatcheryId?: string) {
               )
             `)
             .eq('machine_id', machine.id)
-            .in('status', ['incubating', 'hatching'])
+            .in('status', ['in_setter', 'in_hatcher'])
             .lte('set_date', today)
             .order('set_date', { ascending: false })
             .limit(1);
