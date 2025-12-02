@@ -133,8 +133,9 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
         : 0;
 
       const kpis: MachineKPIs = {
-        avgSetterUtilization: Math.min(avgSetterUtilization, 100),
-        avgHatcherUtilization: Math.min(avgHatcherUtilization, 100),
+        // Show actual utilization percentage (can be >100% if over capacity)
+        avgSetterUtilization,
+        avgHatcherUtilization,
         housesInSetters: setterBatches.length,
         housesInHatchers: hatcherBatches.length,
         totalSetterCapacity,

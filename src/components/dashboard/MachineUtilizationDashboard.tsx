@@ -323,27 +323,33 @@ const MachineUtilizationDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Setter Utilization */}
         <Card className="shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group border-0">
-          <div className="h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+          <div className={`h-1 ${(kpis?.avgSetterUtilization || 0) > 100 ? 'bg-gradient-to-r from-destructive via-destructive/80 to-destructive/60' : 'bg-gradient-to-r from-primary via-primary/80 to-primary/60'}`} />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
               Avg Setter Utilization
+              {(kpis?.avgSetterUtilization || 0) > 100 && (
+                <Badge variant="destructive" className="ml-auto text-xs flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Over Capacity
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-12 w-24" /> : (
               <div className="space-y-3">
-                <p className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <p className={`text-4xl font-bold ${(kpis?.avgSetterUtilization || 0) > 100 ? 'text-destructive' : 'bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent'}`}>
                   {kpis?.avgSetterUtilization || 0}%
                 </p>
                 <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                   <div 
-                    className="h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-700"
+                    className={`h-full rounded-full transition-all duration-700 ${(kpis?.avgSetterUtilization || 0) > 100 ? 'bg-gradient-to-r from-destructive via-destructive/90 to-destructive/70' : 'bg-gradient-to-r from-primary via-primary/90 to-primary/70'}`}
                     style={{ width: `${Math.min(kpis?.avgSetterUtilization || 0, 100)}%` }}
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">{kpis?.totalSetterEggs?.toLocaleString()}</span>
+                  <span className={`font-semibold ${(kpis?.avgSetterUtilization || 0) > 100 ? 'text-destructive' : 'text-foreground'}`}>{kpis?.totalSetterEggs?.toLocaleString()}</span>
                   {" / "}{kpis?.totalSetterCapacity?.toLocaleString()} eggs
                 </p>
               </div>
@@ -353,27 +359,33 @@ const MachineUtilizationDashboard: React.FC = () => {
 
         {/* Hatcher Utilization */}
         <Card className="shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group border-0">
-          <div className="h-1 bg-gradient-to-r from-accent via-accent/80 to-accent/60" />
+          <div className={`h-1 ${(kpis?.avgHatcherUtilization || 0) > 100 ? 'bg-gradient-to-r from-destructive via-destructive/80 to-destructive/60' : 'bg-gradient-to-r from-accent via-accent/80 to-accent/60'}`} />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
               Avg Hatcher Utilization
+              {(kpis?.avgHatcherUtilization || 0) > 100 && (
+                <Badge variant="destructive" className="ml-auto text-xs flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Over Capacity
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-12 w-24" /> : (
               <div className="space-y-3">
-                <p className="text-4xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent">
+                <p className={`text-4xl font-bold ${(kpis?.avgHatcherUtilization || 0) > 100 ? 'text-destructive' : 'bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent'}`}>
                   {kpis?.avgHatcherUtilization || 0}%
                 </p>
                 <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                   <div 
-                    className="h-full rounded-full bg-gradient-to-r from-accent via-accent/90 to-accent/70 transition-all duration-700"
+                    className={`h-full rounded-full transition-all duration-700 ${(kpis?.avgHatcherUtilization || 0) > 100 ? 'bg-gradient-to-r from-destructive via-destructive/90 to-destructive/70' : 'bg-gradient-to-r from-accent via-accent/90 to-accent/70'}`}
                     style={{ width: `${Math.min(kpis?.avgHatcherUtilization || 0, 100)}%` }}
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">{kpis?.totalHatcherEggs?.toLocaleString()}</span>
+                  <span className={`font-semibold ${(kpis?.avgHatcherUtilization || 0) > 100 ? 'text-destructive' : 'text-foreground'}`}>{kpis?.totalHatcherEggs?.toLocaleString()}</span>
                   {" / "}{kpis?.totalHatcherCapacity?.toLocaleString()} eggs
                 </p>
               </div>
