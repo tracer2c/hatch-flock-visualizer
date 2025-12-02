@@ -303,18 +303,18 @@ const LiveHouseTracker = () => {
               <div className="text-xs text-orange-600">In Hatcher</div>
             </CardContent>
           </Card>
-          <Card className="bg-orange-50 border-orange-200">
+          <Card className="bg-red-50 border-red-200">
             <CardContent className="p-4 text-center">
-              <AlertTriangle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-orange-700">{summaryStats.criticalAlerts}</div>
-              <div className="text-xs text-orange-600">Critical Windows</div>
+              <AlertTriangle className="h-6 w-6 text-red-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-red-700">{summaryStats.criticalAlerts}</div>
+              <div className="text-xs text-red-600">Critical Windows</div>
             </CardContent>
           </Card>
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="bg-green-50 border-green-200">
             <CardContent className="p-4 text-center">
-              <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
-              <div className="text-2xl font-bold text-primary">{summaryStats.avgProgress}%</div>
-              <div className="text-xs text-primary/80">Avg Progress</div>
+              <TrendingUp className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-700">{summaryStats.avgProgress}%</div>
+              <div className="text-xs text-green-600">Avg Progress</div>
             </CardContent>
           </Card>
         </div>

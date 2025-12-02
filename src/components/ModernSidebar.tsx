@@ -35,15 +35,15 @@ const navigationItems = [
     requiresAuth: true
   },
   {
-    path: '/qa-hub',
-    label: 'QA Hub',
-    icon: ClipboardCheck,
-    requiresAuth: true
-  },
-  {
     path: '/data-entry',
     label: 'Data Entry',
     icon: FileInput,
+    requiresAuth: true
+  },
+  {
+    path: '/qa-hub',
+    label: 'QA Hub',
+    icon: ClipboardCheck,
     requiresAuth: true
   },
   {
