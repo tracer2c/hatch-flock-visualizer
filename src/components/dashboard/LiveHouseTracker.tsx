@@ -95,10 +95,26 @@ const LiveHouseTracker = () => {
     }
   });
 
+  // Fetch transfer records to check which houses have been transferred
+  const { data: transferData } = useQuery({
+    queryKey: ['transfer-completions'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('machine_transfers')
+        .select('batch_id');
+      return data || [];
+    }
+  });
+
   // Set of batch_ids that have candling done
   const housesWithCandling = useMemo(() => {
     return new Set(candlingData?.map(c => c.batch_id).filter(Boolean) || []);
   }, [candlingData]);
+
+  // Set of batch_ids that have been transferred
+  const housesWithTransfer = useMemo(() => {
+    return new Set(transferData?.map(t => t.batch_id).filter(Boolean) || []);
+  }, [transferData]);
 
   const getPhaseInfo = (daysSinceSet: number, status: string) => {
     if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
@@ -108,21 +124,25 @@ const LiveHouseTracker = () => {
     return { phase: 'Complete', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: null, daysToNext: 0 };
   };
 
-  const getCriticalDayInfo = (daysSinceSet: number, hasCandlingDone: boolean = false) => {
+  const getCriticalDayInfo = (daysSinceSet: number, hasCandlingDone: boolean = false, hasTransferDone: boolean = false) => {
     // Candling is done once between Day 10-13 - only show if NOT already done
     if (daysSinceSet >= 10 && daysSinceSet <= 13 && !hasCandlingDone) {
       return { day: daysSinceSet, label: 'Candling', description: 'Candling to check fertility (Day 10-13)' };
     }
-    // Candling Overdue (Day 14-15) - show as past due ONLY if candling NOT done
-    if (daysSinceSet >= 14 && daysSinceSet <= 15 && !hasCandlingDone) {
+    // Candling Overdue (Day 14-17) - show as past due ONLY if candling NOT done
+    if (daysSinceSet >= 14 && daysSinceSet <= 17 && !hasCandlingDone) {
       return { day: daysSinceSet, label: 'Candling Overdue', description: 'Candling past due (should be Day 10-13)' };
     }
-    // Transfer Day (Day 17-19)
-    if (daysSinceSet >= 17 && daysSinceSet <= 19) {
+    // Transfer Day (Day 18) - only show if NOT transferred
+    if (daysSinceSet === 18 && !hasTransferDone) {
       return { day: 18, label: 'Transfer Day', description: 'Move to hatcher' };
     }
-    // Hatch Day (Day 20-22)
-    if (daysSinceSet >= 20 && daysSinceSet <= 22) {
+    // Transfer Overdue (Day 19+) - still NOT transferred
+    if (daysSinceSet >= 19 && !hasTransferDone) {
+      return { day: daysSinceSet, label: 'Transfer Overdue', description: 'Transfer past due (should be Day 18)' };
+    }
+    // Hatch Day (Day 21) - only for houses that HAVE transferred
+    if (daysSinceSet >= 21 && hasTransferDone) {
       return { day: 21, label: 'Hatch Day', description: 'Expected hatching' };
     }
     return null;
@@ -136,9 +156,10 @@ const LiveHouseTracker = () => {
       const expectedHatchDate = addDays(new Date(house.set_date), 21);
       const phaseInfo = getPhaseInfo(daysSinceSet, house.status);
       
-      // Check if this house has candling done
+      // Check if this house has candling done and transfer done
       const hasCandlingDone = housesWithCandling.has(house.id);
-      const criticalDay = activeTab === 'active' ? getCriticalDayInfo(daysSinceSet, hasCandlingDone) : null;
+      const hasTransferDone = housesWithTransfer.has(house.id);
+      const criticalDay = activeTab === 'active' ? getCriticalDayInfo(daysSinceSet, hasCandlingDone, hasTransferDone) : null;
       const progressPercentage = Math.min(100, (daysSinceSet / 21) * 100);
       
       // Get performance metrics
@@ -167,7 +188,7 @@ const LiveHouseTracker = () => {
         unitName: (house as any).units?.name || 'Unknown'
       };
     });
-  }, [houses, performanceData, activeTab, housesWithCandling]);
+  }, [houses, performanceData, activeTab, housesWithCandling, housesWithTransfer]);
 
   // Smart navigation based on critical day
   const handleHouseClick = (house: any) => {
@@ -178,6 +199,9 @@ const LiveHouseTracker = () => {
           navigate(`/qa-hub?houseId=${house.id}&action=candling`);
           return;
         case 'Transfer Day':
+        case 'Transfer Overdue':
+          navigate(`/data-entry/house/${house.id}?action=transfer`);
+          return;
           navigate(`/data-entry/house/${house.id}?action=transfer`);
           return;
         case 'Hatch Day':
@@ -211,7 +235,7 @@ const LiveHouseTracker = () => {
       result = result.filter(h => {
         if (!h.criticalDay) return false;
         if (criticalDayFilter === 'candling') return h.criticalDay.label === 'Candling' || h.criticalDay.label === 'Candling Overdue';
-        if (criticalDayFilter === 'transfer') return h.criticalDay.label === 'Transfer Day';
+        if (criticalDayFilter === 'transfer') return h.criticalDay.label === 'Transfer Day' || h.criticalDay.label === 'Transfer Overdue';
         if (criticalDayFilter === 'hatch') return h.criticalDay.label === 'Hatch Day';
         return true;
       });

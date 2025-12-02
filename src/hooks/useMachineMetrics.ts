@@ -75,7 +75,7 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
       let batchesQuery = supabase
         .from('batches')
         .select('id, machine_id, total_eggs_set, status, set_date')
-        .in('status', ['setting', 'incubating', 'hatching']);
+        .in('status', ['in_setter', 'in_hatcher']);
 
       if (filters.dateFrom) {
         batchesQuery = batchesQuery.gte('set_date', filters.dateFrom);
@@ -119,11 +119,11 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
       const totalHatcherCapacity = hatchers.reduce((sum, m) => sum + m.capacity, 0);
       
       const setterBatches = (batches || []).filter(b => 
-        ['setting', 'incubating'].includes(b.status) &&
+        b.status === 'in_setter' &&
         setters.some(m => m.id === b.machine_id)
       );
       const hatcherBatches = (batches || []).filter(b => 
-        b.status === 'hatching' &&
+        b.status === 'in_hatcher' &&
         hatchers.some(m => m.id === b.machine_id)
       );
 
@@ -220,7 +220,7 @@ export const useDailyUtilizationMetrics = (filters: DailyUtilizationFilters) => 
         .from('batches')
         .select('id, machine_id, total_eggs_set, status, set_date, expected_hatch_date')
         .lte('set_date', filters.dateTo)
-        .or(`expected_hatch_date.gte.${filters.dateFrom},status.eq.setting,status.eq.incubating,status.eq.hatching`);
+        .or(`expected_hatch_date.gte.${filters.dateFrom},status.eq.in_setter,status.eq.in_hatcher`);
 
       if (filters.unitId) {
         batchesQuery = batchesQuery.eq('unit_id', filters.unitId);
