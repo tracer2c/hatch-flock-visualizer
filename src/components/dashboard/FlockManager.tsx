@@ -488,12 +488,13 @@ const FlockManager = () => {
                 New Flock
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>
                   {editingFlock ? 'Edit Flock' : 'Create New Flock'}
                 </DialogTitle>
               </DialogHeader>
+              <ScrollArea className="max-h-[calc(90vh-140px)] pr-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. Hatchery selection (first) */}
                 <div className="space-y-2 md:col-span-2">
@@ -679,7 +680,8 @@ const FlockManager = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-2 mt-4">
+              </ScrollArea>
+              <div className="flex gap-2 mt-4 pt-4 border-t">
                 <Button onClick={handleSubmit}>
                   {editingFlock ? 'Update' : 'Create'} Flock
                 </Button>

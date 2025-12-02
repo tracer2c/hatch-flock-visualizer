@@ -307,7 +307,7 @@ const LiveHouseTracker = () => {
             <CardContent className="p-4 text-center">
               <AlertTriangle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-orange-700">{summaryStats.criticalAlerts}</div>
-              <div className="text-xs text-orange-600">Critical Days</div>
+              <div className="text-xs text-orange-600">Critical Windows</div>
             </CardContent>
           </Card>
           <Card className="bg-primary/5 border-primary/20">
@@ -387,11 +387,11 @@ const LiveHouseTracker = () => {
                 </Select>
 
                 <Select value={criticalDayFilter} onValueChange={setCriticalDayFilter}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Critical Days" />
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue placeholder="Critical Windows" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Critical Days</SelectItem>
+                    <SelectItem value="all">All Critical Windows</SelectItem>
                     <SelectItem value="candling">Candling (Day 10-13)</SelectItem>
                     <SelectItem value="transfer">Transfer Day (Day 17-19)</SelectItem>
                     <SelectItem value="hatch">Hatch Day (Day 20-22)</SelectItem>

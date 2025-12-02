@@ -52,7 +52,15 @@ interface SelectedMachine {
   daysInIncubation: number;
 }
 
-const SingleSetterQAWorkflow: React.FC = () => {
+interface SingleSetterQAWorkflowProps {
+  preSelectedHouseId?: string | null;
+  preSelectedAction?: string | null;
+}
+
+const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({ 
+  preSelectedHouseId, 
+  preSelectedAction 
+}) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,11 +68,25 @@ const SingleSetterQAWorkflow: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeQATab, setActiveQATab] = useState('setter-temps');
 
   const { data: hatcheries, isLoading: hatcheriesLoading } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
     selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
   );
+
+  // Auto-select machine if preSelectedHouseId is provided
+  React.useEffect(() => {
+    if (preSelectedHouseId && machines && machines.length > 0) {
+      const machineWithHouse = machines.find(m => m.currentHouse?.id === preSelectedHouseId);
+      if (machineWithHouse) {
+        setSelectedMachine(machineWithHouse as SelectedMachine);
+        if (preSelectedAction === 'candling') {
+          setActiveQATab('candling');
+        }
+      }
+    }
+  }, [preSelectedHouseId, preSelectedAction, machines]);
 
   const filteredMachines = machines?.filter(machine => {
     const searchLower = searchTerm.toLowerCase();
@@ -513,8 +535,8 @@ const SingleSetterQAWorkflow: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="setter-temps" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+      <Tabs value={activeQATab} onValueChange={setActiveQATab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
           <TabsTrigger value="setter-temps" className="flex items-center gap-1 text-xs">
             <Thermometer className="h-3 w-3" />Setter
           </TabsTrigger>
