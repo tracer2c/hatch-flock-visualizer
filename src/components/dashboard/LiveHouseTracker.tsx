@@ -117,11 +117,36 @@ const LiveHouseTracker = () => {
   }, [transferData]);
 
   const getPhaseInfo = (daysSinceSet: number, status: string) => {
+    // Prioritize database status - phase reflects actual status, color reflects overdue state
     if (status === 'completed') return { phase: 'Completed', color: 'bg-slate-500', textColor: 'text-slate-700', bgLight: 'bg-slate-50', nextPhase: null, daysToNext: 0 };
-    if (status === 'scheduled' || daysSinceSet < 0) return { phase: 'Scheduled', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50', nextPhase: 'In Setter', daysToNext: Math.abs(daysSinceSet) };
-    if (daysSinceSet < 18) return { phase: 'In Setter', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', nextPhase: 'In Hatcher', daysToNext: 18 - daysSinceSet };
-    if (daysSinceSet < 21) return { phase: 'In Hatcher', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50', nextPhase: 'Complete', daysToNext: 21 - daysSinceSet };
-    return { phase: 'Complete', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50', nextPhase: null, daysToNext: 0 };
+    if (status === 'scheduled') return { phase: 'Scheduled', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50', nextPhase: 'In Setter', daysToNext: Math.abs(daysSinceSet) };
+    
+    if (status === 'in_setter') {
+      const isOverdue = daysSinceSet >= 18;
+      return { 
+        phase: 'In Setter', 
+        color: isOverdue ? 'bg-red-500' : 'bg-blue-500',
+        textColor: isOverdue ? 'text-red-700' : 'text-blue-700',
+        bgLight: isOverdue ? 'bg-red-50' : 'bg-blue-50',
+        nextPhase: 'In Hatcher', 
+        daysToNext: Math.max(0, 18 - daysSinceSet)
+      };
+    }
+    
+    if (status === 'in_hatcher') {
+      const isOverdue = daysSinceSet >= 21;
+      return { 
+        phase: 'In Hatcher', 
+        color: isOverdue ? 'bg-red-500' : 'bg-orange-500',
+        textColor: isOverdue ? 'text-red-700' : 'text-orange-700',
+        bgLight: isOverdue ? 'bg-red-50' : 'bg-orange-50',
+        nextPhase: 'Complete', 
+        daysToNext: Math.max(0, 21 - daysSinceSet)
+      };
+    }
+    
+    // Fallback for any other status
+    return { phase: 'In Setter', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', nextPhase: 'In Hatcher', daysToNext: 18 };
   };
 
   const getCriticalDayInfo = (daysSinceSet: number, hasCandlingDone: boolean = false, hasTransferDone: boolean = false) => {
