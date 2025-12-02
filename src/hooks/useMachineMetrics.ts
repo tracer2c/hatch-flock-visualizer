@@ -118,14 +118,9 @@ export const useMachineMetrics = (filters: MachineMetricsFilters) => {
       const totalSetterCapacity = setters.reduce((sum, m) => sum + m.capacity, 0);
       const totalHatcherCapacity = hatchers.reduce((sum, m) => sum + m.capacity, 0);
       
-      const setterBatches = (batches || []).filter(b => 
-        b.status === 'in_setter' &&
-        setters.some(m => m.id === b.machine_id)
-      );
-      const hatcherBatches = (batches || []).filter(b => 
-        b.status === 'in_hatcher' &&
-        hatchers.some(m => m.id === b.machine_id)
-      );
+      // Use STATUS only for counting - machine_id may not be updated on transfer
+      const setterBatches = (batches || []).filter(b => b.status === 'in_setter');
+      const hatcherBatches = (batches || []).filter(b => b.status === 'in_hatcher');
 
       const totalSetterEggs = setterBatches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
       const totalHatcherEggs = hatcherBatches.reduce((sum, b) => sum + (b.total_eggs_set || 0), 0);
