@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ScatterChart, Scatter, ZAxis } from 'recharts';
 import { useAgeBasedPerformance } from "@/hooks/useAgeBasedPerformance";
 import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
-import { Users, Filter, Info, Download, Image, Calendar, Eye } from "lucide-react";
+import { Users, Filter, Info, Download, Image, Calendar, Eye, Building2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,13 +19,13 @@ import { ExportService } from "@/services/exportService";
 
 const AgeBasedAnalytics = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedUnit, setSelectedUnit] = useState<string>("all");
+  const [selectedHatcheries, setSelectedHatcheries] = useState<string[]>([]);
   const [selectedFlock, setSelectedFlock] = useState<string>("all");
   const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
   
-  // Pass filters to the hook
+  // Pass filters to the hook - use first selected hatchery or undefined for all
   const { data: metrics, isLoading, refetch } = useAgeBasedPerformance({
-    unitId: selectedUnit !== "all" ? selectedUnit : undefined,
+    unitId: selectedHatcheries.length === 1 ? selectedHatcheries[0] : undefined,
     flockId: selectedFlock !== "all" ? selectedFlock : undefined,
     flockGroupId: selectedFlockGroup !== "all" ? selectedFlockGroup : undefined
   });
@@ -53,30 +54,78 @@ const AgeBasedAnalytics = () => {
     }
   });
   
-  // Fetch flocks for filtering
-  const { data: flocks } = useQuery({
-    queryKey: ['flocks-filter', selectedUnit],
+  // Fetch all flocks with their hatchery info
+  const { data: allFlocks } = useQuery({
+    queryKey: ['flocks-all-hatcheries'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('flocks')
         .select('id, flock_number, flock_name, flock_group_id, unit_id')
         .order('flock_number');
-      
-      if (selectedUnit !== "all") {
-        query = query.eq('unit_id', selectedUnit);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     }
   });
   
-  // Get unique flock groups
+  // Compute common flocks across selected hatcheries
+  const commonFlocks = useMemo(() => {
+    if (!allFlocks || selectedHatcheries.length === 0) {
+      return allFlocks || [];
+    }
+    
+    if (selectedHatcheries.length === 1) {
+      // Single hatchery - show all flocks from that hatchery
+      return allFlocks.filter(f => f.unit_id === selectedHatcheries[0]);
+    }
+    
+    // Multiple hatcheries - find flocks with same flock_group_id that exist in ALL selected hatcheries
+    const flocksByGroup = new Map<string, Set<string>>();
+    
+    allFlocks.forEach(f => {
+      if (f.flock_group_id && selectedHatcheries.includes(f.unit_id || '')) {
+        if (!flocksByGroup.has(f.flock_group_id)) {
+          flocksByGroup.set(f.flock_group_id, new Set());
+        }
+        flocksByGroup.get(f.flock_group_id)!.add(f.unit_id || '');
+      }
+    });
+    
+    // Find group_ids that exist in ALL selected hatcheries
+    const commonGroupIds = Array.from(flocksByGroup.entries())
+      .filter(([, hatcheryIds]) => selectedHatcheries.every(h => hatcheryIds.has(h)))
+      .map(([groupId]) => groupId);
+    
+    // Return one representative flock per common group
+    const seenGroups = new Set<string>();
+    return allFlocks.filter(f => {
+      if (f.flock_group_id && commonGroupIds.includes(f.flock_group_id)) {
+        if (!seenGroups.has(f.flock_group_id)) {
+          seenGroups.add(f.flock_group_id);
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [allFlocks, selectedHatcheries]);
+  
+  // Toggle hatchery selection
+  const toggleHatchery = (hatcheryId: string) => {
+    setSelectedHatcheries(prev => {
+      if (prev.includes(hatcheryId)) {
+        return prev.filter(id => id !== hatcheryId);
+      }
+      return [...prev, hatcheryId];
+    });
+    // Reset flock selection when hatcheries change
+    setSelectedFlock("all");
+    setSelectedFlockGroup("all");
+  };
+  
+  // Get unique flock groups from common flocks
   const flockGroups = useMemo(() => {
-    if (!flocks) return [];
+    if (!commonFlocks) return [];
     const groups = new Map();
-    flocks.forEach(f => {
+    commonFlocks.forEach(f => {
       if (f.flock_group_id) {
         if (!groups.has(f.flock_group_id)) {
           groups.set(f.flock_group_id, { id: f.flock_group_id, number: f.flock_number, name: f.flock_name });
@@ -84,14 +133,14 @@ const AgeBasedAnalytics = () => {
       }
     });
     return Array.from(groups.values());
-  }, [flocks]);
+  }, [commonFlocks]);
   
   // Metrics are already filtered by the hook, just use them directly
   const filteredMetrics = metrics;
 
   // Fetch candling data by age
   const { data: candlingData } = useQuery({
-    queryKey: ['candling-by-age', selectedUnit, selectedFlock],
+    queryKey: ['candling-by-age', selectedHatcheries, selectedFlock],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('qa_monitoring')
@@ -116,7 +165,7 @@ const AgeBasedAnalytics = () => {
         if (!batch?.flock) return;
         
         // Apply filters
-        if (selectedUnit !== 'all' && batch.flock.unit_id !== selectedUnit) return;
+        if (selectedHatcheries.length > 0 && !selectedHatcheries.includes(batch.flock.unit_id)) return;
         if (selectedFlock !== 'all' && batch.flock.id !== selectedFlock) return;
         
         const ageWeeks = batch.flock.age_weeks;
@@ -246,7 +295,7 @@ const AgeBasedAnalytics = () => {
                 <div>
                   <p className="font-medium text-xs">{range.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    {range.minWeeks}-{range.maxWeeks === 999 ? '70+' : range.maxWeeks} weeks
+                    {range.minWeeks}-{range.maxWeeks === 65 ? '65+' : range.maxWeeks} weeks
                   </p>
                   <p className="text-xs text-muted-foreground italic mt-0.5">
                     {range.description}
@@ -278,54 +327,79 @@ const AgeBasedAnalytics = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
+            {/* Multi-Hatchery Selection */}
             <div className="space-y-2">
-              <Label>Hatchery</Label>
-              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Hatcheries</SelectItem>
-                  {units?.map(unit => (
-                    <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Hatcheries (select multiple to view common flocks)
+              </Label>
+              <div className="flex flex-wrap gap-3 p-3 bg-muted/30 rounded-lg">
+                {units?.map(unit => (
+                  <label 
+                    key={unit.id} 
+                    className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-3 py-1.5 rounded-md transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedHatcheries.includes(unit.id)}
+                      onCheckedChange={() => toggleHatchery(unit.id)}
+                    />
+                    <span className="text-sm font-medium">{unit.name}</span>
+                  </label>
+                ))}
+                {units && units.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedHatcheries([])}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              {selectedHatcheries.length > 1 && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Showing {commonFlocks.length} common flock(s) across {selectedHatcheries.length} hatcheries
+                </p>
+              )}
             </div>
             
-            <div className="space-y-2">
-              <Label>Flock</Label>
-              <Select value={selectedFlock} onValueChange={setSelectedFlock}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Flocks</SelectItem>
-                  {flocks?.filter(f => !f.flock_group_id).map(flock => (
-                    <SelectItem key={flock.id} value={flock.id}>
-                      #{flock.flock_number} - {flock.flock_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Multi-Hatchery Flock Group</Label>
-              <Select value={selectedFlockGroup} onValueChange={setSelectedFlockGroup}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
-                  {flockGroups.map(group => (
-                    <SelectItem key={group.id} value={group.id}>
-                      Group #{group.number} - {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Flock</Label>
+                <Select value={selectedFlock} onValueChange={setSelectedFlock}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Flocks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Flocks</SelectItem>
+                    {commonFlocks?.filter(f => selectedHatcheries.length <= 1 || f.flock_group_id).map(flock => (
+                      <SelectItem key={flock.id} value={selectedHatcheries.length > 1 ? flock.flock_group_id || flock.id : flock.id}>
+                        #{flock.flock_number} - {flock.flock_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Multi-Hatchery Flock Group</Label>
+                <Select value={selectedFlockGroup} onValueChange={setSelectedFlockGroup}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {flockGroups.map(group => (
+                      <SelectItem key={group.id} value={group.id}>
+                        Group #{group.number} - {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -339,7 +413,7 @@ const AgeBasedAnalytics = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">{range.label}</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {rangeInfo?.minWeeks}-{rangeInfo?.maxWeeks === 999 ? '70+' : rangeInfo?.maxWeeks} weeks
+                  {rangeInfo?.minWeeks}-{rangeInfo?.maxWeeks === 65 ? '65+' : rangeInfo?.maxWeeks} weeks
                 </p>
               </CardHeader>
             <CardContent>
@@ -438,29 +512,20 @@ const AgeBasedAnalytics = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
                   <YAxis yAxisId="left" label={{ value: 'Avg Count', angle: -90, position: 'insideLeft' }} />
-                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Fertility %', angle: 90, position: 'insideRight' }} domain={[0, 100]} />
+                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Fertility %', angle: 90, position: 'insideRight' }} />
                   <Tooltip />
                   <Legend />
                   <Bar yAxisId="left" dataKey="avgFertile" fill="hsl(var(--chart-2))" name="Avg Fertile" />
                   <Bar yAxisId="left" dataKey="avgInfertile" fill="hsl(var(--chart-4))" name="Avg Infertile" />
-                  <Line yAxisId="right" type="monotone" dataKey="fertilityRate" stroke="hsl(var(--chart-1))" name="Fertility Rate %" strokeWidth={2} />
+                  <Line yAxisId="right" type="monotone" dataKey="fertilityRate" stroke="hsl(var(--chart-1))" name="Fertility %" strokeWidth={2} />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                {candlingData.map(item => (
-                  <div key={item.label} className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">{item.label}</p>
-                    <p className="text-muted-foreground">{item.totalChecks} checks</p>
-                    <p className="text-green-600 font-semibold">{item.fertilityRate}% fertility</p>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+              <Eye className="h-12 w-12 mb-2 opacity-50" />
               <p>No candling data available</p>
-              <p className="text-sm mt-1">Enter candling results in QA monitoring to see analysis</p>
+              <p className="text-sm">Candling results will appear here once QA checks include candling information</p>
             </div>
           )}
         </CardContent>
