@@ -1116,23 +1116,42 @@ export default function EmbrexDashboard() {
     return byHatchery;
   }, [baseFilteredRows]);
 
-  // Line chart data for Hatch % & Fertility % by hatchery
-  const hatchFertilityLineData = useMemo(() => {
+  // Line chart data for Hatch % by hatchery (separate chart)
+  const hatchLineData = useMemo(() => {
     const buckets = buildBuckets(baseFilteredRows);
     return buckets.map(b => {
       const result: any = { bucket: b.bucketKey };
-      const byUnit: Record<string, { hatch: number[], fert: number[] }> = {};
+      const byUnit: Record<string, number[]> = {};
       
       b.raw.forEach(r => {
         const unit = r.unit_name || "Unknown";
-        if (!byUnit[unit]) byUnit[unit] = { hatch: [], fert: [] };
-        if (r.hatch_percent) byUnit[unit].hatch.push(r.hatch_percent);
-        if (r.fertility_percent) byUnit[unit].fert.push(r.fertility_percent);
+        if (!byUnit[unit]) byUnit[unit] = [];
+        if (r.hatch_percent) byUnit[unit].push(r.hatch_percent);
       });
       
       Object.entries(byUnit).forEach(([unit, data]) => {
-        result[`${unit}_hatch`] = data.hatch.length ? data.hatch.reduce((a,b)=>a+b,0)/data.hatch.length : 0;
-        result[`${unit}_fertility`] = data.fert.length ? data.fert.reduce((a,b)=>a+b,0)/data.fert.length : 0;
+        result[unit] = data.length ? data.reduce((a,b)=>a+b,0)/data.length : 0;
+      });
+      
+      return result;
+    });
+  }, [baseFilteredRows, granularity, percentAgg]);
+
+  // Line chart data for Fertility % by hatchery (separate chart)
+  const fertilityLineData = useMemo(() => {
+    const buckets = buildBuckets(baseFilteredRows);
+    return buckets.map(b => {
+      const result: any = { bucket: b.bucketKey };
+      const byUnit: Record<string, number[]> = {};
+      
+      b.raw.forEach(r => {
+        const unit = r.unit_name || "Unknown";
+        if (!byUnit[unit]) byUnit[unit] = [];
+        if (r.fertility_percent) byUnit[unit].push(r.fertility_percent);
+      });
+      
+      Object.entries(byUnit).forEach(([unit, data]) => {
+        result[unit] = data.length ? data.reduce((a,b)=>a+b,0)/data.length : 0;
       });
       
       return result;
@@ -1172,45 +1191,65 @@ export default function EmbrexDashboard() {
     const hatcheries = Object.keys(hatcheryData);
     
     return (
-      <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full p-2">
-        {/* Line Chart - Hatch % & Fertility % by Hatchery */}
+      <div className="grid grid-cols-3 grid-rows-2 gap-3 h-full p-2">
+        {/* Line Chart - Hatch % by Hatchery */}
         <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-blue-600" />
-              Hatch % & Fertility % by Hatchery
+              Hatch % by Hatchery
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={hatchFertilityLineData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+              <ComposedChart data={hatchLineData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="bucket" tick={{ fontSize: 10 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {hatcheries.map((unit, idx) => (
-                  <>
-                    <Line
-                      key={`${unit}_hatch`}
-                      type="monotone"
-                      dataKey={`${unit}_hatch`}
-                      stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
-                      strokeWidth={2}
-                      dot={{ r: 2 }}
-                      name={`${unit} Hatch %`}
-                    />
-                    <Line
-                      key={`${unit}_fertility`}
-                      type="monotone"
-                      dataKey={`${unit}_fertility`}
-                      stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{ r: 2 }}
-                      name={`${unit} Fertility %`}
-                    />
-                  </>
+                  <Line
+                    key={unit}
+                    type="monotone"
+                    dataKey={unit}
+                    stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    name={`${unit} Hatch %`}
+                  />
+                ))}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Line Chart - Fertility % by Hatchery */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              Fertility % by Hatchery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={fertilityLineData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="bucket" tick={{ fontSize: 10 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
+                {hatcheries.map((unit, idx) => (
+                  <Line
+                    key={unit}
+                    type="monotone"
+                    dataKey={unit}
+                    stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    name={`${unit} Fertility %`}
+                  />
                 ))}
               </ComposedChart>
             </ResponsiveContainer>
@@ -1221,7 +1260,7 @@ export default function EmbrexDashboard() {
         <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-green-600" />
+              <BarChart3 className="h-4 w-4 text-amber-600" />
               Clears & Injected by Hatchery
             </CardTitle>
           </CardHeader>
@@ -1274,8 +1313,8 @@ export default function EmbrexDashboard() {
           </CardContent>
         </Card>
 
-        {/* Donut Chart - Distribution */}
-        <Card className="flex flex-col">
+        {/* Donut Chart - Distribution (spans 2 columns) */}
+        <Card className="flex flex-col col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <PieChartIcon className="h-4 w-4 text-purple-600" />
@@ -1289,8 +1328,8 @@ export default function EmbrexDashboard() {
                   data={donutData}
                   cx="50%"
                   cy="50%"
-                  innerRadius="45%"
-                  outerRadius="70%"
+                  innerRadius="40%"
+                  outerRadius="65%"
                   paddingAngle={2}
                   dataKey="value"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
@@ -1709,21 +1748,38 @@ export default function EmbrexDashboard() {
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
               <CardHeader className="flex-none pb-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={()=>setSidebarOpen(v=>!v)}>
-                      {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={()=>setSidebarOpen(v=>!v)}>
+                      {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                      {sidebarOpen ? "Hide Filters" : "Show Filters"}
                     </Button>
+                    <div className="h-6 w-px bg-border" />
                     <div>
                       <CardTitle className="text-xl">
-                        {compareMode ? VIZ_LABEL[viz] : "Hatchery Overview Dashboard"}
+                        {compareMode ? "Compare Mode" : "Hatchery Overview"}
                       </CardTitle>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-muted-foreground">
                         {compareMode ? "Side-by-side comparison" : "Summary view across all hatcheries"}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Visualization Dropdown */}
+                    <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
+                      <SelectTrigger className="h-8 w-[130px]">
+                        <SelectValue placeholder="Chart type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="timeline_line">Line Graph</SelectItem>
+                        <SelectItem value="timeline_bar">Bar Chart</SelectItem>
+                        <SelectItem value="donut">Donut Chart</SelectItem>
+                        <SelectItem value="heatmap">Heatmap</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div className="h-6 w-px bg-border" />
+
                     <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
                       onClick={()=>setCompareMode(v=>!v)}>
                       <LayoutGrid className="h-4 w-4" />
@@ -1731,7 +1787,7 @@ export default function EmbrexDashboard() {
                     </Button>
                     {compareMode && (
                       <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
-                        <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                        <SelectTrigger className="h-8 w-[100px]"><SelectValue placeholder="Cols" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1 col</SelectItem>
                           <SelectItem value="2">2 cols</SelectItem>
@@ -1740,17 +1796,9 @@ export default function EmbrexDashboard() {
                       </Select>
                     )}
 
-                    <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
-                    <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
-                    {savedViews.length>0 && (
-                      <Select onValueChange={(v)=>applySavedView(v)}>
-                        <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Load view" /></SelectTrigger>
-                        <SelectContent>
-                          {savedViews.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
+                    <div className="h-6 w-px bg-border" />
+
+                    {filterCount > 0 && <Badge variant="secondary">{filterCount} filters</Badge>}
                     <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
                       <Download className="h-4 w-4" /> CSV
                     </Button>
