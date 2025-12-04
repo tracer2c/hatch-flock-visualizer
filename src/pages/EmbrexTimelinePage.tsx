@@ -274,7 +274,7 @@ const EXTENDED_PALETTE = [
 const HATCHERY_COLORS: Record<string, string> = {
   "DHN": "#3b82f6",   // Blue
   "SAM": "#10b981",   // Emerald/Green
-  "TROY": "#f59e0b",  // Amber/Orange
+  "Troy": "#f59e0b",  // Amber/Orange (title case to match DB)
   "ENT": "#ef4444",   // Red
 };
 
@@ -1920,37 +1920,25 @@ export default function EmbrexDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Facet By Dropdown */}
-                    <Select value={facetBy} onValueChange={(v: FacetMode) => setFacetBy(v)}>
-                      <SelectTrigger className="h-8 w-[140px]">
-                        <Grid2X2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Facet By" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="flock">Flock</SelectItem>
-                        <SelectItem value="unit">Hatchery</SelectItem>
-                        <SelectItem value="flock_unit">Flock × Hatchery</SelectItem>
-                        <SelectItem value="house">House</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {/* Filters Popover */}
+                    {/* Integrated Facet By + Filters Dropdown */}
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                          <Filter className="h-3.5 w-3.5" />
-                          Filters
+                          <Grid2X2 className="h-3.5 w-3.5" />
+                          Facet: {facetBy === "unit" ? "Hatchery" : facetBy === "flock_unit" ? "Flock × Hatchery" : facetBy === "house" ? "House" : "Flock"}
                           {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
                             <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                               {selectedFlocks.length + selectedUnits.length + selectedHouses.length}
                             </Badge>
                           )}
+                          <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-80 p-0" align="start">
-                        <div className="p-3 border-b">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-semibold">Filters</h4>
+                        {/* Facet Mode Selection */}
+                        <div className="p-3 border-b bg-muted/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-semibold">Facet By</h4>
                             {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
                               <Button 
                                 variant="ghost" 
@@ -1962,85 +1950,108 @@ export default function EmbrexDashboard() {
                                   setSelectedHouses([]);
                                 }}
                               >
-                                Clear all
+                                Clear filters
                               </Button>
                             )}
                           </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              { value: "flock", label: "Flock" },
+                              { value: "unit", label: "Hatchery" },
+                              { value: "flock_unit", label: "Flock × Hatchery" },
+                              { value: "house", label: "House" },
+                            ].map(opt => (
+                              <Button
+                                key={opt.value}
+                                variant={facetBy === opt.value ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setFacetBy(opt.value as FacetMode)}
+                              >
+                                {opt.label}
+                              </Button>
+                            ))}
+                          </div>
                         </div>
                         
-                        {/* Hatcheries Section */}
-                        <div className="border-b">
-                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                            <span>Hatcheries</span>
-                            {selectedUnits.length > 0 && (
-                              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedUnits.length}</Badge>
-                            )}
+                        {/* Dynamic Filter Options based on Facet Mode */}
+                        {/* Hatcheries - show for unit or flock_unit facet */}
+                        {(facetBy === "unit" || facetBy === "flock_unit") && (
+                          <div className="border-b">
+                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                              <span>Filter Hatcheries</span>
+                              {selectedUnits.length > 0 && (
+                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedUnits.length}</Badge>
+                              )}
+                            </div>
+                            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+                              {units.map(u => {
+                                const checked = selectedUnits.includes(u);
+                                return (
+                                  <Button
+                                    key={u}
+                                    variant={checked ? "default" : "outline"}
+                                    size="sm"
+                                    className="h-7 text-xs gap-1.5"
+                                    onClick={() => setSelectedUnits(prev => 
+                                      checked ? prev.filter(x => x !== u) : [...prev, u]
+                                    )}
+                                  >
+                                    <div 
+                                      className="w-2 h-2 rounded-full" 
+                                      style={{ backgroundColor: HATCHERY_COLORS[u] || "#94a3b8" }}
+                                    />
+                                    {u}
+                                  </Button>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                            {units.map(u => {
-                              const checked = selectedUnits.includes(u);
-                              return (
-                                <Button
-                                  key={u}
-                                  variant={checked ? "default" : "outline"}
-                                  size="sm"
-                                  className="h-7 text-xs gap-1.5"
-                                  onClick={() => setSelectedUnits(prev => 
-                                    checked ? prev.filter(x => x !== u) : [...prev, u]
-                                  )}
-                                >
-                                  <div 
-                                    className="w-2 h-2 rounded-full" 
-                                    style={{ backgroundColor: HATCHERY_COLORS[u] || "#94a3b8" }}
-                                  />
-                                  {u}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        )}
 
-                        {/* Flocks Section */}
-                        <div className="border-b">
-                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                            <span>Flocks</span>
-                            {selectedFlocks.length > 0 && (
-                              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedFlocks.length}</Badge>
-                            )}
+                        {/* Flocks - show for flock, flock_unit, or house facet */}
+                        {(facetBy === "flock" || facetBy === "flock_unit" || facetBy === "house") && (
+                          <div className="border-b">
+                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                              <span>Filter Flocks</span>
+                              {selectedFlocks.length > 0 && (
+                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedFlocks.length}</Badge>
+                              )}
+                            </div>
+                            <Command className="p-0">
+                              <CommandInput placeholder="Search flocks…" className="h-8" />
+                              <CommandList className="max-h-32">
+                                <CommandEmpty>No flocks.</CommandEmpty>
+                                <CommandGroup>
+                                  {flocksList.map(f => {
+                                    const checked = selectedFlocks.includes(f.num);
+                                    return (
+                                      <CommandItem
+                                        key={f.num}
+                                        value={String(f.num)}
+                                        onSelect={() => setSelectedFlocks(prev => 
+                                          checked ? prev.filter(x => x !== f.num) : [...prev, f.num]
+                                        )}
+                                        className="text-xs"
+                                      >
+                                        <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
+                                          {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
+                                        </div>
+                                        #{f.num} — {f.name}
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
                           </div>
-                          <Command className="p-0">
-                            <CommandInput placeholder="Search flocks…" className="h-8" />
-                            <CommandList className="max-h-32">
-                              <CommandEmpty>No flocks.</CommandEmpty>
-                              <CommandGroup>
-                                {flocksList.map(f => {
-                                  const checked = selectedFlocks.includes(f.num);
-                                  return (
-                                    <CommandItem
-                                      key={f.num}
-                                      value={String(f.num)}
-                                      onSelect={() => setSelectedFlocks(prev => 
-                                        checked ? prev.filter(x => x !== f.num) : [...prev, f.num]
-                                      )}
-                                      className="text-xs"
-                                    >
-                                      <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
-                                        {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
-                                      </div>
-                                      #{f.num} — {f.name}
-                                    </CommandItem>
-                                  );
-                                })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </div>
+                        )}
 
-                        {/* Houses Section - only show when flocks selected */}
-                        {(selectedFlocks.length > 0 || facetBy === "house") && (
+                        {/* Houses - show only for house facet */}
+                        {facetBy === "house" && (
                           <div>
                             <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                              <span>Houses</span>
+                              <span>Filter Houses</span>
                               {selectedHouses.length > 0 && (
                                 <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedHouses.length}</Badge>
                               )}
@@ -2048,7 +2059,7 @@ export default function EmbrexDashboard() {
                             <Command className="p-0">
                               <CommandInput placeholder="Search houses…" className="h-8" />
                               <CommandList className="max-h-32">
-                                <CommandEmpty>No houses. Select a flock first.</CommandEmpty>
+                                <CommandEmpty>No houses.</CommandEmpty>
                                 <CommandGroup>
                                   {housesList.map(h => {
                                     const checked = selectedHouses.includes(h.id);
