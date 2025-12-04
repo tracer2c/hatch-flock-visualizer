@@ -1845,18 +1845,18 @@ export default function EmbrexDashboard() {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 min-h-0 pt-0">
-                <div className="w-full h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 pt-0 overflow-auto">
+                <div className="w-full min-h-full bg-white rounded-lg border border-slate-200">
                   {loading ? (
                     <Skeleton className="h-full w-full" />
                   ) : (
                     <>
                       {compareMode ? (
                         <div
-                          className="grid gap-3 h-full p-2"
+                          className="grid gap-3 p-2 auto-rows-[300px]"
                           style={{ gridTemplateColumns: `repeat(${getGridLayout(facets.length)}, minmax(0,1fr))` }}
                         >
-                          {facets.slice(0, 9).map((f, idx) => {
+                          {facets.map((f, idx) => {
                             const data = chartDataForFacet(f.rows);
                             return (
                               <div key={f.key} className="flex flex-col min-h-0 border rounded-lg" id={`embrex-facet-chart-${idx}`}>
