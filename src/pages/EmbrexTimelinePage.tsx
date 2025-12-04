@@ -16,12 +16,14 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
   Download, RefreshCw, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
-  Monitor, ChevronDown, ChevronRight, Radio, GitBranch, PieChart as PieChartIcon
+  Monitor, ChevronDown, ChevronRight, Radio, GitBranch, PieChart as PieChartIcon,
+  Filter, Home
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -261,11 +263,19 @@ const formatNumber = (value: number, isPercent: boolean = false): string => {
 };
 
 const PALETTE = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
+
+// Extended palette for house/flock facets with more distinct colors
+const EXTENDED_PALETTE = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", 
+  "#ec4899", "#84cc16", "#f97316", "#14b8a6", "#a855f7", "#22c55e",
+  "#0ea5e9", "#eab308", "#d946ef", "#64748b"
+];
+
 const HATCHERY_COLORS: Record<string, string> = {
-  "DHN": "#3b82f6",
-  "SAM": "#10b981", 
-  "TROY": "#f59e0b",
-  "ENT": "#ef4444",
+  "DHN": "#3b82f6",   // Blue
+  "SAM": "#10b981",   // Emerald/Green
+  "TROY": "#f59e0b",  // Amber/Orange
+  "ENT": "#ef4444",   // Red
 };
 
 // Only 4 visualization types now
@@ -1040,12 +1050,23 @@ export default function EmbrexDashboard() {
     return [domainMin, domainMax];
   };
 
-  /* Chart renderer */
-  const renderChart = (data: any[], _facetTitle: string) => {
+  /* Chart renderer - accepts optional facetKey to determine colors for hatchery facets */
+  const renderChart = (data: any[], _facetTitle: string, facetKey?: string) => {
     const commonMargin = { top: 10, right: 20, left: 10, bottom: 10 };
     const dynamicDomain = calculateDynamicDomain(data, metrics);
     const benchNum = typeof benchmark === "number" ? benchmark : undefined;
     const showBenchmark = benchNum !== undefined && benchNum >= dynamicDomain[0] && benchNum <= dynamicDomain[1];
+
+    // Determine color based on facet mode and key
+    const getFacetColor = (metricIdx: number) => {
+      // For unit (hatchery) facets, use hatchery-specific color for all metrics
+      if (facetBy === "unit" && facetKey) {
+        const hatcheryName = facetKey.replace("U-", "");
+        return HATCHERY_COLORS[hatcheryName] || EXTENDED_PALETTE[metricIdx % EXTENDED_PALETTE.length];
+      }
+      // For other facets, use extended palette by index
+      return EXTENDED_PALETTE[metricIdx % EXTENDED_PALETTE.length];
+    };
 
     if (viz === "timeline_bar" || viz === "timeline_line") {
       return (
@@ -1062,7 +1083,7 @@ export default function EmbrexDashboard() {
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               {showBenchmark && <ReferenceLine y={benchNum} yAxisId="right" stroke="#64748b" strokeDasharray="5 5" />}
               {metrics.map((m, idx) => {
-                const color = PALETTE[idx % PALETTE.length];
+                const color = getFacetColor(idx);
                 const yAxis = isPercentMetric(m) ? "right" : "left";
                 return viz === "timeline_bar"
                   ? <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[4,4,0,0]} name={metricLabel[m]} />
@@ -1094,7 +1115,7 @@ export default function EmbrexDashboard() {
       const pieData = Object.entries(aggregated).map(([key, value], idx) => ({
         name: metricLabel[key as MetricKey] || key,
         value: isPercentMetric(key as MetricKey) ? value / Math.max(data.length, 1) : value,
-        color: PALETTE[idx % PALETTE.length],
+        color: getFacetColor(idx),
       }));
 
       return (
@@ -1899,6 +1920,167 @@ export default function EmbrexDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Facet By Dropdown */}
+                    <Select value={facetBy} onValueChange={(v: FacetMode) => setFacetBy(v)}>
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <Grid2X2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Facet By" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flock">Flock</SelectItem>
+                        <SelectItem value="unit">Hatchery</SelectItem>
+                        <SelectItem value="flock_unit">Flock × Hatchery</SelectItem>
+                        <SelectItem value="house">House</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Filters Popover */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                          <Filter className="h-3.5 w-3.5" />
+                          Filters
+                          {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
+                            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                              {selectedFlocks.length + selectedUnits.length + selectedHouses.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-0" align="start">
+                        <div className="p-3 border-b">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-semibold">Filters</h4>
+                            {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 text-xs"
+                                onClick={() => {
+                                  setSelectedFlocks([]);
+                                  setSelectedUnits([]);
+                                  setSelectedHouses([]);
+                                }}
+                              >
+                                Clear all
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Hatcheries Section */}
+                        <div className="border-b">
+                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                            <span>Hatcheries</span>
+                            {selectedUnits.length > 0 && (
+                              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedUnits.length}</Badge>
+                            )}
+                          </div>
+                          <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+                            {units.map(u => {
+                              const checked = selectedUnits.includes(u);
+                              return (
+                                <Button
+                                  key={u}
+                                  variant={checked ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-xs gap-1.5"
+                                  onClick={() => setSelectedUnits(prev => 
+                                    checked ? prev.filter(x => x !== u) : [...prev, u]
+                                  )}
+                                >
+                                  <div 
+                                    className="w-2 h-2 rounded-full" 
+                                    style={{ backgroundColor: HATCHERY_COLORS[u] || "#94a3b8" }}
+                                  />
+                                  {u}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Flocks Section */}
+                        <div className="border-b">
+                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                            <span>Flocks</span>
+                            {selectedFlocks.length > 0 && (
+                              <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedFlocks.length}</Badge>
+                            )}
+                          </div>
+                          <Command className="p-0">
+                            <CommandInput placeholder="Search flocks…" className="h-8" />
+                            <CommandList className="max-h-32">
+                              <CommandEmpty>No flocks.</CommandEmpty>
+                              <CommandGroup>
+                                {flocksList.map(f => {
+                                  const checked = selectedFlocks.includes(f.num);
+                                  return (
+                                    <CommandItem
+                                      key={f.num}
+                                      value={String(f.num)}
+                                      onSelect={() => setSelectedFlocks(prev => 
+                                        checked ? prev.filter(x => x !== f.num) : [...prev, f.num]
+                                      )}
+                                      className="text-xs"
+                                    >
+                                      <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
+                                        {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
+                                      </div>
+                                      #{f.num} — {f.name}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </div>
+
+                        {/* Houses Section - only show when flocks selected */}
+                        {(selectedFlocks.length > 0 || facetBy === "house") && (
+                          <div>
+                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                              <span>Houses</span>
+                              {selectedHouses.length > 0 && (
+                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedHouses.length}</Badge>
+                              )}
+                            </div>
+                            <Command className="p-0">
+                              <CommandInput placeholder="Search houses…" className="h-8" />
+                              <CommandList className="max-h-32">
+                                <CommandEmpty>No houses. Select a flock first.</CommandEmpty>
+                                <CommandGroup>
+                                  {housesList.map(h => {
+                                    const checked = selectedHouses.includes(h.id);
+                                    return (
+                                      <CommandItem
+                                        key={h.id}
+                                        value={`${h.batch_number} ${h.flock_name}`}
+                                        onSelect={() => setSelectedHouses(prev => 
+                                          checked ? prev.filter(x => x !== h.id) : [...prev, h.id]
+                                        )}
+                                        className="text-xs"
+                                      >
+                                        <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
+                                          {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span>House #{h.batch_number}</span>
+                                          <span className="text-[10px] text-muted-foreground">{h.flock_name} • {h.unit_name}</span>
+                                        </div>
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="h-6 w-px bg-border" />
+
                     {/* Visualization Dropdown */}
                     <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
                       <SelectTrigger className="h-8 w-[130px]">
@@ -1932,7 +2114,6 @@ export default function EmbrexDashboard() {
 
                     <div className="h-6 w-px bg-border" />
 
-                    {filterCount > 0 && <Badge variant="secondary">{filterCount} filters</Badge>}
                     <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
                       <Download className="h-4 w-4" /> CSV
                     </Button>
@@ -1959,10 +2140,20 @@ export default function EmbrexDashboard() {
                         >
                           {facets.map((f, idx) => {
                             const data = chartDataForFacet(f.rows);
+                            // Get hatchery color for unit facets
+                            const hatcheryName = facetBy === "unit" ? f.key.replace("U-", "") : null;
+                            const facetColor = hatcheryName ? HATCHERY_COLORS[hatcheryName] : EXTENDED_PALETTE[idx % EXTENDED_PALETTE.length];
+                            
                             return (
-                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg" id={`embrex-facet-chart-${idx}`}>
-                                <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate">{f.title}</div>
-                                <div className="flex-1 min-h-0">{renderChart(data, f.title)}</div>
+                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg overflow-hidden" id={`embrex-facet-chart-${idx}`}>
+                                <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: facetColor }}
+                                  />
+                                  {f.title}
+                                </div>
+                                <div className="flex-1 min-h-0">{renderChart(data, f.title, f.key)}</div>
                               </div>
                             );
                           })}
