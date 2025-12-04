@@ -93,7 +93,7 @@ const AgeRangeSettings = ({ onRangesUpdate }: AgeRangeSettingsProps) => {
                   id={`max-${range.key}`}
                   type="number"
                   value={range.maxWeeks === 999 ? '' : range.maxWeeks}
-                  placeholder={range.maxWeeks === 999 ? "70+" : undefined}
+                  placeholder={range.maxWeeks === 65 ? "65+" : undefined}
                   onChange={(e) => updateRange(index, 'maxWeeks', e.target.value ? parseInt(e.target.value) : 999)}
                   min={range.minWeeks + 1}
                 />

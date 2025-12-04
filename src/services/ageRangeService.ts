@@ -1,4 +1,4 @@
-export type AgeRange = 'young' | 'peak' | 'aging' | 'retirement';
+export type AgeRange = 'young' | 'peak' | 'middle' | 'older';
 
 export interface AgeRangeDefinition {
   key: AgeRange;
@@ -13,34 +13,34 @@ export const AGE_RANGES: AgeRangeDefinition[] = [
   {
     key: 'young',
     label: 'Young Flocks',
-    minWeeks: 0,
-    maxWeeks: 29,
+    minWeeks: 26,
+    maxWeeks: 30,
     color: 'hsl(var(--chart-1))',
     description: 'Building production capacity'
   },
   {
     key: 'peak',
     label: 'Peak Production',
-    minWeeks: 30,
-    maxWeeks: 50,
+    minWeeks: 31,
+    maxWeeks: 34,
     color: 'hsl(var(--chart-2))',
     description: 'Optimal performance window'
   },
   {
-    key: 'aging',
-    label: 'Aging Flocks',
-    minWeeks: 51,
-    maxWeeks: 70,
+    key: 'middle',
+    label: 'Middle Flocks',
+    minWeeks: 35,
+    maxWeeks: 45,
     color: 'hsl(var(--chart-3))',
-    description: 'Declining performance expected'
+    description: 'Sustained production period'
   },
   {
-    key: 'retirement',
-    label: 'Retirement Age',
-    minWeeks: 71,
-    maxWeeks: 999,
+    key: 'older',
+    label: 'Older Flocks',
+    minWeeks: 46,
+    maxWeeks: 65,
     color: 'hsl(var(--chart-4))',
-    description: 'Consider flock replacement'
+    description: 'Consider flock management'
   }
 ];
 
