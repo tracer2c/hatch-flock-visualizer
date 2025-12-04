@@ -4,32 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
 import { useChartExport } from "@/hooks/useChartExport";
 
-
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
   Download, RefreshCw, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
-  Monitor, ChevronDown, ChevronRight, Radio, GitBranch
+  Monitor, ChevronDown, ChevronRight, Radio, GitBranch, PieChart as PieChartIcon
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend,
-  ReferenceLine, CartesianGrid, Area, AreaChart
+  ReferenceLine, CartesianGrid, PieChart, Pie, Cell
 } from "recharts";
 
 /* ╭──────────────────────────────────────────────────────────────────────────╮
@@ -187,6 +185,7 @@ const metricLabel: Record<MetricKey, string> = {
   total_pips: "Total Pips",
   embryonic_mortality_count: "Embryonic Mortality",
 };
+
 const BASIC_METRICS = [
   "total_eggs_set",
   "eggs_cleared", 
@@ -225,7 +224,9 @@ const isPercentMetric = (m: MetricKey) =>
   m === "cull_percent" || m === "live_pip_percent" ||
   m === "dead_pip_percent" || m === "total_pip_percent" ||
   m === "embryonic_mortality_percent";
+
 const validScale = (s: any): s is Granularity => ["year", "month", "week", "day"].includes(s);
+
 const fmtBucketLabel = (d: Date, g: Granularity) => {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
   if (g === "year") return `${y}`;
@@ -233,6 +234,7 @@ const fmtBucketLabel = (d: Date, g: Granularity) => {
   if (g === "week") { const start = new Date(y, 0, 1); const wk = Math.floor((+d - +start) / (7 * 86400000)) + 1; return `${y}-W${String(wk).padStart(2, "0")}`; }
   return `${y}-${m}-${day}`;
 };
+
 const startOfBucket = (d: Date, g: Granularity) => {
   const y = d.getFullYear();
   if (g === "year") return new Date(y, 0, 1);
@@ -240,44 +242,40 @@ const startOfBucket = (d: Date, g: Granularity) => {
   if (g === "week") { const t = new Date(d), day = t.getDay(), diff = (day + 6) % 7; t.setDate(t.getDate() - diff); t.setHours(0,0,0,0); return t; }
   const t = new Date(d); t.setHours(0,0,0,0); return t;
 };
+
 const toCsv = (rows: Record<string, any>[]) => {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
   const esc = (v: any) => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   return [headers.join(","), ...rows.map(r => headers.map(h => esc(r[h])).join(","))].join("\n");
 };
+
 const saveFile = (filename: string, content: string, mime = "text/csv;charset=utf-8") => {
   const blob = new Blob([content], { type: mime }); const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 };
 
-// Format numbers to max 2 decimal places
 const formatNumber = (value: number, isPercent: boolean = false): string => {
-  if (isPercent) {
-    return value.toFixed(2);
-  }
+  if (isPercent) return value.toFixed(2);
   return Math.round(value).toLocaleString();
 };
 
 const PALETTE = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#059669", "#fb7185", "#22c55e", "#a78bfa"];
+const HATCHERY_COLORS: Record<string, string> = {
+  "DHN": "#3b82f6",
+  "SAM": "#10b981", 
+  "TROY": "#f59e0b",
+  "ENT": "#ef4444",
+};
 
-type VizKind =
-  | "timeline_bar"
-  | "timeline_line"
-  | "stacked_counts"
-  | "percent_trends"
-  | "sparklines"
-  | "age_distribution"
-  | "heatmap";
+// Only 4 visualization types now
+type VizKind = "timeline_bar" | "timeline_line" | "donut" | "heatmap";
 
 const VIZ_LABEL: Record<VizKind, string> = {
-  timeline_bar: "Timeline – Bar",
-  timeline_line: "Timeline – Line",
-  stacked_counts: "Stacked Counts",
-  percent_trends: "Percent Trends",
-  sparklines: "Sparklines",
-  age_distribution: "Age Distribution",
-  heatmap: "Heatmap (month×unit)",
+  timeline_bar: "Bar Chart",
+  timeline_line: "Line Graph",
+  donut: "Donut Chart",
+  heatmap: "Heatmap",
 };
 
 const DEFAULTS = {
@@ -306,11 +304,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         {payload.map((entry: any, index: number) => {
           if (entry.dataKey === '_raw' || entry.dataKey === 'rolling' && entry.value === undefined) return null;
           
-          // Check if it's a count metric
           const countMetrics = ['fertile_eggs', 'infertile_eggs', 'early_dead', 'mid_dead', 'late_dead', 'hatch_count', 'sample_size', 'cull_chicks', 'live_pips', 'dead_pips', 'total_pips', 'embryonic_mortality_count'];
           const isCount = countMetrics.includes(entry.dataKey);
           
-          // Check if it's a percentage metric
           const isPercent = entry.dataKey === 'clear_pct' || entry.dataKey === 'injected_pct' || 
                            entry.dataKey.includes('percent') || entry.dataKey.includes('pct') ||
                            (entry.dataKey === 'rolling' && (payload[0].dataKey === 'clear_pct' || payload[0].dataKey === 'injected_pct'));
@@ -451,15 +447,12 @@ export default function EmbrexDashboard() {
         if (error) throw error;
 
         const formatted: RawRow[] = (data ?? []).map((b: any) => {
-          // Calculate mortality percentages from fertility and residue analysis
           const fertility = b.fertility_analysis;
           const residue = b.residue_analysis;
           const totalEggs = Number(b.total_eggs_set ?? 0);
           
-          // Prioritize sample size from fertility first, then residue, then default
           const sampleSize = Number(fertility?.sample_size ?? residue?.sample_size ?? 648);
           
-          // Get all mortality components from residue analysis
           const infertileEggs = Number(fertility?.infertile_eggs ?? 0);
           const earlyDead = Number(residue?.early_dead ?? 0);
           const midDead = Number(residue?.mid_dead ?? 0);
@@ -468,20 +461,11 @@ export default function EmbrexDashboard() {
           const livePips = Number(residue?.live_pip_number ?? 0);
           const deadPips = Number(residue?.dead_pip_number ?? 0);
           
-          // Calculate fertile eggs and chicks hatched using standardized formulas
           const fertileEggs = calculateFertileEggs(sampleSize, infertileEggs);
           const chicksHatched = calculateChicksHatched(
-            sampleSize,
-            infertileEggs,
-            earlyDead,
-            midDead,
-            lateDead,
-            cullChicks,
-            livePips,
-            deadPips
+            sampleSize, infertileEggs, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips
           );
           
-          // Auto-calculate from fertility_analysis if not set in batches table
           const eggsCleared = Number(b.eggs_cleared ?? infertileEggs);
           const eggsInjected = Number(b.eggs_injected ?? fertileEggs);
           
@@ -490,7 +474,6 @@ export default function EmbrexDashboard() {
           let late_dead_percent = 0;
           let total_mortality_percent = 0;
           
-          // All mortality data comes from residue analysis - use sample size for percentages
           if (residue && sampleSize > 0) {
             early_dead_percent = ((residue.early_dead ?? 0) / sampleSize) * 100;
             mid_dead_percent = ((residue.mid_dead ?? 0) / sampleSize) * 100;
@@ -498,17 +481,9 @@ export default function EmbrexDashboard() {
           }
           
           total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
-          
-          // Calculate PIP metrics (already defined above, just calculate total)
           const totalPips = livePips + deadPips;
+          const embryonicMortalityCount = (residue?.early_dead ?? 0) + (residue?.mid_dead ?? 0) + (residue?.late_dead ?? 0);
 
-          // Calculate Embryonic Mortality (Early Dead + Mid Dead + Late Dead)
-          const embryonicMortalityCount = 
-            (residue?.early_dead ?? 0) + 
-            (residue?.mid_dead ?? 0) + 
-            (residue?.late_dead ?? 0);
-
-          // Calculate percentages using sample size
           let cull_percent = 0;
           let live_pip_percent = 0;
           let dead_pip_percent = 0;
@@ -625,10 +600,11 @@ export default function EmbrexDashboard() {
     return out;
   }, [rows, selectedUnits, selectedFlocks, dateFrom, dateTo]);
 
-  /* Facets */
+  /* Facets - with common flocks logic for flock_unit */
   type Facet = { key: string; title: string; rows: RawRow[]; };
   const facets: Facet[] = useMemo(() => {
     const data = baseFilteredRows;
+    
     if (facetBy === "flock") {
       if (!selectedFlocks.length) return [{ key: "ALL", title: "All flocks", rows: data }];
       return selectedFlocks.map(num => ({
@@ -637,19 +613,55 @@ export default function EmbrexDashboard() {
         rows: data.filter(r => r.flock_number === num),
       }));
     }
+    
     if (facetBy === "unit") {
       const list = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
-      return list.map(u => ({ key: `U-${u}`, title: `Unit: ${u}`, rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) }));
+      return list.map(u => ({ key: `U-${u}`, title: `Hatchery: ${u}`, rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) }));
     }
-    const flockList = selectedFlocks.length ? selectedFlocks : Array.from(new Set(data.map(r => r.flock_number)));
+    
+    // flock_unit mode: show only COMMON flocks across selected hatcheries
     const unitList = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
+    
+    // Build map of flocks per unit
+    const flocksByUnit = new Map<string, Set<number>>();
+    unitList.forEach(u => flocksByUnit.set(u.toLowerCase(), new Set()));
+    data.forEach(r => {
+      const unitKey = (r.unit_name || "").toLowerCase();
+      if (flocksByUnit.has(unitKey)) {
+        flocksByUnit.get(unitKey)!.add(r.flock_number);
+      }
+    });
+    
+    // Find intersection of flocks across all selected hatcheries
+    const unitFlockSets = [...flocksByUnit.values()];
+    let commonFlocks: Set<number>;
+    if (unitFlockSets.length === 0) {
+      commonFlocks = new Set();
+    } else if (unitFlockSets.length === 1) {
+      commonFlocks = unitFlockSets[0];
+    } else {
+      commonFlocks = unitFlockSets.reduce((acc, set) => 
+        new Set([...acc].filter(x => set.has(x)))
+      );
+    }
+    
+    // If user selected specific flocks, filter to those that are common
+    const flockList = selectedFlocks.length 
+      ? selectedFlocks.filter(f => commonFlocks.has(f))
+      : [...commonFlocks];
+    
     const out: Facet[] = [];
-    for (const f of flockList) for (const u of unitList) {
-      out.push({
-        key: `FU-${f}-${u}`,
-        title: `Flock #${f} — ${flocksMap.get(f) ?? ""} • Unit: ${u}`,
-        rows: data.filter(r => r.flock_number === f && (r.unit_name||"").toLowerCase() === u.toLowerCase()),
-      });
+    for (const f of flockList) {
+      for (const u of unitList) {
+        const facetRows = data.filter(r => r.flock_number === f && (r.unit_name||"").toLowerCase() === u.toLowerCase());
+        if (facetRows.length > 0) {
+          out.push({
+            key: `FU-${f}-${u}`,
+            title: `Flock #${f} — ${flocksMap.get(f) ?? ""} • ${u}`,
+            rows: facetRows,
+          });
+        }
+      }
     }
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, flocksMap]);
@@ -687,7 +699,6 @@ export default function EmbrexDashboard() {
       const sumClr = b.count.eggs_cleared ?? 0;
       const sumInj = b.count.eggs_injected ?? 0;
       
-      // Calculate weighted averages for fertility metrics
       const fertilityVals = b.raw.filter(r => r.fertility_percent != null);
       const earlyVals = b.raw.filter(r => r.early_dead_percent != null);
       const midVals = b.raw.filter(r => r.mid_dead_percent != null);
@@ -707,7 +718,6 @@ export default function EmbrexDashboard() {
         b.pct.clear_pct = sumSet > 0 ? (sumClr / sumSet) * 100 : 0;
         b.pct.injected_pct = sumSet > 0 ? (sumInj / sumSet) * 100 : 0;
         
-        // Weighted averages for fertility metrics
         b.pct.fertility_percent = fertilityVals.length > 0 ? 
           fertilityVals.reduce((sum, r) => sum + (r.fertility_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
         b.pct.early_dead_percent = earlyVals.length > 0 ? 
@@ -740,7 +750,6 @@ export default function EmbrexDashboard() {
         const valsClr = b.raw.map(r => (r.total_eggs_set ? (r.eggs_cleared ?? 0) / r.total_eggs_set * 100 : 0));
         const valsInj = b.raw.map(r => (r.total_eggs_set ? (r.eggs_injected ?? 0) / r.total_eggs_set * 100 : 0));
         
-        // Unweighted averages for fertility metrics
         b.pct.fertility_percent = fertilityVals.length > 0 ? 
           fertilityVals.reduce((sum, r) => sum + r.fertility_percent!, 0) / fertilityVals.length : 0;
         b.pct.early_dead_percent = earlyVals.length > 0 ? 
@@ -772,8 +781,6 @@ export default function EmbrexDashboard() {
         
         b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
         b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
-        b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
-        b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
       }
       out.push(b);
     });
@@ -795,6 +802,18 @@ export default function EmbrexDashboard() {
       eggs_cleared: b.count.eggs_cleared ?? 0,
       eggs_injected: b.count.eggs_injected ?? 0,
       age_weeks: b.count.age_weeks ?? 0,
+      fertile_eggs: b.count.fertile_eggs ?? 0,
+      infertile_eggs: b.count.infertile_eggs ?? 0,
+      early_dead: b.count.early_dead ?? 0,
+      mid_dead: b.count.mid_dead ?? 0,
+      late_dead: b.count.late_dead ?? 0,
+      hatch_count: b.count.hatch_count ?? 0,
+      sample_size: b.count.sample_size ?? 0,
+      cull_chicks: b.count.cull_chicks ?? 0,
+      live_pips: b.count.live_pips ?? 0,
+      dead_pips: b.count.dead_pips ?? 0,
+      total_pips: b.count.total_pips ?? 0,
+      embryonic_mortality_count: b.count.embryonic_mortality_count ?? 0,
       clear_pct: b.pct.clear_pct ?? 0,
       injected_pct: b.pct.injected_pct ?? 0,
       fertility_percent: b.pct.fertility_percent ?? 0,
@@ -802,202 +821,115 @@ export default function EmbrexDashboard() {
       mid_dead_percent: b.pct.mid_dead_percent ?? 0,
       late_dead_percent: b.pct.late_dead_percent ?? 0,
       total_mortality_percent: b.pct.total_mortality_percent ?? 0,
-      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? 0,
       hatch_percent: b.pct.hatch_percent ?? 0,
+      hof_percent: b.pct.hof_percent ?? 0,
+      hoi_percent: b.pct.hoi_percent ?? 0,
       if_dev_percent: b.pct.if_dev_percent ?? 0,
-      fertile_eggs: b.count.fertile_eggs ?? 0,
-      infertile_eggs: b.count.infertile_eggs ?? 0,
-      early_dead: b.count.early_dead ?? 0,
-      mid_dead: b.count.mid_dead ?? 0,
-      late_dead: b.count.late_dead ?? 0,
-      embryonic_mortality_count: b.count.embryonic_mortality_count ?? 0,
-      hatch_count: b.count.hatch_count ?? 0,
-      sample_size: b.count.sample_size ?? 0,
-      rolling: rollingAvg ? rolling[i] : undefined,
+      cull_percent: b.pct.cull_percent ?? 0,
+      live_pip_percent: b.pct.live_pip_percent ?? 0,
+      dead_pip_percent: b.pct.dead_pip_percent ?? 0,
+      total_pip_percent: b.pct.total_pip_percent ?? 0,
+      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? 0,
+      rolling: rolling[i],
       _raw: b.raw,
     }));
   };
 
   /* Drill-down modal */
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
   const [modalRows, setModalRows] = useState<RawRow[]>([]);
-  const openDrill = (facetTitle: string, bucketLabel: string, raw: RawRow[]) => {
-    setModalTitle(`${facetTitle} • ${bucketLabel}`); setModalRows(raw); setModalOpen(true);
+  const [modalTitle, setModalTitle] = useState("");
+  const [activeFacet, setActiveFacet] = useState<string>("");
+
+  useEffect(() => { if (facets.length && !facets.find(f=>f.key===activeFacet)) setActiveFacet(facets[0].key); }, [facets, activeFacet]);
+
+  const openDrilldown = (bucket: any, _title: string) => {
+    const raws = bucket._raw as RawRow[] | undefined;
+    if (!raws || !raws.length) return;
+    setModalRows(raws);
+    setModalTitle(`Bucket: ${bucket.bucket}`);
+    setModalOpen(true);
   };
 
-  /* Export / Saved Views */
-  const { exportMultipleChartsToPDF } = useChartExport();
-  
+  /* Export helpers */
   const exportBucketsCsv = () => {
-    const out: Record<string, any>[] = [];
-    (compareMode ? facets : [facets.find(f=>true)!]).forEach(f => {
-      const dat = chartDataForFacet(f.rows);
-      dat.forEach(r => out.push({
-        facet: f.title, bucket: r.bucket,
-        total_eggs_set: r.total_eggs_set, eggs_cleared: r.eggs_cleared, eggs_injected: r.eggs_injected,
-        clear_pct: parseFloat(r.clear_pct.toFixed(2)), injected_pct: parseFloat(r.injected_pct.toFixed(2)),
-        fertility_percent: parseFloat((r.fertility_percent || 0).toFixed(2)),
-        early_dead_percent: parseFloat((r.early_dead_percent || 0).toFixed(2)),
-        mid_dead_percent: parseFloat((r.mid_dead_percent || 0).toFixed(2)),
-        late_dead_percent: parseFloat((r.late_dead_percent || 0).toFixed(2)),
-        total_mortality_percent: parseFloat((r.total_mortality_percent || 0).toFixed(2)),
-        embryonic_mortality_percent: parseFloat((r.embryonic_mortality_percent || 0).toFixed(2)),
-        hatch_percent: parseFloat((r.hatch_percent || 0).toFixed(2)),
-        if_dev_percent: parseFloat((r.if_dev_percent || 0).toFixed(2)),
-        fertile_eggs: r.fertile_eggs || 0,
-        infertile_eggs: r.infertile_eggs || 0,
-        early_dead: r.early_dead || 0,
-        mid_dead: r.mid_dead || 0,
-        late_dead: r.late_dead || 0,
-        embryonic_mortality_count: r.embryonic_mortality_count || 0,
-        hatch_count: r.hatch_count || 0,
-        sample_size: r.sample_size || 0,
-        rolling: r.rolling ? parseFloat(r.rolling.toFixed(2)) : ""
-      }));
-    });
-    saveFile("embrex_timeline.csv", toCsv(out));
+    const all = facets.flatMap(f => chartDataForFacet(f.rows).map(b => ({ facet: f.title, ...b, _raw: undefined })));
+    saveFile("embrex-buckets.csv", toCsv(all));
+  };
+  const { exportChartToPDF } = useChartExport();
+  const exportFullReport = async () => {
+    if (compareMode) {
+      await exportChartToPDF("embrex-facet-chart-0", `Embrex-Timeline-Report.pdf`);
+    } else {
+      await exportChartToPDF("embrex-timeline-main-chart", `Embrex-Timeline-Report.pdf`);
+    }
   };
 
-  const exportFullReport = async () => {
-    const chartIds = ['embrex-timeline-main-chart'];
-    if (compareMode) {
-      facets.forEach((_, idx) => chartIds.push(`embrex-facet-chart-${idx}`));
-    }
-    await exportMultipleChartsToPDF(
-      chartIds,
-      `embrex_timeline_report_${new Date().toISOString().split('T')[0]}`
-    );
-  };
+  /* Saved views */
   const saveCurrentView = () => {
-    if (!savedName.trim()) { toast({ title: "Name required", description: "Provide a name to save this view." }); return; }
-    localStorage.setItem(`embrexView:${savedName.trim()}`, searchParams.toString());
-    toast({ title: "View saved", description: `"${savedName}" saved.` }); setSavedName("");
+    if (!savedName.trim()) return;
+    localStorage.setItem(`embrexView:${savedName}`, searchParams.toString());
+    toast({ title: "Saved", description: `View "${savedName}" saved.` });
+    setSavedName("");
   };
   const applySavedView = (name: string) => {
-    const qs = localStorage.getItem(`embrexView:${name}`);
-    if (!qs) return toast({ title: "Not found", description: "Saved view does not exist.", variant: "destructive" });
-    const url = new URL(window.location.href); url.search = qs; window.location.assign(url.toString());
+    const q = localStorage.getItem(`embrexView:${name}`);
+    if (q) setSearchParams(new URLSearchParams(q));
   };
 
-  /* Metric palette */
-  const basicMetricOptions = [
-    { value: "total_eggs_set", label: "Total Eggs", color: PALETTE[0] },
-    { value: "eggs_cleared",   label: "Clears",     color: PALETTE[1] },
-    { value: "eggs_injected",  label: "Injected",   color: PALETTE[2] },
-    { value: "clear_pct",      label: "Clear %",    color: PALETTE[3] },
-    { value: "injected_pct",   label: "Injected %", color: PALETTE[4] },
-    { value: "age_weeks",      label: "Age (w)",    color: PALETTE[5] },
-  ] as const;
-
-  const fertilityPercentMetricOptions = [
-    { value: "fertility_percent", label: "Fertility %", color: PALETTE[0] },
-    { value: "early_dead_percent", label: "Early Dead %", color: PALETTE[1] },
-    { value: "mid_dead_percent", label: "Mid Dead %", color: PALETTE[2] },
-    { value: "late_dead_percent", label: "Late Dead %", color: PALETTE[3] },
-    { value: "total_mortality_percent", label: "Total Mortality %", color: PALETTE[4] },
-    { value: "hatch_percent", label: "Hatch %", color: PALETTE[5] },
-    { value: "if_dev_percent", label: "I/F %", color: PALETTE[6] },
-    { value: "injected_pct", label: "Injected %", color: PALETTE[7] },
-    { value: "embryonic_mortality_percent", label: "Embryonic Mortality %", color: PALETTE[8] },
-  ] as const;
-
-  const fertilityCountMetricOptions = [
-    { value: "fertile_eggs", label: "Fertile Eggs", color: PALETTE[0] },
-    { value: "infertile_eggs", label: "Infertile Eggs", color: PALETTE[1] },
-    { value: "eggs_injected", label: "Injected", color: PALETTE[2] },
-    { value: "early_dead", label: "Early Dead", color: PALETTE[3] },
-    { value: "mid_dead", label: "Mid Dead", color: PALETTE[4] },
-    { value: "late_dead", label: "Late Dead", color: PALETTE[5] },
-    { value: "hatch_count", label: "Hatch Count", color: PALETTE[6] },
-    { value: "sample_size", label: "Sample Size", color: PALETTE[7] },
-    { value: "embryonic_mortality_count", label: "Embryonic Mortality", color: PALETTE[8] },
-  ] as const;
-
-  const metricOptions = showFertilityMetrics 
-    ? (showFertilityCounts ? fertilityCountMetricOptions : fertilityPercentMetricOptions)
-    : basicMetricOptions;
-
-  /* Facet tabs state */
-  const [activeFacet, setActiveFacet] = useState<string>("ALL");
-  useEffect(() => {
-    if (!facets.find(f => f.key === activeFacet)) {
-      setActiveFacet(facets[0]?.key ?? "ALL");
-    }
-  }, [facets, activeFacet]);
-
-  /* ─────────────── Dynamic Y-Axis Domain Calculator ─────────────── */
-  const calculateDynamicDomain = (data: any[], selectedMetrics: string[]): [number, number] => {
-    // Only calculate for percentage metrics
-    const percentMetrics = selectedMetrics.filter(m => isPercentMetric(m as MetricKey));
+  /* Calculate dynamic Y-axis domain for percentage metrics */
+  const calculateDynamicDomain = (data: any[], metricKeys: MetricKey[]): [number, number] => {
+    const percentMetrics = metricKeys.filter(isPercentMetric);
     if (percentMetrics.length === 0) return [0, 100];
     
-    // Find min and max values across all selected percentage metrics
-    let min = Infinity;
-    let max = -Infinity;
+    let minVal = Infinity;
+    let maxVal = -Infinity;
     
-    data.forEach(row => {
-      percentMetrics.forEach(metric => {
-        const value = row[metric];
-        if (typeof value === 'number' && isFinite(value)) {
-          min = Math.min(min, value);
-          max = Math.max(max, value);
+    data.forEach(d => {
+      percentMetrics.forEach(m => {
+        const val = d[m];
+        if (typeof val === 'number' && !isNaN(val)) {
+          if (val < minVal) minVal = val;
+          if (val > maxVal) maxVal = val;
         }
       });
     });
     
-    // If no valid data, use default
-    if (!isFinite(min) || !isFinite(max)) return [0, 100];
+    if (minVal === Infinity || maxVal === -Infinity) return [0, 100];
     
-    // Add padding: 10% below min and 20% above max
-    const range = max - min;
-    const paddedMin = Math.max(0, min - range * 0.1);
-    const paddedMax = max + range * 0.2;
+    const range = maxVal - minVal;
+    const padding = range * 0.1;
+    const domainMin = Math.max(0, Math.floor((minVal - padding) / 5) * 5);
+    const domainMax = Math.min(100, Math.ceil((maxVal + padding * 2) / 5) * 5);
     
-    // Round to nice numbers
-    const roundedMin = Math.floor(paddedMin);
-    const roundedMax = Math.ceil(paddedMax);
-    
-    return [roundedMin, roundedMax];
+    return [domainMin, domainMax];
   };
 
-  /* ─────────────── Chart renderer (fills container; no hardcoded height) ─────────────── */
-  const renderChart = (data: any[], facetTitle: string) => {
-    const commonMargin = { top: 8, right: 16, left: 8, bottom: 8 };
+  /* Chart renderer */
+  const renderChart = (data: any[], _facetTitle: string) => {
+    const commonMargin = { top: 10, right: 20, left: 10, bottom: 10 };
     const dynamicDomain = calculateDynamicDomain(data, metrics);
+    const benchNum = typeof benchmark === "number" ? benchmark : undefined;
+    const showBenchmark = benchNum !== undefined && benchNum >= dynamicDomain[0] && benchNum <= dynamicDomain[1];
 
     if (viz === "timeline_bar" || viz === "timeline_line") {
-      const isBar = viz === "timeline_bar";
       return (
         <div className="h-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={data}
-              margin={commonMargin}
-              onClick={(e:any)=>{ if (!e?.activePayload?.length) return; const p=e.activePayload[0]?.payload; if (!p) return; openDrill(facetTitle, p.bucket as string, p._raw as RawRow[]); }}
-            >
+            <ComposedChart data={data} margin={commonMargin} onClick={(e: any) => e?.activePayload?.[0]?.payload && openDrilldown(e.activePayload[0].payload, _facetTitle)}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
-              <YAxis yAxisId="right" orientation="right" domain={dynamicDomain} tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 11 }} />
+              {metrics.some(isPercentMetric) && (
+                <YAxis yAxisId="right" orientation="right" domain={dynamicDomain} tick={{ fontSize: 11 }} />
+              )}
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              {benchmark !== "" && Number.isFinite(Number(benchmark)) && (
-                Number(benchmark) >= dynamicDomain[0] && Number(benchmark) <= dynamicDomain[1]
-              ) && (
-                <ReferenceLine
-                  yAxisId="right"
-                  y={Number(benchmark)}
-                  stroke="#ef4444"
-                  strokeDasharray="4 4"
-                  label={{ value: `Target ${benchmark}%`, fontSize: 11 }}
-                />
-              )}
-              {metrics.map((m, i) => {
-                const allOptions = [...basicMetricOptions, ...fertilityPercentMetricOptions, ...fertilityCountMetricOptions];
-                const color = allOptions.find(mm => mm.value === m)?.color || PALETTE[i % PALETTE.length];
+              {showBenchmark && <ReferenceLine y={benchNum} yAxisId="right" stroke="#64748b" strokeDasharray="5 5" />}
+              {metrics.map((m, idx) => {
+                const color = PALETTE[idx % PALETTE.length];
                 const yAxis = isPercentMetric(m) ? "right" : "left";
-                return isBar
+                return viz === "timeline_bar"
                   ? <Bar key={m} dataKey={m} yAxisId={yAxis} fill={color} radius={[4,4,0,0]} name={metricLabel[m]} />
                   : <Line key={m} type="monotone" dataKey={m} yAxisId={yAxis} stroke={color} strokeWidth={2} dot={{ r: 2 }} name={metricLabel[m]} />;
               })}
@@ -1018,77 +950,40 @@ export default function EmbrexDashboard() {
       );
     }
 
-    if (viz === "stacked_counts") {
+    if (viz === "donut") {
+      // Aggregate data for donut chart
+      const aggregated: Record<string, number> = {};
+      metrics.forEach(m => {
+        aggregated[m] = data.reduce((sum, d) => sum + (d[m] ?? 0), 0);
+      });
+      const pieData = Object.entries(aggregated).map(([key, value], idx) => ({
+        name: metricLabel[key as MetricKey] || key,
+        value: isPercentMetric(key as MetricKey) ? value / Math.max(data.length, 1) : value,
+        color: PALETTE[idx % PALETTE.length],
+      }));
+
       return (
-        <div className="h-full">
+        <div className="h-full flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                innerRadius="50%"
+                outerRadius="75%"
+                paddingAngle={2}
+                dataKey="value"
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                labelLine={false}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="total_eggs_set" stackId="a" fill={PALETTE[0]} name="Total Eggs" />
-              <Bar dataKey="eggs_cleared"  stackId="a" fill={PALETTE[2]} name="Clears" />
-              <Bar dataKey="eggs_injected" stackId="a" fill={PALETTE[1]} name="Injected" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      );
-    }
-
-    if (viz === "percent_trends") {
-      return (
-        <div className="h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0,100]} tick={{ fontSize: 11 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Area type="monotone" dataKey="clear_pct" stroke={PALETTE[3]} fill={PALETTE[3]} fillOpacity={0.25} strokeWidth={2} name="Clear %" />
-              <Area type="monotone" dataKey="injected_pct" stroke={PALETTE[4]} fill={PALETTE[4]} fillOpacity={0.25} strokeWidth={2} name="Injected %" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      );
-    }
-
-    if (viz === "sparklines") {
-      const keys: MetricKey[] = ["total_eggs_set","clear_pct","injected_pct"];
-      return (
-        <div className="grid gap-3 md:grid-cols-3 h-full">
-          {keys.map((k, i)=>(
-            <div key={k} className="p-2 border rounded-md flex flex-col min-h-0">
-              <div className="text-xs text-muted-foreground mb-1">{metricLabel[k]}</div>
-              <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data} margin={commonMargin}>
-                    <XAxis dataKey="bucket" hide />
-                    <YAxis hide domain={isPercentMetric(k) ? [0,100] : ["auto","auto"]} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey={k} stroke={PALETTE[i]} fill={PALETTE[i]} fillOpacity={0.15} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (viz === "age_distribution") {
-      return (
-        <div className="h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={commonMargin}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="age_weeks" fill="#94a3b8" radius={[4,4,0,0]} />
-            </ComposedChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
       );
@@ -1106,32 +1001,22 @@ export default function EmbrexDashboard() {
       });
       const maxVal = Math.max(0, ...Object.values(byUnit).flatMap(x=>Object.values(x)));
       
-      // Helper to get color based on value intensity - yellow to orange to red gradient
       const getHeatColor = (value: number, max: number) => {
-        if (!value || !max) return '#f8fafc'; // Very light gray for empty cells
+        if (!value || !max) return '#f8fafc';
         const intensity = value / max;
-        
-        // Yellow → Orange → Red gradient (similar to reference image)
-        if (intensity < 0.25) {
-          return '#fef3c7'; // Very light yellow
-        } else if (intensity < 0.5) {
-          return '#fed7aa'; // Light orange
-        } else if (intensity < 0.65) {
-          return '#fdba74'; // Medium orange
-        } else if (intensity < 0.8) {
-          return '#fb923c'; // Strong orange
-        } else if (intensity < 0.9) {
-          return '#f97316'; // Deep orange
-        } else {
-          return '#ea580c'; // Red for highest values
-        }
+        if (intensity < 0.25) return '#fef3c7';
+        if (intensity < 0.5) return '#fed7aa';
+        if (intensity < 0.65) return '#fdba74';
+        if (intensity < 0.8) return '#fb923c';
+        if (intensity < 0.9) return '#f97316';
+        return '#ea580c';
       };
 
       return (
         <div className="space-y-3 h-full overflow-auto">
           <div className="inline-block min-w-full">
             <div className="grid gap-2" style={{ gridTemplateColumns: `160px repeat(${months.length}, minmax(60px, 1fr))` }}>
-              <div className="text-sm font-semibold text-foreground sticky left-0 bg-background py-2">Unit</div>
+              <div className="text-sm font-semibold text-foreground sticky left-0 bg-background py-2">Hatchery</div>
               {months.map((mo) => (
                 <div key={mo} className="text-xs font-medium text-muted-foreground text-center py-2" title={mo}>
                   {mo}
@@ -1164,7 +1049,6 @@ export default function EmbrexDashboard() {
             </div>
           </div>
           
-          {/* Legend */}
           <div className="flex items-center gap-4 pt-3 border-t bg-background">
             <span className="text-sm font-medium text-foreground">Intensity:</span>
             <div className="flex items-center gap-2">
@@ -1188,19 +1072,247 @@ export default function EmbrexDashboard() {
     return null;
   };
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     DEFAULT DASHBOARD (when Compare is OFF) - Fixed 4-panel layout
+     ═══════════════════════════════════════════════════════════════════════════ */
+  
+  // Get data aggregated by hatchery for the default dashboard
+  const hatcheryData = useMemo(() => {
+    const byHatchery: Record<string, { 
+      hatch_percent: number[], 
+      fertility_percent: number[],
+      eggs_cleared: number,
+      eggs_injected: number,
+      early_dead: number,
+      mid_dead: number,
+      late_dead: number,
+      count: number 
+    }> = {};
+    
+    baseFilteredRows.forEach(r => {
+      const unit = r.unit_name || "Unknown";
+      if (!byHatchery[unit]) {
+        byHatchery[unit] = { 
+          hatch_percent: [], 
+          fertility_percent: [],
+          eggs_cleared: 0,
+          eggs_injected: 0,
+          early_dead: 0,
+          mid_dead: 0,
+          late_dead: 0,
+          count: 0 
+        };
+      }
+      if (r.hatch_percent) byHatchery[unit].hatch_percent.push(r.hatch_percent);
+      if (r.fertility_percent) byHatchery[unit].fertility_percent.push(r.fertility_percent);
+      byHatchery[unit].eggs_cleared += r.eggs_cleared ?? 0;
+      byHatchery[unit].eggs_injected += r.eggs_injected ?? 0;
+      byHatchery[unit].early_dead += r.early_dead ?? 0;
+      byHatchery[unit].mid_dead += r.mid_dead ?? 0;
+      byHatchery[unit].late_dead += r.late_dead ?? 0;
+      byHatchery[unit].count++;
+    });
+    
+    return byHatchery;
+  }, [baseFilteredRows]);
+
+  // Line chart data for Hatch % & Fertility % by hatchery
+  const hatchFertilityLineData = useMemo(() => {
+    const buckets = buildBuckets(baseFilteredRows);
+    return buckets.map(b => {
+      const result: any = { bucket: b.bucketKey };
+      const byUnit: Record<string, { hatch: number[], fert: number[] }> = {};
+      
+      b.raw.forEach(r => {
+        const unit = r.unit_name || "Unknown";
+        if (!byUnit[unit]) byUnit[unit] = { hatch: [], fert: [] };
+        if (r.hatch_percent) byUnit[unit].hatch.push(r.hatch_percent);
+        if (r.fertility_percent) byUnit[unit].fert.push(r.fertility_percent);
+      });
+      
+      Object.entries(byUnit).forEach(([unit, data]) => {
+        result[`${unit}_hatch`] = data.hatch.length ? data.hatch.reduce((a,b)=>a+b,0)/data.hatch.length : 0;
+        result[`${unit}_fertility`] = data.fert.length ? data.fert.reduce((a,b)=>a+b,0)/data.fert.length : 0;
+      });
+      
+      return result;
+    });
+  }, [baseFilteredRows, granularity, percentAgg]);
+
+  // Bar chart data for Clears & Injected
+  const clearsInjectedData = useMemo(() => {
+    return Object.entries(hatcheryData).map(([unit, data]) => ({
+      hatchery: unit,
+      Clears: data.eggs_cleared,
+      Injected: data.eggs_injected,
+    }));
+  }, [hatcheryData]);
+
+  // Table data for Early, Mid, Late Dead
+  const mortalityTableData = useMemo(() => {
+    return Object.entries(hatcheryData).map(([unit, data]) => ({
+      hatchery: unit,
+      earlyDead: data.early_dead,
+      midDead: data.mid_dead,
+      lateDead: data.late_dead,
+      total: data.early_dead + data.mid_dead + data.late_dead,
+    }));
+  }, [hatcheryData]);
+
+  // Donut data - distribution of eggs across hatcheries
+  const donutData = useMemo(() => {
+    return Object.entries(hatcheryData).map(([unit, data], idx) => ({
+      name: unit,
+      value: data.eggs_cleared + data.eggs_injected,
+      color: HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length],
+    }));
+  }, [hatcheryData]);
+
+  const renderDefaultDashboard = () => {
+    const hatcheries = Object.keys(hatcheryData);
+    
+    return (
+      <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full p-2">
+        {/* Line Chart - Hatch % & Fertility % by Hatchery */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+              Hatch % & Fertility % by Hatchery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={hatchFertilityLineData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="bucket" tick={{ fontSize: 10 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
+                {hatcheries.map((unit, idx) => (
+                  <>
+                    <Line
+                      key={`${unit}_hatch`}
+                      type="monotone"
+                      dataKey={`${unit}_hatch`}
+                      stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      name={`${unit} Hatch %`}
+                    />
+                    <Line
+                      key={`${unit}_fertility`}
+                      type="monotone"
+                      dataKey={`${unit}_fertility`}
+                      stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 2 }}
+                      name={`${unit} Fertility %`}
+                    />
+                  </>
+                ))}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Bar Chart - Clears & Injected */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-green-600" />
+              Clears & Injected by Hatchery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={clearsInjectedData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="hatchery" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
+                <Bar dataKey="Clears" fill="#f59e0b" radius={[4,4,0,0]} name="Clears" />
+                <Bar dataKey="Injected" fill="#10b981" radius={[4,4,0,0]} name="Injected" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Table - Early, Mid, Late Dead */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Activity className="h-4 w-4 text-red-600" />
+              Mortality Breakdown by Hatchery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Hatchery</TableHead>
+                  <TableHead className="text-xs text-right">Early Dead</TableHead>
+                  <TableHead className="text-xs text-right">Mid Dead</TableHead>
+                  <TableHead className="text-xs text-right">Late Dead</TableHead>
+                  <TableHead className="text-xs text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mortalityTableData.map((row) => (
+                  <TableRow key={row.hatchery}>
+                    <TableCell className="text-xs font-medium">{row.hatchery}</TableCell>
+                    <TableCell className="text-xs text-right">{row.earlyDead.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right">{row.midDead.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right">{row.lateDead.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right font-semibold">{row.total.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Donut Chart - Distribution */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 text-purple-600" />
+              Egg Distribution by Hatchery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={donutData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="45%"
+                  outerRadius="70%"
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {donutData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   /* Active facet & basic stats */
   const activeFacetObj = facets.find(f => f.key === activeFacet) || facets[0];
   const activeData = activeFacetObj ? chartDataForFacet(activeFacetObj.rows) : [];
-  const totalEggs = activeData.reduce((a,c)=>a+(c.total_eggs_set||0),0);
-  const avgClear = activeData.length ? (activeData.reduce((a,c)=>a+(c.clear_pct||0),0)/activeData.length) : 0;
-  const avgInj = activeData.length ? (activeData.reduce((a,c)=>a+(c.injected_pct||0),0)/activeData.length) : 0;
-  const avgAge = (() => {
-    const allRawRows = activeFacetObj?.rows || [];
-    return allRawRows.length ? (allRawRows.reduce((a,c)=>a+(c.age_weeks||0),0)/allRawRows.length) : 0;
-  })();
-  const avgFertility = activeData.length ? (activeData.reduce((a,c)=>a+(c.fertility_percent||0),0)/activeData.length) : 0;
-  const avgHatch = activeData.length ? (activeData.reduce((a,c)=>a+(c.hatch_percent||0),0)/activeData.length) : 0;
-  const avgMortality = activeData.length ? (activeData.reduce((a,c)=>a+(c.total_mortality_percent||0),0)/activeData.length) : 0;
 
   const filterCount = (() => {
     let n = 0;
@@ -1216,6 +1328,13 @@ export default function EmbrexDashboard() {
     return n;
   })();
 
+  /* Dynamic grid layout for compare mode */
+  const getGridLayout = (count: number) => {
+    if (count <= 4) return 2;
+    if (count <= 6) return 3;
+    return 3;
+  };
+
   /* Welcome Screen Component */
   const WelcomeScreen = () => (
     <div className="h-screen w-full flex items-center justify-center bg-background overflow-hidden">
@@ -1225,7 +1344,6 @@ export default function EmbrexDashboard() {
             welcomeStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          {/* Header Section */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-8">
               <div className="p-4 rounded-lg border border-border bg-card">
@@ -1242,7 +1360,6 @@ export default function EmbrexDashboard() {
             </p>
           </div>
 
-          {/* Call to Action */}
           <div 
             className={`transition-all duration-1000 ease-out delay-300 ${
               welcomeStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
@@ -1254,7 +1371,6 @@ export default function EmbrexDashboard() {
                   Select your preferred visualization method and configure metrics to begin data exploration
                 </p>
                 
-                {/* Feature Grid */}
                 <div className="grid grid-cols-4 gap-3 mb-8">
                   {[
                     { label: "Live Tracking", icon: Radio, path: "/live-tracking" },
@@ -1278,7 +1394,6 @@ export default function EmbrexDashboard() {
                   })}
                 </div>
                 
-                {/* Start Button */}
                 <Button 
                   onClick={() => setShowWelcome(false)}
                   className="w-full h-11"
@@ -1295,7 +1410,7 @@ export default function EmbrexDashboard() {
     </div>
   );
 
-  /* ── Sidebar dropdown (collapsible) state + outside click close ─────────── */
+  /* Sidebar dropdown state */
   const vizCardRef = useRef<HTMLDivElement>(null);
   const metricsCardRef = useRef<HTMLDivElement>(null);
   const [vizOpen, setVizOpen] = useState(false);
@@ -1316,7 +1431,6 @@ export default function EmbrexDashboard() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [vizOpen, metricsOpen]);
 
-  /* ─────────────────────────────── SHELL (no top header) ──────────────────── */
   if (showWelcome) {
     return <WelcomeScreen />;
   }
@@ -1324,162 +1438,117 @@ export default function EmbrexDashboard() {
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="h-full w-full grid" style={{ gridTemplateColumns: sidebarOpen ? "320px 1fr" : "0px 1fr" }}>
-        {/* Sidebar (full height, scrollable) */}
+        {/* Sidebar */}
         <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <div className="p-3 space-y-3">
-            {/* Visualization (collapsible) */}
-            <Card ref={vizCardRef} className="shadow-sm border-0">
-              <button type="button" onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }} aria-expanded={vizOpen} className="w-full text-left">
-                <CardHeader className="pb-2 flex-row items-center gap-2">
-                  <Monitor className="h-4 w-4 text-blue-600" />
-                  <CardTitle className="text-sm font-semibold flex-1">Visualization</CardTitle>
-                  {vizOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </CardHeader>
-              </button>
-              {vizOpen && (
-                <CardContent className="space-y-2 pt-0">
-                  {([
-                    { value: "timeline_bar", label: "Timeline Bar", icon: BarChart3 },
-                    { value: "timeline_line", label: "Timeline Line", icon: TrendingUp },
-                    { value: "stacked_counts", label: "Stacked Counts", icon: BarChart3 },
-                    { value: "percent_trends", label: "Percent Trends", icon: Activity },
-                    { value: "sparklines", label: "Sparklines", icon: Activity },
-                    { value: "age_distribution", label: "Age Distribution", icon: Activity },
-                    { value: "heatmap", label: "Heatmap", icon: Activity },
-                  ] as Array<{value: VizKind; label: string; icon: any}>).map((opt) => {
-                    const Icon = opt.icon;
-                    return (
-                      <Button
-                        key={opt.value}
-                        variant={viz === opt.value ? "default" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setViz(opt.value)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {opt.label}
-                      </Button>
-                    );
-                  })}
-                </CardContent>
-              )}
-            </Card>
+            {/* Visualization (collapsible) - Only shown in compare mode */}
+            {compareMode && (
+              <Card ref={vizCardRef} className="shadow-sm border-0">
+                <button type="button" onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }} aria-expanded={vizOpen} className="w-full text-left">
+                  <CardHeader className="pb-2 flex-row items-center gap-2">
+                    <Monitor className="h-4 w-4 text-blue-600" />
+                    <CardTitle className="text-sm font-semibold flex-1">Visualization</CardTitle>
+                    {vizOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </CardHeader>
+                </button>
+                {vizOpen && (
+                  <CardContent className="space-y-2 pt-0">
+                    {([
+                      { value: "timeline_bar", label: "Bar Chart", icon: BarChart3 },
+                      { value: "timeline_line", label: "Line Graph", icon: TrendingUp },
+                      { value: "donut", label: "Donut Chart", icon: PieChartIcon },
+                      { value: "heatmap", label: "Heatmap", icon: Activity },
+                    ] as Array<{value: VizKind; label: string; icon: any}>).map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <Button
+                          key={opt.value}
+                          variant={viz === opt.value ? "default" : "ghost"}
+                          className="w-full justify-start gap-2"
+                          onClick={() => setViz(opt.value)}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {opt.label}
+                        </Button>
+                      );
+                    })}
+                  </CardContent>
+                )}
+              </Card>
+            )}
 
-            {/* Metrics (collapsible) */}
-            <Card ref={metricsCardRef} className="shadow-sm border-0">
-              <button type="button" onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }} aria-expanded={metricsOpen} className="w-full text-left">
-                <CardHeader className="pb-2 flex-row items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-green-600" />
-                  <CardTitle className="text-sm font-semibold flex-1">Metrics</CardTitle>
-                  {metricsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </CardHeader>
-              </button>
-              {metricsOpen && (
-                <CardContent className="space-y-2 pt-0">
-                  {/* Metrics Toggle */}
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-medium">
-                        {showFertilityMetrics ? "Fertility & Mortality Metrics" : "Basic Metrics"}
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowFertilityMetrics(!showFertilityMetrics);
-                        // Reset metrics when switching to avoid conflicts
-                        setMetrics(showFertilityMetrics ? ["total_eggs_set", "clear_pct"] : ["fertility_percent", "hatch_percent"]);
-                      }}
-                      className="h-8 text-xs"
-                    >
-                      Switch to {showFertilityMetrics ? "Basic" : "Fertility"}
-                    </Button>
-                  </div>
-
-                  {/* Count/Percentage Toggle for Fertility Metrics */}
-                  {showFertilityMetrics && (
-                    <div className="flex items-center justify-between p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/60 shadow-sm">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 shadow-sm" />
-                        <span className="text-sm font-medium text-gray-700">
-                          {showFertilityCounts ? "Showing Counts" : "Showing %"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 font-medium">
-                          %
-                        </span>
-                        <Switch
-                          checked={showFertilityCounts}
-                          onCheckedChange={(checked) => {
-                            setShowFertilityCounts(checked);
-                            // Update URL parameter
-                            searchParams.set("fertCount", checked ? "1" : "0");
-                            setSearchParams(searchParams);
-                            // Reset metrics when toggling to avoid showing incompatible metrics
-                            setMetrics(checked 
-                              ? ["fertile_eggs", "early_dead"] 
-                              : ["fertility_percent", "hatch_percent"]);
-                          }}
-                          className="data-[state=checked]:bg-blue-600"
-                        />
-                        <span className="text-xs text-gray-500 font-medium">
-                          Counts
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {metricOptions.map((metric) => (
-                    <div key={metric.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={metric.value}
-                        checked={metrics.includes(metric.value as MetricKey)}
-                        onCheckedChange={(checked) => {
-                          setMetrics(prev => checked ? [...prev, metric.value as MetricKey] : prev.filter(m => m !== (metric.value as MetricKey)));
-                        }}
+            {/* Metrics (collapsible) - Only shown in compare mode */}
+            {compareMode && (
+              <Card ref={metricsCardRef} className="shadow-sm border-0">
+                <button type="button" onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }} aria-expanded={metricsOpen} className="w-full text-left">
+                  <CardHeader className="pb-2 flex-row items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-green-600" />
+                    <CardTitle className="text-sm font-semibold flex-1">Metrics</CardTitle>
+                    {metricsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </CardHeader>
+                </button>
+                {metricsOpen && (
+                  <CardContent className="space-y-3 pt-0">
+                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                      <Checkbox 
+                        id="fertilityToggle"
+                        checked={showFertilityMetrics}
+                        onCheckedChange={(c) => setShowFertilityMetrics(Boolean(c))}
                       />
-                      <label htmlFor={metric.value} className="text-sm flex items-center gap-2">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: metric.color }} />
-                        {metric.label}
+                      <label htmlFor="fertilityToggle" className="text-xs font-medium cursor-pointer">
+                        Show Fertility & Mortality Metrics
                       </label>
                     </div>
-                  ))}
-                  {metrics.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {metrics.slice(0,6).map(m => (
-                        <Badge key={m} variant="secondary" className="gap-1">
-                          {metricLabel[m]}
-                          <X className="h-3 w-3 cursor-pointer" onClick={()=>setMetrics(prev=>prev.filter(x=>x!==m))} />
-                        </Badge>
-                      ))}
+                    
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {(showFertilityMetrics ? FERTILITY_METRICS : BASIC_METRICS).map((m) => {
+                        const checked = metrics.includes(m);
+                        return (
+                          <div
+                            key={m}
+                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                              checked ? "bg-primary/10" : "hover:bg-muted"
+                            }`}
+                            onClick={() => {
+                              setMetrics(prev =>
+                                checked ? prev.filter(x => x !== m) : [...prev, m]
+                              );
+                            }}
+                          >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              checked ? "bg-primary border-primary" : "border-muted-foreground"
+                            }`}>
+                              {checked && <span className="text-primary-foreground text-xs">✓</span>}
+                            </div>
+                            <span className="text-xs">{metricLabel[m]}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
+                  </CardContent>
+                )}
+              </Card>
+            )}
 
-            {/* Compare selectors */}
+            {/* Facet By */}
             <Card className="shadow-sm border-0">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Grid2X2 className="h-4 w-4 text-indigo-600" />
-                  Compare
+                  <Grid2X2 className="h-4 w-4 text-orange-600" />
+                  Facet By
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <div className="text-xs text-slate-600 mb-1">Facet by</div>
-                  <Select value={facetBy} onValueChange={(v:FacetMode)=>setFacetBy(v)}>
-                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="flock">Flocks</SelectItem>
-                      <SelectItem value="unit">Hatcheries</SelectItem>
-                      <SelectItem value="flock_unit">Flock × Hatchery</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <CardContent className="space-y-2">
+                <Select value={facetBy} onValueChange={(v: FacetMode) => setFacetBy(v)}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flock">Flock</SelectItem>
+                    <SelectItem value="unit">Hatchery</SelectItem>
+                    <SelectItem value="flock_unit">Flock × Hatchery (Common)</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 {/* Flocks */}
                 <div className="rounded-md border">
@@ -1494,7 +1563,7 @@ export default function EmbrexDashboard() {
                           return (
                             <CommandItem
                               key={f.num}
-                              value={`#${f.num} ${f.name}`}
+                              value={String(f.num)}
                               onSelect={()=>setSelectedFlocks(prev => checked ? prev.filter(x=>x!==f.num) : [...prev, f.num])}
                             >
                               <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
@@ -1572,21 +1641,25 @@ export default function EmbrexDashboard() {
                   </Select>
                 </div>
 
-                <div>
-                  <label className="text-xs text-slate-600 mb-1 block">Benchmark %</label>
-                  <Input
-                    type="number"
-                    placeholder="e.g. 95"
-                    value={benchmark}
-                    onChange={(e) => setBenchmark(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="h-8"
-                  />
-                </div>
+                {compareMode && (
+                  <>
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Benchmark %</label>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 95"
+                        value={benchmark}
+                        onChange={(e) => setBenchmark(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8"
+                      />
+                    </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v)=>setRollingAvg(Boolean(v))}/>
-                  <label htmlFor="rolling" className="text-xs text-slate-600">Show rolling average (3 buckets)</label>
-                </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="rolling" checked={rollingAvg} onCheckedChange={(v)=>setRollingAvg(Boolean(v))}/>
+                      <label htmlFor="rolling" className="text-xs text-slate-600">Show rolling average (3 buckets)</label>
+                    </div>
+                  </>
+                )}
 
                 <div className="pt-2 border-t">
                   <div className="text-xs text-slate-600 mb-1">Date Range</div>
@@ -1630,7 +1703,7 @@ export default function EmbrexDashboard() {
           </div>
         </aside>
 
-        {/* Visuals (fixed page, no scroll) */}
+        {/* Main content */}
         <main className="h-full overflow-hidden">
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
@@ -1641,32 +1714,31 @@ export default function EmbrexDashboard() {
                       {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                     </Button>
                     <div>
-                      <CardTitle className="text-xl">{VIZ_LABEL[viz]}</CardTitle>
+                      <CardTitle className="text-xl">
+                        {compareMode ? VIZ_LABEL[viz] : "Hatchery Overview Dashboard"}
+                      </CardTitle>
                       <p className="text-sm text-slate-600 mt-1">
-                        {compareMode ? "Side-by-side comparison" : (activeFacetObj?.title || "All flocks")}
+                        {compareMode ? "Side-by-side comparison" : "Summary view across all hatcheries"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Controls moved here (right side) */}
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
-                        onClick={()=>setCompareMode(v=>!v)}>
-                        <LayoutGrid className="h-4 w-4" />
-                        {compareMode ? "Compare: On" : "Compare: Off"}
-                      </Button>
-                      {compareMode && (
-                        <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
-                          <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 col</SelectItem>
-                            <SelectItem value="2">2 cols</SelectItem>
-                            <SelectItem value="3">3 cols</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
+                    <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
+                      onClick={()=>setCompareMode(v=>!v)}>
+                      <LayoutGrid className="h-4 w-4" />
+                      {compareMode ? "Compare: On" : "Compare: Off"}
+                    </Button>
+                    {compareMode && (
+                      <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
+                        <SelectTrigger className="h-8 w-[110px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 col</SelectItem>
+                          <SelectItem value="2">2 cols</SelectItem>
+                          <SelectItem value="3">3 cols</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
 
                     <Input placeholder="Save view as…" value={savedName} onChange={(e)=>setSavedName(e.target.value)} className="h-8 w-44" />
                     <Button variant="outline" size="sm" className="gap-1 h-8" onClick={saveCurrentView}><Save className="h-4 w-4" />Save</Button>
@@ -1680,37 +1752,16 @@ export default function EmbrexDashboard() {
                     )}
                     {filterCount > 0 && <Badge className="ml-1">{filterCount} filters</Badge>}
                     <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-                      <Download className="h-4 w-4" /> Export Data (CSV)
+                      <Download className="h-4 w-4" /> CSV
                     </Button>
                     <Button variant="default" size="sm" className="gap-2" onClick={exportFullReport}>
-                      <Download className="h-4 w-4" /> Export Full Report (PDF)
+                      <Download className="h-4 w-4" /> PDF
                     </Button>
                     <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
                       <RefreshCw className="h-4 w-4" /> Reset
                     </Button>
                   </div>
                 </div>
-
-                {!compareMode && (
-                  <div className="grid grid-cols-4 gap-3 mt-3">
-                    {(showFertilityMetrics ? [
-                      { label: "Total Eggs", value: totalEggs.toLocaleString() },
-                      { label: "Avg Fertility", value: `${avgFertility.toFixed(2)}%` },
-                      { label: "Avg Hatch", value: `${avgHatch.toFixed(2)}%` },
-                      { label: "Avg Mortality", value: `${avgMortality.toFixed(2)}%` },
-                    ] : [
-                      { label: "Total Eggs", value: totalEggs.toLocaleString() },
-                      { label: "Clear Rate", value: `${avgClear.toFixed(2)}%` },
-                      { label: "Injection Rate", value: `${avgInj.toFixed(2)}%` },
-                      { label: "Average Age", value: `${avgAge.toFixed(1)}w` },
-                    ]).map((metric, i) => (
-                      <div key={i} className="p-3 rounded-lg border bg-white">
-                        <div className="text-xs text-slate-600">{metric.label}</div>
-                        <div className="text-lg font-bold">{metric.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardHeader>
 
               <CardContent className="flex-1 min-h-0 pt-0">
@@ -1721,10 +1772,10 @@ export default function EmbrexDashboard() {
                     <>
                       {compareMode ? (
                         <div
-                          className="grid gap-3 h-full"
-                          style={{ gridTemplateColumns: `repeat(${compareCols}, minmax(0,1fr))` }}
+                          className="grid gap-3 h-full p-2"
+                          style={{ gridTemplateColumns: `repeat(${getGridLayout(facets.length)}, minmax(0,1fr))` }}
                         >
-                          {facets.slice(0, compareCols * 2).map((f, idx) => {
+                          {facets.slice(0, 9).map((f, idx) => {
                             const data = chartDataForFacet(f.rows);
                             return (
                               <div key={f.key} className="flex flex-col min-h-0 border rounded-lg" id={`embrex-facet-chart-${idx}`}>
@@ -1735,7 +1786,9 @@ export default function EmbrexDashboard() {
                           })}
                         </div>
                       ) : (
-                        <div className="h-full" id="embrex-timeline-main-chart">{renderChart(activeData, activeFacetObj?.title || "All flocks")}</div>
+                        <div className="h-full" id="embrex-timeline-main-chart">
+                          {renderDefaultDashboard()}
+                        </div>
                       )}
                     </>
                   )}
@@ -1757,7 +1810,7 @@ export default function EmbrexDashboard() {
             <table className="w-full text-sm">
               <thead className="text-left sticky top-0 bg-background">
                 <tr className="border-b">
-                  <th className="py-2 pr-2">Batch</th>
+                  <th className="py-2 pr-2">House</th>
                   <th className="py-2 pr-2">Flock</th>
                   <th className="py-2 pr-2">Hatchery</th>
                   <th className="py-2 pr-2">Set date</th>
