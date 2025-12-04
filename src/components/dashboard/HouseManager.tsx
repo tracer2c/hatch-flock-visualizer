@@ -523,6 +523,10 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     }
 
     const expectedHatchDate = calculateHatchDate(formData.setDate);
+    
+    // Determine status based on set_date - future dates are 'scheduled'
+    const today = new Date().toISOString().split('T')[0];
+    const status = formData.setDate > today ? 'scheduled' : 'in_setter';
 
     const { data, error } = await supabase
       .from('batches')
@@ -535,7 +539,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
-        status: 'in_setter'
+        status: status
       })
       .select()
       .single();
