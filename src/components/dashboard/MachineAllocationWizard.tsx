@@ -190,6 +190,10 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
 
       // Create batch - use first machine_id for backward compatibility (or null if split)
       const primaryMachineId = allocations.length === 1 ? allocations[0].machineInfo.machine.id : null;
+      
+      // Determine status based on set_date - future dates are 'scheduled'
+      const today = new Date().toISOString().split('T')[0];
+      const batchStatus = formData.setDate > today ? 'scheduled' : 'in_setter';
 
       const { data: batch, error: batchError } = await supabase
         .from('batches')
@@ -202,7 +206,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           set_time: formData.setTime,
           expected_hatch_date: expectedHatchDate,
           total_eggs_set: totalEggs,
-          status: 'setting'
+          status: batchStatus
         })
         .select()
         .single();
