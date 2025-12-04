@@ -572,16 +572,32 @@ export default function EmbrexDashboard() {
     showFertilityMetrics, showFertilityCounts, setSearchParams
   ]);
 
+  /* Helper to extract base flock name (strips hatchery suffix) */
+  const extractBaseFlockName = (flockName: string): string => {
+    return flockName
+      .replace(/ DHN$/i, '')
+      .replace(/ TROY$/i, '')
+      .replace(/ SAM$/i, '')
+      .replace(/ ENT$/i, '')
+      .trim();
+  };
+
   /* Derived lists */
   const units = useMemo(
     () => Array.from(new Set(rows.map(r => (r.unit_name || "").trim()).filter(Boolean))).sort(),
     [rows]
   );
+  
+  // Filter flocksList by selected hatcheries
   const flocksList = useMemo(() => {
     const uniq = new Map<number, string>();
-    rows.forEach(r => { if (!uniq.has(r.flock_number)) uniq.set(r.flock_number, r.flock_name); });
+    const filteredRows = selectedUnits.length 
+      ? rows.filter(r => selectedUnits.map(u => u.toLowerCase()).includes((r.unit_name || '').toLowerCase()))
+      : rows;
+    filteredRows.forEach(r => { if (!uniq.has(r.flock_number)) uniq.set(r.flock_number, r.flock_name); });
     return [...uniq.entries()].sort((a,b)=>a[0]-b[0]).map(([num,name])=>({num, name}));
-  }, [rows]);
+  }, [rows, selectedUnits]);
+  
   const flocksMap = useMemo(() => new Map(flocksList.map(({num,name}) => [num, name])), [flocksList]);
 
   /* Filtering */
@@ -619,47 +635,80 @@ export default function EmbrexDashboard() {
       return list.map(u => ({ key: `U-${u}`, title: `Hatchery: ${u}`, rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) }));
     }
     
-    // flock_unit mode: show only COMMON flocks across selected hatcheries
+    // flock_unit mode: show only COMMON flocks across selected hatcheries (by base name)
     const unitList = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
     
-    // Build map of flocks per unit
-    const flocksByUnit = new Map<string, Set<number>>();
-    unitList.forEach(u => flocksByUnit.set(u.toLowerCase(), new Set()));
+    // Build map of base flock names per unit
+    const baseNamesByUnit = new Map<string, Set<string>>();
+    unitList.forEach(u => baseNamesByUnit.set(u.toLowerCase(), new Set()));
+    
+    // Also build a map from base name to flock numbers (for each unit)
+    const flocksByBaseNameAndUnit = new Map<string, Map<string, number[]>>(); // baseName -> (unitLower -> flock_numbers[])
+    
     data.forEach(r => {
       const unitKey = (r.unit_name || "").toLowerCase();
-      if (flocksByUnit.has(unitKey)) {
-        flocksByUnit.get(unitKey)!.add(r.flock_number);
+      const baseName = extractBaseFlockName(r.flock_name);
+      
+      if (baseNamesByUnit.has(unitKey)) {
+        baseNamesByUnit.get(unitKey)!.add(baseName);
+      }
+      
+      // Track which flock_numbers belong to each baseName+unit combination
+      if (!flocksByBaseNameAndUnit.has(baseName)) {
+        flocksByBaseNameAndUnit.set(baseName, new Map());
+      }
+      const unitMap = flocksByBaseNameAndUnit.get(baseName)!;
+      if (!unitMap.has(unitKey)) {
+        unitMap.set(unitKey, []);
+      }
+      if (!unitMap.get(unitKey)!.includes(r.flock_number)) {
+        unitMap.get(unitKey)!.push(r.flock_number);
       }
     });
     
-    // Find intersection of flocks across all selected hatcheries
-    const unitFlockSets = [...flocksByUnit.values()];
-    let commonFlocks: Set<number>;
-    if (unitFlockSets.length === 0) {
-      commonFlocks = new Set();
-    } else if (unitFlockSets.length === 1) {
-      commonFlocks = unitFlockSets[0];
+    // Find intersection of BASE NAMES across all selected hatcheries
+    const unitBaseNameSets = [...baseNamesByUnit.values()];
+    let commonBaseNames: Set<string>;
+    if (unitBaseNameSets.length === 0) {
+      commonBaseNames = new Set();
+    } else if (unitBaseNameSets.length === 1) {
+      commonBaseNames = unitBaseNameSets[0];
     } else {
-      commonFlocks = unitFlockSets.reduce((acc, set) => 
+      commonBaseNames = unitBaseNameSets.reduce((acc, set) => 
         new Set([...acc].filter(x => set.has(x)))
       );
     }
     
-    // If user selected specific flocks, filter to those that are common
-    const flockList = selectedFlocks.length 
-      ? selectedFlocks.filter(f => commonFlocks.has(f))
-      : [...commonFlocks];
+    // If user selected specific flocks, filter to those whose base names are common
+    let relevantBaseNames = [...commonBaseNames];
+    if (selectedFlocks.length) {
+      const selectedBaseNames = new Set(
+        selectedFlocks.map(fnum => {
+          const name = flocksMap.get(fnum) || '';
+          return extractBaseFlockName(name);
+        })
+      );
+      relevantBaseNames = relevantBaseNames.filter(bn => selectedBaseNames.has(bn));
+    }
     
     const out: Facet[] = [];
-    for (const f of flockList) {
+    for (const baseName of relevantBaseNames.sort()) {
+      const unitMap = flocksByBaseNameAndUnit.get(baseName);
+      if (!unitMap) continue;
+      
       for (const u of unitList) {
-        const facetRows = data.filter(r => r.flock_number === f && (r.unit_name||"").toLowerCase() === u.toLowerCase());
-        if (facetRows.length > 0) {
-          out.push({
-            key: `FU-${f}-${u}`,
-            title: `Flock #${f} — ${flocksMap.get(f) ?? ""} • ${u}`,
-            rows: facetRows,
-          });
+        const unitKey = u.toLowerCase();
+        const flockNumbers = unitMap.get(unitKey) || [];
+        
+        for (const fnum of flockNumbers) {
+          const facetRows = data.filter(r => r.flock_number === fnum && (r.unit_name||"").toLowerCase() === unitKey);
+          if (facetRows.length > 0) {
+            out.push({
+              key: `FU-${fnum}-${u}`,
+              title: `${baseName} • ${u}`,
+              rows: facetRows,
+            });
+          }
         }
       }
     }
