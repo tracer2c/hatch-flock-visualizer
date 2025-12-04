@@ -51,7 +51,7 @@ const SOPDashboard = () => {
           flock:flocks(flock_name),
           machine:machines(machine_number, machine_type)
         `)
-        .in('status', ['setting', 'incubating', 'hatching'])
+        .in('status', ['in_setter', 'in_hatcher'])
         .order('set_date', { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -111,7 +111,7 @@ const SOPDashboard = () => {
           flock:flocks(flock_name),
           machine:machines(id, machine_number, machine_type, unit_id)
         `)
-        .eq('status', 'incubating')
+        .eq('status', 'in_setter')
         .order('set_date', { ascending: true })
         .limit(10);
       if (error) throw error;
