@@ -217,7 +217,7 @@ const MultiSetterQAEntry: React.FC<MultiSetterQAEntryProps> = ({
           value={values[field]}
           onChange={(e) => handleInputChange(field, e.target.value)}
           placeholder="100.0"
-          className={`text-center h-9 w-16 ${getTempColor(values[field])} ${bgColor}`}
+          className={`text-center h-10 w-24 text-base font-medium ${getTempColor(values[field])} ${bgColor}`}
         />
         {occupancyLabel && (
           <span className={`text-[10px] font-medium ${occupancyLabel.color} truncate max-w-[70px]`}>
