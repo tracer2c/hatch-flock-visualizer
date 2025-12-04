@@ -93,6 +93,15 @@ const TransferManager = ({
       return;
     }
 
+    if (daysInSetter < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Transfer date cannot be before the set date",
+        variant: "destructive"
+      });
+      return;
+    }
+
     await createTransfer.mutateAsync({
       batch_id: batchId,
       from_machine_id: currentMachineId,
@@ -114,6 +123,7 @@ const TransferManager = ({
   };
 
   const getDayIndicator = (days: number) => {
+    if (days < 0) return { color: 'bg-red-100 text-red-800', label: 'Invalid - Before Set Date' };
     if (days === 18) return { color: 'bg-green-100 text-green-800', label: 'Optimal' };
     if (days >= 17 && days <= 19) return { color: 'bg-yellow-100 text-yellow-800', label: 'Acceptable' };
     if (days < 17) return { color: 'bg-orange-100 text-orange-800', label: 'Early' };
@@ -187,6 +197,7 @@ const TransferManager = ({
                 <Input
                   type="date"
                   value={formData.transfer_date}
+                  min={setDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, transfer_date: e.target.value }))}
                 />
               </div>

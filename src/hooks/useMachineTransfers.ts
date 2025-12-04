@@ -186,11 +186,11 @@ export function useDeleteTransfer() {
   });
 }
 
-// Calculate days in previous machine
+// Calculate days in previous machine (returns negative if transfer is before set date)
 export function calculateDaysInMachine(setDate: string, transferDate: string): number {
   const set = new Date(setDate);
   const transfer = new Date(transferDate);
-  const diffTime = Math.abs(transfer.getTime() - set.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffTime = transfer.getTime() - set.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 }
