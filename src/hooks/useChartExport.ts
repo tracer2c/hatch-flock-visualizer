@@ -2,10 +2,16 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from './use-toast';
 
+export interface ChartExportItem {
+  id: string;
+  title: string;
+  description: string;
+}
+
 export const useChartExport = () => {
   const { toast } = useToast();
 
-  const exportChartToPDF = async (chartId: string, filename: string) => {
+  const exportChartToPDF = async (chartId: string, filename: string, description?: string) => {
     try {
       const element = document.getElementById(chartId);
       if (!element) {
@@ -19,20 +25,50 @@ export const useChartExport = () => {
 
       // Capture the element as canvas
       const canvas = await html2canvas(element, {
-        scale: 2, // Higher quality
+        scale: 2,
         logging: false,
         backgroundColor: '#ffffff'
       });
 
-      // Convert to PDF
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Add title
+      pdf.setFontSize(18);
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(filename.replace('.pdf', ''), 15, 20);
+
+      // Add description if provided
+      let yOffset = 30;
+      if (description) {
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 116, 139);
+        const splitDesc = pdf.splitTextToSize(description, pageWidth - 30);
+        pdf.text(splitDesc, 15, yOffset);
+        yOffset += splitDesc.length * 5 + 5;
+      }
+
+      // Add chart image
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pageWidth - 30;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const maxImgHeight = pageHeight - yOffset - 20;
+      const finalHeight = Math.min(imgHeight, maxImgHeight);
+      const finalWidth = (finalHeight / imgHeight) * imgWidth;
+
+      pdf.addImage(imgData, 'PNG', 15, yOffset, finalWidth, finalHeight);
+
+      // Add footer
+      pdf.setFontSize(8);
+      pdf.setTextColor(150);
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, 15, pageHeight - 10);
+
       pdf.save(`${filename}.pdf`);
 
       toast({
@@ -44,6 +80,89 @@ export const useChartExport = () => {
       toast({
         title: "Export failed",
         description: error instanceof Error ? error.message : "Failed to export chart",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportMultipleChartsWithDescriptions = async (
+    charts: ChartExportItem[],
+    filename: string,
+    reportTitle?: string
+  ) => {
+    try {
+      toast({
+        title: "Generating PDF Report...",
+        description: `Capturing ${charts.length} charts`,
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < charts.length; i++) {
+        const chart = charts[i];
+        const element = document.getElementById(chart.id);
+        
+        if (!element) {
+          console.warn(`Chart element '${chart.id}' not found, skipping`);
+          continue;
+        }
+
+        if (i > 0) pdf.addPage();
+
+        // Add chart title
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(chart.title, 15, 18);
+
+        // Add description
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 116, 139);
+        const splitDesc = pdf.splitTextToSize(chart.description, pageWidth - 30);
+        pdf.text(splitDesc, 15, 28);
+        const descHeight = splitDesc.length * 5;
+
+        // Capture and add chart
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const yOffset = 32 + descHeight;
+        const imgWidth = pageWidth - 30;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const maxImgHeight = pageHeight - yOffset - 15;
+        const finalHeight = Math.min(imgHeight, maxImgHeight);
+        const finalWidth = (finalHeight / imgHeight) * imgWidth;
+
+        pdf.addImage(imgData, 'PNG', 15, yOffset, finalWidth, finalHeight);
+
+        // Add page footer
+        pdf.setFontSize(8);
+        pdf.setTextColor(150);
+        pdf.text(`Page ${i + 1} of ${charts.length}`, pageWidth - 30, pageHeight - 8);
+        pdf.text(`Generated: ${new Date().toLocaleString()}`, 15, pageHeight - 8);
+      }
+
+      pdf.save(filename);
+
+      toast({
+        title: "Report exported",
+        description: `${filename} with ${charts.length} charts downloaded`,
+      });
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Failed to export report",
         variant: "destructive"
       });
     }
@@ -107,6 +226,7 @@ export const useChartExport = () => {
 
   return {
     exportChartToPDF,
-    exportMultipleChartsToPDF
+    exportMultipleChartsToPDF,
+    exportMultipleChartsWithDescriptions
   };
 };
