@@ -1,28 +1,86 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Clock, AlertTriangle, CheckCircle, Search, Filter, 
   LayoutGrid, Table as TableIcon, ArrowUpDown, TrendingUp, Egg, 
-  Activity, ChevronRight, History
+  Activity, ChevronRight, History, Wifi, WifiOff, RefreshCw
 } from "lucide-react";
 import { format, differenceInDays, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { calculateHOIPercent } from '@/utils/hatcheryFormulas';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const LiveHouseTracker = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Real-time subscriptions for live updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('live-house-tracking')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'batches' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['houses-tracking'] });
+          queryClient.invalidateQueries({ queryKey: ['house-performance-data'] });
+          setLastUpdated(new Date());
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'qa_monitoring' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['candling-completions'] });
+          setLastUpdated(new Date());
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'machine_transfers' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['transfer-completions'] });
+          setLastUpdated(new Date());
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fertility_analysis' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['house-performance-data'] });
+          setLastUpdated(new Date());
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'residue_analysis' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['house-performance-data'] });
+          setLastUpdated(new Date());
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch houses based on tab selection
-  const { data: houses, isLoading } = useQuery({
+  const { data: houses, isLoading, refetch } = useQuery({
     queryKey: ['houses-tracking', activeTab],
     queryFn: async () => {
       const statusFilter = activeTab === 'active' 
@@ -41,6 +99,7 @@ const LiveHouseTracker = () => {
         .order('set_date', { ascending: activeTab === 'active' });
       
       if (error) throw error;
+      setLastUpdated(new Date());
       return data || [];
     }
   });
@@ -53,6 +112,14 @@ const LiveHouseTracker = () => {
   const [sortBy, setSortBy] = useState<string>('daysSinceSet');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewType, setViewType] = useState<'cards' | 'table'>('cards');
+
+  const handleManualRefresh = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['house-performance-data'] });
+    queryClient.invalidateQueries({ queryKey: ['candling-completions'] });
+    queryClient.invalidateQueries({ queryKey: ['transfer-completions'] });
+    setLastUpdated(new Date());
+  };
 
   // Fetch units for hatchery filter
   const { data: units } = useQuery({
@@ -339,19 +406,61 @@ const LiveHouseTracker = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabs for Active/Completed */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'completed')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="active" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Active Houses
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Completed Houses
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Header with Live Indicator */}
+      <div className="flex items-center justify-between">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'completed')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="active" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Active Houses
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Completed Houses
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Live Status Indicator */}
+        <div className="flex items-center gap-3">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border">
+                  {isConnected ? (
+                    <>
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs font-medium text-green-600">Live</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Connecting...</span>
+                    </>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isConnected ? 'Real-time updates active' : 'Connecting to real-time updates...'}</p>
+                <p className="text-xs text-muted-foreground">Last updated: {format(lastUpdated, 'HH:mm:ss')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleManualRefresh}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
       {/* Summary Statistics - Different for Active vs Completed */}
       {activeTab === 'active' ? (
