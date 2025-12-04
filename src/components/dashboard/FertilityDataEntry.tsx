@@ -328,10 +328,10 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                   placeholder="Enter sample size"
                   min="1"
                   required
-                  className="flex-1"
+                  className="w-32 text-center font-medium"
                 />
                 <Select onValueChange={(val) => handleInputChange('sampleSize', val)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-28">
                     <SelectValue placeholder="Presets" />
                   </SelectTrigger>
                   <SelectContent>
