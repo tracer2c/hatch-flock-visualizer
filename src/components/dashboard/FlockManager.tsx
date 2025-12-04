@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User, Egg } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
@@ -622,10 +622,10 @@ const FlockManager = () => {
                   />
                 </div>
 
-                {/* 6. Total Birds - Show per-hatchery inputs when multiple selected */}
+                {/* 6. Total Eggs - Show per-hatchery inputs when multiple selected */}
                 {!editingFlock && selectedHatcheries.length > 1 ? (
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Total Birds per Hatchery</Label>
+                    <Label>Total Eggs per Hatchery</Label>
                     <div className="border rounded-lg p-3 space-y-2">
                       {selectedHatcheries.map(unitId => {
                         const unit = activeUnits.find(u => u.id === unitId);
@@ -640,22 +640,22 @@ const FlockManager = () => {
                                 ...prev,
                                 [unitId]: e.target.value
                               }))}
-                              placeholder="e.g., 25000"
+                              placeholder="e.g., 25000 eggs"
                             />
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-xs text-muted-foreground">Enter the bird count for each hatchery separately</p>
+                    <p className="text-xs text-muted-foreground">Enter the egg count for each hatchery separately</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label>Total Birds</Label>
+                    <Label>Total Eggs</Label>
                     <Input
                       type="number"
                       value={formData.total_birds}
                       onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
-                      placeholder="e.g., 25000"
+                      placeholder="e.g., 25000 eggs"
                     />
                   </div>
                 )}
@@ -869,8 +869,8 @@ const FlockManager = () => {
                       </div>
                       {flock.total_birds && (
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4" />
-                          <span>{flock.total_birds.toLocaleString()} birds</span>
+                          <Egg className="h-4 w-4" />
+                          <span>{flock.total_birds.toLocaleString()} eggs</span>
                         </div>
                       )}
                       {flock.last_modified_at && (
