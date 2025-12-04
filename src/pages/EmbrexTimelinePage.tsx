@@ -68,7 +68,7 @@ type MetricKey =
   | "total_pips"
   | "embryonic_mortality_count";
 type PercentAgg = "weighted" | "unweighted";
-type FacetMode = "flock" | "unit" | "flock_unit";
+type FacetMode = "flock" | "unit" | "flock_unit" | "house";
 
 interface RawRow {
   batch_id: string;
@@ -355,13 +355,16 @@ export default function EmbrexDashboard() {
     searchParams.get("fertility") === "1"
   );
   const [facetBy, setFacetBy] = useState<FacetMode>(() =>
-    (["flock","unit","flock_unit"].includes(searchParams.get("facetBy") || "") ? (searchParams.get("facetBy") as FacetMode) : DEFAULTS.facetBy)
+    (["flock","unit","flock_unit","house"].includes(searchParams.get("facetBy") || "") ? (searchParams.get("facetBy") as FacetMode) : DEFAULTS.facetBy)
   );
   const [selectedFlocks, setSelectedFlocks] = useState<number[]>(() =>
     (searchParams.get("flocks") || "").split(",").filter(Boolean).map(Number)
   );
   const [selectedUnits, setSelectedUnits] = useState<string[]>(() =>
     (searchParams.get("units") || "").split(",").filter(Boolean)
+  );
+  const [selectedHouses, setSelectedHouses] = useState<string[]>(() =>
+    (searchParams.get("houses") || "").split(",").filter(Boolean)
   );
   const [dateFrom, setDateFrom] = useState<string>(() => searchParams.get("from") || DEFAULTS.from);
   const [dateTo,   setDateTo]   = useState<string>(() => searchParams.get("to")   || DEFAULTS.to);
@@ -554,6 +557,7 @@ export default function EmbrexDashboard() {
     sp.set("facetBy", facetBy);
     if (selectedFlocks.length) sp.set("flocks", selectedFlocks.join(","));
     if (selectedUnits.length) sp.set("units", selectedUnits.join(","));
+    if (selectedHouses.length) sp.set("houses", selectedHouses.join(","));
     if (dateFrom) sp.set("from", dateFrom);
     if (dateTo) sp.set("to", dateTo);
     sp.set("pctAgg", percentAgg);
@@ -567,7 +571,7 @@ export default function EmbrexDashboard() {
     if (showFertilityCounts) sp.set("fertCount", "1"); else sp.delete("fertCount");
     setSearchParams(sp, { replace: true });
   }, [
-    granularity, metrics, facetBy, selectedFlocks, selectedUnits, dateFrom, dateTo,
+    granularity, metrics, facetBy, selectedFlocks, selectedUnits, selectedHouses, dateFrom, dateTo,
     percentAgg, rollingAvg, benchmark, viz, compareMode, compareCols, sidebarOpen, 
     showFertilityMetrics, showFertilityCounts, setSearchParams
   ]);
@@ -599,6 +603,44 @@ export default function EmbrexDashboard() {
   }, [rows, selectedUnits]);
   
   const flocksMap = useMemo(() => new Map(flocksList.map(({num,name}) => [num, name])), [flocksList]);
+
+  // Houses list - filtered by selected flocks and hatcheries
+  const housesList = useMemo(() => {
+    let filteredRows = rows;
+    
+    if (selectedUnits.length) {
+      const allow = new Set(selectedUnits.map(u => u.toLowerCase()));
+      filteredRows = filteredRows.filter(r => allow.has((r.unit_name || '').toLowerCase()));
+    }
+    
+    if (selectedFlocks.length) {
+      const allow = new Set(selectedFlocks);
+      filteredRows = filteredRows.filter(r => allow.has(r.flock_number));
+    }
+    
+    // Build unique houses list with flock context
+    const houses = new Map<string, { 
+      batch_number: string; 
+      flock_name: string; 
+      flock_number: number;
+      unit_name: string; 
+    }>();
+    
+    filteredRows.forEach(r => {
+      if (!houses.has(r.batch_id)) {
+        houses.set(r.batch_id, {
+          batch_number: r.batch_number,
+          flock_name: r.flock_name,
+          flock_number: r.flock_number,
+          unit_name: r.unit_name,
+        });
+      }
+    });
+    
+    return [...houses.entries()]
+      .sort((a, b) => a[1].flock_name.localeCompare(b[1].flock_name) || a[1].batch_number.localeCompare(b[1].batch_number))
+      .map(([id, info]) => ({ id, ...info }));
+  }, [rows, selectedFlocks, selectedUnits]);
 
   /* Filtering */
   const baseFilteredRows = useMemo(() => {
@@ -633,6 +675,25 @@ export default function EmbrexDashboard() {
     if (facetBy === "unit") {
       const list = selectedUnits.length ? selectedUnits : Array.from(new Set(data.map(r => r.unit_name).filter(Boolean) as string[]));
       return list.map(u => ({ key: `U-${u}`, title: `Hatchery: ${u}`, rows: data.filter(r => (r.unit_name||"").toLowerCase() === u.toLowerCase()) }));
+    }
+    
+    // House mode - compare individual houses
+    if (facetBy === "house") {
+      const housesToShow = selectedHouses.length 
+        ? selectedHouses 
+        : [...new Set(data.map(r => r.batch_id))];
+      
+      return housesToShow.map(batchId => {
+        const houseRows = data.filter(r => r.batch_id === batchId);
+        const firstRow = houseRows[0];
+        if (!firstRow) return null;
+        
+        return {
+          key: `H-${batchId}`,
+          title: `House #${firstRow.batch_number} • ${firstRow.flock_name} (${firstRow.unit_name})`,
+          rows: houseRows,
+        };
+      }).filter(Boolean) as Facet[];
     }
     
     // flock_unit mode: show only COMMON flocks across selected hatcheries (by base name)
@@ -712,8 +773,9 @@ export default function EmbrexDashboard() {
         }
       }
     }
+    
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
-  }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, flocksMap]);
+  }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, selectedHouses, flocksMap, extractBaseFlockName]);
 
   /* Bucketing + chart data */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
@@ -1619,6 +1681,7 @@ export default function EmbrexDashboard() {
                     <SelectItem value="flock">Flock</SelectItem>
                     <SelectItem value="unit">Hatchery</SelectItem>
                     <SelectItem value="flock_unit">Flock × Hatchery (Common)</SelectItem>
+                    <SelectItem value="house">House (within Flock)</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -1677,6 +1740,44 @@ export default function EmbrexDashboard() {
                     </CommandList>
                   </Command>
                 </div>
+
+                {/* Houses - Show when flocks selected or house facet mode */}
+                {(selectedFlocks.length > 0 || facetBy === "house") && (
+                  <div className="rounded-md border">
+                    <div className="px-3 py-2 border-b text-sm font-medium flex items-center justify-between">
+                      <span>Houses</span>
+                      <span className="text-xs text-muted-foreground">{housesList.length} available</span>
+                    </div>
+                    <Command className="p-0">
+                      <CommandInput placeholder="Search houses…" />
+                      <CommandList className="max-h-44 overflow-auto">
+                        <CommandEmpty>No houses. Select a flock first.</CommandEmpty>
+                        <CommandGroup>
+                          {housesList.map(h => {
+                            const checked = selectedHouses.includes(h.id);
+                            return (
+                              <CommandItem
+                                key={h.id}
+                                value={`${h.batch_number} ${h.flock_name} ${h.unit_name}`}
+                                onSelect={() => setSelectedHouses(prev => 
+                                  checked ? prev.filter(x => x !== h.id) : [...prev, h.id]
+                                )}
+                              >
+                                <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${checked ? "bg-primary text-primary-foreground" : "bg-background"}`}>
+                                  {checked && <span className="block w-2 h-2 bg-primary-foreground rounded-sm" />}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-medium">House #{h.batch_number}</span>
+                                  <span className="text-xs text-muted-foreground">{h.flock_name} • {h.unit_name}</span>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
