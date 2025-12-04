@@ -856,12 +856,36 @@ export default function EmbrexDashboard() {
     const all = facets.flatMap(f => chartDataForFacet(f.rows).map(b => ({ facet: f.title, ...b, _raw: undefined })));
     saveFile("embrex-buckets.csv", toCsv(all));
   };
-  const { exportChartToPDF } = useChartExport();
+  const { exportChartToPDF, exportMultipleChartsWithDescriptions } = useChartExport();
+  
+  const chartDescriptions = {
+    hatchLine: "Hatch Percentage by Hatchery: This line chart displays hatch rate trends over time for each production facility. Higher percentages indicate better hatching performance. The hatch rate is calculated as (Chicks Hatched / Sample Size) × 100.",
+    fertilityLine: "Fertility Percentage by Hatchery: This visualization shows fertility rates across all hatcheries over the selected time period. Fertility represents the proportion of viable eggs and is calculated as (Fertile Eggs / Total Eggs Set) × 100.",
+    clearsBar: "Clears & Injected Analysis: This bar chart compares the volume of cleared eggs versus injected eggs by hatchery. Clears represent infertile eggs identified and removed during candling, while Injected shows eggs that proceeded through the incubation process.",
+    mortality: "Embryonic Mortality Breakdown: This table provides a detailed analysis of mortality by developmental stage (Early Dead, Mid Dead, Late Dead) for each hatchery. Understanding mortality patterns helps identify potential issues in the incubation process.",
+    donut: "Egg Distribution Overview: This donut chart illustrates the proportional distribution of total eggs set across all hatcheries, providing insight into production volume allocation.",
+    compareChart: "Comparative Analysis: This visualization compares selected metrics across different facets (flocks, hatcheries, or combinations) to identify performance patterns and variations."
+  };
+
   const exportFullReport = async () => {
     if (compareMode) {
-      await exportChartToPDF("embrex-facet-chart-0", `Embrex-Timeline-Report.pdf`);
+      // Export compare mode charts
+      const charts = facets.map((f, i) => ({
+        id: `embrex-facet-chart-${i}`,
+        title: `${f.title} - ${metricLabel[metrics[0]] || 'Analysis'}`,
+        description: `${chartDescriptions.compareChart} This chart shows ${metrics.map(m => metricLabel[m]).join(', ')} for ${f.title}.`
+      }));
+      await exportMultipleChartsWithDescriptions(charts, 'Embrex-Timeline-Report.pdf');
     } else {
-      await exportChartToPDF("embrex-timeline-main-chart", `Embrex-Timeline-Report.pdf`);
+      // Export default dashboard panels
+      const charts = [
+        { id: 'hatch-line-chart', title: 'Hatch % by Hatchery', description: chartDescriptions.hatchLine },
+        { id: 'fertility-line-chart', title: 'Fertility % by Hatchery', description: chartDescriptions.fertilityLine },
+        { id: 'clears-bar-chart', title: 'Clears & Injected Analysis', description: chartDescriptions.clearsBar },
+        { id: 'mortality-table', title: 'Mortality Breakdown', description: chartDescriptions.mortality },
+        { id: 'donut-chart', title: 'Egg Distribution', description: chartDescriptions.donut }
+      ];
+      await exportMultipleChartsWithDescriptions(charts, 'Embrex-Timeline-Report.pdf');
     }
   };
 
@@ -1193,7 +1217,7 @@ export default function EmbrexDashboard() {
     return (
       <div className="grid grid-cols-3 grid-rows-2 gap-3 h-full p-2">
         {/* Line Chart - Hatch % by Hatchery */}
-        <Card className="flex flex-col">
+        <Card id="hatch-line-chart" className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -1225,7 +1249,7 @@ export default function EmbrexDashboard() {
         </Card>
 
         {/* Line Chart - Fertility % by Hatchery */}
-        <Card className="flex flex-col">
+        <Card id="fertility-line-chart" className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-green-600" />
@@ -1257,7 +1281,7 @@ export default function EmbrexDashboard() {
         </Card>
 
         {/* Bar Chart - Clears & Injected */}
-        <Card className="flex flex-col">
+        <Card id="clears-bar-chart" className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-amber-600" />
@@ -1280,7 +1304,7 @@ export default function EmbrexDashboard() {
         </Card>
 
         {/* Table - Early, Mid, Late Dead */}
-        <Card className="flex flex-col">
+        <Card id="mortality-table" className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Activity className="h-4 w-4 text-red-600" />
@@ -1314,7 +1338,7 @@ export default function EmbrexDashboard() {
         </Card>
 
         {/* Donut Chart - Distribution (spans 2 columns) */}
-        <Card className="flex flex-col col-span-2">
+        <Card id="donut-chart" className="flex flex-col col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <PieChartIcon className="h-4 w-4 text-purple-600" />
@@ -1450,25 +1474,21 @@ export default function EmbrexDashboard() {
   );
 
   /* Sidebar dropdown state */
-  const vizCardRef = useRef<HTMLDivElement>(null);
   const metricsCardRef = useRef<HTMLDivElement>(null);
-  const [vizOpen, setVizOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
-      if (!(vizOpen || metricsOpen)) return;
+      if (!metricsOpen) return;
       const t = e.target as Node;
-      const insideViz = vizCardRef.current?.contains(t);
       const insideMet = metricsCardRef.current?.contains(t);
-      if (!insideViz && !insideMet) {
-        setVizOpen(false);
+      if (!insideMet) {
         setMetricsOpen(false);
       }
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
-  }, [vizOpen, metricsOpen]);
+  }, [metricsOpen]);
 
   if (showWelcome) {
     return <WelcomeScreen />;
@@ -1480,46 +1500,10 @@ export default function EmbrexDashboard() {
         {/* Sidebar */}
         <aside className={`h-full border-r bg-white/80 backdrop-blur overflow-y-auto ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <div className="p-3 space-y-3">
-            {/* Visualization (collapsible) - Only shown in compare mode */}
-            {compareMode && (
-              <Card ref={vizCardRef} className="shadow-sm border-0">
-                <button type="button" onClick={() => { setVizOpen(o=>!o); setMetricsOpen(false); }} aria-expanded={vizOpen} className="w-full text-left">
-                  <CardHeader className="pb-2 flex-row items-center gap-2">
-                    <Monitor className="h-4 w-4 text-blue-600" />
-                    <CardTitle className="text-sm font-semibold flex-1">Visualization</CardTitle>
-                    {vizOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </CardHeader>
-                </button>
-                {vizOpen && (
-                  <CardContent className="space-y-2 pt-0">
-                    {([
-                      { value: "timeline_bar", label: "Bar Chart", icon: BarChart3 },
-                      { value: "timeline_line", label: "Line Graph", icon: TrendingUp },
-                      { value: "donut", label: "Donut Chart", icon: PieChartIcon },
-                      { value: "heatmap", label: "Heatmap", icon: Activity },
-                    ] as Array<{value: VizKind; label: string; icon: any}>).map((opt) => {
-                      const Icon = opt.icon;
-                      return (
-                        <Button
-                          key={opt.value}
-                          variant={viz === opt.value ? "default" : "ghost"}
-                          className="w-full justify-start gap-2"
-                          onClick={() => setViz(opt.value)}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {opt.label}
-                        </Button>
-                      );
-                    })}
-                  </CardContent>
-                )}
-              </Card>
-            )}
-
             {/* Metrics (collapsible) - Only shown in compare mode */}
             {compareMode && (
               <Card ref={metricsCardRef} className="shadow-sm border-0">
-                <button type="button" onClick={() => { setMetricsOpen(o=>!o); setVizOpen(false); }} aria-expanded={metricsOpen} className="w-full text-left">
+                <button type="button" onClick={() => setMetricsOpen(o=>!o)} aria-expanded={metricsOpen} className="w-full text-left">
                   <CardHeader className="pb-2 flex-row items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-green-600" />
                     <CardTitle className="text-sm font-semibold flex-1">Metrics</CardTitle>
