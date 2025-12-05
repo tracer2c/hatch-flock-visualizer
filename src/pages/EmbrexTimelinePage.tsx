@@ -278,6 +278,18 @@ const HATCHERY_COLORS: Record<string, string> = {
   "ENT": "#ef4444",   // Red
 };
 
+// Case-insensitive hatchery color lookup helper
+const getHatcheryColor = (name: string, fallbackIdx: number = 0): string => {
+  const upperName = name?.toUpperCase() || "";
+  const colors: Record<string, string> = {
+    "DHN": "#3b82f6",
+    "SAM": "#10b981", 
+    "TROY": "#f59e0b",
+    "ENT": "#ef4444",
+  };
+  return colors[upperName] || EXTENDED_PALETTE[fallbackIdx % EXTENDED_PALETTE.length];
+};
+
 // Only 4 visualization types now
 type VizKind = "timeline_bar" | "timeline_line" | "donut" | "heatmap";
 
@@ -1057,14 +1069,10 @@ export default function EmbrexDashboard() {
     const benchNum = typeof benchmark === "number" ? benchmark : undefined;
     const showBenchmark = benchNum !== undefined && benchNum >= dynamicDomain[0] && benchNum <= dynamicDomain[1];
 
-    // Determine color based on facet mode and key
+    // Each metric gets a different color - hatchery identity shown in card header
     const getFacetColor = (metricIdx: number) => {
-      // For unit (hatchery) facets, use hatchery-specific color for all metrics
-      if (facetBy === "unit" && facetKey) {
-        const hatcheryName = facetKey.replace("U-", "");
-        return HATCHERY_COLORS[hatcheryName] || EXTENDED_PALETTE[metricIdx % EXTENDED_PALETTE.length];
-      }
-      // For other facets, use extended palette by index
+      // Always use different colors for different metrics
+      // Metric 0 = Blue, Metric 1 = Emerald, Metric 2 = Amber, etc.
       return EXTENDED_PALETTE[metricIdx % EXTENDED_PALETTE.length];
     };
 
