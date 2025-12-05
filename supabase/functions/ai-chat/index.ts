@@ -4134,8 +4134,8 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context } = await req.json();
-    console.log('AI Chat request:', { message, contextLength: context?.length });
+    const { message, history = [] } = await req.json();
+    console.log('AI Chat request:', { message, historyLength: history?.length });
 
     if (!openaiApiKey) {
       return new Response(JSON.stringify({
@@ -4220,6 +4220,7 @@ When analyzing data:
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
+          ...(history || []).map((h: any) => ({ role: h.role, content: h.content })),
           { role: 'user', content: message }
         ],
         tools: tools,
@@ -4266,6 +4267,7 @@ When analyzing data:
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
+            ...(history || []).map((h: any) => ({ role: h.role, content: h.content })),
             { role: 'user', content: message },
             assistantMessage,
             ...toolResults
