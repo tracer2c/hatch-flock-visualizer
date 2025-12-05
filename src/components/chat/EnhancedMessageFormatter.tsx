@@ -1,11 +1,29 @@
 import React from 'react';
 import { QuestionButtons } from './QuestionButtons';
+import { StructuredAnalyticsDisplay } from './StructuredAnalyticsDisplay';
 
 interface EnhancedMessageFormatterProps {
   content: string | any;
   onQuestionClick?: (question: string) => void;
   className?: string;
 }
+
+// Detect if content is an analytics response that should be structured
+const isAnalyticsResponse = (text: string): boolean => {
+  const analyticsIndicators = [
+    /key\s*findings?:/i,
+    /summary\s*[&:]\s*insights?/i,
+    /recommendations?:/i,
+    /\d+\.?\d*%\s*(hatch|fertility|rate)/i,
+    /top\s*\d+\s*(performers?|flocks?|houses?)/i,
+    /analysis\s*(shows?|reveals?|indicates?)/i,
+    /based\s*on\s*(the\s*)?(data|analysis)/i,
+    /hatch\s*rate|fertility\s*rate/i,
+    /age.based|flock.based|machine.based/i,
+    /\*\*[A-Z\s]+\*\*\s*[-–]\s*(Batch|Count|Percent|Rate)/i,
+  ];
+  return analyticsIndicators.some(pattern => pattern.test(text));
+};
 
 export const EnhancedMessageFormatter: React.FC<EnhancedMessageFormatterProps> = ({
   content,
@@ -16,6 +34,10 @@ export const EnhancedMessageFormatter: React.FC<EnhancedMessageFormatterProps> =
     return <div className={className}>{JSON.stringify(content)}</div>;
   }
 
+  // Check if this is an analytics response that should use structured display
+  if (isAnalyticsResponse(content)) {
+    return <StructuredAnalyticsDisplay content={content} className={className} />;
+  }
   // Helper to detect if content is data vs actionable questions
   const isDataContent = (text: string): boolean => {
     const dataIndicators = [
