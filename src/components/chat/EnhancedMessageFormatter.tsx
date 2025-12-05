@@ -16,8 +16,31 @@ export const EnhancedMessageFormatter: React.FC<EnhancedMessageFormatterProps> =
     return <div className={className}>{JSON.stringify(content)}</div>;
   }
 
-  // Extract numbered questions/options from the response
+  // Helper to detect if content is data vs actionable questions
+  const isDataContent = (text: string): boolean => {
+    const dataIndicators = [
+      /\d+\.?\d*%/,           // Percentages like "102.7%"
+      /Count:\s*\d+/i,        // "Count: 1"
+      /Percent:\s*/i,         // "Percent:"
+      /Rate:\s*/i,            // "Rate:"
+      /Total:\s*/i,           // "Total:"
+      /\*\*[A-Z\s]+\*\*/,     // Bold flock names like **MAPLE HILL SAM**
+      /Batch Count/i,         // Data labels
+      /Hatch Percent/i,
+      /Fertility/i,
+      /HOF|HOI/i,
+      /Early Dead|Mid Dead|Late Dead/i,
+    ];
+    return dataIndicators.some(pattern => pattern.test(text));
+  };
+
+  // Extract numbered questions/options from the response (not data)
   const extractQuestions = (text: string): string[] => {
+    // If the content contains data indicators, don't extract as questions
+    if (isDataContent(text)) {
+      return [];
+    }
+
     const patterns = [
       // Pattern: "1. Option text 2. Another option"
       /(\d+\.\s*[^.]+?)(?=\s*\d+\.\s*|\s*$)/g,
@@ -28,9 +51,16 @@ export const EnhancedMessageFormatter: React.FC<EnhancedMessageFormatterProps> =
     for (const pattern of patterns) {
       const matches = Array.from(text.matchAll(pattern));
       if (matches.length >= 2) {
-        return matches.map(match => 
+        const extracted = matches.map(match => 
           match[1] ? match[1].trim() : match[0].replace(/^(\d+\.|-|•)\s*/, '').trim()
         ).filter(q => q.length > 0);
+        
+        // Double-check: if any extracted item looks like data, return empty
+        if (extracted.some(item => isDataContent(item))) {
+          return [];
+        }
+        
+        return extracted;
       }
     }
     return [];
