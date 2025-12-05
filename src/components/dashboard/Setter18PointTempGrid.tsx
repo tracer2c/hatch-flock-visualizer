@@ -181,7 +181,7 @@ const Setter18PointTempGrid: React.FC<Setter18PointTempGridProps> = ({
       value={values[field]}
       onChange={(e) => handleInputChange(field, e.target.value)}
       placeholder={placeholder}
-      className={`text-center h-9 w-16 ${getTempColor(values[field])}`}
+      className={`text-center h-11 w-20 text-base font-medium ${getTempColor(values[field])}`}
     />
   );
 

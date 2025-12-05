@@ -160,7 +160,7 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
                       value={angles[`angle_${level.toLowerCase()}_left` as keyof typeof angles]}
                       onChange={(e) => handleInputChange(`angle_${level.toLowerCase()}_left` as keyof typeof angles, e.target.value)}
                       placeholder="45.0"
-                      className={`text-center h-10 w-20 mx-auto ${getAngleColor(angles[`angle_${level.toLowerCase()}_left` as keyof typeof angles])}`}
+                      className={`text-center h-12 w-24 mx-auto text-lg font-medium ${getAngleColor(angles[`angle_${level.toLowerCase()}_left` as keyof typeof angles])}`}
                     />
                   </td>
                   <td className="p-3 text-center bg-green-50/30 border-l">
@@ -170,7 +170,7 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
                       value={angles[`angle_${level.toLowerCase()}_right` as keyof typeof angles]}
                       onChange={(e) => handleInputChange(`angle_${level.toLowerCase()}_right` as keyof typeof angles, e.target.value)}
                       placeholder="45.0"
-                      className={`text-center h-10 w-20 mx-auto ${getAngleColor(angles[`angle_${level.toLowerCase()}_right` as keyof typeof angles])}`}
+                      className={`text-center h-12 w-24 mx-auto text-lg font-medium ${getAngleColor(angles[`angle_${level.toLowerCase()}_right` as keyof typeof angles])}`}
                     />
                   </td>
                 </tr>
