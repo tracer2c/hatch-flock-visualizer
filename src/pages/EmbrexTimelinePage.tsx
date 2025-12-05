@@ -1347,7 +1347,7 @@ export default function EmbrexDashboard() {
     return Object.entries(hatcheryData).map(([unit, data], idx) => ({
       name: unit,
       value: data.eggs_cleared + data.eggs_injected,
-      color: HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length],
+      color: getHatcheryColor(unit, idx),
     }));
   }, [hatcheryData]);
 
@@ -1377,7 +1377,7 @@ export default function EmbrexDashboard() {
                     key={unit}
                     type="monotone"
                     dataKey={unit}
-                    stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                    stroke={getHatcheryColor(unit, idx)}
                     strokeWidth={2}
                     dot={{ r: 2 }}
                     name={`${unit} Hatch %`}
@@ -1409,7 +1409,7 @@ export default function EmbrexDashboard() {
                     key={unit}
                     type="monotone"
                     dataKey={unit}
-                    stroke={HATCHERY_COLORS[unit] || PALETTE[idx % PALETTE.length]}
+                    stroke={getHatcheryColor(unit, idx)}
                     strokeWidth={2}
                     dot={{ r: 2 }}
                     name={`${unit} Fertility %`}
