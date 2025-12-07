@@ -1911,6 +1911,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          allowed_data_types: string[] | null
           avatar_url: string | null
           company_id: string
           created_at: string
@@ -1923,6 +1924,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allowed_data_types?: string[] | null
           avatar_url?: string | null
           company_id: string
           created_at?: string
@@ -1935,6 +1937,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allowed_data_types?: string[] | null
           avatar_url?: string | null
           company_id?: string
           created_at?: string

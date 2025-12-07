@@ -31,14 +31,12 @@ export function TopBar() {
 
   return (
     <header className={cn(
-      "sticky top-0 z-30 w-full border-b border-border/30",
-      "bg-background/90 backdrop-blur-md",
-      "shadow-sm"
+      "fixed top-0 right-0 z-40 border-b border-border/30",
+      "bg-background/95 backdrop-blur-md",
+      "shadow-sm transition-all duration-300",
+      sidebarOpen ? "left-[240px]" : "left-[56px]"
     )}>
-      <div className={cn(
-        "flex h-12 items-center justify-between pr-6 transition-all duration-300",
-        sidebarOpen ? "pl-20" : "pl-6"
-      )}>
+      <div className="flex h-12 items-center justify-between px-6">
         {/* Left Side - Back Button + Brand */}
         <div className="flex items-center gap-3">
           {/* Back Button - hidden on dashboard */}
