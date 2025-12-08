@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Egg } from 'lucide-react';
 
 export default function AuthPage() {
@@ -15,9 +16,10 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showMFADialog, setShowMFADialog] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState('');
+  const [pendingMFAVerification, setPendingMFAVerification] = useState(false);
 
-  // Redirect if already authenticated
-  if (user && !loading) {
+  // Redirect if already authenticated (but not if MFA verification is pending)
+  if (user && !loading && !pendingMFAVerification && !showMFADialog) {
     return <Navigate to="/" replace />;
   }
 
@@ -32,6 +34,7 @@ export default function AuthPage() {
     const result = await signIn(email, password);
     
     if (result.requiresMFA && result.factorId) {
+      setPendingMFAVerification(true); // Block redirect until MFA is complete
       setMfaFactorId(result.factorId);
       setShowMFADialog(true);
     }
@@ -54,12 +57,16 @@ export default function AuthPage() {
   };
 
   const handleMFASuccess = () => {
+    setPendingMFAVerification(false);
     setShowMFADialog(false);
     navigate('/');
   };
 
-  const handleMFACancel = () => {
+  const handleMFACancel = async () => {
+    setPendingMFAVerification(false);
     setShowMFADialog(false);
+    // Sign out the user since they cancelled MFA - they must complete verification
+    await supabase.auth.signOut();
   };
 
   if (loading) {
