@@ -171,16 +171,17 @@ export const useAuth = () => {
 
       if (error) throw error;
 
-      // Check MFA factors after sign in
+      // Check MFA factors after sign in - only verified factors require MFA
       const { data: factors } = await supabase.auth.mfa.listFactors();
-      const hasMFA = (factors?.totp?.length || 0) > 0;
+      const verifiedFactors = factors?.totp?.filter(f => f.status === 'verified') || [];
+      const hasMFA = verifiedFactors.length > 0;
 
       if (hasMFA) {
         // Return info that MFA verification is needed
         return { 
           error: null, 
           requiresMFA: true, 
-          factorId: factors?.totp?.[0]?.id 
+          factorId: verifiedFactors[0]?.id 
         };
       }
 
