@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ── Icons ─────────────────────────────────────────────────────────────────── */
 import {
@@ -29,7 +30,7 @@ import {
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
 import {
-  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend,
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip as RechartsTooltip, Legend,
   ReferenceLine, CartesianGrid, PieChart, Pie, Cell
 } from "recharts";
 
@@ -1088,7 +1089,7 @@ export default function EmbrexDashboard() {
               {metrics.some(isPercentMetric) && (
                 <YAxis yAxisId="right" orientation="right" domain={dynamicDomain} tick={{ fontSize: 11 }} />
               )}
-              <Tooltip content={<CustomTooltip />} />
+              <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               {showBenchmark && <ReferenceLine y={benchNum} yAxisId="right" stroke="#64748b" strokeDasharray="5 5" />}
               {metrics.map((m, idx) => {
@@ -1146,7 +1147,7 @@ export default function EmbrexDashboard() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -1371,7 +1372,7 @@ export default function EmbrexDashboard() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="bucket" tick={{ fontSize: 10 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {hatcheries.map((unit, idx) => (
                   <Line
@@ -1403,7 +1404,7 @@ export default function EmbrexDashboard() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="bucket" tick={{ fontSize: 10 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {hatcheries.map((unit, idx) => (
                   <Line
@@ -1435,7 +1436,7 @@ export default function EmbrexDashboard() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="hatchery" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
                 <Bar dataKey="Clears" fill="#f59e0b" radius={[4,4,0,0]} name="Clears" />
                 <Bar dataKey="Injected" fill="#10b981" radius={[4,4,0,0]} name="Injected" />
@@ -1504,7 +1505,7 @@ export default function EmbrexDashboard() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
               </PieChart>
             </ResponsiveContainer>
@@ -1914,15 +1915,23 @@ export default function EmbrexDashboard() {
               <CardHeader className="flex-none py-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={()=>setSidebarOpen(v=>!v)}
-                      title={sidebarOpen ? "Hide Filters" : "Show Filters"}
-                    >
-                      {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={()=>setSidebarOpen(v=>!v)}
+                          >
+                            {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{sidebarOpen ? "Hide Filters" : "Show Filters"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
 
                     {/* Visualization Dropdown */}
                     <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
@@ -1939,15 +1948,23 @@ export default function EmbrexDashboard() {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Button 
-                      variant={compareMode ? "default" : "outline"} 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={()=>setCompareMode(v=>!v)}
-                      title={compareMode ? "Compare Mode: On" : "Compare Mode: Off"}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant={compareMode ? "default" : "outline"} 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={()=>setCompareMode(v=>!v)}
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{compareMode ? "Compare Mode: On" : "Compare Mode: Off"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     {compareMode && (
                       <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
                         <SelectTrigger className="h-8 w-[80px]"><SelectValue placeholder="Cols" /></SelectTrigger>
@@ -1961,33 +1978,57 @@ export default function EmbrexDashboard() {
 
                     <div className="h-5 w-px bg-border" />
 
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={exportBucketsCsv}
-                      title="Export CSV"
-                    >
-                      <FileDown className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="default" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={exportFullReport}
-                      title="Export PDF"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={() => window.location.assign(window.location.pathname)}
-                      title="Reset"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={exportBucketsCsv}
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Export CSV</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="default" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={exportFullReport}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Export PDF Report</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => window.location.assign(window.location.pathname)}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Reset Filters</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               </CardHeader>
