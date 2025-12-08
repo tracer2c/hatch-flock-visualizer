@@ -2001,8 +2001,8 @@ export default function EmbrexDashboard() {
                       {compareMode ? (
                         facets.length === 1 ? (
                           // Single facet: Fill entire available space with flex layout
-                          <div className="h-full p-2">
-                            <div className="h-full flex flex-col border rounded-lg overflow-hidden" id="embrex-facet-chart-0">
+          <div className="min-h-[500px] h-[calc(100vh-280px)] p-2">
+            <div className="h-full flex flex-col border rounded-lg overflow-hidden" id="embrex-facet-chart-0">
                               <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate flex items-center gap-2">
                                 <div 
                                   className="w-3 h-3 rounded-full flex-shrink-0"
