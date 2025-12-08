@@ -76,19 +76,7 @@ Generated: ${new Date().toLocaleString()}
     setError('');
 
     try {
-      // Save recovery codes to database first (hashed)
-      for (const code of recoveryCodes) {
-        const { error: insertError } = await supabase
-          .from('mfa_recovery_codes')
-          .insert({
-            user_id: userId,
-            code_hash: btoa(code), // Simple encoding - in production use proper hashing
-          });
-        
-        if (insertError) throw insertError;
-      }
-
-      // Enroll MFA with Supabase
+      // Enroll MFA with Supabase (don't save recovery codes yet - wait for verification)
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: 'Authenticator App'
@@ -120,6 +108,9 @@ Generated: ${new Date().toLocaleString()}
     setError('');
 
     try {
+      // Refresh session to get updated claims after enrollment
+      await supabase.auth.refreshSession();
+
       // Challenge and verify
       const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
         factorId
@@ -134,6 +125,14 @@ Generated: ${new Date().toLocaleString()}
       });
 
       if (verifyError) throw verifyError;
+
+      // NOW save recovery codes to database (after successful verification)
+      for (const code of recoveryCodes) {
+        await supabase.from('mfa_recovery_codes').insert({
+          user_id: userId,
+          code_hash: btoa(code),
+        });
+      }
 
       // Update user profile to mark MFA as enabled
       const { error: updateError } = await supabase
