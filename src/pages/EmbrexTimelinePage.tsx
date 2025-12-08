@@ -1999,33 +1999,51 @@ export default function EmbrexDashboard() {
                   ) : (
                     <>
                       {compareMode ? (
-                        <div
-                          className={cn(
-                            "grid gap-3 p-2",
-                            facets.length === 1 ? "auto-rows-[420px]" : "auto-rows-[300px]"
-                          )}
-                          style={{ gridTemplateColumns: `repeat(${getGridLayout(facets.length)}, minmax(0,1fr))` }}
-                        >
-                          {facets.map((f, idx) => {
-                            const data = chartDataForFacet(f.rows);
-                            // Get hatchery color for unit facets
-                            const hatcheryName = facetBy === "unit" ? f.key.replace("U-", "") : null;
-                            const facetColor = hatcheryName ? HATCHERY_COLORS[hatcheryName] : EXTENDED_PALETTE[idx % EXTENDED_PALETTE.length];
-                            
-                            return (
-                              <div key={f.key} className="flex flex-col min-h-0 border rounded-lg overflow-hidden" id={`embrex-facet-chart-${idx}`}>
-                                <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate flex items-center gap-2">
-                                  <div 
-                                    className="w-3 h-3 rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: facetColor }}
-                                  />
-                                  {f.title}
-                                </div>
-                                <div className="flex-1 min-h-0">{renderChart(data, f.title, f.key)}</div>
+                        facets.length === 1 ? (
+                          // Single facet: Fill entire available space with flex layout
+                          <div className="h-full p-2">
+                            <div className="h-full flex flex-col border rounded-lg overflow-hidden" id="embrex-facet-chart-0">
+                              <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: facetBy === "unit" 
+                                    ? HATCHERY_COLORS[facets[0].key.replace("U-", "")] 
+                                    : EXTENDED_PALETTE[0] 
+                                  }}
+                                />
+                                {facets[0].title}
                               </div>
-                            );
-                          })}
-                        </div>
+                              <div className="flex-1 min-h-0">
+                                {renderChart(chartDataForFacet(facets[0].rows), facets[0].title, facets[0].key)}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          // Multiple facets: Use grid layout
+                          <div
+                            className="grid gap-3 p-2 auto-rows-[300px]"
+                            style={{ gridTemplateColumns: `repeat(${getGridLayout(facets.length)}, minmax(0,1fr))` }}
+                          >
+                            {facets.map((f, idx) => {
+                              const data = chartDataForFacet(f.rows);
+                              const hatcheryName = facetBy === "unit" ? f.key.replace("U-", "") : null;
+                              const facetColor = hatcheryName ? HATCHERY_COLORS[hatcheryName] : EXTENDED_PALETTE[idx % EXTENDED_PALETTE.length];
+                              
+                              return (
+                                <div key={f.key} className="flex flex-col min-h-0 border rounded-lg overflow-hidden" id={`embrex-facet-chart-${idx}`}>
+                                  <div className="px-3 py-2 text-xs font-medium border-b bg-slate-50 truncate flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: facetColor }}
+                                    />
+                                    {f.title}
+                                  </div>
+                                  <div className="flex-1 min-h-0">{renderChart(data, f.title, f.key)}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )
                       ) : (
                         <div className="h-full" id="embrex-timeline-main-chart">
                           {renderDefaultDashboard()}
