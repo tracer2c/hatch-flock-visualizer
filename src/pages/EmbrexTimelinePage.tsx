@@ -24,7 +24,7 @@ import {
   Activity, BarChart3, TrendingUp, Calendar as CalendarIcon, Settings,
   Download, RefreshCw, Grid2X2, Save, X, PanelLeftClose, PanelLeftOpen, LayoutGrid,
   Monitor, ChevronDown, ChevronRight, Radio, GitBranch, PieChart as PieChartIcon,
-  Filter, Home
+  Filter, Home, FileDown, FileText
 } from "lucide-react";
 
 /* ── Recharts ──────────────────────────────────────────────────────────────── */
@@ -1911,200 +1911,22 @@ export default function EmbrexDashboard() {
         <main className="h-full overflow-hidden">
           <div className="h-full p-3">
             <Card className="h-full shadow-xl border-0 bg-white/90 backdrop-blur flex flex-col">
-              <CardHeader className="flex-none pb-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" className="gap-2" onClick={()=>setSidebarOpen(v=>!v)}>
-                      {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-                      {sidebarOpen ? "Hide Filters" : "Show Filters"}
-                    </Button>
-                    <div className="h-6 w-px bg-border" />
-                    <div>
-                      <CardTitle className="text-xl">
-                        {compareMode ? "Compare Mode" : "Hatchery Overview"}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {compareMode ? "Side-by-side comparison" : "Summary view across all hatcheries"}
-                      </p>
-                    </div>
-                  </div>
-
+              <CardHeader className="flex-none py-2">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {/* Integrated Facet By + Filters Dropdown */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                          <Grid2X2 className="h-3.5 w-3.5" />
-                          Facet: {facetBy === "unit" ? "Hatchery" : facetBy === "flock_unit" ? "Flock × Hatchery" : facetBy === "house" ? "House" : "Flock"}
-                          {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
-                            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                              {selectedFlocks.length + selectedUnits.length + selectedHouses.length}
-                            </Badge>
-                          )}
-                          <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-0" align="start">
-                        {/* Facet Mode Selection */}
-                        <div className="p-3 border-b bg-muted/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold">Facet By</h4>
-                            {(selectedFlocks.length + selectedUnits.length + selectedHouses.length) > 0 && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 text-xs"
-                                onClick={() => {
-                                  setSelectedFlocks([]);
-                                  setSelectedUnits([]);
-                                  setSelectedHouses([]);
-                                }}
-                              >
-                                Clear filters
-                              </Button>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { value: "flock", label: "Flock" },
-                              { value: "unit", label: "Hatchery" },
-                              { value: "flock_unit", label: "Flock × Hatchery" },
-                              { value: "house", label: "House" },
-                            ].map(opt => (
-                              <Button
-                                key={opt.value}
-                                variant={facetBy === opt.value ? "default" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => setFacetBy(opt.value as FacetMode)}
-                              >
-                                {opt.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Dynamic Filter Options based on Facet Mode */}
-                        {/* Hatcheries - show for unit or flock_unit facet */}
-                        {(facetBy === "unit" || facetBy === "flock_unit") && (
-                          <div className="border-b">
-                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                              <span>Filter Hatcheries</span>
-                              {selectedUnits.length > 0 && (
-                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedUnits.length}</Badge>
-                              )}
-                            </div>
-                            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                              {units.map(u => {
-                                const checked = selectedUnits.includes(u);
-                                return (
-                                  <Button
-                                    key={u}
-                                    variant={checked ? "default" : "outline"}
-                                    size="sm"
-                                    className="h-7 text-xs gap-1.5"
-                                    onClick={() => setSelectedUnits(prev => 
-                                      checked ? prev.filter(x => x !== u) : [...prev, u]
-                                    )}
-                                  >
-                                    <div 
-                                      className="w-2 h-2 rounded-full" 
-                                      style={{ backgroundColor: HATCHERY_COLORS[u] || "#94a3b8" }}
-                                    />
-                                    {u}
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Flocks - show for flock, flock_unit, or house facet */}
-                        {(facetBy === "flock" || facetBy === "flock_unit" || facetBy === "house") && (
-                          <div className="border-b">
-                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                              <span>Filter Flocks</span>
-                              {selectedFlocks.length > 0 && (
-                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedFlocks.length}</Badge>
-                              )}
-                            </div>
-                            <Command className="p-0">
-                              <CommandInput placeholder="Search flocks…" className="h-8" />
-                              <CommandList className="max-h-32">
-                                <CommandEmpty>No flocks.</CommandEmpty>
-                                <CommandGroup>
-                                  {flocksList.map(f => {
-                                    const checked = selectedFlocks.includes(f.num);
-                                    return (
-                                      <CommandItem
-                                        key={f.num}
-                                        value={String(f.num)}
-                                        onSelect={() => setSelectedFlocks(prev => 
-                                          checked ? prev.filter(x => x !== f.num) : [...prev, f.num]
-                                        )}
-                                        className="text-xs"
-                                      >
-                                        <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
-                                          {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
-                                        </div>
-                                        #{f.num} — {f.name}
-                                      </CommandItem>
-                                    );
-                                  })}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </div>
-                        )}
-
-                        {/* Houses - show only for house facet */}
-                        {facetBy === "house" && (
-                          <div>
-                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                              <span>Filter Houses</span>
-                              {selectedHouses.length > 0 && (
-                                <Badge variant="secondary" className="h-4 px-1 text-[10px]">{selectedHouses.length}</Badge>
-                              )}
-                            </div>
-                            <Command className="p-0">
-                              <CommandInput placeholder="Search houses…" className="h-8" />
-                              <CommandList className="max-h-32">
-                                <CommandEmpty>No houses.</CommandEmpty>
-                                <CommandGroup>
-                                  {housesList.map(h => {
-                                    const checked = selectedHouses.includes(h.id);
-                                    return (
-                                      <CommandItem
-                                        key={h.id}
-                                        value={`${h.batch_number} ${h.flock_name}`}
-                                        onSelect={() => setSelectedHouses(prev => 
-                                          checked ? prev.filter(x => x !== h.id) : [...prev, h.id]
-                                        )}
-                                        className="text-xs"
-                                      >
-                                        <div className={`mr-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${checked ? "bg-primary border-primary" : "border-muted-foreground/50"}`}>
-                                          {checked && <span className="text-primary-foreground text-[10px]">✓</span>}
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span>House #{h.batch_number}</span>
-                                          <span className="text-[10px] text-muted-foreground">{h.flock_name} • {h.unit_name}</span>
-                                        </div>
-                                      </CommandItem>
-                                    );
-                                  })}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </div>
-                        )}
-                      </PopoverContent>
-                    </Popover>
-
-                    <div className="h-6 w-px bg-border" />
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={()=>setSidebarOpen(v=>!v)}
+                      title={sidebarOpen ? "Hide Filters" : "Show Filters"}
+                    >
+                      {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                    </Button>
 
                     {/* Visualization Dropdown */}
                     <Select value={viz} onValueChange={(v: VizKind) => setViz(v)}>
-                      <SelectTrigger className="h-8 w-[130px]">
+                      <SelectTrigger className="h-8 w-[120px]">
                         <SelectValue placeholder="Chart type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2114,17 +1936,21 @@ export default function EmbrexDashboard() {
                         <SelectItem value="heatmap">Heatmap</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
 
-                    <div className="h-6 w-px bg-border" />
-
-                    <Button variant={compareMode ? "default" : "outline"} size="sm" className="gap-1"
-                      onClick={()=>setCompareMode(v=>!v)}>
+                  <div className="flex items-center gap-1.5">
+                    <Button 
+                      variant={compareMode ? "default" : "outline"} 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={()=>setCompareMode(v=>!v)}
+                      title={compareMode ? "Compare Mode: On" : "Compare Mode: Off"}
+                    >
                       <LayoutGrid className="h-4 w-4" />
-                      {compareMode ? "Compare: On" : "Compare: Off"}
                     </Button>
                     {compareMode && (
                       <Select value={String(compareCols)} onValueChange={(v)=>setCompareCols(Number(v))}>
-                        <SelectTrigger className="h-8 w-[100px]"><SelectValue placeholder="Cols" /></SelectTrigger>
+                        <SelectTrigger className="h-8 w-[80px]"><SelectValue placeholder="Cols" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1 col</SelectItem>
                           <SelectItem value="2">2 cols</SelectItem>
@@ -2133,16 +1959,34 @@ export default function EmbrexDashboard() {
                       </Select>
                     )}
 
-                    <div className="h-6 w-px bg-border" />
+                    <div className="h-5 w-px bg-border" />
 
-                    <Button variant="outline" size="sm" className="gap-2" onClick={exportBucketsCsv}>
-                      <Download className="h-4 w-4" /> CSV
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={exportBucketsCsv}
+                      title="Export CSV"
+                    >
+                      <FileDown className="h-4 w-4" />
                     </Button>
-                    <Button variant="default" size="sm" className="gap-2" onClick={exportFullReport}>
-                      <Download className="h-4 w-4" /> PDF
+                    <Button 
+                      variant="default" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={exportFullReport}
+                      title="Export PDF"
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.assign(window.location.pathname)}>
-                      <RefreshCw className="h-4 w-4" /> Reset
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={() => window.location.assign(window.location.pathname)}
+                      title="Reset"
+                    >
+                      <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
