@@ -1,16 +1,20 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
 import { Egg } from 'lucide-react';
 
 export default function AuthPage() {
   const { user, signIn, signUp, loading } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [showMFADialog, setShowMFADialog] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState('');
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -25,7 +29,13 @@ export default function AuthPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    await signIn(email, password);
+    const result = await signIn(email, password);
+    
+    if (result.requiresMFA && result.factorId) {
+      setMfaFactorId(result.factorId);
+      setShowMFADialog(true);
+    }
+    
     setIsLoading(false);
   };
 
@@ -41,6 +51,15 @@ export default function AuthPage() {
 
     await signUp(email, password, firstName, lastName);
     setIsLoading(false);
+  };
+
+  const handleMFASuccess = () => {
+    setShowMFADialog(false);
+    navigate('/');
+  };
+
+  const handleMFACancel = () => {
+    setShowMFADialog(false);
   };
 
   if (loading) {
@@ -221,6 +240,15 @@ export default function AuthPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* MFA Verification Dialog */}
+      <MFAVerifyDialog
+        open={showMFADialog}
+        onOpenChange={setShowMFADialog}
+        factorId={mfaFactorId}
+        onSuccess={handleMFASuccess}
+        onCancel={handleMFACancel}
+      />
     </div>
   );
 }

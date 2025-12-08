@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, Factor } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,10 +12,19 @@ export interface UserProfile {
   phone?: string;
   avatar_url?: string;
   status: string;
+  mfa_enabled?: boolean;
+  mfa_grace_period_start?: string;
+  mfa_grace_period_days?: number;
 }
 
 export interface UserRole {
   role: 'company_admin' | 'operations_head' | 'staff';
+}
+
+export interface MFAStatus {
+  hasMFA: boolean;
+  factors: Factor[];
+  isVerified: boolean;
 }
 
 export const useAuth = () => {
@@ -24,6 +33,7 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mfaStatus, setMfaStatus] = useState<MFAStatus>({ hasMFA: false, factors: [], isVerified: false });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,10 +48,12 @@ export const useAuth = () => {
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
             await fetchUserRoles(session.user.id);
+            await checkMFAStatus();
           }, 0);
         } else {
           setProfile(null);
           setRoles([]);
+          setMfaStatus({ hasMFA: false, factors: [], isVerified: false });
         }
         setLoading(false);
       }
@@ -55,6 +67,7 @@ export const useAuth = () => {
       if (session?.user) {
         fetchUserProfile(session.user.id);
         fetchUserRoles(session.user.id);
+        checkMFAStatus();
       }
       setLoading(false);
     });
@@ -91,6 +104,23 @@ export const useAuth = () => {
     }
   };
 
+  const checkMFAStatus = async () => {
+    try {
+      const { data: factors, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      setMfaStatus({
+        hasMFA: (factors?.totp?.length || 0) > 0,
+        factors: factors?.totp || [],
+        isVerified: aal?.currentLevel === 'aal2'
+      });
+    } catch (error) {
+      console.error('Error checking MFA status:', error);
+    }
+  };
+
   const signUp = async (
     email: string,
     password: string,
@@ -114,6 +144,8 @@ export const useAuth = () => {
 
       if (error) throw error;
 
+      // Start grace period for new users
+      // This will be set after the user confirms their email and profile is created
       toast({
         title: "Account created successfully",
         description: "Please check your email to verify your account.",
@@ -132,13 +164,76 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
+      // Check MFA factors after sign in
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const hasMFA = (factors?.totp?.length || 0) > 0;
+
+      if (hasMFA) {
+        // Return info that MFA verification is needed
+        return { 
+          error: null, 
+          requiresMFA: true, 
+          factorId: factors?.totp?.[0]?.id 
+        };
+      }
+
+      // Start grace period if not already started
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('mfa_grace_period_start, mfa_enabled')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!profile?.mfa_grace_period_start && !profile?.mfa_enabled) {
+          await supabase
+            .from('user_profiles')
+            .update({ mfa_grace_period_start: new Date().toISOString() })
+            .eq('id', data.user.id);
+        }
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: "You have been signed in successfully.",
+      });
+
+      return { error: null, requiresMFA: false };
+    } catch (error: any) {
+      toast({
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error, requiresMFA: false };
+    }
+  };
+
+  const verifyMFA = async (factorId: string, code: string) => {
+    try {
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId
+      });
+
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId,
+        challengeId: challenge.id,
+        code
+      });
+
+      if (verifyError) throw verifyError;
+
+      await checkMFAStatus();
+      
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully.",
@@ -147,7 +242,7 @@ export const useAuth = () => {
       return { error: null };
     } catch (error: any) {
       toast({
-        title: "Sign in failed",
+        title: "Verification failed",
         description: error.message,
         variant: "destructive",
       });
@@ -315,15 +410,28 @@ export const useAuth = () => {
   const isOperationsHead = () => hasRole('operations_head');
   const isStaff = () => hasRole('staff');
 
+  const checkGracePeriodExpired = () => {
+    if (!profile?.mfa_grace_period_start || profile?.mfa_enabled) return false;
+    
+    const graceStart = new Date(profile.mfa_grace_period_start);
+    const graceDays = profile.mfa_grace_period_days || 7;
+    const graceEnd = new Date(graceStart);
+    graceEnd.setDate(graceEnd.getDate() + graceDays);
+    
+    return new Date() > graceEnd;
+  };
+
   return {
     user,
     session,
     profile,
     roles,
     loading,
+    mfaStatus,
     signUp,
     signIn,
     signOut,
+    verifyMFA,
     updateProfile,
     updateEmail,
     updatePassword,
@@ -332,5 +440,7 @@ export const useAuth = () => {
     isAdmin,
     isOperationsHead,
     isStaff,
+    checkMFAStatus,
+    checkGracePeriodExpired,
   };
 };
