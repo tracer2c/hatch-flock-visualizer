@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { TwoFactorSection } from "@/components/TwoFactorAuth";
 
 export default function UserProfilePage() {
   const { user, profile, updateProfile, updateEmail, updatePassword } = useAuth();
@@ -197,6 +198,9 @@ export default function UserProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Two-Factor Authentication Section */}
+      {user && <TwoFactorSection userId={user.id} />}
 
       {/* Email Update Section */}
       <Card className="shadow-sm">

@@ -1121,6 +1121,30 @@ export type Database = {
           },
         ]
       }
+      mfa_recovery_codes: {
+        Row: {
+          code_hash: string
+          created_at: string | null
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string | null
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string | null
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       multi_setter_sets: {
         Row: {
           allocation_id: string | null
@@ -1919,6 +1943,10 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          mfa_enabled: boolean | null
+          mfa_grace_period_days: number | null
+          mfa_grace_period_start: string | null
+          mfa_recovery_codes_generated_at: string | null
           phone: string | null
           status: Database["public"]["Enums"]["user_status"]
           updated_at: string
@@ -1932,6 +1960,10 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          mfa_enabled?: boolean | null
+          mfa_grace_period_days?: number | null
+          mfa_grace_period_start?: string | null
+          mfa_recovery_codes_generated_at?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
@@ -1945,6 +1977,10 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          mfa_enabled?: boolean | null
+          mfa_grace_period_days?: number | null
+          mfa_grace_period_start?: string | null
+          mfa_recovery_codes_generated_at?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
