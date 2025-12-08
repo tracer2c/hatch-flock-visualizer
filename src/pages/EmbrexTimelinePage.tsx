@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
 import { useChartExport } from "@/hooks/useChartExport";
+import { cn } from "@/lib/utils";
 
 /* ── shadcn/ui ─────────────────────────────────────────────────────────────── */
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -1533,6 +1534,7 @@ export default function EmbrexDashboard() {
 
   /* Dynamic grid layout for compare mode */
   const getGridLayout = (count: number) => {
+    if (count <= 1) return 1;
     if (count <= 4) return 2;
     if (count <= 6) return 3;
     return 3;
@@ -2154,7 +2156,10 @@ export default function EmbrexDashboard() {
                     <>
                       {compareMode ? (
                         <div
-                          className="grid gap-3 p-2 auto-rows-[300px]"
+                          className={cn(
+                            "grid gap-3 p-2",
+                            facets.length === 1 ? "auto-rows-[420px]" : "auto-rows-[300px]"
+                          )}
                           style={{ gridTemplateColumns: `repeat(${getGridLayout(facets.length)}, minmax(0,1fr))` }}
                         >
                           {facets.map((f, idx) => {
