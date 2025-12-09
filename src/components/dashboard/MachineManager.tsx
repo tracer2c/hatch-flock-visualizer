@@ -120,10 +120,8 @@ const MachineManager = () => {
       ? (formData.setter_mode || 'multi_setter') 
       : null;
 
-    // Add SS prefix for single setter machines
-    const machineNumber = setterMode === 'single_setter' 
-      ? `SS${formData.machine_number}` 
-      : formData.machine_number;
+    // Use machine number as entered (no prefix)
+    const machineNumber = formData.machine_number;
 
     const machineData = {
       machine_number: machineNumber,
@@ -309,8 +307,8 @@ const MachineManager = () => {
 
   const getSetterModeLabel = (mode: string | null) => {
     switch (mode) {
-      case 'single_setter': return 'Single';
-      case 'multi_setter': return 'Multi';
+      case 'single_setter': return 'Single Stage';
+      case 'multi_setter': return 'Multi Stage';
       default: return '';
     }
   };
@@ -410,14 +408,14 @@ const MachineManager = () => {
                           <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="single_setter">Single Setter (SS prefix)</SelectItem>
-                          <SelectItem value="multi_setter">Multi Setter</SelectItem>
+                          <SelectItem value="single_setter">Single Stage Setter</SelectItem>
+                          <SelectItem value="multi_setter">Multi Stage Setter</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
                         {formData.setter_mode === 'multi_setter' 
-                          ? 'Multi setter machines can hold multiple flock sets in different zones.'
-                          : 'Single setter machines load all eggs together as one set. Machine number will be prefixed with SS.'
+                          ? 'Multi stage setters can hold multiple flock sets in different zones.'
+                          : 'Single stage setters load all eggs together as one set.'
                         }
                       </p>
                     </div>
@@ -426,22 +424,11 @@ const MachineManager = () => {
                   {/* 4. Machine Number */}
                   <div className="space-y-2">
                     <Label>Machine Number *</Label>
-                    <div className="flex items-center gap-2">
-                      {formData.setter_mode === 'single_setter' && (
-                        <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1.5 rounded">SS</span>
-                      )}
-                      <Input
-                        value={formData.machine_number}
-                        onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
-                        placeholder={formData.setter_mode === 'single_setter' ? "e.g., 001" : "e.g., INC-001"}
-                        className="flex-1"
-                      />
-                    </div>
-                    {formData.setter_mode === 'single_setter' && formData.machine_number && (
-                      <p className="text-xs text-muted-foreground">
-                        Full number: SS{formData.machine_number}
-                      </p>
-                    )}
+                    <Input
+                      value={formData.machine_number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, machine_number: e.target.value }))}
+                      placeholder="e.g., INC-001"
+                    />
                   </div>
                   
                   {/* 5. Capacity */}
