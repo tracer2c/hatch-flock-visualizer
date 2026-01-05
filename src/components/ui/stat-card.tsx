@@ -74,8 +74,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <Card className={cn(
       "group relative overflow-hidden transition-all duration-300",
-      "hover:shadow-xl hover:-translate-y-1 hover:border-primary/30",
-      "bg-gradient-to-br from-card via-card to-muted/20 border-border/50",
+      "hover:shadow-xl hover:-translate-y-1 hover:border-primary/40",
+      "bg-primary/5 border-primary/15",
       className
     )}>
       {/* Vibrant Gradient Accent Bar */}
