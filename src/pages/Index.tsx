@@ -20,17 +20,37 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="p-3 md:p-6 max-w-full overflow-x-hidden">
-      {/* Dashboard Header with Eggs Icon */}
-      <div className="mb-4 md:mb-6 flex items-center gap-3 md:gap-4">
-        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-          <Egg className="w-8 h-8 md:w-10 md:h-10 text-amber-600" />
+    <div className="p-3 md:p-6 max-w-full overflow-x-hidden relative">
+      {/* Subtle Background Orbs */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/5 to-success/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-br from-accent/5 to-warning/5 rounded-full blur-3xl pointer-events-none" />
+      
+      {/* Dashboard Header */}
+      <div className="mb-6 md:mb-8 relative">
+        <div className="flex items-center gap-4 md:gap-5">
+          {/* Enhanced Icon Container */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary to-success rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity" />
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-accent/20 via-warning/15 to-accent/10 flex items-center justify-center flex-shrink-0 relative border border-accent/20 shadow-lg">
+              <Egg className="w-8 h-8 md:w-9 md:h-9 text-accent" />
+            </div>
+          </div>
+          
+          {/* Title Section */}
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gradient-hero truncate">
+              Dashboard Overview
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Real-time hatchery operations monitoring
+            </p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">Dashboard Overview</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Live overview of hatchery operations</p>
-        </div>
+        
+        {/* Decorative Accent Line */}
+        <div className="mt-4 h-1 w-32 md:w-48 bg-gradient-to-r from-primary via-success to-accent rounded-full opacity-60" />
       </div>
+      
       <OverviewOperations />
     </div>
   );

@@ -34,7 +34,7 @@ export default function AuthPage() {
     const result = await signIn(email, password);
     
     if (result.requiresMFA && result.factorId) {
-      setPendingMFAVerification(true); // Block redirect until MFA is complete
+      setPendingMFAVerification(true);
       setMfaFactorId(result.factorId);
       setShowMFADialog(true);
     }
@@ -65,7 +65,6 @@ export default function AuthPage() {
   const handleMFACancel = async () => {
     setPendingMFAVerification(false);
     setShowMFADialog(false);
-    // Sign out the user since they cancelled MFA - they must complete verification
     await supabase.auth.signOut();
   };
 
@@ -82,50 +81,64 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+      {/* Vibrant Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
+      
+      {/* Animated Decorative Orbs */}
+      <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-br from-accent/30 to-warning/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-primary/25 to-success/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+      <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-gradient-to-br from-success/20 to-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '-1.5s' }} />
+      
+      {/* Subtle Pattern Overlay */}
+      <div className="absolute inset-0 opacity-[0.015]" style={{ 
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` 
+      }} />
       
       <div className="w-full max-w-md relative z-10">
-        {/* Header */}
+        {/* Header with Enhanced Logo */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-block p-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl mb-4 shadow-sm">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-100/50 to-amber-100/50 rounded-xl flex items-center justify-center shadow-lg">
-              <Egg className="w-10 h-10 text-amber-600" />
+          <div className="inline-block p-1 bg-gradient-to-br from-primary via-success to-accent rounded-2xl mb-4 shadow-glow">
+            <div className="p-3 bg-background rounded-xl">
+              <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-warning/20 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent" />
+                <Egg className="w-10 h-10 text-accent relative z-10" />
+              </div>
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-700 via-amber-600 to-orange-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-gradient-hero">
             Hatchery Management
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Welcome to your enterprise hatchery management system
+            Enterprise-grade hatchery operations platform
           </p>
         </div>
 
-        {/* Auth Tabs */}
+        {/* Auth Tabs with Glass Effect */}
         <Tabs defaultValue="signin" className="w-full animate-scale-in">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-2 bg-background/60 backdrop-blur-md p-1.5 border border-border/50 shadow-lg">
             <TabsTrigger 
               value="signin"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-300"
             >
               Sign In
             </TabsTrigger>
             <TabsTrigger 
               value="signup"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-300"
             >
               Sign Up
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin" className="mt-4">
-            <Card className="border-2 shadow-xl backdrop-blur-sm bg-background/95">
+            <Card className="border-2 border-border/50 shadow-2xl backdrop-blur-sm bg-card/95 overflow-hidden">
+              {/* Accent Bar */}
+              <div className="h-1 w-full bg-gradient-to-r from-primary via-success to-accent" />
+              
               <CardHeader className="space-y-1 pb-4">
-                <CardTitle className="text-2xl">Sign In</CardTitle>
+                <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
                 <CardDescription>
-                  Enter your credentials to access your account
+                  Enter your credentials to access your dashboard
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSignIn}>
@@ -139,7 +152,7 @@ export default function AuthPage() {
                       name="email"
                       type="email"
                       placeholder="you@example.com"
-                      className="h-11"
+                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
                   </div>
@@ -152,15 +165,15 @@ export default function AuthPage() {
                       name="password"
                       type="password"
                       placeholder="••••••••"
-                      className="h-11"
+                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-3">
+                <CardFooter className="flex flex-col gap-3 pb-6">
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300"
                     disabled={isLoading}
                   >
                     {isLoading ? "Signing in..." : "Sign In"}
@@ -171,11 +184,14 @@ export default function AuthPage() {
           </TabsContent>
 
           <TabsContent value="signup" className="mt-4">
-            <Card className="border-2 shadow-xl backdrop-blur-sm bg-background/95">
+            <Card className="border-2 border-border/50 shadow-2xl backdrop-blur-sm bg-card/95 overflow-hidden">
+              {/* Accent Bar */}
+              <div className="h-1 w-full bg-gradient-to-r from-accent via-warning to-primary" />
+              
               <CardHeader className="space-y-1 pb-4">
-                <CardTitle className="text-2xl">Create Account</CardTitle>
+                <CardTitle className="text-2xl font-bold">Get Started</CardTitle>
                 <CardDescription>
-                  Create a new account to get started
+                  Create your account to begin managing operations
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSignUp}>
@@ -189,7 +205,7 @@ export default function AuthPage() {
                         id="firstName"
                         name="firstName"
                         placeholder="John"
-                        className="h-11"
+                        className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                         required
                       />
                     </div>
@@ -201,7 +217,7 @@ export default function AuthPage() {
                         id="lastName"
                         name="lastName"
                         placeholder="Doe"
-                        className="h-11"
+                        className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                         required
                       />
                     </div>
@@ -215,7 +231,7 @@ export default function AuthPage() {
                       name="email"
                       type="email"
                       placeholder="you@example.com"
-                      className="h-11"
+                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
                   </div>
@@ -228,15 +244,15 @@ export default function AuthPage() {
                       name="password"
                       type="password"
                       placeholder="••••••••"
-                      className="h-11"
+                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-3">
+                <CardFooter className="flex flex-col gap-3 pb-6">
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-accent to-warning hover:from-accent/90 hover:to-warning/90 shadow-lg hover:shadow-xl hover:shadow-accent/20 transition-all duration-300"
                     disabled={isLoading}
                   >
                     {isLoading ? "Creating account..." : "Create Account"}
