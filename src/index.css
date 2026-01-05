@@ -8,16 +8,16 @@
   :root {
     /* Clean, bright white background */
     --background: 0 0% 100%;
-    --foreground: 213 70% 15%;
+    --foreground: 220 30% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 213 70% 15%;
+    --card-foreground: 220 30% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 213 70% 15%;
+    --popover-foreground: 220 30% 15%;
 
-    /* Auburn Navy Blue Primary - Bold, Trustworthy, Enterprise */
-    --primary: 213 70% 15%;
+    /* Royal Blue Primary - Vibrant, Modern, Professional */
+    --primary: 225 73% 57%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 20% 98%;
@@ -41,14 +41,14 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 213 30% 88%;
-    --input: 213 30% 88%;
-    --ring: 213 70% 15%;
+    --border: 225 30% 88%;
+    --input: 225 30% 88%;
+    --ring: 225 73% 57%;
 
     --radius: 0.75rem;
 
-    /* Auburn-Themed Chart Palette */
-    --chart-1: 213 70% 15%; /* Auburn navy */
+    /* Royal Blue Chart Palette */
+    --chart-1: 225 73% 57%; /* Royal Blue */
     --chart-2: 158 64% 42%; /* emerald */
     --chart-3: 22 91% 46%;  /* Auburn orange */
     --chart-4: 271 81% 56%; /* violet */
@@ -60,32 +60,32 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.12);
-    --shadow-glow: 0 0 25px hsl(213 70% 15% / 0.2);
+    --shadow-glow: 0 0 25px hsl(225 73% 57% / 0.25);
     --shadow-glow-accent: 0 0 25px hsl(22 91% 46% / 0.25);
 
-    /* Auburn Gradient System */
-    --gradient-primary: linear-gradient(135deg, hsl(213 70% 15%) 0%, hsl(213 70% 25%) 100%);
+    /* Royal Blue Gradient System */
+    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%) 0%, hsl(225 73% 67%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(22 91% 46%) 0%, hsl(30 90% 50%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(213 70% 15%) 0%, hsl(213 70% 25%) 50%, hsl(22 91% 46%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
-    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(213 70% 15% / 0.02) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 99%) 100%);
-    --gradient-page: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 50%, hsl(0 0% 100%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(225 73% 57%) 0%, hsl(225 73% 67%) 50%, hsl(22 91% 46%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(225 30% 98%) 100%);
+    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(225 73% 57% / 0.02) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(225 30% 99%) 100%);
+    --gradient-page: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(225 30% 98%) 50%, hsl(0 0% 100%) 100%);
     --gradient-warm: linear-gradient(135deg, hsl(22 91% 46% / 0.08) 0%, hsl(30 90% 50% / 0.03) 100%);
 
     /* Transitions */
     --transition-base: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Sidebar - Auburn Navy Theme */
+    /* Sidebar - Royal Blue Theme */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 213 70% 20%;
-    --sidebar-primary: 213 70% 15%;
+    --sidebar-foreground: 225 50% 30%;
+    --sidebar-primary: 225 73% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 213 70% 95%;
-    --sidebar-accent-foreground: 213 70% 15%;
-    --sidebar-border: 213 30% 90%;
-    --sidebar-ring: 213 70% 15%;
+    --sidebar-accent: 225 73% 95%;
+    --sidebar-accent-foreground: 225 73% 57%;
+    --sidebar-border: 225 30% 90%;
+    --sidebar-ring: 225 73% 57%;
   }
 
   .dark {
