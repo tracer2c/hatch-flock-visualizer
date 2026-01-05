@@ -116,20 +116,20 @@ const BatchOverviewDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "scheduled": return "bg-gray-500/10 text-gray-700 border-gray-200";
-      case "in_setter": return "bg-amber-500/10 text-amber-700 border-amber-200";
-      case "in_hatcher": return "bg-orange-500/10 text-orange-700 border-orange-200";
-      case "completed": return "bg-slate-500/10 text-slate-600 border-slate-200";
+      case "scheduled": return "bg-muted/80 text-muted-foreground border-muted-foreground/20";
+      case "in_setter": return "bg-primary/10 text-primary border-primary/30";
+      case "in_hatcher": return "bg-accent/10 text-accent border-accent/30";
+      case "completed": return "bg-success/10 text-success border-success/30";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getStatusBorderColor = (status: string) => {
     switch (status) {
-      case "scheduled": return "border-l-gray-500";
-      case "in_setter": return "border-l-amber-500";
-      case "in_hatcher": return "border-l-orange-500";
-      case "completed": return "border-l-slate-400";
+      case "scheduled": return "border-l-muted-foreground/50";
+      case "in_setter": return "border-l-primary";
+      case "in_hatcher": return "border-l-accent";
+      case "completed": return "border-l-success";
       default: return "border-l-muted";
     }
   };
@@ -343,9 +343,9 @@ const BatchOverviewDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="w-full space-y-5">
-          {/* Compact Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-card via-card to-muted/30 border shadow-sm">
+        <div className="w-full space-y-6">
+          {/* Compact Header with Enhanced Styling */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-card via-card to-muted/20 border border-border/50 shadow-lg relative overflow-hidden">
             {/* Left Section: Analytics Navigation + Hatchery Filter */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {/* Analytics Navigation Dropdown */}

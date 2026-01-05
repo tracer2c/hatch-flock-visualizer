@@ -187,14 +187,17 @@ export function ModernSidebar() {
         variant="sidebar" 
         collapsible="offcanvas"
         className={cn(
-          "border-r border-border/30 bg-background/95",
-          "transition-all duration-300"
+          "border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md",
+          "transition-all duration-300 shadow-xl"
         )}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <SidebarContent className="pt-16 px-2">
+        {/* Sidebar Accent Gradient */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
+        
+        <SidebarContent className="pt-16 px-3">
 
           <SidebarGroup>
             <SidebarGroupContent>
@@ -209,11 +212,11 @@ export function ModernSidebar() {
                         asChild 
                         tooltip={collapsed ? item.label : undefined}
                         className={cn(
-                          "group relative flex items-center rounded-lg transition-all duration-200 touch-manipulation",
-                          collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-3 py-3 min-h-[44px]",
+                          "group relative flex items-center rounded-xl transition-all duration-300 touch-manipulation",
+                          collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-4 py-3 min-h-[44px]",
                           active
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-accent text-muted-foreground hover:text-foreground active:bg-accent/80"
+                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+                            : "hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80"
                         )}
                       >
                         <NavLink
@@ -221,8 +224,9 @@ export function ModernSidebar() {
                           className="flex items-center w-full h-full"
                         >
                           <Icon className={cn(
-                            "flex-shrink-0 transition-colors",
-                            collapsed ? "h-5 w-5" : "h-4 w-4"
+                            "flex-shrink-0 transition-all duration-300",
+                            collapsed ? "h-5 w-5" : "h-4 w-4",
+                            active && "drop-shadow-sm"
                           )} />
                           
                           {!collapsed && (
@@ -233,7 +237,7 @@ export function ModernSidebar() {
 
                           {/* Active indicator for collapsed state */}
                           {active && collapsed && (
-                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full" />
+                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-gradient-to-b from-primary to-success rounded-full shadow-lg" />
                           )}
                         </NavLink>
                       </SidebarMenuButton>
@@ -246,14 +250,14 @@ export function ModernSidebar() {
           </SidebarGroup>
 
           {/* Version Footer */}
-          <div className="mt-auto pt-4">
+          <div className="mt-auto pt-4 pb-2">
             {!collapsed ? (
-              <div className="px-3 py-2 text-center">
-                <span className="text-xs text-muted-foreground">v1.2</span>
+              <div className="mx-3 px-3 py-2 rounded-lg bg-sidebar-accent/50 text-center">
+                <span className="text-xs font-medium text-sidebar-accent-foreground">v1.2</span>
               </div>
             ) : (
-              <div className="px-2 py-2 text-center">
-                <span className="text-xs text-muted-foreground">1.2</span>
+              <div className="mx-2 px-2 py-2 rounded-lg bg-sidebar-accent/50 text-center">
+                <span className="text-xs font-medium text-sidebar-accent-foreground">1.2</span>
               </div>
             )}
           </div>
