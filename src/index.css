@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* Warm, inviting background with subtle warmth */
-    --background: 40 33% 98%;
+    /* Clean, bright white background */
+    --background: 0 0% 100%;
     --foreground: 213 70% 15%;
 
     --card: 0 0% 100%;
@@ -20,10 +20,10 @@
     --primary: 213 70% 15%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 30% 96%;
+    --secondary: 210 20% 98%;
     --secondary-foreground: 213 70% 20%;
 
-    --muted: 40 20% 94%;
+    --muted: 210 15% 96%;
     --muted-foreground: 213 50% 40%;
 
     /* Auburn Burnt Orange Accent - Warm, Energetic, Hatchery Theme */
@@ -67,11 +67,11 @@
     --gradient-primary: linear-gradient(135deg, hsl(213 70% 15%) 0%, hsl(213 70% 25%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(22 91% 46%) 0%, hsl(30 90% 50%) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(213 70% 15%) 0%, hsl(213 70% 25%) 50%, hsl(22 91% 46%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(40 30% 96%) 100%);
-    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(213 70% 15% / 0.03) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(40 30% 98%) 100%);
-    --gradient-page: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(40 25% 96%) 50%, hsl(40 33% 98%) 100%);
-    --gradient-warm: linear-gradient(135deg, hsl(22 91% 46% / 0.1) 0%, hsl(30 90% 50% / 0.05) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsl(213 70% 15% / 0.02) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 99%) 100%);
+    --gradient-page: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 50%, hsl(0 0% 100%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(22 91% 46% / 0.08) 0%, hsl(30 90% 50% / 0.03) 100%);
 
     /* Transitions */
     --transition-base: all 200ms cubic-bezier(0.4, 0, 0.2, 1);

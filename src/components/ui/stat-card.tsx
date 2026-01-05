@@ -35,26 +35,26 @@ export const StatCard: React.FC<StatCardProps> = ({
   const getAccentGradient = () => {
     switch (variant) {
       case "primary":
-        return "from-primary via-primary/80 to-success/60";
+        return "from-primary via-primary/70 to-primary/40";
       case "accent":
-        return "from-accent via-warning to-accent/60";
+        return "from-accent via-accent/70 to-accent/40";
       case "success":
-        return "from-success via-success/80 to-primary/60";
+        return "from-primary via-primary/60 to-primary/30";
       default:
-        return "from-primary via-success/70 to-accent/50";
+        return "from-primary via-primary/60 to-primary/30";
     }
   };
 
   const getIconBackground = () => {
     switch (variant) {
       case "primary":
-        return "from-primary/20 to-success/10";
+        return "from-primary/20 to-primary/5";
       case "accent":
-        return "from-accent/20 to-warning/10";
+        return "from-accent/20 to-accent/5";
       case "success":
-        return "from-success/20 to-primary/10";
+        return "from-primary/20 to-primary/5";
       default:
-        return "from-primary/15 to-success/10";
+        return "from-primary/15 to-primary/5";
     }
   };
 
@@ -65,7 +65,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       case "accent":
         return "text-accent";
       case "success":
-        return "text-success";
+        return "text-primary";
       default:
         return "text-primary";
     }
