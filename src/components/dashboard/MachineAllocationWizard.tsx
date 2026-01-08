@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle2, Factory, Package2, ArrowRight, ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Factory, Package2, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAvailableMachineCapacity, useCreateAllocation } from "@/hooks/useAvailableMachineCapacity";
 import { MachineCapacityInfo, Position, ZONE_LABELS, getCapacityPerPosition, validateAllocation } from "@/utils/machineCapacityUtils";
@@ -111,11 +112,20 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
     }
   };
 
+  // Filter flocks by selected hatchery
+  const filteredFlocks = formData.unitId 
+    ? flocks.filter(f => f.unit_id === formData.unitId)
+    : [];
+
   const selectedFlock = flocks.find(f => f.id === formData.flockId);
   const selectedUnit = units.find(u => u.id === formData.unitId);
 
+  // Check if selected flock belongs to selected hatchery
+  const isFlockValidForHatchery = !formData.flockId || !formData.unitId || 
+    flocks.find(f => f.id === formData.flockId)?.unit_id === formData.unitId;
+
   const canProceedBasic = formData.flockId && formData.unitId && formData.customHouseNumber && 
-    formData.totalEggs && parseInt(formData.totalEggs) > 0 && formData.technicianName;
+    formData.totalEggs && parseInt(formData.totalEggs) > 0 && formData.technicianName && isFlockValidForHatchery;
 
   const canProceedAllocation = allocatedEggs === totalEggs && allocations.length > 0;
 
@@ -292,7 +302,14 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Select Hatchery *</Label>
-              <Select value={formData.unitId} onValueChange={(value) => setFormData(prev => ({ ...prev, unitId: value }))}>
+              <Select 
+                value={formData.unitId} 
+                onValueChange={(value) => {
+                  // Reset flock selection when hatchery changes
+                  setFormData(prev => ({ ...prev, unitId: value, flockId: '' }));
+                  setAllocations([]); // Reset allocations when hatchery changes
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a hatchery" />
                 </SelectTrigger>
@@ -306,18 +323,25 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
 
             <div className="space-y-2">
               <Label>Select Flock *</Label>
-              <Select value={formData.flockId} onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}>
+              <Select 
+                value={formData.flockId} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, flockId: value }))}
+                disabled={!formData.unitId}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a flock" />
+                  <SelectValue placeholder={formData.unitId ? "Choose a flock" : "Select hatchery first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {flocks.map((flock) => (
+                  {filteredFlocks.map((flock) => (
                     <SelectItem key={flock.id} value={flock.id}>
                       {flock.flock_number} - {flock.flock_name} (Age: {flock.age_weeks}w)
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {formData.unitId && filteredFlocks.length === 0 && (
+                <p className="text-xs text-amber-600">No flocks available for this hatchery</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -532,8 +556,19 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
             )}
           </div>
 
+          {/* No Machines Alert */}
+          {!machinesLoading && machines.filter(m => m.canAcceptNewAllocation).length === 0 && (
+            <Alert variant="destructive" className="border-destructive/50">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No Machines Available</AlertTitle>
+              <AlertDescription>
+                There are no machines available for this hatchery. Please add machines to this hatchery before creating a house, or select a different hatchery.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Machine Selector */}
-          {showMachineSelector && (
+          {showMachineSelector && machines.filter(m => m.canAcceptNewAllocation).length > 0 && (
             <Card className="border-primary/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Available Machines</CardTitle>
