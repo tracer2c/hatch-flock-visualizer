@@ -71,6 +71,18 @@ verify_jwt = false
 [functions.contextual-help]
 verify_jwt = true
 
+[functions.get-vapid-public-key]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.batch-status-automation]
+verify_jwt = false
+
+[functions.check-overdue-analysis]
+verify_jwt = false
+
 [edge_runtime]
 inspector_port = 54328
 
