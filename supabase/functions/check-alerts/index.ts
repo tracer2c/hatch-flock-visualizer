@@ -16,7 +16,41 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const alertsGenerated = [];
+    const alertsGenerated: Array<{
+      title: string;
+      message: string;
+      severity: string;
+      alert_type: string;
+    }> = [];
+
+    // Helper function to send push notification for an alert
+    const sendPushNotification = async (alert: { title: string; message: string; severity: string; alert_type: string }) => {
+      try {
+        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            title: alert.title,
+            body: alert.message,
+            url: '/alerts',
+            alertType: alert.alert_type.replace('_', ''),
+            severity: alert.severity,
+            tag: `alert-${alert.alert_type}`,
+          }),
+        });
+        
+        if (!pushResponse.ok) {
+          console.error(`Failed to send push notification: ${pushResponse.status}`);
+        } else {
+          console.log(`Push notification sent for: ${alert.title}`);
+        }
+      } catch (err) {
+        console.error('Error sending push notification:', err);
+      }
+    };
 
     // Check for temperature/humidity alerts from recent QA data
     console.log("Checking for temperature and humidity alerts...");
@@ -73,6 +107,8 @@ serve(async (req: Request) => {
         if (!insertError) {
           alertsGenerated.push(alert);
           console.log(`Generated temperature alert for batch ${qa.batches?.batch_number}`);
+          // Send push notification for temperature alert
+          await sendPushNotification(alert);
         }
       }
 
@@ -97,6 +133,7 @@ serve(async (req: Request) => {
         if (!insertError) {
           alertsGenerated.push(alert);
           console.log(`Generated humidity alert for batch ${qa.batches?.batch_number}`);
+          await sendPushNotification(alert);
         }
       }
     }
@@ -145,6 +182,7 @@ serve(async (req: Request) => {
           if (!insertError) {
             alertsGenerated.push(alert);
             console.log(`Generated critical day alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
+            await sendPushNotification(alert);
           }
         }
       }
@@ -177,6 +215,7 @@ serve(async (req: Request) => {
           if (!insertError) {
             alertsGenerated.push(alert);
             console.log(`Generated transfer overdue alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
+            await sendPushNotification(alert);
           }
         }
       }
@@ -244,6 +283,7 @@ serve(async (req: Request) => {
             if (!insertError) {
               alertsGenerated.push(alert);
               console.log(`Generated checklist incomplete alert for batch ${batch.batch_number} - Day ${daysSinceSet}`);
+              await sendPushNotification(alert);
             }
           }
         }
@@ -291,6 +331,7 @@ serve(async (req: Request) => {
             if (!insertError) {
               alertsGenerated.push(alert);
               console.log(`Generated maintenance alert for machine ${machine.machine_number}`);
+              await sendPushNotification(alert);
             }
           }
         }

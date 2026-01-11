@@ -47,10 +47,13 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
         runtimeCaching: [
+          // GET requests - NetworkFirst for fresh data with cache fallback
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
+            method: 'GET',
             options: {
               cacheName: 'supabase-api-cache',
               expiration: {
@@ -62,6 +65,49 @@ export default defineConfig(({ mode }) => ({
               }
             }
           },
+          // POST requests - NetworkOnly with background sync
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              backgroundSync: {
+                name: 'supabase-post-queue',
+                options: {
+                  maxRetentionTime: 24 * 60 // 24 hours in minutes
+                }
+              }
+            }
+          },
+          // PATCH requests - NetworkOnly with background sync
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            method: 'PATCH',
+            options: {
+              backgroundSync: {
+                name: 'supabase-patch-queue',
+                options: {
+                  maxRetentionTime: 24 * 60
+                }
+              }
+            }
+          },
+          // DELETE requests - NetworkOnly with background sync
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            method: 'DELETE',
+            options: {
+              backgroundSync: {
+                name: 'supabase-delete-queue',
+                options: {
+                  maxRetentionTime: 24 * 60
+                }
+              }
+            }
+          },
+          // Storage - CacheFirst for uploaded assets
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/.*/i,
             handler: 'CacheFirst',

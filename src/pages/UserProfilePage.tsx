@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TwoFactorSection } from "@/components/TwoFactorAuth";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 
 export default function UserProfilePage() {
   const { user, profile, updateProfile, updateEmail, updatePassword } = useAuth();
@@ -198,6 +199,9 @@ export default function UserProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Push Notifications Section */}
+      <PushNotificationSettings />
 
       {/* Two-Factor Authentication Section */}
       {user && <TwoFactorSection userId={user.id} />}

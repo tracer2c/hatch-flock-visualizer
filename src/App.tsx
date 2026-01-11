@@ -38,6 +38,7 @@ import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
 import ContextualHelpBot from "./components/ContextualHelpBot";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
+import { OfflineBanner } from "./components/OfflineBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +63,7 @@ const App = () => {
         <BrowserRouter>
           <InitializeApp>
             <HelpProvider>
+              <OfflineBanner />
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/install" element={<InstallPage />} />
