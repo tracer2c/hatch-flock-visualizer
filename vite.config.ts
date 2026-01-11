@@ -45,19 +45,24 @@ export default defineConfig(({ mode }) => ({
           }
         ]
       },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB limit
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/],
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
-          // GET requests - NetworkFirst for fresh data with cache fallback
+          // GET requests - StaleWhileRevalidate for better offline experience
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             method: 'GET',
             options: {
               cacheName: 'supabase-api-cache',
               expiration: {
-                maxEntries: 100,
+                maxEntries: 200,
                 maxAgeSeconds: 86400 // 24 hours
               },
               cacheableResponse: {
@@ -114,8 +119,23 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: 'supabase-storage-cache',
               expiration: {
-                maxEntries: 50,
+                maxEntries: 100,
                 maxAgeSeconds: 604800 // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          // Edge Functions - NetworkFirst
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-functions-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 3600 // 1 hour
               },
               cacheableResponse: {
                 statuses: [0, 200]
