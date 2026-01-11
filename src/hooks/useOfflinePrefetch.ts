@@ -11,58 +11,63 @@ export function useOfflinePrefetch() {
     if (!isOnline) return;
 
     const prefetchEssentialData = async () => {
-      // Prefetch batches (houses)
+      // Prefetch batches (houses) - matches useBatches hook exactly
       queryClient.prefetchQuery({
         queryKey: ['batches'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('batches')
             .select(`
               *,
-              flock:flocks(id, flock_name, flock_number, age_weeks, breed),
-              machine:machines(id, machine_number, machine_type)
+              flocks(flock_name, flock_number, house_number, technician_name),
+              machines(machine_number, machine_type),
+              fertility_analysis!left(id),
+              residue_analysis!left(id)
             `)
-            .order('set_date', { ascending: false })
-            .limit(100);
+            .order('set_date', { ascending: false });
+          if (error) throw error;
           return data || [];
         },
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
       });
 
-      // Prefetch flocks
+      // Prefetch flocks - matches useFlocks hook exactly
       queryClient.prefetchQuery({
         queryKey: ['flocks'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('flocks')
             .select('*')
-            .order('flock_name', { ascending: true });
+            .order('flock_number', { ascending: true });
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
       });
 
-      // Prefetch machines
+      // Prefetch machines - matches useMachines hook exactly
       queryClient.prefetchQuery({
         queryKey: ['machines'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('machines')
             .select('*')
             .order('machine_number', { ascending: true });
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
       });
 
-      // Prefetch units
+      // Prefetch units - matches useUnits hook exactly
       queryClient.prefetchQuery({
         queryKey: ['units'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('units')
             .select('*')
             .order('name', { ascending: true });
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
@@ -72,11 +77,12 @@ export function useOfflinePrefetch() {
       queryClient.prefetchQuery({
         queryKey: ['fertility_analysis'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('fertility_analysis')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
@@ -86,11 +92,12 @@ export function useOfflinePrefetch() {
       queryClient.prefetchQuery({
         queryKey: ['qa_monitoring'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('qa_monitoring')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
@@ -100,11 +107,12 @@ export function useOfflinePrefetch() {
       queryClient.prefetchQuery({
         queryKey: ['residue_analysis'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('residue_analysis')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
@@ -114,11 +122,12 @@ export function useOfflinePrefetch() {
       queryClient.prefetchQuery({
         queryKey: ['egg_pack_quality'],
         queryFn: async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('egg_pack_quality')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
+          if (error) throw error;
           return data || [];
         },
         staleTime: 5 * 60 * 1000,
