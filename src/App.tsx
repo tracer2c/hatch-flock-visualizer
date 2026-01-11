@@ -32,6 +32,7 @@ import UserProfilePage from "./pages/UserProfilePage";
 import LiveTrackingPage from "./pages/LiveTrackingPage";
 import MachineUtilizationPage from "./pages/MachineUtilizationPage";
 import QAHubPage from "./pages/QAHubPage";
+import InstallPage from "./pages/InstallPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
@@ -63,6 +64,7 @@ const App = () => {
             <HelpProvider>
               <Routes>
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/install" element={<InstallPage />} />
                 <Route path="/*" element={
                   <ProtectedRoute>
                     <SidebarProvider defaultOpen={!isMobile && !isTablet}>
