@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Info, CloudOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ResidueDataEntry from "@/components/dashboard/ResidueDataEntry";
+import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 
 interface HouseInfo {
@@ -29,6 +31,10 @@ const ResidueEntryPage = () => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [residueData, setResidueData] = useState([]);
   const { toast } = useToast();
+  const { isOnline } = useOnlineStatus();
+  const { submit: offlineSubmit } = useOfflineSubmit('residue_analysis', {
+    invalidateQueries: ['residue_analysis', 'dataCounts', 'houses'],
+  });
 
   useEffect(() => {
     if (houseId) {
@@ -164,20 +170,18 @@ const ResidueEntryPage = () => {
     // Save each record to database
     for (const record of newData) {
       try {
-        const residueData = {
+        const residueDataRecord = {
+          id: record.id?.startsWith('temp-') ? undefined : record.id,
           batch_id: houseId,
           sample_size: record.sampleSize || 648,
           infertile_eggs: record.infertile || 0,
           fertile_eggs: record.fertileEggs || 0,
-          // Save mortality fields separately
           early_dead: record.earlyDeath || 0,
           mid_dead: record.midDeath || 0,
           late_dead: record.lateDeath || 0,
-          // Save PIP fields separately
           live_pip_number: record.livePipNumber || 0,
           dead_pip_number: record.deadPipNumber || 0,
           pip_number: record.pipNumber || 0,
-          // Save other residue attributes
           malformed_chicks: record.cullChicks || 0,
           contaminated_eggs: record.contamination || 0,
           handling_cracks: record.handlingCracks || 0,
@@ -188,44 +192,37 @@ const ResidueEntryPage = () => {
           dry_egg: record.dryEgg || 0,
           malpositioned: record.malpositioned || 0,
           upside_down: record.upsideDown || 0,
-          // Calculate total residue count
           total_residue_count: (record.earlyDeath || 0) + (record.midDeath || 0) + 
                               (record.lateDeath || 0) + (record.cullChicks || 0),
-          // Save hatchability metrics
           hatch_percent: record.hatchPercent,
           hof_percent: record.hofPercent,
           hoi_percent: record.hoiPercent,
           if_dev_percent: record.ifDevPercent,
-          // Save technician and notes
           lab_technician: record.technicianName || null,
           notes: record.notes || null,
           analysis_date: new Date().toISOString().split('T')[0],
         };
 
-        const { error } = await supabase
-          .from('residue_analysis')
-          .upsert(residueData, {
-            onConflict: 'batch_id'
-          });
-
-        if (error) throw error;
-      } catch (error) {
+        await offlineSubmit(residueDataRecord, 'upsert');
+      } catch (error: any) {
         console.error('Error saving residue data:', error);
         toast({
           title: "Error",
           description: `Failed to save residue data: ${error.message}`,
           variant: "destructive"
         });
-        return; // Stop processing on error
+        return;
       }
     }
     
-    // Reload from database after successful save
-    await loadResidueData();
+    // Reload from database after successful save (if online)
+    if (isOnline) {
+      await loadResidueData();
+    }
     
     toast({
-      title: "Success",
-      description: "Residue data saved successfully"
+      title: isOnline ? "Success" : "Saved Offline",
+      description: isOnline ? "Residue data saved successfully" : "Data will sync when back online"
     });
   };
 

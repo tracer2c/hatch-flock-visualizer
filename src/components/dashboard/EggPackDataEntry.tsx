@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Package, AlertTriangle, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Package, AlertTriangle, Save, ChevronDown, ChevronUp, CloudOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface EggPackData {
   id: string;
@@ -64,6 +65,10 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
   const [technicianName, setTechnicianName] = useState('');
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
+  const { isOnline } = useOnlineStatus();
+  const { submit: offlineSubmit } = useOfflineSubmit('egg_pack_quality', {
+    invalidateQueries: ['egg_pack_quality', 'dataCounts'],
+  });
 
   const calculatePercentage = (value: number, total: number): number => {
     return total > 0 ? Math.round((value / total) * 10000) / 100 : 0;
@@ -73,11 +78,11 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
     const entry = {
       batch_id: batchInfo.id,
       sample_size: newEntry.totalEggsPulled || 648,
-      large: 0, // Calculated from total - small
+      large: 0,
       small: newEntry.small || 0,
       dirty: newEntry.dirty || 0,
       cracked: newEntry.cracked || 0,
-      grade_a: 0, // You can add these fields if needed
+      grade_a: 0,
       grade_b: 0,
       grade_c: 0,
       inspection_date: new Date().toISOString().split('T')[0],
@@ -85,20 +90,14 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       notes: notes || `Stained: ${newEntry.stained}, Abnormal: ${newEntry.abnormal}, Contaminated: ${newEntry.contaminated}, USD: ${newEntry.usd}${newEntry.setWeek ? `, Set Week: ${newEntry.setWeek}` : ''}`
     };
 
-    const { error } = await supabase
-      .from('egg_pack_quality')
-      .insert([entry]);
-
-    if (error) {
+    try {
+      await offlineSubmit(entry, 'insert');
+      
       toast({
-        title: "Error saving data",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Entry Added",
-        description: `Added egg pack quality assessment for ${batchInfo.flock_name}`,
+        title: isOnline ? "Entry Added" : "Saved Offline",
+        description: isOnline 
+          ? `Added egg pack quality assessment for ${batchInfo.flock_name}`
+          : "Entry will sync when back online",
       });
       
       // Reset form but keep batch info
@@ -119,8 +118,16 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
         hatchWeek: ''
       });
       
-      // Refresh data
-      loadEggPackData();
+      // Refresh data if online
+      if (isOnline) {
+        loadEggPackData();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error saving data",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -201,6 +208,13 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
 
   return (
     <div className="space-y-6">
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+          <CloudOff className="h-4 w-4" />
+          <span className="text-sm">You're offline. Data will be saved locally and synced when back online.</span>
+        </div>
+      )}
 
       {/* Quality Summary - Moved to Top */}
       {localData.length > 0 && (
