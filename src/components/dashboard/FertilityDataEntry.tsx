@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Save, X, Info, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Info, AlertTriangle, CloudOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { calculateDaysSinceSet, validateFertilityAnalysisDate } from "@/utils/dateValidation";
+import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
+import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
 
 interface FertilityRecord {
   id: string;
@@ -49,6 +51,9 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
     notes: ''
   });
   const { toast } = useToast();
+  const { submit: offlineSubmit, isOnline } = useOfflineSubmit('fertility_analysis', {
+    invalidateQueries: ['fertility_analysis', 'batches', 'houses'],
+  });
 
   useEffect(() => {
     loadFertilityData();
@@ -139,6 +144,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       const calculated = calculateValues(sampleSize, infertile);
       
       const recordData = {
+        id: editingId || undefined,
         batch_id: batchInfo.id,
         sample_size: sampleSize,
         infertile_eggs: infertile,
@@ -148,32 +154,39 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         notes: formData.notes || null
       };
 
-      // Use UPSERT to handle both insert and update automatically
-      const result = await supabase
-        .from('fertility_analysis')
-        .upsert(recordData as any, { onConflict: 'batch_id' })
-        .select()
-        .single();
+      // Use offline-aware submit
+      const result = await offlineSubmit(recordData, 'upsert');
 
-      if (result.error) throw result.error;
-
-      // Update local state - find and replace existing record, or add new one
-      const existingIndex = data.findIndex(item => item.batch_id === batchInfo.id);
-      let updatedData;
-      if (existingIndex >= 0) {
-        updatedData = data.map(item => item.batch_id === batchInfo.id ? result.data : item);
+      // If we got data back (online mode), update local state
+      if (result) {
+        const existingIndex = data.findIndex(item => item.batch_id === batchInfo.id);
+        let updatedData;
+        if (existingIndex >= 0) {
+          updatedData = data.map(item => item.batch_id === batchInfo.id ? result[0] : item);
+        } else {
+          updatedData = [...data, result[0]];
+        }
+        onDataUpdate(updatedData);
       } else {
-        updatedData = [...data, result.data];
+        // Offline mode - add temporary record for UI
+        const tempRecord = {
+          ...recordData,
+          id: `temp-${Date.now()}`,
+          fertility_percent: calculated.fertilityPercent,
+        } as FertilityRecord;
+        
+        const existingIndex = data.findIndex(item => item.batch_id === batchInfo.id);
+        if (existingIndex >= 0) {
+          onDataUpdate(data.map(item => item.batch_id === batchInfo.id ? tempRecord : item));
+        } else {
+          onDataUpdate([...data, tempRecord]);
+        }
       }
 
-      onDataUpdate(updatedData);
-      toast({
-        title: "Record Saved",
-        description: "Fertility data saved successfully"
-      });
-
-      // Check and update batch status
-      await checkBatchStatus();
+      // Check and update batch status (only if online)
+      if (isOnline) {
+        await checkBatchStatus();
+      }
       
       handleCancel();
     } catch (error: any) {
@@ -307,6 +320,14 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
 
   return (
     <div className="space-y-6">
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+          <CloudOff className="h-4 w-4" />
+          <span className="text-sm">You're offline. Data will be saved locally and synced when back online.</span>
+        </div>
+      )}
+
       {/* Form Section */}
       <Card>
         <CardHeader>

@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle, Wand2 } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle, Wand2, CloudOff } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,8 @@ import { format, subDays, addDays, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Baby } from "lucide-react";
 import { MachineAllocationWizard } from "./MachineAllocationWizard";
+import { useHousesData, useFlocksData, useMachinesData, useUnitsData } from "@/hooks/useHousesData";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface Flock {
   id: string;
@@ -81,6 +83,14 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [houses, setHouses] = useState<House[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  
+  // Use React Query hooks for offline support
+  const { data: housesData, refetch: refetchHouses, isLoading: isLoadingHouses } = useHousesData();
+  const { data: flocksData, isLoading: isLoadingFlocks } = useFlocksData();
+  const { data: machinesData, isLoading: isLoadingMachines } = useMachinesData();
+  const { data: unitsData, isLoading: isLoadingUnits } = useUnitsData();
+  const { isOnline } = useOnlineStatus();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -169,12 +179,27 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     return null;
   };
 
+  // Sync React Query data with local state
   useEffect(() => {
-    loadFlocks();
-    loadMachines();
-    loadHouses();
-    loadUnits();
-  }, []);
+    if (housesData) setHouses(housesData);
+  }, [housesData]);
+
+  useEffect(() => {
+    if (flocksData) setFlocks(flocksData);
+  }, [flocksData]);
+
+  useEffect(() => {
+    if (machinesData) setMachines(machinesData);
+  }, [machinesData]);
+
+  useEffect(() => {
+    if (unitsData) setUnits(unitsData);
+  }, [unitsData]);
+
+  // Helper function to reload houses (uses React Query refetch)
+  const loadHouses = () => {
+    refetchHouses();
+  };
 
   // Auto-set current time when create form is opened
   useEffect(() => {
@@ -185,120 +210,6 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
       }));
     }
   }, [showCreateForm]);
-
-  const loadFlocks = async () => {
-    const { data, error } = await supabase
-      .from('flocks')
-      .select('*')
-      .order('flock_number', { ascending: true });
-    
-    if (error) {
-      toast({
-        title: "Error loading flocks",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      setFlocks(data || []);
-    }
-  };
-
-  const loadMachines = async () => {
-    const { data, error } = await supabase
-      .from('machines')
-      .select('*')
-      .order('machine_number', { ascending: true });
-    
-    if (error) {
-      toast({
-        title: "Error loading machines",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      setMachines(data || []);
-    }
-  };
-
-  const loadHouses = async () => {
-    const { data, error } = await supabase
-      .from('batches')
-      .select(`
-        *,
-        flocks(flock_name, flock_number, house_number, technician_name),
-        machines(machine_number, machine_type),
-        fertility_analysis!left(id),
-        residue_analysis!left(id)
-      `)
-      .order('set_date', { ascending: false });
-    
-    if (error) {
-      toast({
-        title: "Error loading houses",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      const formattedHouses = data?.map(batch => {
-        // Extract house number from batch_number if not in flocks table
-        // batch_number format: "FlockName #HouseNumber"
-        let houseNumber = batch.flocks?.house_number || '';
-        if (!houseNumber && batch.batch_number.includes('#')) {
-          const parts = batch.batch_number.split('#');
-          houseNumber = parts[1]?.trim() || '';
-        }
-        
-        // Handle both array and object returns from Supabase (UNIQUE constraint)
-        const fertilityCompleted = Boolean(
-          Array.isArray(batch.fertility_analysis) 
-            ? batch.fertility_analysis.length > 0 
-            : batch.fertility_analysis?.id
-        );
-        const residueCompleted = Boolean(
-          Array.isArray(batch.residue_analysis) 
-            ? batch.residue_analysis.length > 0 
-            : batch.residue_analysis?.id
-        );
-        
-        return {
-          id: batch.id,
-          batch_number: batch.batch_number,
-          flock_name: batch.flocks?.flock_name || '',
-          flock_number: batch.flocks?.flock_number || 0,
-          house_number: houseNumber,
-          machine_number: batch.machines?.machine_number || '',
-          machine_type: batch.machines?.machine_type || '',
-          set_date: batch.set_date,
-          expected_hatch_date: batch.expected_hatch_date,
-          total_eggs_set: batch.total_eggs_set,
-          status: batch.status,
-          unit_id: batch.unit_id ?? null,
-          technician_name: batch.flocks?.technician_name || null,
-          data_type: batch.data_type as 'original' | 'dummy' || 'original',
-          fertility_completed: fertilityCompleted,
-          residue_completed: residueCompleted,
-        };
-      }) || [];
-      setHouses(formattedHouses);
-    }
-  };
-
-  const loadUnits = async () => {
-    const { data, error } = await supabase
-      .from('units')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) {
-      toast({
-        title: "Error loading units",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-    setUnits(data || []);
-  };
 
   // Filter toggle helpers
   const toggleFilterUnit = (id: string, checked: boolean) => {
@@ -627,6 +538,14 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+          <CloudOff className="h-4 w-4" />
+          <span className="text-sm">You're offline. Viewing cached data. New houses cannot be created offline.</span>
+        </div>
+      )}
+
       {/* Create New House with Allocation Wizard */}
       <Card className="border-primary/20">
         <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
