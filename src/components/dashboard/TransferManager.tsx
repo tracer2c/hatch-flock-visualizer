@@ -10,6 +10,9 @@ import { ArrowRight, Calendar, Clock, Info, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateTransfer, useBatchTransfers, calculateDaysInMachine } from "@/hooks/useMachineTransfers";
 import { useToast } from "@/hooks/use-toast";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { format, parse } from "date-fns";
 
 interface Machine {
   id: string;
@@ -194,11 +197,14 @@ const TransferManager = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Transfer Date *</Label>
-                <Input
-                  type="date"
-                  value={formData.transfer_date}
-                  min={setDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, transfer_date: e.target.value }))}
+                <DatePicker
+                  date={formData.transfer_date}
+                  onSelect={(date) => {
+                    const dateStr = date ? format(date, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0];
+                    setFormData(prev => ({ ...prev, transfer_date: dateStr }));
+                  }}
+                  minDate={parse(setDate, 'yyyy-MM-dd', new Date())}
+                  placeholder="Select transfer date"
                 />
               </div>
               <div className="space-y-2">
@@ -206,10 +212,11 @@ const TransferManager = ({
                   Transfer Time
                   <span className="text-muted-foreground text-xs">(optional)</span>
                 </Label>
-                <Input
-                  type="time"
-                  value={formData.transfer_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, transfer_time: e.target.value }))}
+                <TimePicker
+                  time={formData.transfer_time}
+                  onSelect={(time) => setFormData(prev => ({ ...prev, transfer_time: time }))}
+                  placeholder="Select time"
+                  minuteStep={15}
                 />
               </div>
             </div>

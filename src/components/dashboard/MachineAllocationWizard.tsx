@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,8 @@ import { MachineCapacityInfo, Position, ZONE_LABELS, getCapacityPerPosition, val
 import { PositionSelectionGrid } from "./PositionSelectionGrid";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 interface Flock {
   id: string;
@@ -365,22 +368,24 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
 
             <div className="space-y-2">
               <Label>Set Date *</Label>
-              <Input
-                type="date"
-                value={formData.setDate}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, setDate: e.target.value }));
+              <DatePicker
+                date={formData.setDate}
+                onSelect={(date) => {
+                  const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+                  setFormData(prev => ({ ...prev, setDate: dateStr }));
                   setAllocations([]); // Reset allocations when date changes
                 }}
+                placeholder="Select set date"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Set Time</Label>
-              <Input
-                type="time"
-                value={formData.setTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, setTime: e.target.value }))}
+              <TimePicker
+                time={formData.setTime}
+                onSelect={(time) => setFormData(prev => ({ ...prev, setTime: time }))}
+                placeholder="Select set time"
+                minuteStep={15}
               />
             </div>
 

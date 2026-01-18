@@ -48,6 +48,8 @@ import MoistureLossEntry from './MoistureLossEntry';
 import CandlingEntry from './CandlingEntry';
 import { submitCandlingQAMulti } from '@/services/qaSubmissionService';
 import { OccupancyInfo } from '@/utils/setterPositionMapping';
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 interface SelectedMachine {
   id: string;
@@ -558,7 +560,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label>Check Date</Label>
-              <Input type="date" value={checkDate} onChange={(e) => setCheckDate(e.target.value)} />
+              <DatePicker
+                date={checkDate}
+                onSelect={(date) => {
+                  const dateStr = date ? format(date, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0];
+                  setCheckDate(dateStr);
+                }}
+                placeholder="Select check date"
+              />
             </div>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
