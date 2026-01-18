@@ -262,8 +262,12 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Log logout before signing out (while we still have auth)
-      await activityLogger.logLogout().catch(console.error);
+      // Capture user info BEFORE signing out (since session will be invalidated)
+      const currentUserId = user?.id;
+      const currentUserEmail = profile?.email || user?.email;
+      
+      // Log logout with explicit user info
+      await activityLogger.logLogoutWithUser(currentUserId, currentUserEmail);
       
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
