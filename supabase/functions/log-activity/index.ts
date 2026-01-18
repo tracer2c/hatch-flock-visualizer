@@ -16,6 +16,8 @@ interface ActivityLogRequest {
   notes?: string;
   session_id?: string;
   page_path?: string;
+  user_id?: string;
+  user_email?: string;
 }
 
 Deno.serve(async (req) => {
@@ -27,6 +29,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Extract IP address from various headers (handles proxies)
     const forwardedFor = req.headers.get('x-forwarded-for');
@@ -35,7 +38,6 @@ Deno.serve(async (req) => {
     
     let ipAddress: string | null = null;
     if (forwardedFor) {
-      // x-forwarded-for can contain multiple IPs, take the first (original client)
       ipAddress = forwardedFor.split(',')[0].trim();
     } else if (realIp) {
       ipAddress = realIp;
@@ -46,34 +48,7 @@ Deno.serve(async (req) => {
     const userAgent = req.headers.get('user-agent');
     const authHeader = req.headers.get('authorization');
 
-    // Create Supabase client with user's auth
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader || '' },
-      },
-    });
-
-    // Get user from JWT
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Get user profile to fetch company_id and email
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('company_id, email')
-      .eq('id', user.id)
-      .single();
-
+    // Parse body first to get user_id/user_email if provided
     const body: ActivityLogRequest = await req.json();
 
     // Validate required fields
@@ -87,12 +62,58 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert activity log
-    const { data, error } = await supabase
+    // Try to get user from JWT first
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+
+    if (authHeader) {
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      });
+
+      const { data: { user } } = await userClient.auth.getUser();
+      if (user) {
+        userId = user.id;
+        userEmail = user.email || null;
+      }
+    }
+
+    // If no user from JWT, use user_id/user_email from request body (for logout scenarios)
+    if (!userId && body.user_id) {
+      userId = body.user_id;
+      userEmail = body.user_email || null;
+    }
+
+    // If still no user, reject the request
+    if (!userId) {
+      console.error('No user identified from JWT or request body');
+      return new Response(
+        JSON.stringify({ error: 'User identification required' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Create admin client with service role for inserting logs (bypasses RLS)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Get user profile to fetch company_id and email
+    const { data: profile } = await adminClient
+      .from('user_profiles')
+      .select('company_id, email')
+      .eq('id', userId)
+      .single();
+
+    // Insert activity log using admin client
+    const { data, error } = await adminClient
       .from('user_activity_log')
       .insert({
-        user_id: user.id,
-        user_email: profile?.email || user.email,
+        user_id: userId,
+        user_email: profile?.email || userEmail,
         session_id: body.session_id,
         ip_address: ipAddress,
         user_agent: userAgent,
@@ -121,7 +142,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Activity logged: ${body.action_type} by ${user.email} from ${ipAddress}`);
+    console.log(`Activity logged: ${body.action_type} by ${userEmail || userId} from ${ipAddress}`);
 
     return new Response(
       JSON.stringify({ success: true, id: data.id }),

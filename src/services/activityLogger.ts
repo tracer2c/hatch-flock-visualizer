@@ -83,19 +83,16 @@ class ActivityLogger {
 
   private async sendLog(entry: ActivityLogEntry, retryCount = 0): Promise<void> {
     try {
-      // Check if user has a valid session before attempting to log
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // No valid session, skip logging silently
-        console.debug('Activity logging skipped: no active session');
-        return;
-      }
+      // Get current user info to include in request
+      const { data: { user } } = await supabase.auth.getUser();
 
       const { error } = await supabase.functions.invoke('log-activity', {
         body: {
           ...entry,
           session_id: this.sessionId,
           page_path: this.getPagePath(),
+          user_id: user?.id,
+          user_email: user?.email,
         },
       });
 
@@ -108,6 +105,30 @@ class ActivityLogger {
         return this.sendLog(entry, retryCount + 1);
       }
       throw error;
+    }
+  }
+
+  // Special method for logout that accepts explicit user info (since session is being invalidated)
+  async logLogoutWithUser(userId?: string, userEmail?: string): Promise<void> {
+    if (!userId) {
+      console.debug('Activity logging skipped for logout: no user ID provided');
+      return;
+    }
+
+    try {
+      await supabase.functions.invoke('log-activity', {
+        body: {
+          action_type: 'logout',
+          action_category: 'auth',
+          notes: 'User logged out',
+          session_id: this.sessionId,
+          page_path: this.getPagePath(),
+          user_id: userId,
+          user_email: userEmail,
+        },
+      });
+    } catch (error) {
+      console.warn('Failed to log logout activity:', error);
     }
   }
 
