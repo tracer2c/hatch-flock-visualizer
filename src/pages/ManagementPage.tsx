@@ -1,6 +1,5 @@
 import FlockManager from "@/components/dashboard/FlockManager";
 import MachineManager from "@/components/dashboard/MachineManager";
-import DataCleanup from "@/components/dashboard/DataCleanup";
 import BatchStatusSettings from "@/components/dashboard/BatchStatusSettings";
 import SOPManager from "@/components/dashboard/SOPManager";
 import SOPDashboard from "@/components/dashboard/SOPDashboard";
@@ -9,9 +8,8 @@ import UnitManager from "@/components/dashboard/UnitManager";
 import { TargetManager } from "@/components/management/TargetManager";
 import { ResidueScheduleManager } from "@/components/management/ResidueScheduleManager";
 import ReportsManager from "@/components/management/ReportsManager";
-import { Settings, Clock, FileText, Users, Cog, Database, UserCheck, Home, Target, Calendar, ListChecks, Download } from "lucide-react";
+import { Clock, FileText, Users, Cog, UserCheck, Home, Target, Calendar, ListChecks, Download } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
 const ManagementPage = () => {
   return (
     <div className="p-6">
@@ -122,20 +120,6 @@ const ManagementPage = () => {
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="data-cleanup" className="bg-white rounded-lg shadow-sm border">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center gap-3">
-              <Database className="h-5 w-5 text-red-600" />
-              <div className="text-left">
-                <h3 className="font-semibold text-lg">Data Cleanup</h3>
-                <p className="text-gray-600 text-sm">Clean up old records and manage data retention</p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <DataCleanup />
-          </AccordionContent>
-        </AccordionItem>
 
         <AccordionItem value="custom-targets" className="bg-white rounded-lg shadow-sm border">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
