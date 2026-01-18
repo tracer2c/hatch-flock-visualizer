@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useToast } from './use-toast';
+import { activityLogger } from '@/services/activityLogger';
 
 type Operation = 'insert' | 'update' | 'upsert' | 'delete';
 
@@ -55,6 +56,18 @@ export function useOfflineSubmit(
 
           if (result?.error) {
             throw result.error;
+          }
+
+          // Log the activity
+          const resourceId = result?.data?.[0]?.id || data.id || '';
+          const resourceName = data.batch_number || data.flock_name || data.machine_number || data.name || '';
+          
+          if (operation === 'insert') {
+            activityLogger.logCreate(table, resourceId, resourceName, data).catch(console.error);
+          } else if (operation === 'update' || operation === 'upsert') {
+            activityLogger.logUpdate(table, resourceId, resourceName, {}, data).catch(console.error);
+          } else if (operation === 'delete') {
+            activityLogger.logDelete(table, resourceId, resourceName, data).catch(console.error);
           }
 
           // Invalidate related queries

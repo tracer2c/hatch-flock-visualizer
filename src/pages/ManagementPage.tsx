@@ -8,7 +8,8 @@ import UnitManager from "@/components/dashboard/UnitManager";
 import { TargetManager } from "@/components/management/TargetManager";
 import { ResidueScheduleManager } from "@/components/management/ResidueScheduleManager";
 import ReportsManager from "@/components/management/ReportsManager";
-import { Clock, FileText, Users, Cog, UserCheck, Home, Target, Calendar, ListChecks, Download } from "lucide-react";
+import ActivityLogViewer from "@/components/management/ActivityLogViewer";
+import { Clock, FileText, Users, Cog, UserCheck, Home, Target, Calendar, ListChecks, Download, ClipboardList } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 const ManagementPage = () => {
   return (
@@ -163,6 +164,21 @@ const ManagementPage = () => {
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-6">
             <ReportsManager />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="activity-log" className="bg-white rounded-lg shadow-sm border">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <ClipboardList className="h-5 w-5 text-rose-600" />
+              <div className="text-left">
+                <h3 className="font-semibold text-lg">User Activity Log</h3>
+                <p className="text-gray-600 text-sm">View all user actions with IP addresses and timestamps</p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <ActivityLogViewer />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
