@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { calculateDaysSinceSet, validateFertilityAnalysisDate } from "@/utils/dateValidation";
 import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
 import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 interface FertilityRecord {
   id: string;
@@ -379,12 +381,13 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
 
             <div className="space-y-2">
               <Label htmlFor="analysisDate">Analysis Date <span className="text-destructive">*</span></Label>
-              <Input
-                id="analysisDate"
-                type="date"
-                value={formData.analysisDate}
-                onChange={(e) => handleInputChange('analysisDate', e.target.value)}
-                required
+              <DatePicker
+                date={formData.analysisDate}
+                onSelect={(date) => {
+                  const dateStr = date ? format(date, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0];
+                  handleInputChange('analysisDate', dateStr);
+                }}
+                placeholder="Select analysis date"
               />
               {daysSinceSet !== null && (
                 <div className="flex items-center gap-2 flex-wrap">

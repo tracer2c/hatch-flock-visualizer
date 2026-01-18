@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,8 @@ import { Baby } from "lucide-react";
 import { MachineAllocationWizard } from "./MachineAllocationWizard";
 import { useHousesData, useFlocksData, useMachinesData, useUnitsData } from "@/hooks/useHousesData";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 interface Flock {
   id: string;
@@ -977,19 +978,23 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
 
                 <div className="space-y-2">
                   <Label>Set Date *</Label>
-                  <Input
-                    type="date"
-                    value={editFormData.setDate}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, setDate: e.target.value }))}
+                  <DatePicker
+                    date={editFormData.setDate}
+                    onSelect={(date) => {
+                      const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+                      setEditFormData(prev => ({ ...prev, setDate: dateStr }));
+                    }}
+                    placeholder="Select set date"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Set Time *</Label>
-                  <Input
-                    type="time"
-                    value={editFormData.setTime}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, setTime: e.target.value }))}
+                  <TimePicker
+                    time={editFormData.setTime}
+                    onSelect={(time) => setEditFormData(prev => ({ ...prev, setTime: time }))}
+                    placeholder="Select set time"
+                    minuteStep={15}
                   />
                 </div>
 

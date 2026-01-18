@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 interface FilterOption {
   id: string;
@@ -117,19 +119,25 @@ export const DataSheetCenteredFilterDialog = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-xs">From</Label>
-                  <Input
-                    type="date"
-                    value={filters.dateFrom}
-                    onChange={(e) => setFilters((prev: any) => ({ ...prev, dateFrom: e.target.value }))}
+                  <DatePicker
+                    date={filters.dateFrom}
+                    onSelect={(date) => {
+                      const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+                      setFilters((prev: any) => ({ ...prev, dateFrom: dateStr }));
+                    }}
+                    placeholder="From date"
                     className="h-9"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">To</Label>
-                  <Input
-                    type="date"
-                    value={filters.dateTo}
-                    onChange={(e) => setFilters((prev: any) => ({ ...prev, dateTo: e.target.value }))}
+                  <DatePicker
+                    date={filters.dateTo}
+                    onSelect={(date) => {
+                      const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
+                      setFilters((prev: any) => ({ ...prev, dateTo: dateStr }));
+                    }}
+                    placeholder="To date"
                     className="h-9"
                   />
                 </div>
