@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Session, Factor } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { activityLogger } from '@/services/activityLogger';
 
 export interface UserProfile {
   id: string;
@@ -201,6 +202,9 @@ export const useAuth = () => {
         }
       }
 
+      // Log successful login
+      activityLogger.logLogin().catch(console.error);
+
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully.",
@@ -235,6 +239,9 @@ export const useAuth = () => {
 
       await checkMFAStatus();
       
+      // Log MFA verification
+      activityLogger.logMFAVerify().catch(console.error);
+      
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully.",
@@ -253,6 +260,9 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
+      // Log logout before signing out (while we still have auth)
+      await activityLogger.logLogout().catch(console.error);
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
@@ -345,6 +355,9 @@ export const useAuth = () => {
       });
       
       if (error) throw error;
+      
+      // Log password change
+      activityLogger.logPasswordChange().catch(console.error);
       
       toast({
         title: "Password updated",

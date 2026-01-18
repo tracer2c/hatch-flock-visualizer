@@ -1,0 +1,143 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface ActivityLogRequest {
+  action_type: string;
+  action_category: string;
+  resource_type?: string;
+  resource_id?: string;
+  resource_name?: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  notes?: string;
+  session_id?: string;
+  page_path?: string;
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // Extract IP address from various headers (handles proxies)
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    const realIp = req.headers.get('x-real-ip');
+    const cfConnectingIp = req.headers.get('cf-connecting-ip');
+    
+    let ipAddress: string | null = null;
+    if (forwardedFor) {
+      // x-forwarded-for can contain multiple IPs, take the first (original client)
+      ipAddress = forwardedFor.split(',')[0].trim();
+    } else if (realIp) {
+      ipAddress = realIp;
+    } else if (cfConnectingIp) {
+      ipAddress = cfConnectingIp;
+    }
+
+    const userAgent = req.headers.get('user-agent');
+    const authHeader = req.headers.get('authorization');
+
+    // Create Supabase client with user's auth
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader || '' },
+      },
+    });
+
+    // Get user from JWT
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Get user profile to fetch company_id and email
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id, email')
+      .eq('id', user.id)
+      .single();
+
+    const body: ActivityLogRequest = await req.json();
+
+    // Validate required fields
+    if (!body.action_type || !body.action_category) {
+      return new Response(
+        JSON.stringify({ error: 'action_type and action_category are required' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Insert activity log
+    const { data, error } = await supabase
+      .from('user_activity_log')
+      .insert({
+        user_id: user.id,
+        user_email: profile?.email || user.email,
+        session_id: body.session_id,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        action_type: body.action_type,
+        action_category: body.action_category,
+        resource_type: body.resource_type,
+        resource_id: body.resource_id,
+        resource_name: body.resource_name,
+        old_values: body.old_values,
+        new_values: body.new_values,
+        page_path: body.page_path,
+        notes: body.notes,
+        company_id: profile?.company_id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Insert error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to log activity', details: error.message }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log(`Activity logged: ${body.action_type} by ${user.email} from ${ipAddress}`);
+
+    return new Response(
+      JSON.stringify({ success: true, id: data.id }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});

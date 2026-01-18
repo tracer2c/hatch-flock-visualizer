@@ -1963,6 +1963,74 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activity_log: {
+        Row: {
+          action_category: string
+          action_type: string
+          company_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          new_values: Json | null
+          notes: string | null
+          old_values: Json | null
+          page_path: string | null
+          resource_id: string | null
+          resource_name: string | null
+          resource_type: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_category: string
+          action_type: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          notes?: string | null
+          old_values?: Json | null
+          page_path?: string | null
+          resource_id?: string | null
+          resource_name?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_category?: string
+          action_type?: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          notes?: string | null
+          old_values?: Json | null
+          page_path?: string | null
+          resource_id?: string | null
+          resource_name?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           allowed_data_types: string[] | null
