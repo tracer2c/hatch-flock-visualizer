@@ -83,6 +83,14 @@ class ActivityLogger {
 
   private async sendLog(entry: ActivityLogEntry, retryCount = 0): Promise<void> {
     try {
+      // Check if user has a valid session before attempting to log
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // No valid session, skip logging silently
+        console.debug('Activity logging skipped: no active session');
+        return;
+      }
+
       const { error } = await supabase.functions.invoke('log-activity', {
         body: {
           ...entry,

@@ -202,8 +202,10 @@ export const useAuth = () => {
         }
       }
 
-      // Log successful login
-      activityLogger.logLogin().catch(console.error);
+      // Log successful login after a short delay to ensure session is established
+      setTimeout(() => {
+        activityLogger.logLogin().catch(console.error);
+      }, 500);
 
       toast({
         title: "Welcome back!",
