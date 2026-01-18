@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       .from('user_activity_log')
       .insert({
         user_id: userId,
-        user_email: profile?.email || userEmail,
+        user_email: userEmail || profile?.email,
         session_id: body.session_id,
         ip_address: ipAddress,
         user_agent: userAgent,
