@@ -230,7 +230,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
     const calculatedChicks = hatchabilityMetrics.chicksHatched;
     
     const newRecord: ResidueRecord = {
-      id: editingId || Date.now().toString(),
+      id: editingId || `temp-${Date.now()}`,
       name: formData.name,
       flockNumber: Number(formData.flockNumber),
       houseNumber: Number(formData.houseNumber),

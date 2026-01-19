@@ -171,7 +171,7 @@ const ResidueEntryPage = () => {
     for (const record of newData) {
       try {
         const residueDataRecord = {
-          id: record.id?.startsWith('temp-') ? undefined : record.id,
+          id: (record.id?.startsWith('temp-') || /^\d+$/.test(record.id || '')) ? undefined : record.id,
           batch_id: houseId,
           sample_size: record.sampleSize || 648,
           infertile_eggs: record.infertile || 0,
