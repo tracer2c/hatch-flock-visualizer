@@ -434,10 +434,33 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
            record.temp_back_top_left !== null;
   };
 
-  // Calculate total capacity used
+  // Calculate total capacity used (cumulative - all time)
   const totalCapacityUsed = useMemo(() => {
     return filteredSets.reduce((sum, set) => sum + set.capacity, 0);
   }, [filteredSets]);
+
+  // Calculate eggs currently present in the machine (active sets within 21-day incubation cycle)
+  const { currentlyPresentEggs, activeSetsCount } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const activeSets = sets.filter(set => {
+      const setDate = new Date(set.set_date);
+      setDate.setHours(0, 0, 0, 0);
+      const daysSinceSet = Math.floor((today.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+      // A set is "active" if it's within the 21-day incubation cycle (Day 0 to Day 21)
+      return daysSinceSet >= 0 && daysSinceSet <= 21;
+    });
+    
+    return {
+      currentlyPresentEggs: activeSets.reduce((sum, set) => sum + set.capacity, 0),
+      activeSetsCount: activeSets.length
+    };
+  }, [sets]);
+
+  // Calculate available capacity
+  const availableCapacity = Math.max(0, machine.capacity - currentlyPresentEggs);
+  const isOverCapacity = currentlyPresentEggs > machine.capacity;
 
   // Export handlers
   const handleExportSets = () => {
@@ -515,48 +538,81 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
           {/* Sets Tab */}
           <TabsContent value="sets" className="space-y-4 mt-4">
             {/* Summary Bar */}
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Machine Capacity:</span>
-                  <span className="ml-1 font-semibold">{machine.capacity.toLocaleString()}</span>
+            <div className="flex flex-col gap-3 p-3 bg-muted/50 rounded-lg">
+              {/* Primary metrics row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-sm flex-wrap">
+                  <div>
+                    <span className="text-muted-foreground">Machine Capacity:</span>
+                    <span className="ml-1 font-semibold">{machine.capacity.toLocaleString()}</span>
+                  </div>
+                  <div className="border-l border-border pl-4">
+                    <span className="text-muted-foreground">Eggs Currently Present:</span>
+                    <span className={`ml-1 font-semibold ${isOverCapacity ? 'text-destructive' : 'text-primary'}`}>
+                      {currentlyPresentEggs.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-l border-border pl-4">
+                    <span className="text-muted-foreground">Available Capacity:</span>
+                    <span className={`ml-1 font-semibold ${availableCapacity > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      {availableCapacity.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Sets Loaded:</span>
-                  <span className="ml-1 font-semibold">{filteredSets.length}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Total Eggs:</span>
-                  <span className="ml-1 font-semibold">{totalCapacityUsed.toLocaleString()}</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportSets}
+                    disabled={filteredSets.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2"
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="h-5 px-1.5">{activeFilterCount}</Badge>
+                    )}
+                  </Button>
+                  <Button size="sm" onClick={() => { resetForm(); setShowAddForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Set
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportSets}
-                  disabled={filteredSets.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Export
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5">{activeFilterCount}</Badge>
-                  )}
-                </Button>
-                <Button size="sm" onClick={() => { resetForm(); setShowAddForm(true); }}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Set
-                </Button>
+              
+              {/* Secondary metrics row - historical/cumulative data */}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground border-t border-border pt-2">
+                <div>
+                  <span>Active Sets (0-21 days):</span>
+                  <span className="ml-1 font-medium text-foreground">{activeSetsCount}</span>
+                </div>
+                <div className="border-l border-border pl-4">
+                  <span>Total Sets (All Time):</span>
+                  <span className="ml-1 font-medium text-foreground">{filteredSets.length}</span>
+                </div>
+                <div className="border-l border-border pl-4">
+                  <span>Total Eggs (Cumulative):</span>
+                  <span className="ml-1 font-medium text-foreground">{totalCapacityUsed.toLocaleString()}</span>
+                </div>
               </div>
+              
+              {/* Over-capacity warning */}
+              {isOverCapacity && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Machine is over capacity by {(currentlyPresentEggs - machine.capacity).toLocaleString()} eggs
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             {/* Filters Section */}
