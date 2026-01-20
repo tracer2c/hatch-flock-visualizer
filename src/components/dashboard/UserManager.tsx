@@ -7,10 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Eye, EyeOff, ChevronDown, Check, X, Shield } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Check, X, Shield, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -63,7 +62,7 @@ const UserManager = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -356,103 +355,110 @@ const UserManager = () => {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Company Users ({users.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    {user.first_name && user.last_name 
-                      ? `${user.first_name} ${user.last_name}`
-                      : 'No name set'
-                    }
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.phone || 'Not set'}</TableCell>
-                  <TableCell>
-                    <Select 
-                      value={user.user_roles[0]?.role || 'staff'} 
-                      onValueChange={(value) => updateUserRole(user.id, value as any)}
-                      disabled={!isAdmin()}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="operations_head">Operations Head</SelectItem>
-                        <SelectItem value="company_admin">Company Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(user.status)}>
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!isAdmin()}
-                        onClick={() => updateUserStatus(
-                          user.id, 
-                          user.status === 'active' ? 'inactive' : 'active'
-                        )}
-                      >
-                        {user.status === 'active' ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Company Users
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Role Permissions
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Role Permissions Section */}
-      <Card>
-        <Collapsible open={permissionsOpen} onOpenChange={setPermissionsOpen}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">Role Permissions</CardTitle>
-                </div>
-                <ChevronDown className={cn(
-                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
-                  permissionsOpen && "rotate-180"
-                )} />
-              </div>
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Company Users ({users.length})
+              </CardTitle>
             </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="pt-0">
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}`
+                          : 'No name set'
+                        }
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.phone || 'Not set'}</TableCell>
+                      <TableCell>
+                        <Select 
+                          value={user.user_roles[0]?.role || 'staff'} 
+                          onValueChange={(value) => updateUserRole(user.id, value as any)}
+                          disabled={!isAdmin()}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="operations_head">Operations Head</SelectItem>
+                            <SelectItem value="company_admin">Company Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(user.status)}>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!isAdmin()}
+                            onClick={() => updateUserStatus(
+                              user.id, 
+                              user.status === 'active' ? 'inactive' : 'active'
+                            )}
+                          >
+                            {user.status === 'active' ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Role Permissions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="rounded-lg border overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -497,9 +503,9 @@ const UserManager = () => {
                 Permissions are automatically applied based on the user's assigned role.
               </p>
             </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
