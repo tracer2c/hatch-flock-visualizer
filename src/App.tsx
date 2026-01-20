@@ -45,6 +45,7 @@ import LiveTrackingPage from "./pages/LiveTrackingPage";
 import MachineUtilizationPage from "./pages/MachineUtilizationPage";
 import QAHubPage from "./pages/QAHubPage";
 import InstallPage from "./pages/InstallPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
@@ -82,6 +83,7 @@ function AppContent() {
       <SyncManager />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/install" element={<InstallPage />} />
         <Route path="/*" element={
           <ProtectedRoute>

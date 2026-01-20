@@ -5,18 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Egg } from 'lucide-react';
+import { Egg, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 
 export default function AuthPage() {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, resetPasswordForEmail, loading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showMFADialog, setShowMFADialog] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState('');
   const [pendingMFAVerification, setPendingMFAVerification] = useState(false);
+  
+  // Forgot password states
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   // Redirect if already authenticated (but not if MFA verification is pending)
   if (user && !loading && !pendingMFAVerification && !showMFADialog) {
@@ -66,6 +74,49 @@ export default function AuthPage() {
     setPendingMFAVerification(false);
     setShowMFADialog(false);
     await supabase.auth.signOut();
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail.trim()) return;
+    
+    setForgotPasswordLoading(true);
+    const result = await resetPasswordForEmail(forgotPasswordEmail);
+    setForgotPasswordLoading(false);
+    
+    if (!result.error) {
+      setEmailSent(true);
+      startResendCountdown();
+    }
+  };
+
+  const startResendCountdown = () => {
+    setResendCountdown(30);
+    const interval = setInterval(() => {
+      setResendCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendEmail = async () => {
+    if (resendCountdown > 0) return;
+    
+    setForgotPasswordLoading(true);
+    await resetPasswordForEmail(forgotPasswordEmail);
+    setForgotPasswordLoading(false);
+    startResendCountdown();
+  };
+
+  const closeForgotPasswordDialog = () => {
+    setShowForgotPassword(false);
+    setEmailSent(false);
+    setForgotPasswordEmail('');
+    setResendCountdown(0);
   };
 
   if (loading) {
@@ -168,6 +219,15 @@ export default function AuthPage() {
                       className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-sm text-primary hover:underline focus:outline-none"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 pb-6">
@@ -272,6 +332,104 @@ export default function AuthPage() {
         onSuccess={handleMFASuccess}
         onCancel={handleMFACancel}
       />
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={closeForgotPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          {!emailSent ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">Reset Your Password</DialogTitle>
+                <DialogDescription>
+                  Enter your email address and we'll send you a link to reset your password.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleForgotPassword} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email" className="text-sm font-medium">
+                    Email
+                  </Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-semibold bg-gradient-to-r from-primary to-primary/90"
+                    disabled={forgotPasswordLoading || !forgotPasswordEmail.trim()}
+                  >
+                    {forgotPasswordLoading ? "Sending..." : "Send Reset Link"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={closeForgotPasswordDialog}
+                    className="w-full"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Sign In
+                  </Button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-success/20 rounded-full flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-success" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-bold">Check Your Email</DialogTitle>
+                  </div>
+                </div>
+                <DialogDescription className="pt-2">
+                  We've sent a password reset link to:
+                  <span className="block font-medium text-foreground mt-1">{forgotPasswordEmail}</span>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="text-sm text-muted-foreground">
+                  Didn't receive the email? Check your spam folder or try resending.
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleResendEmail}
+                    disabled={resendCountdown > 0 || forgotPasswordLoading}
+                    className="w-full h-11"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${forgotPasswordLoading ? 'animate-spin' : ''}`} />
+                    {resendCountdown > 0 
+                      ? `Resend in ${resendCountdown}s` 
+                      : forgotPasswordLoading 
+                        ? "Sending..." 
+                        : "Resend Email"
+                    }
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={closeForgotPasswordDialog}
+                    className="w-full"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Sign In
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
