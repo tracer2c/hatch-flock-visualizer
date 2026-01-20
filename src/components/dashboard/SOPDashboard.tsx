@@ -92,7 +92,7 @@ const SOPDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('machines')
-        .select('id, machine_number, machine_type, last_maintenance, status')
+        .select('id, machine_number, machine_type, last_maintenance, created_at, status')
         .order('last_maintenance', { ascending: true, nullsFirst: true })
         .limit(10);
       if (error) throw error;
@@ -171,8 +171,10 @@ const SOPDashboard = () => {
   // Count machines needing maintenance based on dynamic config
   const maintenanceInterval = maintenanceConfig || 30;
   const machinesNeedingMaintenance = machinesMaintenance?.filter(m => {
-    if (!m.last_maintenance) return true;
-    return differenceInDays(new Date(), new Date(m.last_maintenance)) > maintenanceInterval;
+    // Use created_at as baseline for machines without maintenance record
+    const referenceDate = m.last_maintenance || m.created_at;
+    if (!referenceDate) return false;
+    return differenceInDays(new Date(), new Date(referenceDate)) > maintenanceInterval;
   }).length || 0;
 
   if (batchesLoading) {
@@ -333,10 +335,12 @@ const SOPDashboard = () => {
             Click a machine to complete maintenance tasks
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {machinesMaintenance?.map(machine => {
-              const daysSinceMaintenance = machine.last_maintenance 
-                ? differenceInDays(new Date(), new Date(machine.last_maintenance))
-                : 999;
+          {machinesMaintenance?.map(machine => {
+              // Use created_at as baseline for machines without maintenance record
+              const referenceDate = machine.last_maintenance || machine.created_at;
+              const daysSinceMaintenance = referenceDate 
+                ? differenceInDays(new Date(), new Date(referenceDate))
+                : 0;
               const needsMaintenance = daysSinceMaintenance > maintenanceInterval;
 
               return (
