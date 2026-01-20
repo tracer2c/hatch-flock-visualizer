@@ -441,6 +441,56 @@ export const useAuth = () => {
     return new Date() > graceEnd;
   };
 
+  const resetPasswordForEmail = async (email: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reset email sent",
+        description: "Check your inbox for the password reset link.",
+      });
+
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Request failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const resetPassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset successful",
+        description: "Your password has been updated. You can now sign in.",
+      });
+
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Password reset failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
   return {
     user,
     session,
@@ -462,5 +512,7 @@ export const useAuth = () => {
     isStaff,
     checkMFAStatus,
     checkGracePeriodExpired,
+    resetPasswordForEmail,
+    resetPassword,
   };
 };
