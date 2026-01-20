@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Egg, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Egg, Mail, ArrowLeft, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AuthPage() {
   const { user, signIn, signUp, resetPasswordForEmail, loading } = useAuth();
@@ -25,6 +26,43 @@ export default function AuthPage() {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Sign up email validation states
+  const [signupEmail, setSignupEmail] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Check if email already exists in user_profiles
+  const checkEmailExists = async (email: string) => {
+    if (!email || !email.includes('@')) {
+      setEmailExists(false);
+      return;
+    }
+    
+    setCheckingEmail(true);
+    
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle();
+    
+    setEmailExists(!!data);
+    setCheckingEmail(false);
+  };
+
+  // Debounced email check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (signupEmail) {
+        checkEmailExists(signupEmail);
+      } else {
+        setEmailExists(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [signupEmail]);
 
   // Redirect if already authenticated (but not if MFA verification is pending)
   if (user && !loading && !pendingMFAVerification && !showMFADialog) {
@@ -286,14 +324,48 @@ export default function AuthPage() {
                     <Label htmlFor="signup-email" className="text-sm font-medium">
                       Email
                     </Label>
-                    <Input
-                      id="signup-email"
-                      name="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        className={cn(
+                          "h-11 border-2 transition-colors pr-10",
+                          emailExists 
+                            ? "border-amber-400 bg-amber-50 focus:border-amber-500" 
+                            : "border-border/50 focus:border-primary/50"
+                        )}
+                        required
+                      />
+                      {checkingEmail && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    {emailExists && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm animate-fade-in">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="text-amber-800">
+                            An account with this email already exists.{' '}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const signinTab = document.querySelector('[value="signin"]') as HTMLElement;
+                              signinTab?.click();
+                            }}
+                            className="text-primary font-medium hover:underline"
+                          >
+                            Sign in instead
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-sm font-medium">
@@ -313,7 +385,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-semibold bg-gradient-to-r from-accent to-warning hover:from-accent/90 hover:to-warning/90 shadow-lg hover:shadow-xl hover:shadow-accent/20 transition-all duration-300"
-                    disabled={isLoading}
+                    disabled={isLoading || emailExists}
                   >
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>
