@@ -215,7 +215,7 @@ export function ModernSidebar() {
                           "group relative flex items-center rounded-xl transition-all duration-300 touch-manipulation",
                           collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-4 py-3 min-h-[44px]",
                           active
-                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:text-primary-foreground shadow-lg shadow-primary/20"
                             : "hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80"
                         )}
                       >
