@@ -656,20 +656,61 @@ const BatchOverviewDashboard = () => {
                   <div className="h-full overflow-y-auto space-y-3 pr-1">
                     {showQAAlerts ? (
                       qaAlerts && qaAlerts.length > 0 ? (
-                        qaAlerts.slice(0, 10).map((alert) => (
-                          <div key={alert.id} className="flex items-center justify-between p-3 bg-muted/40 border border-border/60 rounded-lg hover:bg-muted/60 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-md bg-amber-500/10">
-                                <Activity className="h-4 w-4 text-amber-600" />
+                        qaAlerts.slice(0, 10).map((alert) => {
+                          const temp = alert.temperature;
+                          const humidity = alert.humidity;
+                          const isCritical = temp < 97 || temp > 103 || humidity < 45 || humidity > 75;
+                          const isWarning = !isCritical && (temp < 99 || temp > 101 || humidity < 55 || humidity > 65);
+                          
+                          const severityConfig = isCritical ? {
+                            cardClass: 'bg-red-500/10 border-red-400 animate-pulse-alert-critical',
+                            iconBg: 'bg-red-500/20',
+                            iconColor: 'text-red-600',
+                            badgeClass: 'bg-red-500 text-white border-0',
+                            badgeText: 'Critical',
+                            showPing: true
+                          } : isWarning ? {
+                            cardClass: 'bg-amber-500/10 border-amber-400 animate-pulse-alert-warning',
+                            iconBg: 'bg-amber-500/20',
+                            iconColor: 'text-amber-600',
+                            badgeClass: 'bg-amber-500 text-white border-0',
+                            badgeText: 'Warning',
+                            showPing: false
+                          } : {
+                            cardClass: 'bg-blue-500/10 border-blue-400/60',
+                            iconBg: 'bg-blue-500/20',
+                            iconColor: 'text-blue-600',
+                            badgeClass: 'bg-blue-500 text-white border-0',
+                            badgeText: 'Info',
+                            showPing: false
+                          };
+
+                          return (
+                            <div 
+                              key={alert.id} 
+                              className={cn(
+                                "flex items-center justify-between p-3 border rounded-lg hover:scale-[1.01] transition-all cursor-pointer",
+                                severityConfig.cardClass
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={cn("p-1.5 rounded-md relative", severityConfig.iconBg)}>
+                                  {severityConfig.showPing && (
+                                    <span className="absolute inset-0 rounded-md animate-ping bg-red-500/40" />
+                                  )}
+                                  <Activity className={cn("h-4 w-4 relative", severityConfig.iconColor)} />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-sm">{alert.batches?.batch_number} - Alert</div>
+                                  <div className="text-xs text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-medium text-sm">{alert.batches?.batch_number} - Alert</div>
-                                <div className="text-xs text-muted-foreground">Temp: {alert.temperature}°F, Humidity: {alert.humidity}%</div>
-                              </div>
+                              <Badge className={cn("text-xs", severityConfig.badgeClass)}>
+                                {severityConfig.badgeText}
+                              </Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs">Active</Badge>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="text-center py-12">
                           <div className="p-4 rounded-full bg-green-500/10 w-fit mx-auto mb-3">
@@ -681,13 +722,12 @@ const BatchOverviewDashboard = () => {
                       )
                     ) : (
                       (() => {
-                        // Filter machines by selected hatchery
                         const filteredMachines = hatcheryFilter === "all" 
                           ? machineUtilization 
                           : machineUtilization?.filter((machine: any) => machine.unit_id === hatcheryFilter);
                         
                         return filteredMachines && filteredMachines.length > 0 ? (
-                          filteredMachines.slice(0, 10).map((machine) => (
+                          filteredMachines.slice(0, 10).map((machine: any) => (
                             <div key={machine.id} className="flex items-center justify-between p-3 border border-border/60 rounded-lg hover:bg-muted/40 transition-colors">
                               <div className="flex items-center gap-3">
                                 <div className={cn(

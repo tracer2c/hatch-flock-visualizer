@@ -336,3 +336,25 @@
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+@keyframes pulse-alert-critical {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 hsl(0 84% 60% / 0.4);
+    border-color: hsl(0 84% 60% / 0.6);
+  }
+  50% { 
+    box-shadow: 0 0 0 6px hsl(0 84% 60% / 0);
+    border-color: hsl(0 84% 60% / 1);
+  }
+}
+
+@keyframes pulse-alert-warning {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 hsl(38 92% 50% / 0.3);
+    border-color: hsl(38 92% 50% / 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 0 4px hsl(38 92% 50% / 0);
+    border-color: hsl(38 92% 50% / 0.8);
+  }
+}
