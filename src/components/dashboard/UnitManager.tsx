@@ -20,6 +20,7 @@ type Unit = {
 const UnitManager = () => {
   const { toast } = useToast();
   const [units, setUnits] = useState<Unit[]>([]);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,10 +38,33 @@ const UnitManager = () => {
     status: "active",
   });
 
-  const loadUnits = async () => {
+  const loadUserCompany = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("company_id")
+      .eq("id", user.id)
+      .single();
+
+    if (error || !data?.company_id) {
+      console.error("Failed to load user company:", error);
+      return null;
+    }
+
+    setUserCompanyId(data.company_id);
+    return data.company_id;
+  };
+
+  const loadUnits = async (companyId?: string) => {
+    const cid = companyId || userCompanyId;
+    if (!cid) return;
+
     const { data, error } = await supabase
       .from("units")
       .select("*")
+      .eq("company_id", cid)
       .order("name", { ascending: true });
 
     if (error) {
@@ -55,7 +79,13 @@ const UnitManager = () => {
   };
 
   useEffect(() => {
-    loadUnits();
+    const init = async () => {
+      const companyId = await loadUserCompany();
+      if (companyId) {
+        loadUnits(companyId);
+      }
+    };
+    init();
   }, []);
 
   const resetCreateForm = () => {
@@ -90,12 +120,21 @@ const UnitManager = () => {
       });
       return;
     }
+    if (!userCompanyId) {
+      toast({
+        title: "Error",
+        description: "Unable to determine your company. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setCreating(true);
     const { error } = await supabase.from("units").insert({
       name: form.name.trim(),
       code: form.code?.trim() || null,
       description: form.description?.trim() || null,
       status: form.status,
+      company_id: userCompanyId,
     });
 
     setCreating(false);
