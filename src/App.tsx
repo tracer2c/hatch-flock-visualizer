@@ -17,6 +17,17 @@ import QAEntryPage from "./pages/QAEntryPage";
 import ResidueEntryPage from "./pages/ResidueEntryPage";
 import ClearsInjectedEntryPage from "./pages/ClearsInjectedEntryPage";
 import ManagementPage from "./pages/ManagementPage";
+import SOPDashboardPage from "./pages/management/SOPDashboardPage";
+import HatcheriesPage from "./pages/management/HatcheriesPage";
+import HouseAutomationPage from "./pages/management/HouseAutomationPage";
+import SOPManagerPage from "./pages/management/SOPManagerPage";
+import FlocksPage from "./pages/management/FlocksPage";
+import MachinesPage from "./pages/management/MachinesPage";
+import UsersPage from "./pages/management/UsersPage";
+import TargetsPage from "./pages/management/TargetsPage";
+import ResidueSchedulePage from "./pages/management/ResidueSchedulePage";
+import ReportsPage from "./pages/management/ReportsPage";
+import ActivityLogPage from "./pages/management/ActivityLogPage";
 import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
@@ -103,6 +114,17 @@ function AppContent() {
                       <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
                       <Route path="/checklist/machine/:machineId" element={<ChecklistPage />} />
                       <Route path="/management" element={<ManagementPage />} />
+                      <Route path="/management/sop-dashboard" element={<SOPDashboardPage />} />
+                      <Route path="/management/hatcheries" element={<HatcheriesPage />} />
+                      <Route path="/management/house-automation" element={<HouseAutomationPage />} />
+                      <Route path="/management/sop-manager" element={<SOPManagerPage />} />
+                      <Route path="/management/flocks" element={<FlocksPage />} />
+                      <Route path="/management/machines" element={<MachinesPage />} />
+                      <Route path="/management/users" element={<UsersPage />} />
+                      <Route path="/management/targets" element={<TargetsPage />} />
+                      <Route path="/management/residue-schedule" element={<ResidueSchedulePage />} />
+                      <Route path="/management/reports" element={<ReportsPage />} />
+                      <Route path="/management/activity-log" element={<ActivityLogPage />} />
                       <Route path="/bulk-import" element={<BulkDataImportPage />} />
                       <Route path="/report" element={<ProjectReport />} />
                       <Route path="/chat" element={<ChatPage />} />
