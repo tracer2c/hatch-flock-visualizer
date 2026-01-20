@@ -46,6 +46,7 @@ import MachineUtilizationPage from "./pages/MachineUtilizationPage";
 import QAHubPage from "./pages/QAHubPage";
 import InstallPage from "./pages/InstallPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import SupportPage from "./pages/SupportPage";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
@@ -85,6 +86,7 @@ function AppContent() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/install" element={<InstallPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/*" element={
           <ProtectedRoute>
             <SidebarProvider defaultOpen={!isMobile && !isTablet}>

@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Egg, Mail, ArrowLeft, RefreshCw, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Egg, Mail, ArrowLeft, RefreshCw, AlertTriangle, Loader2, Eye, EyeOff, Headset } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 export default function AuthPage() {
   const { user, signIn, signUp, resetPasswordForEmail, loading } = useAuth();
@@ -596,6 +597,15 @@ export default function AuthPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Floating Help Button */}
+      <Link 
+        to="/support"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+      >
+        <Headset className="h-5 w-5" />
+        <span className="text-sm font-medium">Need Help?</span>
+      </Link>
     </div>
   );
 }
