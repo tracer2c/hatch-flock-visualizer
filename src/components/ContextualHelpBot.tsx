@@ -10,6 +10,7 @@ import { useHelpContext } from '@/contexts/HelpContext';
 import { EnhancedMessageFormatter } from '@/components/chat/EnhancedMessageFormatter';
 import { ContextualSuggestions } from '@/components/chat/ContextualSuggestions';
 import { cn } from '@/lib/utils';
+import { useLocation } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -19,6 +20,12 @@ interface Message {
 }
 
 const ContextualHelpBot: React.FC = () => {
+  const location = useLocation();
+  
+  // Hide on Smart Analytics page (redundant since it has its own chat)
+  if (location.pathname === '/chat') {
+    return null;
+  }
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
