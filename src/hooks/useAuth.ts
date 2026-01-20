@@ -45,30 +45,31 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile and roles
+          // Fetch user profile and roles - setLoading(false) AFTER roles are loaded
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
             await fetchUserRoles(session.user.id);
             await checkMFAStatus();
+            setLoading(false);
           }, 0);
         } else {
           setProfile(null);
           setRoles([]);
           setMfaStatus({ hasMFA: false, factors: [], isVerified: false });
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id);
-        fetchUserRoles(session.user.id);
-        checkMFAStatus();
+        await fetchUserProfile(session.user.id);
+        await fetchUserRoles(session.user.id);
+        await checkMFAStatus();
       }
       setLoading(false);
     });
