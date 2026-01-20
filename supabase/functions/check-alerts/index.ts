@@ -302,37 +302,39 @@ serve(async (req: Request) => {
     }
 
     for (const machine of machines || []) {
-      if (machine.last_maintenance) {
-        const daysSinceLastMaintenance = Math.floor((new Date().getTime() - new Date(machine.last_maintenance).getTime()) / (1000 * 60 * 60 * 24));
-        
-        // Check if maintenance is overdue (30+ days)
-        if (daysSinceLastMaintenance >= 30) {
-          const existingAlert = await supabase
+      // Use created_at as baseline for machines without maintenance record
+      const referenceDate = machine.last_maintenance || machine.created_at;
+      if (!referenceDate) continue;
+      
+      const daysSinceReference = Math.floor((new Date().getTime() - new Date(referenceDate).getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if maintenance is overdue (30+ days from last maintenance or creation)
+      if (daysSinceReference >= 30) {
+        const existingAlert = await supabase
+          .from('alerts')
+          .select('id')
+          .eq('machine_id', machine.id)
+          .eq('alert_type', 'machine_maintenance')
+          .eq('status', 'active');
+
+        if (!existingAlert.data?.length) {
+          const alert = {
+            alert_type: 'machine_maintenance',
+            machine_id: machine.id,
+            severity: daysSinceReference >= 45 ? 'critical' : 'warning',
+            title: `Maintenance Overdue - ${machine.machine_number}`,
+            message: `Machine ${machine.machine_number} maintenance is overdue by ${daysSinceReference - 30} days`,
+            status: 'active'
+          };
+
+          const { error: insertError } = await supabase
             .from('alerts')
-            .select('id')
-            .eq('machine_id', machine.id)
-            .eq('alert_type', 'machine_maintenance')
-            .eq('status', 'active');
+            .insert(alert);
 
-          if (!existingAlert.data?.length) {
-            const alert = {
-              alert_type: 'machine_maintenance',
-              machine_id: machine.id,
-              severity: daysSinceLastMaintenance >= 45 ? 'critical' : 'warning',
-              title: `Maintenance Overdue - ${machine.machine_number}`,
-              message: `Machine ${machine.machine_number} maintenance is overdue by ${daysSinceLastMaintenance - 30} days`,
-              status: 'active'
-            };
-
-            const { error: insertError } = await supabase
-              .from('alerts')
-              .insert(alert);
-
-            if (!insertError) {
-              alertsGenerated.push(alert);
-              console.log(`Generated maintenance alert for machine ${machine.machine_number}`);
-              await sendPushNotification(alert);
-            }
+          if (!insertError) {
+            alertsGenerated.push(alert);
+            console.log(`Generated maintenance alert for machine ${machine.machine_number}`);
+            await sendPushNotification(alert);
           }
         }
       }
