@@ -30,6 +30,10 @@ export default function AuthPage() {
   // Sign up email validation states
   const [signupEmail, setSignupEmail] = useState('');
   const [emailExists, setEmailExists] = useState(false);
+  
+  // Sign in email state (for transferring from sign up)
+  const [signInEmail, setSignInEmail] = useState('');
+  const [activeTab, setActiveTab] = useState('signin');
   const [checkingEmail, setCheckingEmail] = useState(false);
 
   // Password states
@@ -219,7 +223,7 @@ export default function AuthPage() {
         </div>
 
         {/* Auth Tabs with Glass Effect */}
-        <Tabs defaultValue="signin" className="w-full animate-scale-in">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-scale-in">
           <TabsList className="grid w-full grid-cols-2 bg-background/60 backdrop-blur-md p-1.5 border border-border/50 shadow-lg">
             <TabsTrigger 
               value="signin"
@@ -257,6 +261,8 @@ export default function AuthPage() {
                       name="email"
                       type="email"
                       placeholder="you@example.com"
+                      value={signInEmail}
+                      onChange={(e) => setSignInEmail(e.target.value)}
                       className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
                       required
                     />
@@ -386,8 +392,11 @@ export default function AuthPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const signinTab = document.querySelector('[value="signin"]') as HTMLElement;
-                              signinTab?.click();
+                              setSignInEmail(signupEmail);
+                              setActiveTab('signin');
+                              setTimeout(() => {
+                                document.getElementById('signin-password')?.focus();
+                              }, 100);
                             }}
                             className="text-primary font-medium hover:underline"
                           >
