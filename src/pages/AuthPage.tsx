@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Egg, Mail, ArrowLeft, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
+import { Egg, Mail, ArrowLeft, RefreshCw, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AuthPage() {
@@ -32,7 +32,15 @@ export default function AuthPage() {
   const [emailExists, setEmailExists] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
 
-  // Check if email already exists in user_profiles
+  // Password states
+  const [signupPassword, setSignupPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+
+  // Check if email already exists using RPC function (bypasses RLS)
   const checkEmailExists = async (email: string) => {
     if (!email || !email.includes('@')) {
       setEmailExists(false);
@@ -41,15 +49,22 @@ export default function AuthPage() {
     
     setCheckingEmail(true);
     
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('email')
-      .eq('email', email.toLowerCase().trim())
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('check_email_exists', {
+      check_email: email.trim()
+    });
     
-    setEmailExists(!!data);
+    setEmailExists(data === true);
     setCheckingEmail(false);
   };
+
+  // Validate password match
+  useEffect(() => {
+    if (confirmPassword) {
+      setPasswordsMatch(signupPassword === confirmPassword);
+    } else {
+      setPasswordsMatch(true);
+    }
+  }, [signupPassword, confirmPassword]);
 
   // Debounced email check
   useEffect(() => {
@@ -90,15 +105,16 @@ export default function AuthPage() {
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!passwordsMatch || !signupPassword || !confirmPassword) return;
+    
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
     const firstName = formData.get('firstName') as string;
     const lastName = formData.get('lastName') as string;
 
-    await signUp(email, password, firstName, lastName);
+    await signUp(email, signupPassword, firstName, lastName);
     setIsLoading(false);
   };
 
@@ -249,14 +265,28 @@ export default function AuthPage() {
                     <Label htmlFor="signin-password" className="text-sm font-medium">
                       Password
                     </Label>
-                    <Input
-                      id="signin-password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type={showSignInPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignInPassword(!showSignInPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showSignInPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                     <div className="flex justify-end">
                       <button
                         type="button"
@@ -371,21 +401,76 @@ export default function AuthPage() {
                     <Label htmlFor="signup-password" className="text-sm font-medium">
                       Password
                     </Label>
-                    <Input
-                      id="signup-password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        className="h-11 border-2 border-border/50 focus:border-primary/50 transition-colors pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-sm font-medium">
+                      Confirm Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={cn(
+                          "h-11 border-2 transition-colors pr-10",
+                          !passwordsMatch && confirmPassword
+                            ? "border-destructive bg-destructive/5 focus:border-destructive"
+                            : "border-border/50 focus:border-primary/50"
+                        )}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {!passwordsMatch && confirmPassword && (
+                      <p className="text-sm text-destructive flex items-center gap-1.5 animate-fade-in">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Passwords do not match
+                      </p>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 pb-6">
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-semibold bg-gradient-to-r from-accent to-warning hover:from-accent/90 hover:to-warning/90 shadow-lg hover:shadow-xl hover:shadow-accent/20 transition-all duration-300"
-                    disabled={isLoading || emailExists}
+                    disabled={isLoading || emailExists || !passwordsMatch || !signupPassword || !confirmPassword}
                   >
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>

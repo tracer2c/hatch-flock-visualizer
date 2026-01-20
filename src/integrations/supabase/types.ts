@@ -2288,6 +2288,7 @@ export type Database = {
       }
     }
     Functions: {
+      check_email_exists: { Args: { check_email: string }; Returns: boolean }
       get_next_house_number: { Args: { flock_uuid: string }; Returns: number }
       get_user_company: { Args: { _user_id: string }; Returns: string }
       has_role: {
