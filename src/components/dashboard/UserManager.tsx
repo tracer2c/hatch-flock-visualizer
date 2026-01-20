@@ -52,11 +52,13 @@ const UserManager = () => {
     role: 'staff' as 'company_admin' | 'operations_head' | 'staff'
   });
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, isAdmin } = useAuth();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (profile?.company_id) {
+      fetchUsers();
+    }
+  }, [profile?.company_id]);
 
   const fetchUsers = async () => {
     try {
@@ -236,91 +238,101 @@ const UserManager = () => {
     }
   };
 
+  if (authLoading) {
+    return <div className="p-4 text-muted-foreground">Loading authentication...</div>;
+  }
+
+  if (!profile?.company_id) {
+    return <div className="p-4 text-destructive">Unable to load users. Company not found.</div>;
+  }
+
   if (loading) {
-    return <div className="p-4">Loading users...</div>;
+    return <div className="p-4 text-muted-foreground">Loading users...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="first_name">First Name</Label>
-                  <Input
-                    id="first_name"
-                    value={newUser.first_name}
-                    onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="last_name">Last Name</Label>
-                  <Input
-                    id="last_name"
-                    value={newUser.last_name}
-                    onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={newUser.phone}
-                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Select value={newUser.role} onValueChange={(value: any) => setNewUser({ ...newUser, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="operations_head">Operations Head</SelectItem>
-                    <SelectItem value="company_admin">Company Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={createUser} className="w-full">
-                Create User
+        {isAdmin() && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="first_name">First Name</Label>
+                    <Input
+                      id="first_name"
+                      value={newUser.first_name}
+                      onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="last_name">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      value={newUser.last_name}
+                      onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={newUser.phone}
+                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={newUser.role} onValueChange={(value: any) => setNewUser({ ...newUser, role: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="operations_head">Operations Head</SelectItem>
+                      <SelectItem value="company_admin">Company Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={createUser} className="w-full">
+                  Create User
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
@@ -355,6 +367,7 @@ const UserManager = () => {
                     <Select 
                       value={user.user_roles[0]?.role || 'staff'} 
                       onValueChange={(value) => updateUserRole(user.id, value as any)}
+                      disabled={!isAdmin()}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -379,6 +392,7 @@ const UserManager = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={!isAdmin()}
                         onClick={() => updateUserStatus(
                           user.id, 
                           user.status === 'active' ? 'inactive' : 'active'

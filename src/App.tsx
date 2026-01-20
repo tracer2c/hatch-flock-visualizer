@@ -32,6 +32,7 @@ import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import InitializeApp from "./components/InitializeApp";
 import ProjectReport from "./pages/ProjectReport";
 import ChatPage from "./pages/ChatPage";
@@ -117,18 +118,54 @@ function AppContent() {
                       <Route path="/checklist" element={<ChecklistPage />} />
                       <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
                       <Route path="/checklist/machine/:machineId" element={<ChecklistPage />} />
-                      <Route path="/management" element={<ManagementPage />} />
+                      <Route path="/management" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin']}>
+                          <ManagementPage />
+                        </RoleProtectedRoute>
+                      } />
                       <Route path="/management/sop-dashboard" element={<SOPDashboardPage />} />
-                      <Route path="/management/hatcheries" element={<HatcheriesPage />} />
-                      <Route path="/management/house-automation" element={<HouseAutomationPage />} />
+                      <Route path="/management/hatcheries" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin']}>
+                          <HatcheriesPage />
+                        </RoleProtectedRoute>
+                      } />
+                      <Route path="/management/house-automation" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin']}>
+                          <HouseAutomationPage />
+                        </RoleProtectedRoute>
+                      } />
                       <Route path="/management/sop-manager" element={<SOPManagerPage />} />
-                      <Route path="/management/flocks" element={<FlocksPage />} />
-                      <Route path="/management/machines" element={<MachinesPage />} />
-                      <Route path="/management/users" element={<UsersPage />} />
-                      <Route path="/management/targets" element={<TargetsPage />} />
+                      <Route path="/management/flocks" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
+                          <FlocksPage />
+                        </RoleProtectedRoute>
+                      } />
+                      <Route path="/management/machines" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
+                          <MachinesPage />
+                        </RoleProtectedRoute>
+                      } />
+                      <Route path="/management/users" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin']}>
+                          <UsersPage />
+                        </RoleProtectedRoute>
+                      } />
+                      <Route path="/management/targets" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin']}>
+                          <TargetsPage />
+                        </RoleProtectedRoute>
+                      } />
                       <Route path="/management/residue-schedule" element={<ResidueSchedulePage />} />
-                      <Route path="/management/reports" element={<ReportsPage />} />
-                      <Route path="/management/activity-log" element={<ActivityLogPage />} />
+                      <Route path="/management/reports" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
+                          <ReportsPage />
+                        </RoleProtectedRoute>
+                      } />
+                      <Route path="/management/activity-log" element={
+                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
+                          <ActivityLogPage />
+                        </RoleProtectedRoute>
+                      } />
                       <Route path="/bulk-import" element={<BulkDataImportPage />} />
                       <Route path="/report" element={<ProjectReport />} />
                       <Route path="/chat" element={<ChatPage />} />
