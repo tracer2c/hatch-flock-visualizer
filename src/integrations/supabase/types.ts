@@ -1329,6 +1329,7 @@ export type Database = {
           check_date: string
           check_time: string
           co2_level: number | null
+          company_id: string
           created_at: string
           day_of_incubation: number
           entry_mode: string
@@ -1376,6 +1377,7 @@ export type Database = {
           check_date?: string
           check_time?: string
           co2_level?: number | null
+          company_id?: string
           created_at?: string
           day_of_incubation: number
           entry_mode?: string
@@ -1423,6 +1425,7 @@ export type Database = {
           check_date?: string
           check_time?: string
           co2_level?: number | null
+          company_id?: string
           created_at?: string
           day_of_incubation?: number
           entry_mode?: string
@@ -1471,6 +1474,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_monitoring_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
