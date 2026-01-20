@@ -38,7 +38,7 @@ export default function SupportPage() {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10">
             <Headset className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">Gare Help Center</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3"> Help Center</h1>
           <p className="text-primary-foreground/80 mb-8">
             Find answers, guides, and 24/7 support for your hatchery operations
           </p>
