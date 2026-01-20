@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, ChevronDown, Check, X, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -24,6 +26,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+
+// Role permissions matrix - defines what each role can access
+const rolePermissions = [
+  { feature: 'Dashboard', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Data Entry', staff: true, operations_head: true, company_admin: true },
+  { feature: 'QA Hub', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Data Sheet', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Timeline', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Daily Tasks', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Smart Analytics', staff: true, operations_head: true, company_admin: true },
+  { feature: 'Flocks Management', staff: false, operations_head: true, company_admin: true },
+  { feature: 'Machines Management', staff: false, operations_head: true, company_admin: true },
+  { feature: 'Reports', staff: false, operations_head: true, company_admin: true },
+  { feature: 'Activity Logs', staff: false, operations_head: true, company_admin: true },
+  { feature: 'User Management', staff: false, operations_head: false, company_admin: true },
+  { feature: 'Targets & Settings', staff: false, operations_head: false, company_admin: true },
+  { feature: 'Hatcheries', staff: false, operations_head: false, company_admin: true },
+  { feature: 'House Automation', staff: false, operations_head: false, company_admin: true },
+];
 
 interface UserProfile {
   id: string;
@@ -41,8 +62,8 @@ interface UserProfile {
 const UserManager = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -411,6 +432,73 @@ const UserManager = () => {
             </TableBody>
           </Table>
         </CardContent>
+      </Card>
+
+      {/* Role Permissions Section */}
+      <Card>
+        <Collapsible open={permissionsOpen} onOpenChange={setPermissionsOpen}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Role Permissions</CardTitle>
+                </div>
+                <ChevronDown className={cn(
+                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                  permissionsOpen && "rotate-180"
+                )} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Feature</TableHead>
+                      <TableHead className="text-center font-semibold w-28">Staff</TableHead>
+                      <TableHead className="text-center font-semibold w-36">Operations Head</TableHead>
+                      <TableHead className="text-center font-semibold w-32">Company Admin</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rolePermissions.map((permission, index) => (
+                      <TableRow key={permission.feature} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                        <TableCell className="font-medium">{permission.feature}</TableCell>
+                        <TableCell className="text-center">
+                          {permission.staff ? (
+                            <Check className="h-5 w-5 text-green-500 mx-auto" />
+                          ) : (
+                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {permission.operations_head ? (
+                            <Check className="h-5 w-5 text-green-500 mx-auto" />
+                          ) : (
+                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {permission.company_admin ? (
+                            <Check className="h-5 w-5 text-green-500 mx-auto" />
+                          ) : (
+                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Permissions are automatically applied based on the user's assigned role.
+              </p>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
   );
