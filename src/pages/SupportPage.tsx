@@ -63,7 +63,7 @@ export default function SupportPage() {
               <div>
                 <p className="text-sm text-muted-foreground">24/7 Support Hotline</p>
                 <p className="text-3xl font-bold text-primary mt-1">{SUPPORT_PHONE}</p>
-                <p className="text-sm text-muted-foreground mt-1">Call anytime — real humans, no bots</p>
+                <p className="text-sm text-muted-foreground mt-1">Call anytime </p>
               </div>
               <Button size="lg" className="gap-2" asChild>
                 <a href={`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`}>
