@@ -5,6 +5,28 @@ import {
   type OccupancyInfo 
 } from '@/utils/setterPositionMapping';
 
+/**
+ * Get the current user's company_id from their profile
+ */
+async function getUserCompanyId(): Promise<string> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData?.user?.id) {
+    throw new Error('User not authenticated');
+  }
+  
+  const { data: profile, error } = await supabase
+    .from('user_profiles')
+    .select('company_id')
+    .eq('id', userData.user.id)
+    .single();
+    
+  if (error || !profile?.company_id) {
+    throw new Error('Could not determine user company');
+  }
+  
+  return profile.company_id;
+}
+
 interface SubmissionResult {
   success: boolean;
   qaMonitoringId?: string;
@@ -75,11 +97,14 @@ export async function submitHouseLevelQA(
   record: HouseLevelQARecord
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     const { data, error } = await supabase
       .from('qa_monitoring')
       .insert({
         ...record,
-        entry_mode: 'house'
+        entry_mode: 'house',
+        company_id: companyId
       })
       .select('id')
       .single();
@@ -103,10 +128,13 @@ export async function submitMachineLevelQA(
   positionOccupancy: Map<string, OccupancyInfo>
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     // 1. Insert qa_monitoring record with batch_id = null and entry_mode = 'machine'
     const qaMonitoringRecord = {
       batch_id: null, // Machine-level entry has no single batch
       machine_id: record.machine_id,
+      company_id: companyId,
       inspector_name: record.inspector_name,
       check_date: record.check_date,
       check_time: record.check_time,
@@ -240,9 +268,12 @@ export async function submitMachineWideQA(
   uniqueFlocks: FlockLinkage[]
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     const qaMonitoringRecord: any = {
       batch_id: null,
       machine_id: record.machine_id,
+      company_id: companyId,
       inspector_name: record.inspector_name,
       check_date: record.check_date,
       check_time: record.check_time,
@@ -322,9 +353,12 @@ export async function submitGenericQAWithLinkage(
   notes?: string | null
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     const qaMonitoringRecord: any = {
       batch_id: null,
       machine_id: machineId,
+      company_id: companyId,
       inspector_name: inspectorName,
       check_date: checkDate,
       check_time: new Date().toTimeString().split(' ')[0],
@@ -509,11 +543,14 @@ export async function submitCandlingQA(data: {
   notes?: string | null;
 }): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     const { data: result, error } = await supabase
       .from('qa_monitoring')
       .insert({
         batch_id: data.batch_id,
         machine_id: data.machine_id,
+        company_id: companyId,
         check_date: data.check_date,
         check_time: new Date().toTimeString().split(' ')[0],
         day_of_incubation: 0,
@@ -558,11 +595,14 @@ export async function submitCandlingQAMulti(
   notes?: string | null
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
+    
     const { data: result, error: qaError } = await supabase
       .from('qa_monitoring')
       .insert({
         batch_id: null,
         machine_id: machineId,
+        company_id: companyId,
         check_date: checkDate,
         check_time: new Date().toTimeString().split(' ')[0],
         day_of_incubation: 0,
