@@ -128,7 +128,7 @@ export default {
 				'fade-in': {
 					from: {
 						opacity: '0',
-						transform: 'translateY(10px)'
+						transform: 'translateY(8px)'
 					},
 					to: {
 						opacity: '1',
@@ -158,15 +158,15 @@ export default {
 						transform: 'translateY(0px)'
 					},
 					'50%': {
-						transform: 'translateY(-10px)'
+						transform: 'translateY(-6px)'
 					}
 				},
 				'pulse-glow': {
 					'0%, 100%': {
-						boxShadow: '0 0 5px hsl(var(--primary) / 0.3), 0 0 20px hsl(var(--primary) / 0.1)'
+						boxShadow: '0 0 5px hsl(var(--primary) / 0.2), 0 0 15px hsl(var(--primary) / 0.05)'
 					},
 					'50%': {
-						boxShadow: '0 0 20px hsl(var(--primary) / 0.5), 0 0 40px hsl(var(--primary) / 0.2)'
+						boxShadow: '0 0 15px hsl(var(--primary) / 0.4), 0 0 30px hsl(var(--primary) / 0.15)'
 					}
 				},
 				'shimmer': {
@@ -207,20 +207,31 @@ export default {
 						boxShadow: '0 0 0 4px hsl(38 92% 50% / 0)',
 						borderColor: 'hsl(38 92% 50% / 0.8)'
 					}
+				},
+				'bounce-subtle': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-3px)' }
+				},
+				'wiggle': {
+					'0%, 100%': { transform: 'rotate(0deg)' },
+					'25%': { transform: 'rotate(-2deg)' },
+					'75%': { transform: 'rotate(2deg)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.3s ease-out',
 				'accordion-up': 'accordion-up 0.3s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out',
+				'fade-in': 'fade-in 0.4s ease-out',
 				'slide-in': 'slide-in 0.3s ease-out',
 				'scale-in': 'scale-in 0.2s ease-out',
-				'float': 'float 6s ease-in-out infinite',
-				'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+				'float': 'float 4s ease-in-out infinite',
+				'pulse-glow': 'pulse-glow 3s ease-in-out infinite',
 				'shimmer': 'shimmer 2s infinite',
 				'gradient-shift': 'gradient-shift 8s ease infinite',
 				'pulse-alert-critical': 'pulse-alert-critical 2s ease-in-out infinite',
 				'pulse-alert-warning': 'pulse-alert-warning 2.5s ease-in-out infinite',
+				'bounce-subtle': 'bounce-subtle 1s ease-in-out infinite',
+				'wiggle': 'wiggle 0.3s ease-in-out'
 			}
 		}
 	},

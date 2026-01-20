@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Mic, User, MessageCircle, Download, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Send, Mic, User, MessageCircle, Download, AlertTriangle, Sparkles, TrendingUp, BarChart3, Activity } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BatchOverviewDisplay } from './BatchOverviewDisplay';
@@ -9,7 +9,7 @@ import { EnhancedMessageFormatter } from './EnhancedMessageFormatter';
 import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
 import { SummaryCard } from './SummaryCard';
-import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -31,6 +31,7 @@ export const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [openaiConfigured, setOpenaiConfigured] = useState<boolean | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -88,10 +89,8 @@ export const ChatInterface = () => {
         throw error;
       }
 
-      // Log the raw response for debugging
       console.log('[ChatInterface] Raw AI response:', data);
       
-      // Handle empty response with summary/payload fallback
       let response = data?.response || data?.message || '';
       if (!response && (data?.summary || data?.payload)) {
         if (data?.summary?.isExecutive) {
@@ -187,7 +186,6 @@ export const ChatInterface = () => {
   const startListening = async () => {
     try {
       setIsListening(true);
-      // Voice input implementation would go here
       toast({
         title: "Voice Input",
         description: "Voice input not yet implemented"
@@ -200,14 +198,14 @@ export const ChatInterface = () => {
   };
 
   const suggestedPrompts = [
-    "Show me today's house overview with charts",
-    "Compare fertility rates between houses",
-    "Generate performance trends for the last month",
-    "Show machine utilization analytics",
-    "Create a fertility vs hatch rate comparison",
-    "Display house status breakdown",
-    "Analyze recent performance patterns",
-    "Compare current vs historical data"
+    { text: "Show me today's house overview with charts", icon: BarChart3, color: "text-blue-500" },
+    { text: "Compare fertility rates between houses", icon: TrendingUp, color: "text-emerald-500" },
+    { text: "Generate performance trends for the last month", icon: Activity, color: "text-violet-500" },
+    { text: "Show machine utilization analytics", icon: Sparkles, color: "text-amber-500" },
+    { text: "Create a fertility vs hatch rate comparison", icon: TrendingUp, color: "text-rose-500" },
+    { text: "Display house status breakdown", icon: BarChart3, color: "text-cyan-500" },
+    { text: "Analyze recent performance patterns", icon: Activity, color: "text-orange-500" },
+    { text: "Compare current vs historical data", icon: Sparkles, color: "text-indigo-500" }
   ];
 
   const handleSuggestedPrompt = (prompt: string) => {
@@ -219,81 +217,107 @@ export const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-foreground">Smart Analytics</h1>
-                  <p className="text-sm text-muted-foreground">AI-powered insights & reports</p>
-                </div>
+    <div className="flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
+      {/* Compact Header */}
+      <div className="flex-shrink-0 border-b bg-gradient-to-r from-background via-background to-muted/20">
+        <div className="max-w-5xl mx-auto px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 animate-pulse-glow">
+                <MessageCircle className="h-5 w-5 text-primary" />
               </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+            </div>
+            <div>
+              <h1 className="text-base font-semibold text-foreground">Smart Analytics</h1>
+              <p className="text-xs text-muted-foreground">AI-powered insights</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="max-w-5xl mx-auto px-6 py-4">
           {/* OpenAI Configuration Warning */}
           {openaiConfigured === false && (
-            <div className="mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
+            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20 animate-fade-in">
               <div className="flex items-center gap-2 text-warning-foreground">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <p className="font-medium">OpenAI Configuration Required</p>
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <p className="text-sm font-medium">OpenAI Configuration Required</p>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                OpenAI API key is not configured. Some AI features may not work properly. Please configure your API key in the project settings.
+              <p className="text-xs text-muted-foreground mt-1">
+                Please configure your API key in project settings.
               </p>
             </div>
           )}
           
           {messages.length === 0 ? (
-            <div className="space-y-6">
-              <div className="space-y-3 text-center">
-                <h2 className="text-lg font-semibold text-foreground">How can I help you today?</h2>
-                <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-                  I can help you analyze your hatchery data, generate reports, and provide insights about your operations.
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-14rem)]">
+              {/* Welcome Section */}
+              <div className="text-center mb-8 animate-fade-in">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-float">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground mb-2">What can I help you analyze?</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Ask me about hatchery data, generate reports, or get insights about your operations
                 </p>
               </div>
               
-              <div className="max-w-4xl mx-auto">
-                <p className="text-xs font-medium text-muted-foreground mb-4 text-center">Popular questions:</p>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {suggestedPrompts.map((prompt, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      onClick={() => handleSuggestedPrompt(prompt)}
-                      className="text-left h-auto p-3 text-sm hover:bg-accent/50 justify-start transition-all duration-200"
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
+              {/* Prompt Grid */}
+              <div className="w-full max-w-3xl">
+                <p className="text-xs font-medium text-muted-foreground mb-3 text-center uppercase tracking-wider">
+                  Popular questions
+                </p>
+                <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                  {suggestedPrompts.map((prompt, index) => {
+                    const Icon = prompt.icon;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestedPrompt(prompt.text)}
+                        style={{ animationDelay: `${index * 50}ms` }}
+                        className={cn(
+                          "group flex items-center gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm",
+                          "text-left text-sm text-foreground/90",
+                          "opacity-0 animate-fade-in [animation-fill-mode:forwards]",
+                          "transition-all duration-200 ease-out",
+                          "hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30 hover:bg-card",
+                          "active:scale-[0.98]"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
+                          "bg-muted/50 transition-colors duration-200",
+                          "group-hover:bg-primary/10"
+                        )}>
+                          <Icon className={cn("h-4 w-4 transition-transform duration-200 group-hover:scale-110", prompt.color)} />
+                        </div>
+                        <span className="flex-1 line-clamp-1">{prompt.text}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              {messages.map((message) => (
+            <div className="space-y-4">
+              {messages.map((message, msgIndex) => (
                 <div
                   key={message.id}
-                  className={`flex gap-3 ${
+                  style={{ animationDelay: `${msgIndex * 30}ms` }}
+                  className={cn(
+                    "flex gap-3 animate-fade-in",
                     message.role === 'user' ? 'flex-row-reverse' : ''
-                  }`}
+                  )}
                 >
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={cn(
+                    "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-105",
                     message.role === 'user' 
                       ? 'bg-primary text-primary-foreground' 
                       : 'bg-muted'
-                  }`}>
+                  )}>
                     {message.role === 'user' ? (
                       <User className="h-4 w-4" />
                     ) : (
@@ -301,19 +325,19 @@ export const ChatInterface = () => {
                     )}
                   </div>
                   
-                   <div className={`flex-1 space-y-2 max-w-4xl ${
-                     message.role === 'user' ? 'text-right' : ''
-                   }`}>
-                     {/* Summary Card for assistant messages */}
-                     {message.role === 'assistant' && message.summary && (
-                       <div className="mb-3">
-                         <SummaryCard summary={message.summary} />
-                       </div>
-                     )}
+                  <div className={cn(
+                    "flex-1 space-y-2 max-w-3xl",
+                    message.role === 'user' ? 'text-right' : ''
+                  )}>
+                    {message.role === 'assistant' && message.summary && (
+                      <div className="mb-3">
+                        <SummaryCard summary={message.summary} />
+                      </div>
+                    )}
 
-                     <div className="inline-block">
+                    <div className="inline-block">
                       {message.role === 'user' ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground bg-primary/5 rounded-xl px-4 py-2">
                           {message.content}
                         </p>
                       ) : typeof message.content === 'object' && message.content?.type === 'analytics' ? (
@@ -335,11 +359,10 @@ export const ChatInterface = () => {
                           className="text-sm"
                         />
                       )}
-                     </div>
+                    </div>
                     
-                    {/* Render structured house data */}
                     {message.payload?.type === 'batches_overview' && (
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <BatchOverviewDisplay 
                           payload={message.payload}
                           onShowMore={() => handleActionClick({ type: 'show_more' }, message)}
@@ -349,14 +372,14 @@ export const ChatInterface = () => {
                     )}
                     
                     {message.actions && message.actions.length > 0 && !message.payload && (
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex gap-2 mt-2">
                         {message.actions.map((action, index) => (
                           <Button
                             key={index}
                             variant="outline"
                             size="sm"
                             onClick={() => handleActionClick(action, message)}
-                            className="text-xs h-8"
+                            className="text-xs h-7 transition-all duration-200 hover:scale-105 active:scale-95"
                           >
                             {action.type === 'download_csv' && <Download className="h-3 w-3 mr-1.5" />}
                             {action.name}
@@ -373,17 +396,15 @@ export const ChatInterface = () => {
               ))}
               
               {isLoading && (
-                <div className="flex gap-3">
+                <div className="flex gap-3 animate-fade-in">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className="h-4 w-4 animate-pulse" />
                   </div>
                   <div className="flex-1">
-                    <div className="inline-block py-2">
-                      <div className="flex gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse" />
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse delay-100" />
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-pulse delay-200" />
-                      </div>
+                    <div className="inline-flex items-center gap-1.5 py-2 px-3 bg-muted/50 rounded-xl">
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
                 </div>
@@ -394,38 +415,50 @@ export const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Fixed Input Bar */}
-      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur">
-        <div className="max-w-6xl mx-auto p-6">
+      {/* Compact Input Bar */}
+      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-6 py-3">
           <form onSubmit={handleSubmit}>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1 relative">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask me anything about your hatchery data..."
-                  className="min-h-[48px] text-sm px-4 py-3 pr-14 rounded-xl border-2 focus:border-primary"
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={startListening}
-                  disabled={isLoading}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 ${
-                    isListening ? 'text-red-500' : ''
-                  }`}
-                >
-                  <Mic className="h-5 w-5" />
-                </Button>
-              </div>
+            <div className={cn(
+              "flex gap-3 items-center p-1.5 rounded-xl border-2 bg-muted/30 transition-all duration-200",
+              isFocused ? "border-primary/50 shadow-lg shadow-primary/5 bg-background" : "border-transparent"
+            )}>
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder="Ask me anything about your hatchery data..."
+                className={cn(
+                  "flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-10",
+                  "placeholder:text-muted-foreground/60"
+                )}
+                disabled={isLoading}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={startListening}
+                disabled={isLoading}
+                className={cn(
+                  "h-9 w-9 rounded-lg transition-all duration-200",
+                  isListening ? 'text-destructive bg-destructive/10' : 'hover:bg-muted'
+                )}
+              >
+                <Mic className={cn("h-4 w-4", isListening && "animate-pulse")} />
+              </Button>
               <Button 
                 type="submit" 
                 disabled={isLoading || !input.trim()}
-                className="h-12 px-6 rounded-xl text-sm"
+                size="icon"
+                className={cn(
+                  "h-9 w-9 rounded-lg transition-all duration-200",
+                  "hover:scale-105 active:scale-95",
+                  !input.trim() && "opacity-50"
+                )}
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </Button>
             </div>
           </form>
