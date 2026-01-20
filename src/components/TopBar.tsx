@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, ArrowLeft, Home, Search } from "lucide-react";
+import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -138,6 +138,16 @@ export function TopBar() {
                       </span>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/support')}
+                    className="flex items-center p-3 focus:bg-accent/50 cursor-pointer"
+                  >
+                    <Headset className="mr-3 h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Help & Support</span>
                   </DropdownMenuItem>
                   
                   <DropdownMenuSeparator />
