@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Eye, EyeOff, Check, X, Shield, Users } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { UserPlus, Eye, EyeOff, Check, X, Shield, Users, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -25,25 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-
-// Role permissions matrix - defines what each role can access
-const rolePermissions = [
-  { feature: 'Dashboard', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Data Entry', staff: true, operations_head: true, company_admin: true },
-  { feature: 'QA Hub', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Data Sheet', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Timeline', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Daily Tasks', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Smart Analytics', staff: true, operations_head: true, company_admin: true },
-  { feature: 'Flocks Management', staff: false, operations_head: true, company_admin: true },
-  { feature: 'Machines Management', staff: false, operations_head: true, company_admin: true },
-  { feature: 'Reports', staff: false, operations_head: true, company_admin: true },
-  { feature: 'Activity Logs', staff: false, operations_head: true, company_admin: true },
-  { feature: 'User Management', staff: false, operations_head: false, company_admin: true },
-  { feature: 'Targets & Settings', staff: false, operations_head: false, company_admin: true },
-  { feature: 'Hatcheries', staff: false, operations_head: false, company_admin: true },
-  { feature: 'House Automation', staff: false, operations_head: false, company_admin: true },
-];
+import { FEATURE_CONFIG, PERMISSION_MATRIX_FEATURES, type FeatureKey } from '@/lib/featureKeys';
 
 interface UserProfile {
   id: string;
@@ -73,6 +57,20 @@ const UserManager = () => {
   });
   const { toast } = useToast();
   const { profile, loading: authLoading, isAdmin } = useAuth();
+  const { permissions, updatePermission } = usePermissions();
+
+  // Build a lookup map: { feature_key: { role: has_access } }
+  const permissionMap = new Map<string, Map<string, boolean>>();
+  permissions.forEach(p => {
+    if (!permissionMap.has(p.feature_key)) {
+      permissionMap.set(p.feature_key, new Map());
+    }
+    permissionMap.get(p.feature_key)!.set(p.role, p.has_access);
+  });
+
+  const getAccess = (featureKey: string, role: string): boolean => {
+    return permissionMap.get(featureKey)?.get(role) ?? true;
+  };
 
   useEffect(() => {
     if (profile?.company_id) {
@@ -97,7 +95,6 @@ const UserManager = () => {
 
       if (rolesError) throw rolesError;
 
-      // Combine the data
       const usersWithRoles = profilesData?.map(profile => ({
         ...profile,
         user_roles: rolesData?.filter(role => role.user_id === profile.id) || []
@@ -127,7 +124,6 @@ const UserManager = () => {
     }
 
     try {
-      // Create user via Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUser.email,
         password: newUser.password,
@@ -142,7 +138,6 @@ const UserManager = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Update profile with additional info
         const { error: profileError } = await supabase
           .from('user_profiles')
           .update({
@@ -154,7 +149,6 @@ const UserManager = () => {
 
         if (profileError) throw profileError;
 
-        // Update role if different from default
         if (newUser.role !== 'company_admin') {
           const { error: roleError } = await supabase
             .from('user_roles')
@@ -238,6 +232,27 @@ const UserManager = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleTogglePermission = (featureKey: string, role: 'operations_head' | 'staff', currentValue: boolean) => {
+    updatePermission.mutate(
+      { featureKey, role, hasAccess: !currentValue },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Permission updated",
+            description: `${FEATURE_CONFIG[featureKey as FeatureKey]?.label || featureKey} access ${!currentValue ? 'granted' : 'revoked'} for ${role === 'staff' ? 'Staff' : 'Operations Head'}`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to update permission",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const getRoleColor = (role: string) => {
@@ -470,37 +485,56 @@ const UserManager = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rolePermissions.map((permission, index) => (
-                      <TableRow key={permission.feature} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                        <TableCell className="font-medium">{permission.feature}</TableCell>
-                        <TableCell className="text-center">
-                          {permission.staff ? (
-                            <Check className="h-5 w-5 text-green-500 mx-auto" />
-                          ) : (
-                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {permission.operations_head ? (
-                            <Check className="h-5 w-5 text-green-500 mx-auto" />
-                          ) : (
-                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {permission.company_admin ? (
-                            <Check className="h-5 w-5 text-green-500 mx-auto" />
-                          ) : (
-                            <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {PERMISSION_MATRIX_FEATURES.map((featureKey, index) => {
+                      const config = FEATURE_CONFIG[featureKey];
+                      const staffAccess = getAccess(featureKey, 'staff');
+                      const opsAccess = getAccess(featureKey, 'operations_head');
+
+                      return (
+                        <TableRow key={featureKey} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                          <TableCell className="font-medium">{config.label}</TableCell>
+                          <TableCell className="text-center">
+                            {isAdmin() ? (
+                              <Switch
+                                checked={staffAccess}
+                                onCheckedChange={() => handleTogglePermission(featureKey, 'staff', staffAccess)}
+                                disabled={updatePermission.isPending}
+                              />
+                            ) : staffAccess ? (
+                              <Check className="h-5 w-5 text-green-500 mx-auto" />
+                            ) : (
+                              <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isAdmin() ? (
+                              <Switch
+                                checked={opsAccess}
+                                onCheckedChange={() => handleTogglePermission(featureKey, 'operations_head', opsAccess)}
+                                disabled={updatePermission.isPending}
+                              />
+                            ) : opsAccess ? (
+                              <Check className="h-5 w-5 text-green-500 mx-auto" />
+                            ) : (
+                              <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Check className="h-5 w-5 text-green-500" />
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                Permissions are automatically applied based on the user's assigned role.
+                {isAdmin() 
+                  ? "Toggle switches to grant or revoke feature access per role. Company Admin always has full access."
+                  : "Permissions are managed by Company Admins."}
               </p>
             </CardContent>
           </Card>
