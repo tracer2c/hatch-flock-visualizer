@@ -641,6 +641,42 @@ export type Database = {
         }
         Relationships: []
       }
+      device_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          device_key: string | null
+          device_label: string
+          id: string
+          last_seen_at: string | null
+          status: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          device_key?: string | null
+          device_label: string
+          id?: string
+          last_seen_at?: string | null
+          status?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          device_key?: string | null
+          device_label?: string
+          id?: string
+          last_seen_at?: string | null
+          status?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       egg_pack_quality: {
         Row: {
           batch_id: string
