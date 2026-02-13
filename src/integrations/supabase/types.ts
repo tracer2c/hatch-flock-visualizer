@@ -1805,6 +1805,47 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          company_id: string
+          created_at: string
+          feature_key: string
+          has_access: boolean
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          feature_key: string
+          has_access?: boolean
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          feature_key?: string
+          has_access?: boolean
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sample_size_presets: {
         Row: {
           company_id: string | null

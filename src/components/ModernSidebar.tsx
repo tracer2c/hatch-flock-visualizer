@@ -24,66 +24,34 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useIsTablet } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { SIDEBAR_FEATURE_MAP } from "@/lib/featureKeys";
+import type { FeatureKey } from "@/lib/featureKeys";
 
-const navigationItems = [
-  {
-    path: '/',
-    label: 'Dashboard',
-    icon: Home,
-    requiresAuth: true
-  },
-  {
-    path: '/data-entry',
-    label: 'Data Entry',
-    icon: FileInput,
-    requiresAuth: true
-  },
-  {
-    path: '/qa-hub',
-    label: 'QA Hub',
-    icon: ClipboardCheck,
-    requiresAuth: true
-  },
-  {
-    path: '/embrex-data-sheet',
-    label: 'Data Sheet',
-    icon: FileSpreadsheet,
-    requiresAuth: true
-  },
-  {
-    path: '/embrex-timeline',
-    label: 'Timeline',
-    icon: TrendingUp,
-    requiresAuth: true
-  },
-  {
-    path: '/checklist',
-    label: 'Daily Tasks',
-    icon: CheckSquare,
-    requiresAuth: true
-  },
-  {
-    path: '/chat',
-    label: 'Smart Analytics',
-    icon: MessageSquare,
-    requiresAuth: true
-  },
-  {
-    path: '/management',
-    label: 'Management',
-    icon: Settings,
-    requiresAuth: true,
-    requiredRole: 'company_admin' as const
-  }
+const navigationItems: Array<{
+  path: string;
+  label: string;
+  icon: any;
+  requiresAuth: boolean;
+  featureKey?: FeatureKey;
+}> = [
+  { path: '/', label: 'Dashboard', icon: Home, requiresAuth: true, featureKey: 'dashboard' },
+  { path: '/data-entry', label: 'Data Entry', icon: FileInput, requiresAuth: true, featureKey: 'data_entry' },
+  { path: '/qa-hub', label: 'QA Hub', icon: ClipboardCheck, requiresAuth: true, featureKey: 'qa_hub' },
+  { path: '/embrex-data-sheet', label: 'Data Sheet', icon: FileSpreadsheet, requiresAuth: true, featureKey: 'embrex_data_sheet' },
+  { path: '/embrex-timeline', label: 'Timeline', icon: TrendingUp, requiresAuth: true, featureKey: 'embrex_timeline' },
+  { path: '/checklist', label: 'Daily Tasks', icon: CheckSquare, requiresAuth: true, featureKey: 'checklist' },
+  { path: '/chat', label: 'Smart Analytics', icon: MessageSquare, requiresAuth: true, featureKey: 'chat' },
+  { path: '/management', label: 'Management', icon: Settings, requiresAuth: true, featureKey: 'management' },
 ];
-
 
 export function ModernSidebar() {
   const { open, setOpen, toggleSidebar, isMobile: isMobileContext, openMobile } = useSidebar();
   const collapsed = isMobileContext ? !openMobile : !open;
-  const { user, hasRole } = useAuth();
+  const { user } = useAuth();
+  const { hasFeatureAccess } = usePermissions();
   const location = useLocation();
   const currentPath = location.pathname;
   const previousSidebarState = useRef<boolean>(open);
@@ -91,10 +59,8 @@ export function ModernSidebar() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
 
-  // Keyboard shortcut to toggle sidebar
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
@@ -106,7 +72,6 @@ export function ModernSidebar() {
     return () => window.removeEventListener('keydown', handleKeydown);
   }, [toggleSidebar]);
 
-  // Swipe gesture handlers for touch devices
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -118,26 +83,20 @@ export function ModernSidebar() {
 
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
-    
     const currentOpen = isMobileContext ? openMobile : open;
-    
-    if (isLeftSwipe && currentOpen) {
-      toggleSidebar();
-    }
-    if (isRightSwipe && !currentOpen && touchStart < 50) {
-      toggleSidebar();
-    }
+    if (isLeftSwipe && currentOpen) toggleSidebar();
+    if (isRightSwipe && !currentOpen && touchStart < 50) toggleSidebar();
   };
 
   const visibleNavItems = navigationItems.filter(item => {
     if (!item.requiresAuth) return true;
     if (!user) return false;
-    if (item.requiredRole) {
-      return hasRole(item.requiredRole);
+    // Use dynamic permissions to filter
+    if (item.featureKey) {
+      return hasFeatureAccess(item.featureKey);
     }
     return true;
   });
@@ -149,7 +108,6 @@ export function ModernSidebar() {
 
   return (
     <>
-      {/* Overlay backdrop for tablet/mobile */}
       {(isMobileContext ? openMobile : open) && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -157,7 +115,6 @@ export function ModernSidebar() {
         />
       )}
 
-      {/* Simple Toggle Button */}
       <Button
         variant="outline"
         size="touch-lg"
@@ -194,11 +151,9 @@ export function ModernSidebar() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Sidebar Accent Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
         
         <SidebarContent className="pt-16 px-3">
-
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
@@ -235,7 +190,6 @@ export function ModernSidebar() {
                             </span>
                           )}
 
-                          {/* Active indicator for collapsed state */}
                           {active && collapsed && (
                             <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-gradient-to-b from-primary to-success rounded-full shadow-lg" />
                           )}
@@ -244,12 +198,10 @@ export function ModernSidebar() {
                     </SidebarMenuItem>
                   );
                 })}
-
-                </SidebarMenu>
+              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Version Footer */}
           <div className="mt-auto pt-4 pb-2">
             {!collapsed ? (
               <div className="mx-3 px-3 py-2 rounded-lg bg-sidebar-accent/50 text-center">
@@ -261,7 +213,6 @@ export function ModernSidebar() {
               </div>
             )}
           </div>
-
         </SidebarContent>
       </Sidebar>
     </>

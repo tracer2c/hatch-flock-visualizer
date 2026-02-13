@@ -60,23 +60,21 @@ import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 24 * 60 * 60 * 1000, // 24 hours - keep data longer for offline
+      staleTime: 5 * 60 * 1000,
+      gcTime: 24 * 60 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
-      networkMode: 'offlineFirst', // Prefer cached data when offline
+      networkMode: 'offlineFirst',
     },
   },
 });
 
 const persister = createIDBPersister();
 
-// Component to handle prefetching inside the provider
 function AppContent() {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   
-  // Prefetch essential data for offline use
   useOfflinePrefetch();
   
   return (
@@ -98,77 +96,111 @@ function AppContent() {
                   <main className="flex-1 overflow-auto pt-12">
                     <Routes>
                       <Route path="/" element={<Index />} />
-                      <Route path="/performance" element={<PerformancePage />} />
-                      <Route path="/process-flow" element={<ProcessFlowPage />} />
-                      <Route path="/embrex-data-sheet" element={<EmbrexDataSheetPage />} />
-                      <Route path="/embrex-timeline" element={<EmbrexTimelinePage />} />
-                      <Route path="/live-tracking" element={<LiveTrackingPage />} />
-                      <Route path="/machine-utilization" element={<MachineUtilizationPage />} />
-                      <Route path="/analytics" element={<AnalyticsDashboard />} />
-                      <Route path="/residue-breakout" element={<ResidueBreakoutPage />} />
-                      <Route path="/house-flow" element={<HouseFlowPage />} />
-                      <Route path="/qa-hub" element={<QAHubPage />} />
-                      <Route path="/data-entry" element={<DataEntryPage />} />
-                      <Route path="/data-entry/house/:houseId" element={<DataEntryPage />} />
-                      <Route path="/data-entry/house/:houseId/egg-pack" element={<EggPackEntryPage />} />
-                      <Route path="/data-entry/house/:houseId/fertility" element={<FertilityEntryPage />} />
-                      <Route path="/data-entry/house/:houseId/qa" element={<QAEntryPage />} />
-                      <Route path="/data-entry/house/:houseId/residue" element={<ResidueEntryPage />} />
-                      <Route path="/data-entry/house/:houseId/clears-injected" element={<ClearsInjectedEntryPage />} />
-                      <Route path="/checklist" element={<ChecklistPage />} />
-                      <Route path="/checklist/house/:houseId" element={<ChecklistPage />} />
-                      <Route path="/checklist/machine/:machineId" element={<ChecklistPage />} />
-                      <Route path="/management" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin']}>
-                          <ManagementPage />
-                        </RoleProtectedRoute>
+                      <Route path="/performance" element={
+                        <RoleProtectedRoute featureKey="performance"><PerformancePage /></RoleProtectedRoute>
                       } />
-                      <Route path="/management/sop-dashboard" element={<SOPDashboardPage />} />
+                      <Route path="/process-flow" element={
+                        <RoleProtectedRoute featureKey="process_flow"><ProcessFlowPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/embrex-data-sheet" element={
+                        <RoleProtectedRoute featureKey="embrex_data_sheet"><EmbrexDataSheetPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/embrex-timeline" element={
+                        <RoleProtectedRoute featureKey="embrex_timeline"><EmbrexTimelinePage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/live-tracking" element={
+                        <RoleProtectedRoute featureKey="live_tracking"><LiveTrackingPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/machine-utilization" element={
+                        <RoleProtectedRoute featureKey="machine_utilization"><MachineUtilizationPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/analytics" element={
+                        <RoleProtectedRoute featureKey="analytics"><AnalyticsDashboard /></RoleProtectedRoute>
+                      } />
+                      <Route path="/residue-breakout" element={
+                        <RoleProtectedRoute featureKey="residue_breakout"><ResidueBreakoutPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/house-flow" element={
+                        <RoleProtectedRoute featureKey="house_flow"><HouseFlowPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/qa-hub" element={
+                        <RoleProtectedRoute featureKey="qa_hub"><QAHubPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry" element={
+                        <RoleProtectedRoute featureKey="data_entry"><DataEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId" element={
+                        <RoleProtectedRoute featureKey="data_entry"><DataEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId/egg-pack" element={
+                        <RoleProtectedRoute featureKey="data_entry"><EggPackEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId/fertility" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FertilityEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId/qa" element={
+                        <RoleProtectedRoute featureKey="data_entry"><QAEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId/residue" element={
+                        <RoleProtectedRoute featureKey="data_entry"><ResidueEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/house/:houseId/clears-injected" element={
+                        <RoleProtectedRoute featureKey="data_entry"><ClearsInjectedEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/checklist" element={
+                        <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/checklist/house/:houseId" element={
+                        <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/checklist/machine/:machineId" element={
+                        <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/management" element={
+                        <RoleProtectedRoute featureKey="management"><ManagementPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/management/sop-dashboard" element={
+                        <RoleProtectedRoute featureKey="sop_dashboard"><SOPDashboardPage /></RoleProtectedRoute>
+                      } />
                       <Route path="/management/hatcheries" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin']}>
-                          <HatcheriesPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="hatcheries"><HatcheriesPage /></RoleProtectedRoute>
                       } />
                       <Route path="/management/house-automation" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin']}>
-                          <HouseAutomationPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="house_automation"><HouseAutomationPage /></RoleProtectedRoute>
                       } />
-                      <Route path="/management/sop-manager" element={<SOPManagerPage />} />
+                      <Route path="/management/sop-manager" element={
+                        <RoleProtectedRoute featureKey="sop_manager"><SOPManagerPage /></RoleProtectedRoute>
+                      } />
                       <Route path="/management/flocks" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
-                          <FlocksPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="flocks_management"><FlocksPage /></RoleProtectedRoute>
                       } />
                       <Route path="/management/machines" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
-                          <MachinesPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="machines_management"><MachinesPage /></RoleProtectedRoute>
                       } />
                       <Route path="/management/users" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin']}>
-                          <UsersPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="user_management"><UsersPage /></RoleProtectedRoute>
                       } />
                       <Route path="/management/targets" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin']}>
-                          <TargetsPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="targets"><TargetsPage /></RoleProtectedRoute>
                       } />
-                      <Route path="/management/residue-schedule" element={<ResidueSchedulePage />} />
+                      <Route path="/management/residue-schedule" element={
+                        <RoleProtectedRoute featureKey="residue_schedule"><ResidueSchedulePage /></RoleProtectedRoute>
+                      } />
                       <Route path="/management/reports" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
-                          <ReportsPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="reports"><ReportsPage /></RoleProtectedRoute>
                       } />
                       <Route path="/management/activity-log" element={
-                        <RoleProtectedRoute allowedRoles={['company_admin', 'operations_head']}>
-                          <ActivityLogPage />
-                        </RoleProtectedRoute>
+                        <RoleProtectedRoute featureKey="activity_log"><ActivityLogPage /></RoleProtectedRoute>
                       } />
-                      <Route path="/bulk-import" element={<BulkDataImportPage />} />
-                      <Route path="/report" element={<ProjectReport />} />
-                      <Route path="/chat" element={<ChatPage />} />
+                      <Route path="/bulk-import" element={
+                        <RoleProtectedRoute featureKey="bulk_import"><BulkDataImportPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/report" element={
+                        <RoleProtectedRoute featureKey="report"><ProjectReport /></RoleProtectedRoute>
+                      } />
+                      <Route path="/chat" element={
+                        <RoleProtectedRoute featureKey="chat"><ChatPage /></RoleProtectedRoute>
+                      } />
                       <Route path="/profile" element={<UserProfilePage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
@@ -190,8 +222,8 @@ const App = () => {
       client={queryClient}
       persistOptions={{
         persister,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        buster: 'v1', // Change this to invalidate cache on major updates
+        maxAge: 24 * 60 * 60 * 1000,
+        buster: 'v1',
       }}
     >
       <TooltipProvider>
