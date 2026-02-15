@@ -34,9 +34,10 @@ interface HatchPerformanceTabProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }: HatchPerformanceTabProps) => {
+export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: HatchPerformanceTabProps) => {
   const { formatPercentage, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -311,7 +312,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
             </TableHead>
             <TableHead>Technician Name</TableHead>
             <TableHead>Notes</TableHead>
-            <TableHead>Actions</TableHead>
+            {!readOnly && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -352,24 +353,26 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
                 </TableCell>
                 <TableCell>{item.technician_name || "-"}</TableCell>
                 <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(item.batch_id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {!readOnly && (
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(item.batch_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
@@ -455,7 +458,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate }:
               <Button variant="outline" onClick={() => setEditingRecord(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save Changes</Button>
+              <Button onClick={handleSave} disabled={readOnly}>Save Changes</Button>
             </div>
           </div>
           </DialogContent>

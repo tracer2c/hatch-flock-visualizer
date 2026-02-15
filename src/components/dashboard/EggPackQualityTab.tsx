@@ -27,9 +27,10 @@ interface EggPackQualityTabProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: EggPackQualityTabProps) => {
+export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EggPackQualityTabProps) => {
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -270,7 +271,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
               <TableHead>Set Week</TableHead>
               <TableHead>Inspector Name</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead>Actions</TableHead>
+              {!readOnly && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -308,24 +309,26 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
                     <TableCell>{setWeek || "-"}</TableCell>
                     <TableCell>{item.inspector_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(item.batch_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(item.batch_id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -505,7 +508,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate }: E
               <Button variant="outline" onClick={() => setEditingRecord(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save Changes</Button>
+              <Button onClick={handleSave} disabled={readOnly}>Save Changes</Button>
             </div>
           </div>
         </DialogContent>

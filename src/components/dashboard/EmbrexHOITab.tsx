@@ -22,9 +22,10 @@ interface EmbrexHOITabProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate }: EmbrexHOITabProps) => {
+export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
 
@@ -178,7 +179,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate }: Embrex
               <TableHead>Status</TableHead>
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead>Actions</TableHead>
+              {!readOnly && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -221,24 +222,26 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate }: Embrex
                     </TableCell>
                     <TableCell>{item.hoi_technician_name || item.clears_technician_name || item.fertility_technician_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -297,7 +300,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate }: Embrex
               <Button variant="outline" onClick={() => setEditingRecord(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save Changes</Button>
+              <Button onClick={handleSave} disabled={readOnly}>Save Changes</Button>
             </div>
           </div>
         </DialogContent>
