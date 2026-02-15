@@ -63,6 +63,25 @@ export const PERMISSION_MATRIX_FEATURES: FeatureKey[] = [
   'activity_log',
 ];
 
+// Features that support write protection (have data entry / mutation actions)
+export const WRITABLE_FEATURES: FeatureKey[] = [
+  'data_entry',
+  'qa_hub',
+  'checklist',
+  'bulk_import',
+  'management',
+  'sop_manager',
+  'residue_schedule',
+  'flocks_management',
+  'machines_management',
+  'user_management',
+  'targets',
+  'hatcheries',
+  'house_automation',
+  'reports',
+  'embrex_data_sheet',
+];
+
 // Map sidebar nav items to feature keys
 export const SIDEBAR_FEATURE_MAP: Record<string, FeatureKey> = {
   '/': 'dashboard',

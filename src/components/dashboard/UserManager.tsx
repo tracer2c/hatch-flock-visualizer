@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { UserPlus, Eye, EyeOff, Check, X, Shield, Users, Lock } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Check, Shield, Users, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -59,17 +58,20 @@ const UserManager = () => {
   const { profile, loading: authLoading, isAdmin } = useAuth();
   const { permissions, updatePermission } = usePermissions();
 
-  // Build a lookup map: { feature_key: { role: has_access } }
-  const permissionMap = new Map<string, Map<string, boolean>>();
+  // Build a lookup map: { feature_key: { role: { has_access, can_write } } }
+  const permissionMap = new Map<string, Map<string, { has_access: boolean; can_write: boolean }>>();
   permissions.forEach(p => {
     if (!permissionMap.has(p.feature_key)) {
       permissionMap.set(p.feature_key, new Map());
     }
-    permissionMap.get(p.feature_key)!.set(p.role, p.has_access);
+    permissionMap.get(p.feature_key)!.set(p.role, { has_access: p.has_access, can_write: (p as any).can_write ?? true });
   });
 
-  const getAccess = (featureKey: string, role: string): boolean => {
-    return permissionMap.get(featureKey)?.get(role) ?? true;
+  // Returns 'full' | 'view_only' | 'no_access'
+  const getAccessLevel = (featureKey: string, role: string): 'full' | 'view_only' | 'no_access' => {
+    const perm = permissionMap.get(featureKey)?.get(role);
+    if (!perm || !perm.has_access) return 'no_access';
+    return perm.can_write ? 'full' : 'view_only';
   };
 
   useEffect(() => {
@@ -234,14 +236,17 @@ const UserManager = () => {
     }
   };
 
-  const handleTogglePermission = (featureKey: string, role: 'operations_head' | 'staff', currentValue: boolean) => {
+  const handlePermissionChange = (featureKey: string, role: 'operations_head' | 'staff', level: 'full' | 'view_only' | 'no_access') => {
+    const hasAccess = level !== 'no_access';
+    const canWrite = level === 'full';
     updatePermission.mutate(
-      { featureKey, role, hasAccess: !currentValue },
+      { featureKey, role, hasAccess, canWrite },
       {
         onSuccess: () => {
+          const levelLabel = level === 'full' ? 'Full Access' : level === 'view_only' ? 'View Only' : 'No Access';
           toast({
             title: "Permission updated",
-            description: `${FEATURE_CONFIG[featureKey as FeatureKey]?.label || featureKey} access ${!currentValue ? 'granted' : 'revoked'} for ${role === 'staff' ? 'Staff' : 'Operations Head'}`,
+            description: `${FEATURE_CONFIG[featureKey as FeatureKey]?.label || featureKey} set to ${levelLabel} for ${role === 'staff' ? 'Staff' : 'Operations Head'}`,
           });
         },
         onError: () => {
@@ -487,36 +492,54 @@ const UserManager = () => {
                   <TableBody>
                     {PERMISSION_MATRIX_FEATURES.map((featureKey, index) => {
                       const config = FEATURE_CONFIG[featureKey];
-                      const staffAccess = getAccess(featureKey, 'staff');
-                      const opsAccess = getAccess(featureKey, 'operations_head');
+                      const staffLevel = getAccessLevel(featureKey, 'staff');
+                      const opsLevel = getAccessLevel(featureKey, 'operations_head');
 
                       return (
                         <TableRow key={featureKey} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
                           <TableCell className="font-medium">{config.label}</TableCell>
                           <TableCell className="text-center">
                             {isAdmin() ? (
-                              <Switch
-                                checked={staffAccess}
-                                onCheckedChange={() => handleTogglePermission(featureKey, 'staff', staffAccess)}
+                              <Select
+                                value={staffLevel}
+                                onValueChange={(value) => handlePermissionChange(featureKey, 'staff', value as any)}
                                 disabled={updatePermission.isPending}
-                              />
-                            ) : staffAccess ? (
-                              <Check className="h-5 w-5 text-green-500 mx-auto" />
+                              >
+                                <SelectTrigger className="w-[130px] mx-auto h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="full">Full Access</SelectItem>
+                                  <SelectItem value="view_only">View Only</SelectItem>
+                                  <SelectItem value="no_access">No Access</SelectItem>
+                                </SelectContent>
+                              </Select>
                             ) : (
-                              <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                              <Badge variant="outline" className="text-xs">
+                                {staffLevel === 'full' ? 'Full Access' : staffLevel === 'view_only' ? 'View Only' : 'No Access'}
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-center">
                             {isAdmin() ? (
-                              <Switch
-                                checked={opsAccess}
-                                onCheckedChange={() => handleTogglePermission(featureKey, 'operations_head', opsAccess)}
+                              <Select
+                                value={opsLevel}
+                                onValueChange={(value) => handlePermissionChange(featureKey, 'operations_head', value as any)}
                                 disabled={updatePermission.isPending}
-                              />
-                            ) : opsAccess ? (
-                              <Check className="h-5 w-5 text-green-500 mx-auto" />
+                              >
+                                <SelectTrigger className="w-[130px] mx-auto h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="full">Full Access</SelectItem>
+                                  <SelectItem value="view_only">View Only</SelectItem>
+                                  <SelectItem value="no_access">No Access</SelectItem>
+                                </SelectContent>
+                              </Select>
                             ) : (
-                              <X className="h-5 w-5 text-muted-foreground/50 mx-auto" />
+                              <Badge variant="outline" className="text-xs">
+                                {opsLevel === 'full' ? 'Full Access' : opsLevel === 'view_only' ? 'View Only' : 'No Access'}
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-center">
@@ -533,7 +556,7 @@ const UserManager = () => {
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 {isAdmin() 
-                  ? "Toggle switches to grant or revoke feature access per role. Company Admin always has full access."
+                  ? "Set access level per role: Full Access (view + write), View Only (see data, actions disabled), No Access (hidden). Company Admin always has full access."
                   : "Permissions are managed by Company Admins."}
               </p>
             </CardContent>

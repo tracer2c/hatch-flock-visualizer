@@ -9,8 +9,11 @@ import { useSingleSetterMachines, useMultiSetterMachines, useQAStats } from '@/h
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
+import { usePermissions } from "@/hooks/usePermissions";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 const QAHubPage: React.FC = () => {
+  const { hasWriteAccess } = usePermissions();
   const [searchParams] = useSearchParams();
   const houseIdFromUrl = searchParams.get('houseId');
   const actionFromUrl = searchParams.get('action');
@@ -34,6 +37,7 @@ const QAHubPage: React.FC = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <ReadOnlyBanner show={!hasWriteAccess('qa_hub')} />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1">

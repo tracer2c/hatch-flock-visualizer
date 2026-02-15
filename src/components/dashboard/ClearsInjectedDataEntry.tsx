@@ -16,6 +16,7 @@ type Props = {
     clears_notes: string | null;
   }) => Promise<void> | void;
   saving?: boolean;
+  readOnly?: boolean;
   context?: {
     flockNumber?: number;
     flockName?: string;
@@ -29,6 +30,7 @@ export default function ClearsInjectedDataEntry({
   totalEggs,
   onSave,
   saving,
+  readOnly,
   context,
 }: Props) {
   const [sampleSize, setSampleSize] = useState<string>('');
@@ -136,7 +138,7 @@ export default function ClearsInjectedDataEntry({
                 setTechnicianName('');
                 setNotes('');
               }}
-              disabled={!valid || saving}
+              disabled={!valid || saving || readOnly}
               className="w-full"
             >
               {saving ? "Saving..." : "Save"}
