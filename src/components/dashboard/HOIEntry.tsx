@@ -11,9 +11,10 @@ interface HOIEntryProps {
   eggsInjected: number;
   chicksHatched: number;
   onUpdated: (vals: { eggs_injected: number; chicks_hatched: number }) => void;
+  readOnly?: boolean;
 }
 
-const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated }: HOIEntryProps) => {
+const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated, readOnly }: HOIEntryProps) => {
   const [eggsInjectedStr, setEggsInjectedStr] = useState<string>(String(eggsInjected ?? 0));
   const [chicksHatchedStr, setChicksHatchedStr] = useState<string>(String(chicksHatched ?? 0));
   const [technicianName, setTechnicianName] = useState<string>('');
@@ -123,7 +124,7 @@ const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated }: HOIEntryP
           />
         </div>
         <div className="space-y-2">
-          <Button onClick={handleSave} disabled={saving} className="w-full">
+          <Button onClick={handleSave} disabled={saving || readOnly} className="w-full">
             {saving ? "Saving..." : "Save"}
           </Button>
         </div>

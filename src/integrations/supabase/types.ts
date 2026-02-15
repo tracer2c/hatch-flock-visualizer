@@ -1807,6 +1807,7 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          can_write: boolean
           company_id: string
           created_at: string
           feature_key: string
@@ -1817,6 +1818,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          can_write?: boolean
           company_id: string
           created_at?: string
           feature_key: string
@@ -1827,6 +1829,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          can_write?: boolean
           company_id?: string
           created_at?: string
           feature_key?: string

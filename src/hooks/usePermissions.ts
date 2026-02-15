@@ -9,6 +9,7 @@ interface RolePermission {
   feature_key: string;
   role: 'company_admin' | 'operations_head' | 'staff';
   has_access: boolean;
+  can_write: boolean;
 }
 
 export function usePermissions() {
@@ -52,21 +53,39 @@ export function usePermissions() {
     return false;
   };
 
+  const hasWriteAccess = (featureKey: FeatureKey): boolean => {
+    if (isAdmin()) return true;
+
+    const userRoles = roles.map(r => r.role);
+    for (const role of userRoles) {
+      const perm = permissions.find(
+        p => p.feature_key === featureKey && p.role === role
+      );
+      if (perm?.has_access && perm?.can_write) return true;
+    }
+
+    if (permissions.length === 0 && !isLoading) return true;
+
+    return false;
+  };
+
   const updatePermission = useMutation({
     mutationFn: async ({
       featureKey,
       role,
       hasAccess,
+      canWrite,
     }: {
       featureKey: string;
       role: 'operations_head' | 'staff';
       hasAccess: boolean;
+      canWrite: boolean;
     }) => {
       if (!profile?.company_id) throw new Error('No company');
       
       const { error } = await supabase
         .from('role_permissions' as any)
-        .update({ has_access: hasAccess, updated_by: profile.id } as any)
+        .update({ has_access: hasAccess, can_write: canWrite, updated_by: profile.id } as any)
         .eq('company_id', profile.company_id)
         .eq('feature_key', featureKey)
         .eq('role', role);
@@ -82,6 +101,7 @@ export function usePermissions() {
     permissions,
     isLoading,
     hasFeatureAccess,
+    hasWriteAccess,
     updatePermission,
   };
 }

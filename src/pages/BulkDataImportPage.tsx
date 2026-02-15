@@ -14,10 +14,14 @@ import ImportProgress from '@/components/import/ImportProgress';
 import ImportResults from '@/components/import/ImportResults';
 import ImportExampleTemplates from '@/components/import/ImportExampleTemplates';
 import { ArrowLeft, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { usePermissions } from "@/hooks/usePermissions";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 type Step = 'upload' | 'select' | 'validate' | 'import' | 'results';
 
 export default function BulkDataImportPage() {
+  const { hasWriteAccess } = usePermissions();
+  const readOnly = !hasWriteAccess('bulk_import');
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [sheets, setSheets] = useState<SheetData[]>([]);
@@ -255,6 +259,7 @@ export default function BulkDataImportPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
+      <ReadOnlyBanner show={readOnly} />
       <div className="mb-6">
         <Button
           variant="ghost"
