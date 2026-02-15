@@ -13,8 +13,9 @@ interface ResidueBreakoutTabProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const ResidueBreakoutTab = ({ data, searchTerm, filters, onDataUpdate }: ResidueBreakoutTabProps) => {
-  return <ResidueBreakoutTable data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={onDataUpdate} />;
+export const ResidueBreakoutTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: ResidueBreakoutTabProps) => {
+  return <ResidueBreakoutTable data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={onDataUpdate} readOnly={readOnly} />;
 };

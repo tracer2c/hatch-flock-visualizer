@@ -38,9 +38,10 @@ interface ResidueBreakoutTableProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }: ResidueBreakoutTableProps) => {
+export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, readOnly }: ResidueBreakoutTableProps) => {
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -326,7 +327,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <TableHead>HOI %</TableHead>
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead>Actions</TableHead>
+              {!readOnly && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -389,25 +390,27 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
                     </TableCell>
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(item.batch_id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(item.batch_id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -631,7 +634,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate }
               <Button variant="outline" onClick={() => setEditingRecord(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>
+              <Button onClick={handleSave} disabled={readOnly}>
                 Save Changes
               </Button>
             </div>
