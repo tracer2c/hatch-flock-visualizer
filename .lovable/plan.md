@@ -1,34 +1,27 @@
 
 
-## Show User Role in the Profile Dropdown Menu
+## Add "Wayne Sanderson Farms" as a New Company
 
-### What
-Add a role badge (e.g., "Company Admin", "Operations Head", "Staff") beneath the user's email in the TopBar dropdown menu, so users can quickly see their current access level.
+### Current State
+There are 2 companies in the database:
+1. **Default Company** (default.com) -- the fallback for unmatched email domains
+2. **Company One** (companyone.com) -- your current company
 
-### Where
-The change is in the user profile section of the dropdown in `src/components/TopBar.tsx`.
+### What We'll Do
+Insert a new company record for **Wayne Sanderson Farms** into the `companies` table.
 
-### Design
-Inside the existing profile `DropdownMenuItem`, add a small styled badge below the email showing the user's primary role in a human-readable format (e.g., "Company Admin" instead of "company_admin").
+### Details Needed
+Before proceeding, we need to confirm a few things:
+- **Domain**: What email domain should be associated with this company? (e.g., `waynesandersonfarms.com` or `wsf.com`). Any user who signs up with this email domain will be automatically assigned to this company.
+- **Subscription type**: `trial` or `enterprise`?
 
-### Technical Details
+### Technical Steps
+1. Run a SQL INSERT to create the company record with the provided domain and subscription type
+2. The existing `seed_role_permissions_for_company` trigger will automatically create all default role permissions for the new company
+3. Any user who signs up with the matching email domain will be auto-assigned to this company
 
-**File: `src/components/TopBar.tsx`**
-
-1. Import `roles` from the existing `useAuth()` hook (already available, just destructure it).
-2. Add a helper to format the role name: `company_admin` -> `Company Admin`, `operations_head` -> `Operations Head`, `staff` -> `Staff`.
-3. Below the email `<span>` in the profile dropdown item, render a small badge with the formatted role using existing `Badge` component or a simple styled span with appropriate colors:
-   - Company Admin: primary/blue badge
-   - Operations Head: amber/orange badge  
-   - Staff: gray badge
-
-The dropdown will look like:
-
-```
-  Sai Sruthi Neerukonda
-  sruthineerukonda@gmail.com
-  [Company Admin]            <-- new badge
-```
-
-No new dependencies or database changes needed -- the `roles` array is already loaded in the auth context.
+### Default Assumptions (if no preferences given)
+- Domain: `waynesandersonfarms.com`
+- Subscription: `trial`
+- Status: `active`
 
