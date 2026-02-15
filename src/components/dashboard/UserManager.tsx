@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissions } from '@/hooks/usePermissions';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Eye, EyeOff, Check, Shield, Users, Lock } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Shield, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { FEATURE_CONFIG, PERMISSION_MATRIX_FEATURES, type FeatureKey } from '@/lib/featureKeys';
+
 
 interface UserProfile {
   id: string;
@@ -56,23 +56,7 @@ const UserManager = () => {
   });
   const { toast } = useToast();
   const { profile, loading: authLoading, isAdmin } = useAuth();
-  const { permissions, updatePermission } = usePermissions();
-
-  // Build a lookup map: { feature_key: { role: { has_access, can_write } } }
-  const permissionMap = new Map<string, Map<string, { has_access: boolean; can_write: boolean }>>();
-  permissions.forEach(p => {
-    if (!permissionMap.has(p.feature_key)) {
-      permissionMap.set(p.feature_key, new Map());
-    }
-    permissionMap.get(p.feature_key)!.set(p.role, { has_access: p.has_access, can_write: (p as any).can_write ?? true });
-  });
-
-  // Returns 'full' | 'view_only' | 'no_access'
-  const getAccessLevel = (featureKey: string, role: string): 'full' | 'view_only' | 'no_access' => {
-    const perm = permissionMap.get(featureKey)?.get(role);
-    if (!perm || !perm.has_access) return 'no_access';
-    return perm.can_write ? 'full' : 'view_only';
-  };
+  
 
   useEffect(() => {
     if (profile?.company_id) {
@@ -236,29 +220,6 @@ const UserManager = () => {
     }
   };
 
-  const handlePermissionChange = (featureKey: string, role: 'operations_head' | 'staff', level: 'full' | 'view_only' | 'no_access') => {
-    const hasAccess = level !== 'no_access';
-    const canWrite = level === 'full';
-    updatePermission.mutate(
-      { featureKey, role, hasAccess, canWrite },
-      {
-        onSuccess: () => {
-          const levelLabel = level === 'full' ? 'Full Access' : level === 'view_only' ? 'View Only' : 'No Access';
-          toast({
-            title: "Permission updated",
-            description: `${FEATURE_CONFIG[featureKey as FeatureKey]?.label || featureKey} set to ${levelLabel} for ${role === 'staff' ? 'Staff' : 'Operations Head'}`,
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to update permission",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -479,86 +440,25 @@ const UserManager = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="font-semibold">Feature</TableHead>
-                      <TableHead className="text-center font-semibold w-28">Staff</TableHead>
-                      <TableHead className="text-center font-semibold w-36">Operations Head</TableHead>
-                      <TableHead className="text-center font-semibold w-32">Company Admin</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {PERMISSION_MATRIX_FEATURES.map((featureKey, index) => {
-                      const config = FEATURE_CONFIG[featureKey];
-                      const staffLevel = getAccessLevel(featureKey, 'staff');
-                      const opsLevel = getAccessLevel(featureKey, 'operations_head');
-
-                      return (
-                        <TableRow key={featureKey} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                          <TableCell className="font-medium">{config.label}</TableCell>
-                          <TableCell className="text-center">
-                            {isAdmin() ? (
-                              <Select
-                                value={staffLevel}
-                                onValueChange={(value) => handlePermissionChange(featureKey, 'staff', value as any)}
-                                disabled={updatePermission.isPending}
-                              >
-                                <SelectTrigger className="w-[130px] mx-auto h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="full">Full Access</SelectItem>
-                                  <SelectItem value="view_only">View Only</SelectItem>
-                                  <SelectItem value="no_access">No Access</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {staffLevel === 'full' ? 'Full Access' : staffLevel === 'view_only' ? 'View Only' : 'No Access'}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isAdmin() ? (
-                              <Select
-                                value={opsLevel}
-                                onValueChange={(value) => handlePermissionChange(featureKey, 'operations_head', value as any)}
-                                disabled={updatePermission.isPending}
-                              >
-                                <SelectTrigger className="w-[130px] mx-auto h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="full">Full Access</SelectItem>
-                                  <SelectItem value="view_only">View Only</SelectItem>
-                                  <SelectItem value="no_access">No Access</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {opsLevel === 'full' ? 'Full Access' : opsLevel === 'view_only' ? 'View Only' : 'No Access'}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Check className="h-5 w-5 text-green-500" />
-                              <Lock className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+              <div className="space-y-4">
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-red-100 text-red-800">Company Admin</Badge>
+                    <span className="text-sm text-foreground">Full read &amp; write access to all pages</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-blue-100 text-blue-800">Operations Head</Badge>
+                    <span className="text-sm text-foreground">Full read &amp; write access to all pages</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-green-100 text-green-800">Staff</Badge>
+                    <span className="text-sm text-foreground">View-only access to all pages (cannot edit or save)</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Access is determined by user role. To change a user's access level, update their role in the Company Users tab.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                {isAdmin() 
-                  ? "Set access level per role: Full Access (view + write), View Only (see data, actions disabled), No Access (hidden). Company Admin always has full access."
-                  : "Permissions are managed by Company Admins."}
-              </p>
             </CardContent>
           </Card>
         </TabsContent>
