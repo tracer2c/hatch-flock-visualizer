@@ -29,9 +29,10 @@ interface QAMonitoringTabProps {
     dateTo: string;
   };
   onDataUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAMonitoringTabProps) => {
+export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: QAMonitoringTabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
 
@@ -307,7 +308,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
             <TableHead>Angle Bot R</TableHead>
             <TableHead>Inspector</TableHead>
             <TableHead>Notes</TableHead>
-            <TableHead>Actions</TableHead>
+            {!readOnly && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -357,25 +358,27 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
                 <TableCell>{item.angle_bottom_right || "-"}</TableCell>
                 <TableCell>{item.inspector_name || "-"}</TableCell>
                 <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(item.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {!readOnly && (
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(item.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
@@ -512,7 +515,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate }: QAM
             <Button variant="outline" onClick={() => setEditingRecord(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={readOnly}>
               Save Changes
             </Button>
           </div>

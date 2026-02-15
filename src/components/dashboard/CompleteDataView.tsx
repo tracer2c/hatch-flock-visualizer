@@ -23,9 +23,10 @@ interface CompleteDataViewProps {
     dateTo: string;
   };
   onDataReady?: (data: any[]) => void;
+  readOnly?: boolean;
 }
 
-export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }: CompleteDataViewProps) => {
+export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, readOnly }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -327,15 +328,15 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady }
 
   switch (activeTab) {
     case "embrex":
-      return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
+      return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
     case "residue":
       return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
+      return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
     case "hatch":
-      return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
+      return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
     case "qa":
-      return <QAMonitoringTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} />;
+      return <QAMonitoringTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
   }

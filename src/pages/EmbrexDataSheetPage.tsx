@@ -13,8 +13,12 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ExportService } from "@/services/exportService";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 const EmbrexDataSheetPage = () => {
+  const { hasWriteAccess } = usePermissions();
+  const readOnly = !hasWriteAccess('embrex_data_sheet');
   const [activeTab, setActiveTab] = useState("embrex");
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -360,12 +364,14 @@ const EmbrexDataSheetPage = () => {
 
       {/* Content Section */}
       <div className="flex-1 overflow-auto p-6">
+        <ReadOnlyBanner show={readOnly} />
         <CompleteDataView 
           key={`${showPercentages ? 'percentage' : 'count'}-${refreshKey}`}
           activeTab={activeTab} 
           searchTerm={searchTerm}
           filters={filters}
           onDataReady={handleDataReady}
+          readOnly={readOnly}
         />
       </div>
     </div>
