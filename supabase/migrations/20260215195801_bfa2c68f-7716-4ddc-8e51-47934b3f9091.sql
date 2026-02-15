@@ -1,0 +1,3 @@
+UPDATE user_roles
+SET role = 'staff'
+WHERE user_id = '95bb6b5a-c4f5-4a3e-8671-62d7005e4333';
