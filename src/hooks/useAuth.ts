@@ -41,6 +41,21 @@ export const useAuth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Handle sign-out or failed token refresh immediately
+        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setRoles([]);
+          setMfaStatus({ hasMFA: false, factors: [], isVerified: false });
+          setLoading(false);
+          if (event === 'TOKEN_REFRESHED') {
+            // Token refresh failed - force clean sign out
+            supabase.auth.signOut();
+          }
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -62,7 +77,15 @@ export const useAuth = () => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('Session recovery failed:', error.message);
+        // Invalid session - force clean state
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       
