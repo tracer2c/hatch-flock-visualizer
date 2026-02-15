@@ -1,22 +1,42 @@
 
 
-## Add "View Only" Mode to Role Permissions — IMPLEMENTED ✅
+## Fix: Data Sheet "View Only" Not Enforced
 
-### What Was Done
+### Problem
+The Data Sheet page (`/embrex-data-sheet`) was added to `WRITABLE_FEATURES` but the actual components were never updated to check `hasWriteAccess('embrex_data_sheet')`. The edit and delete buttons in all tab components remain visible and functional regardless of permission settings.
 
-1. **Database Migration**: Added `can_write` boolean column (default `true`) to `role_permissions` table
-2. **Updated `usePermissions` Hook**: Added `hasWriteAccess(featureKey)` function + updated `updatePermission` mutation to support `canWrite` parameter
-3. **Updated Feature Keys**: Added `WRITABLE_FEATURES` array listing features that support write protection
-4. **Updated UserManager Permissions Matrix**: Replaced binary Switch toggles with 3-option Select dropdowns (Full Access / View Only / No Access)
-5. **Added ReadOnlyBanner Component**: Reusable amber warning banner for view-only pages
-6. **Applied Write Protection Banners** to key pages:
-   - DataEntryPage, QAHubPage, ChecklistPage, BulkDataImportPage
-   - Management pages: FlocksPage, MachinesPage, SOPManagerPage, HatcheriesPage, UsersPage, TargetsPage
-7. **Added `readOnly` prop** to ClearsInjectedDataEntry and HOIEntry components
+### Root Cause
+The write protection was applied to dedicated data entry pages (DataEntryPage, QAHubPage, etc.) but the Data Sheet page uses its own tab components (`EmbrexHOITab`, `EggPackQualityTab`, `HatchPerformanceTab`, `QAMonitoringTab`) that render edit/delete buttons independently -- and these were never given a `readOnly` prop.
 
-### Three Permission States
-```
-has_access=false              → No Access (hidden from sidebar + route blocked)
-has_access=true, can_write=true  → Full Access (view + write)
-has_access=true, can_write=false → View Only (can see data, action buttons disabled)
-```
+### Fix (5 files)
+
+#### 1. `src/pages/EmbrexDataSheetPage.tsx`
+- Import `usePermissions` hook and `ReadOnlyBanner`
+- Call `hasWriteAccess('embrex_data_sheet')` to compute a `readOnly` flag
+- Show the `ReadOnlyBanner` when `readOnly` is true
+- Pass `readOnly` prop down to `CompleteDataView`
+
+#### 2. `src/components/dashboard/CompleteDataView.tsx`
+- Accept a new `readOnly` prop
+- Pass it through to all tab components (`EmbrexHOITab`, `EggPackQualityTab`, `HatchPerformanceTab`, `QAMonitoringTab`, `ResidueBreakoutTab`)
+
+#### 3. `src/components/dashboard/EmbrexHOITab.tsx`
+- Accept `readOnly` prop
+- When `readOnly` is true: hide the Actions column header and the edit/delete buttons entirely
+- Disable the Save button in the edit dialog (as a safety net)
+
+#### 4. `src/components/dashboard/EggPackQualityTab.tsx`
+- Same pattern: accept `readOnly` prop, hide edit/delete buttons when true
+
+#### 5. `src/components/dashboard/HatchPerformanceTab.tsx`
+- Same pattern: accept `readOnly` prop, hide edit/delete buttons when true
+
+#### 6. `src/components/dashboard/QAMonitoringTab.tsx`
+- Same pattern: accept `readOnly` prop, hide edit/delete buttons when true
+
+### What stays the same
+- No database or RLS changes needed
+- No routing changes
+- `ResidueBreakoutTab` has no edit/delete actions so no changes needed there
+- Export and filter functionality remains available in view-only mode (reading data is fine)
+
