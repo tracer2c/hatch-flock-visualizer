@@ -53,19 +53,10 @@ export function usePermissions() {
     return false;
   };
 
-  const hasWriteAccess = (featureKey: FeatureKey): boolean => {
+  const hasWriteAccess = (_featureKey: FeatureKey): boolean => {
     if (isAdmin()) return true;
-
-    const userRoles = roles.map(r => r.role);
-    for (const role of userRoles) {
-      const perm = permissions.find(
-        p => p.feature_key === featureKey && p.role === role
-      );
-      if (perm?.has_access && perm?.can_write) return true;
-    }
-
-    if (permissions.length === 0 && !isLoading) return true;
-
+    if (roles.some(r => r.role === 'operations_head')) return true;
+    // Staff = view only
     return false;
   };
 
