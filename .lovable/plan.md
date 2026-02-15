@@ -1,129 +1,88 @@
 
 
-## Make Role Permissions Editable by Company Admin (Route-Level Enforcement)
+## Add "View Only" Mode to Role Permissions
 
-### What This Does
+### Problem
+Currently each feature permission is binary: full access or no access. You want a middle ground where a user can **view** a page (see data) but **cannot write** (create, edit, delete).
 
-Currently, the "Role Permissions" tab in User Management shows a static, read-only matrix. This plan converts it into a fully dynamic system where the company admin can toggle which roles (Staff, Operations Head) can access each feature -- and those permissions are enforced at the route level in real-time.
+### Simplest Approach: Add `can_write` Column
 
-### Changes Overview
-
-#### 1. New Database Table: `role_permissions`
-
-Stores per-company, per-feature, per-role access settings.
+Rather than restructuring the existing system, we add a single boolean column `can_write` to the existing `role_permissions` table. This gives three effective states per feature/role:
 
 ```text
-role_permissions
-+--------------+----------------------------------------------+
-| Column       | Type                                         |
-+--------------+----------------------------------------------+
-| id           | uuid (PK)                                    |
-| company_id   | uuid (FK -> companies)                       |
-| feature_key  | text (e.g. 'dashboard', 'data_entry', etc.)  |
-| role         | user_role (staff, operations_head, etc.)      |
-| has_access   | boolean (default true)                       |
-| updated_by   | uuid                                         |
-| created_at   | timestamptz                                  |
-| updated_at   | timestamptz                                  |
-+--------------+----------------------------------------------+
-Unique constraint: (company_id, feature_key, role)
+has_access=false              --> No Access (can't see the page at all)
+has_access=true, can_write=true  --> Full Access (view + write)
+has_access=true, can_write=false --> View Only (can see data, buttons disabled)
 ```
 
-RLS policies:
-- SELECT: All company users can read their company's permissions
-- INSERT/UPDATE/DELETE: Only `company_admin` role
+### Changes
 
-A seed function will populate default permissions for each company based on the current hardcoded matrix (Staff gets access to Dashboard, Data Entry, QA Hub, etc. but not management features).
+#### 1. Database Migration
+- Add `can_write` boolean column to `role_permissions`, defaulting to `true` (so all existing permissions keep working as-is -- zero disruption)
 
-#### 2. Feature-to-Route Mapping
+#### 2. Update `usePermissions` Hook
+- Add a new function: `hasWriteAccess(featureKey): boolean`
+- Returns `true` for company admins (always full access)
+- Returns the `can_write` value from the database for other roles
+- Falls back to `true` if no permission row found (safe default)
 
-A shared constant mapping feature keys to routes:
+#### 3. Update Permissions Matrix UI (`UserManager.tsx`)
+Replace each single toggle with a **3-option dropdown** per cell:
 
 ```text
-Feature Key            Routes
---------------------   ----------------------------------------
-dashboard              /
-performance            /performance
-process_flow           /process-flow
-data_entry             /data-entry/**, /data-entry/house/**
-qa_hub                 /qa-hub
-checklist              /checklist/**
-analytics              /analytics
-embrex_data_sheet      /embrex-data-sheet
-embrex_timeline        /embrex-timeline
-live_tracking          /live-tracking
-machine_utilization    /machine-utilization
-residue_breakout       /residue-breakout
-house_flow             /house-flow
-bulk_import            /bulk-import
-report                 /report
-chat                   /chat
-sop_dashboard          /management/sop-dashboard
-sop_manager            /management/sop-manager
-residue_schedule       /management/residue-schedule
-flocks_management      /management/flocks
-machines_management    /management/machines
-user_management        /management/users
-targets                /management/targets
-hatcheries             /management/hatcheries
-house_automation       /management/house-automation
-reports                /management/reports
-activity_log           /management/activity-log
+Feature          | Staff          | Operations Head | Company Admin
+-----------------+----------------+-----------------+--------------
+Dashboard        | [Full Access v]| [Full Access v] | Full (locked)
+Data Entry       | [View Only  v] | [Full Access v] | Full (locked)
+QA Hub           | [No Access  v] | [Full Access v] | Full (locked)
 ```
 
-Company admins always have full access (cannot be toggled off).
+Dropdown options:
+- **No Access** -- hides route and sidebar item
+- **View Only** -- can navigate and see data, but save/edit/delete buttons are disabled
+- **Full Access** -- current behavior
 
-#### 3. New Hook: `usePermissions`
+#### 4. Provide a Reusable `readOnly` Check for Components
+- Export `hasWriteAccess` from `usePermissions`
+- The key data entry and management pages will use this to conditionally disable mutation UI elements (buttons, forms, delete icons)
+- This is **UI-level enforcement only** -- the simplest approach that doesn't require changing any RLS policies or touching dozens of component internals
 
-A React Query-based hook that:
-- Fetches the company's `role_permissions` from the database
-- Provides a `hasFeatureAccess(featureKey)` function that checks the current user's role against the permissions
-- Company admins always return `true`
-- Caches the result and includes `company_id` in the query key
+#### 5. Apply Write Protection to Key Pages
+The following pages will check `hasWriteAccess` and disable their "Save", "Add", "Edit", "Delete" buttons when the user is view-only:
 
-#### 4. Update `RoleProtectedRoute` Component
+- **Data Entry pages** (BatchDataEntry, FertilityDataEntry, ResidueDataEntry, EggPackDataEntry, ClearsInjectedDataEntry, QADataEntry, HOIEntry)
+- **QA Hub** (all entry workflows)
+- **Checklist** (completion buttons)
+- **Bulk Import** (upload/import buttons)
+- **Management pages** (FlockManager, MachineManager, SOPManager, TargetManager, etc.)
 
-Instead of checking against a hardcoded `allowedRoles` array, it will also accept a `featureKey` prop and use the `usePermissions` hook to check dynamic access:
+Each page wraps its action buttons with a simple check:
 
 ```text
-<RoleProtectedRoute featureKey="flocks_management">
-  <FlocksPage />
-</RoleProtectedRoute>
+const { hasWriteAccess } = usePermissions();
+const readOnly = !hasWriteAccess('data_entry');
+
+<Button disabled={readOnly}>Save</Button>
 ```
 
-This keeps backward compatibility -- existing `allowedRoles` prop still works as a fallback.
+Pages that are purely read-only already (Dashboard, Performance, Analytics, Process Flow, Live Tracking) don't need changes since they have no write actions.
 
-#### 5. Update `App.tsx` Routes
-
-Replace hardcoded `allowedRoles` with `featureKey` on all protected routes. Routes that are currently open (like data entry, QA hub) will also get a `featureKey` so they can be restricted by admin if desired.
-
-#### 6. Update the Permissions Matrix UI in `UserManager.tsx`
-
-Convert the static table to an interactive one:
-- Each cell becomes a toggleable Switch component
-- Company Admin column stays locked (always checked, non-editable)
-- Staff and Operations Head columns are editable by the admin
-- Changes save to the `role_permissions` table in real-time
-- Shows a toast confirmation on save
-
-#### 7. Update Sidebar Visibility
-
-The `ModernSidebar` will use `usePermissions` to hide menu items the current user's role doesn't have access to, so users don't see links they can't navigate to.
+### What This Does NOT Change
+- No RLS policy changes needed (keeps things simple and safe)
+- No changes to routing logic -- `RoleProtectedRoute` still uses `has_access` for page visibility
+- No changes to sidebar filtering logic
+- Existing permissions (all currently `has_access=true, can_write=true` by default) work identically
 
 ### Technical Details
 
-**Migration SQL:**
-- Create `role_permissions` table with unique constraint on `(company_id, feature_key, role)`
-- Enable RLS with company-scoped SELECT and admin-only mutation policies
-- Insert default permission rows for all existing companies using the current hardcoded matrix
+**Migration:** Single `ALTER TABLE` to add `can_write` with default `true`
 
-**Files to Create:**
-- `src/hooks/usePermissions.ts` -- New hook for dynamic permission checks
-- `src/lib/featureKeys.ts` -- Shared feature key constants and route mapping
+**Files to modify:**
+- `supabase/migrations/` -- new migration adding `can_write` column
+- `src/hooks/usePermissions.ts` -- add `hasWriteAccess()` function
+- `src/lib/featureKeys.ts` -- add config for which features support write protection
+- `src/components/dashboard/UserManager.tsx` -- replace toggles with 3-option dropdowns
+- ~10-12 data entry/management components -- add `disabled={readOnly}` to action buttons
 
-**Files to Modify:**
-- `src/components/RoleProtectedRoute.tsx` -- Add `featureKey` prop support
-- `src/components/dashboard/UserManager.tsx` -- Make permissions matrix editable
-- `src/App.tsx` -- Add `featureKey` to all routes
-- `src/components/ModernSidebar.tsx` -- Filter menu items by permission
+**Files NOT touched:** `App.tsx`, `RoleProtectedRoute.tsx`, `ModernSidebar.tsx` -- routing and navigation stay exactly the same.
 
