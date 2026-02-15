@@ -11,13 +11,29 @@ import {
 import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset } from "lucide-react";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
 
 export function TopBar() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, roles, signOut } = useAuth();
+
+  const formatRole = (role: string) => {
+    const map: Record<string, string> = {
+      company_admin: 'Company Admin',
+      operations_head: 'Operations Head',
+      staff: 'Staff',
+    };
+    return map[role] || role;
+  };
+
+  const roleVariant = (role: string) => {
+    if (role === 'company_admin') return 'default';
+    if (role === 'operations_head') return 'secondary';
+    return 'outline';
+  };
   const { open: sidebarOpen } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,6 +152,11 @@ export function TopBar() {
                       <span className="text-xs text-muted-foreground">
                         {user.email}
                       </span>
+                      {roles.length > 0 && (
+                        <Badge variant={roleVariant(roles[0].role)} className="mt-1 text-[10px] px-2 py-0 h-4 w-fit">
+                          {formatRole(roles[0].role)}
+                        </Badge>
+                      )}
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                   </DropdownMenuItem>
