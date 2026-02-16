@@ -54,6 +54,15 @@ const DocumentationWhitePaper = () => {
         <DocCoverPage />
         <DocTableOfContents />
 
+        <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 text-center mb-6">
+          <p className="text-red-600 font-bold text-lg">
+            ⚠️ This application requires an active internet connection to function properly.
+          </p>
+          <p className="text-red-500 text-sm mt-1">
+            The current version does not support offline usage. Please ensure you have a stable internet connection before using the system.
+          </p>
+        </div>
+
         {/* 1. Introduction */}
         <DocSection id="introduction" number="1" title="Introduction">
           <p>The Hatchery Management System is a comprehensive, cloud-based platform designed for commercial poultry hatchery operations. It digitises every stage of the 21-day incubation cycle — from egg receipt and setter loading through candling, transfer, hatch-out, and residue analysis.</p>
@@ -69,7 +78,7 @@ const DocumentationWhitePaper = () => {
               <DocIconCard icon={Activity} title="Real-Time Tracking" description="Monitor every house through the 21-day incubation cycle with live progress bars and critical window alerts." />
               <DocIconCard icon={Brain} title="AI-Powered Analytics" description="Natural language queries for instant insights, predictions, and chart explanations." />
               <DocIconCard icon={Shield} title="Multi-Tenant Security" description="Row-level security isolates each company's data with role-based access control." />
-              <DocIconCard icon={Wifi} title="Offline-First PWA" description="Full functionality without internet — data syncs automatically when connectivity returns." />
+              <DocIconCard icon={Wifi} title="Cloud-Based Platform" description="Access your hatchery data securely from any device with an internet connection." />
             </div>
           </DocSubSection>
         </DocSection>
@@ -339,7 +348,7 @@ const DocumentationWhitePaper = () => {
         <DocSection id="advanced" number="13" title="Advanced Features">
           <div className="grid grid-cols-2 gap-3">
             <DocIconCard icon={Upload} title="Bulk Import" description="Import houses and data from Excel files with column mapping, validation, and progress tracking." />
-            <DocIconCard icon={Wifi} title="Offline Mode (PWA)" description="Installable progressive web app with IndexedDB caching. Data syncs automatically when online." />
+            <DocIconCard icon={Wifi} title="Cloud-Based Access" description="Access the system from any modern browser with an active internet connection. No installation required." />
             <DocIconCard icon={Bell} title="Push Notifications" description="Browser push alerts for temperature anomalies, critical days, maintenance reminders, and schedule alerts." />
             <DocIconCard icon={TrendingUp} title="Predictions Panel" description="AI-powered predictions using OpenAI via Supabase Edge Functions for fertility, hatch rate, and utilization forecasts." />
             <DocIconCard icon={Brain} title="AI Chart Insights" description="Click any chart's insight button to get an AI-generated explanation of trends and anomalies." />
@@ -416,7 +425,7 @@ const DocumentationWhitePaper = () => {
               ['Critical Window', 'Time period requiring specific action (Candling, Transfer, or Hatch).'],
               ['SOP', 'Standard Operating Procedure — day-specific checklist items.'],
               ['RLS', 'Row-Level Security — database policy enforcing per-company data isolation.'],
-              ['PWA', 'Progressive Web App — installable, offline-capable web application.'],
+              
             ]}
           />
         </DocSection>
