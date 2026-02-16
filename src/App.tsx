@@ -48,6 +48,7 @@ import QAHubPage from "./pages/QAHubPage";
 import InstallPage from "./pages/InstallPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SupportPage from "./pages/SupportPage";
+import DocumentationWhitePaper from "./pages/DocumentationWhitePaper";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
@@ -201,6 +202,7 @@ function AppContent() {
                       <Route path="/chat" element={
                         <RoleProtectedRoute featureKey="chat"><ChatPage /></RoleProtectedRoute>
                       } />
+                      <Route path="/documentation" element={<DocumentationWhitePaper />} />
                       <Route path="/profile" element={<UserProfilePage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
