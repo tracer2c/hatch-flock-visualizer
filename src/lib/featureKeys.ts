@@ -28,6 +28,7 @@ export const FEATURE_CONFIG = {
   house_automation: { label: 'House Automation', routes: ['/management/house-automation'] },
   reports: { label: 'Reports', routes: ['/management/reports'] },
   activity_log: { label: 'Activity Logs', routes: ['/management/activity-log'] },
+  documentation: { label: 'Documentation', routes: ['/documentation'] },
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_CONFIG;
