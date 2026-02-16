@@ -1,27 +1,35 @@
 
 
-## Update Michael Martin's Role to Staff
+## Replicate Hatcheries and Machines to Wayne Sanderson Farms
 
-### What needs to happen
-Update the `user_roles` record for `michael.martin@waynesanderson.com` (user_id: `7b5de566-9438-426c-bfb3-59850c553401`) from `company_admin` to `staff`.
+### Overview
+Copy all 4 hatcheries and 186 machines from the Default Company to Wayne Sanderson Farms so that Wayne Sanderson users see the exact same setup.
 
-### Technical Step
-Run the following SQL using the database insert/update tool:
+### What will be created
 
-```sql
-UPDATE user_roles 
-SET role = 'staff' 
-WHERE user_id = '7b5de566-9438-426c-bfb3-59850c553401';
-```
+**4 Hatcheries:**
+| Name | Code | Description |
+|------|------|-------------|
+| DHN | DHN | - |
+| ENT | ENT | - |
+| SAM | SAM | - |
+| Troy | TROY | Troy, AL |
 
-### Result
-After this update, the final user setup for Wayne Sanderson Farms will be:
+**186 Machines** (same names, types, capacities, and setter modes), linked to the correct new hatchery under Wayne Sanderson Farms.
 
-| User | Email | Role |
-|---|---|---|
-| Corey Goodson | corey.goodson@waynesanderson.com | Company Admin |
-| Justin Anderson | justin.anderson@waynesanderson.com | Company Admin |
-| Michael Martin | michael.martin@waynesanderson.com | Staff (view-only) |
+### Technical Approach
 
-No code changes are needed -- this is a data-only update.
+A single database migration will:
+
+1. **Insert 4 new units** into the `units` table with `company_id = '31165db9-014c-4d69-bd04-8d170699d7f2'` (Wayne Sanderson Farms), using the same name, code, description, and status as the Default Company units.
+
+2. **Insert 186 new machines** into the `machines` table, copying `machine_number`, `machine_type`, `capacity`, `status`, `setter_mode`, `location`, `notes`, and `data_type` from the Default Company machines. Each machine's `unit_id` will be mapped to the corresponding **new** Wayne Sanderson hatchery (not the Default Company one).
+
+3. The SQL will use a CTE (Common Table Expression) to:
+   - First insert the 4 hatcheries and capture their new IDs
+   - Then create a mapping between old unit IDs and new unit IDs
+   - Finally insert all 186 machines with the correctly mapped `unit_id`
+
+### No code changes needed
+This is a data-only operation. The existing `UnitManager` and `MachineManager` components already filter by the logged-in user's `company_id` via RLS, so Wayne Sanderson users will automatically see their own hatcheries and machines after this migration.
 
