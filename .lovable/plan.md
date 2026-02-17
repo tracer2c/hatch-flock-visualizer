@@ -1,33 +1,27 @@
 
 
-## Documentation Page Updates
+## Replicate Default Company Templates to Wayne Sanderson Farms
 
-### Changes
+### What will be replicated
 
-1. **Add internet requirement notice** at the very top of the document (inside the white paper content, after the cover page area), a prominent red-colored text banner stating that this application requires an active internet connection to function properly in the current version.
+| Data Type | Count | Details |
+|-----------|-------|---------|
+| Alert Configs | 11 | Temperature, humidity, CO2, ventilation, turning, mortality, maintenance, critical days, hatch approaching, batch status, daily QA |
+| Batch Automation Rules | 3 | Start Setter, Start Hatcher (day 18), Complete House (day 21) |
+| SOP Templates | 8 | Daily monitoring, day 10 candling, day 18 transfer, hatch day, emergency response, weekly maintenance, monthly calibration, staff training |
+| Daily Checklist Items | 18 | 11 batch-type items + 7 machine-type items, with proper SOP template linkage |
 
-2. **Remove the "Offline-First PWA" card** from Section 1 (Introduction > Key Value Propositions) -- the icon card on line 72 that says "Full functionality without internet -- data syncs automatically when connectivity returns."
+### Technical Approach
 
-3. **Remove or update the "Offline Mode (PWA)" card** from Section 13 (Advanced Features) on line 342 that describes the installable PWA with IndexedDB caching.
+A single database migration will be created with a PL/pgSQL `DO` block that:
 
-4. **Remove the PWA glossary entry** from Section 17 (Glossary) on line 419.
+1. Inserts all 11 **alert configs** with Wayne Sanderson's `company_id`
+2. Inserts all 3 **batch status automation rules**
+3. Inserts all 8 **SOP templates**, capturing old-to-new ID mappings in a temp table
+4. Inserts all 18 **daily checklist items**, remapping `sop_template_id` references to the newly created Wayne Sanderson SOP template IDs
 
-### Technical Details
+The SOP template ID remapping is critical because checklist items reference SOP templates by ID -- we need the new Wayne Sanderson SOP template IDs, not the Default Company ones.
 
-**File to modify:** `src/pages/DocumentationWhitePaper.tsx`
+### No code changes needed
 
-- After `<DocCoverPage />` and `<DocTableOfContents />` (around line 56), insert a red notice block:
-  ```jsx
-  <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 text-center mb-6">
-    <p className="text-red-600 font-bold text-lg">
-      This application requires an active internet connection to function properly.
-    </p>
-    <p className="text-red-500 text-sm mt-1">
-      The current version does not support offline usage. Please ensure you have a stable internet connection before using the system.
-    </p>
-  </div>
-  ```
-- Remove the `Offline-First PWA` DocIconCard from the Introduction grid (line 72)
-- Remove the `Offline Mode (PWA)` DocIconCard from Advanced Features (line 342)
-- Remove the PWA row from the Glossary table (line 419)
-
+This is purely a data seeding operation. The application already filters by `company_id` via RLS, so Wayne Sanderson users will automatically see their new templates once the data is inserted.
