@@ -1,39 +1,58 @@
 
 
-## Replicate Default Company Templates to Wayne Sanderson Farms
+## Fix: Update vite.config.ts to Stop Service Worker from Blocking Sign-In
 
-### Overview
+### What to Change
 
-This will insert all configuration templates from the Default Company into Wayne Sanderson Farms (`31165db9-014c-4d69-bd04-8d170699d7f2`) using direct SQL inserts. No code changes are needed -- the app already filters by `company_id` via RLS.
+In `vite.config.ts`, make **two small additions** inside the `workbox` section:
 
-### What will be inserted
+---
 
-| Data Type | Count |
-|-----------|-------|
-| Alert Configs | 11 |
-| Batch Automation Rules | 3 |
-| SOP Templates | 8 |
-| Daily Checklist Items | 18 (11 batch + 7 machine) |
+### Change 1: Add Auth Rules to runtimeCaching
 
-### Technical Approach
+Find the line that says `runtimeCaching: [` (around line 68) and add these two blocks **immediately after it**, before the existing GET/POST rules:
 
-A single SQL script using a PL/pgSQL `DO` block will:
+```typescript
+runtimeCaching: [
+  // NEW: Auth requests must ALWAYS bypass service worker
+  {
+    urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+    handler: 'NetworkOnly',
+    method: 'POST',
+    options: {
+      cacheName: 'supabase-auth-no-cache',
+    }
+  },
+  {
+    urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+    handler: 'NetworkOnly',
+    method: 'GET',
+    options: {
+      cacheName: 'supabase-auth-get-no-cache',
+    }
+  },
+  // ... all existing rules stay exactly as they are below
+```
 
-1. Insert all 11 **alert configs** with Wayne Sanderson's company_id
-2. Insert all 3 **batch automation rules**
-3. Insert all 8 **SOP templates**, storing old-to-new ID mappings in a temp table
-4. Insert all 18 **daily checklist items**, remapping `sop_template_id` references using the temp table so they point to the new Wayne Sanderson SOP template IDs instead of the Default Company ones
+---
 
-The SOP ID remapping is critical because 6 of the 18 checklist items reference specific SOP templates. Without remapping, they would incorrectly point to the Default Company's SOP templates.
+### Change 2: Update navigateFallbackDenylist
 
-### Checklist items with SOP linkage (will be remapped)
+Find this line:
 
-- "Check Temperature Reading" and "Monitor Humidity Levels" and "Ventilation Check" link to "Daily Environmental Monitoring" SOP
-- "Candling Inspection" links to "Day 10 Candling Procedure" SOP
-- "Transfer to Hatcher" links to "Day 18 Transfer Protocol" SOP
-- "Hatch Management" links to "Hatch Day Procedures" SOP
+```typescript
+navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/],
+```
 
-### After completion
+Change it to:
 
-Wayne Sanderson Farms users (Corey Goodson, Justin Anderson, Michael Martin) will immediately see all SOP templates, checklist items, alert configurations, and batch automation rules when they log in -- no app restart needed.
+```typescript
+navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/, /^\/auth\/v1/],
+```
+
+---
+
+### That's It -- Just Those Two Changes
+
+After saving and publishing, the updated service worker will auto-install on Corey's and your tablets the next time you open the app in Chrome. Sign-in requests will go straight to Supabase without any interference.
 
