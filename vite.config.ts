@@ -49,11 +49,28 @@ workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB limit
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/],
+        navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/, /^\/auth\/v1/],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [
+          // Auth requests must ALWAYS bypass service worker
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              cacheName: 'supabase-auth-no-cache',
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            method: 'GET',
+            options: {
+              cacheName: 'supabase-auth-get-no-cache',
+            }
+          },
           // GET requests - StaleWhileRevalidate for better offline experience
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
