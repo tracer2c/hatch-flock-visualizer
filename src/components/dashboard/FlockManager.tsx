@@ -214,11 +214,27 @@ const FlockManager = () => {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     // Creating new flock(s)
     if (!editingFlock) {
+      // Fetch user's company_id to satisfy multi-tenant RLS policy
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user?.id)
+        .maybeSingle();
+
+      if (profileError || !profile?.company_id) {
+        toast({
+          title: "Unable to determine company",
+          description: "Your user profile is missing a company assignment. Please contact your administrator.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const groupId = selectedHatcheries.length > 1 ? crypto.randomUUID() : null;
-      
+
       const flocksToCreate = selectedHatcheries.map(unitId => {
         // Use per-hatchery bird count if available, otherwise use global value
         const birdCount = birdCountsPerHatchery[unitId] || formData.total_birds;
@@ -235,7 +251,8 @@ const FlockManager = () => {
           data_type: 'original' as const,
           created_by: user?.id,
           updated_by: user?.id,
-          breed: 'broiler' as const
+          breed: 'broiler' as const,
+          company_id: profile.company_id,
         };
       });
       

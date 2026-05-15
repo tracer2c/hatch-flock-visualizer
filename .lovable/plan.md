@@ -1,58 +1,44 @@
+## Problem
 
+When a Wayne Sanderson Farms user (or any non–Default Company user) tries to create a flock, the insert fails with:
+`new row violates row-level security policy for table 'flocks'`
 
-## Fix: Update vite.config.ts to Stop Service Worker from Blocking Sign-In
+## Root cause
 
-### What to Change
+`src/components/dashboard/FlockManager.tsx` (lines 222–245) builds the flock insert payload **without `company_id`**. The column then falls back to its DB default of `'00000000-0000-0000-0000-000000000001'` (Default Company).
 
-In `vite.config.ts`, make **two small additions** inside the `workbox` section:
-
----
-
-### Change 1: Add Auth Rules to runtimeCaching
-
-Find the line that says `runtimeCaching: [` (around line 68) and add these two blocks **immediately after it**, before the existing GET/POST rules:
-
-```typescript
-runtimeCaching: [
-  // NEW: Auth requests must ALWAYS bypass service worker
-  {
-    urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
-    handler: 'NetworkOnly',
-    method: 'POST',
-    options: {
-      cacheName: 'supabase-auth-no-cache',
-    }
-  },
-  {
-    urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
-    handler: 'NetworkOnly',
-    method: 'GET',
-    options: {
-      cacheName: 'supabase-auth-get-no-cache',
-    }
-  },
-  // ... all existing rules stay exactly as they are below
+The RLS INSERT policy on `flocks` requires:
+```
+company_id = get_user_company(auth.uid()) AND NOT has_role(auth.uid(), 'staff')
 ```
 
----
+For users belonging to Wayne Sanderson Farms (or any non-default company), the default-injected `company_id` does not match `get_user_company(auth.uid())`, so the insert is rejected.
 
-### Change 2: Update navigateFallbackDenylist
+This is the exact same multi-tenant RLS gap previously fixed in `machineService.ts` and `UnitManager.tsx` (per the architecture memory), but `FlockManager` was missed.
 
-Find this line:
+## Fix
 
-```typescript
-navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/],
-```
+In `src/components/dashboard/FlockManager.tsx`:
 
-Change it to:
+1. Before building `flocksToCreate`, fetch the user's `company_id` from `user_profiles`:
+   ```ts
+   const { data: profile } = await supabase
+     .from('user_profiles')
+     .select('company_id')
+     .eq('id', user.id)
+     .single();
+   ```
+2. Guard against missing profile/company_id with a clear toast error (so we never silently fall back to Default Company).
+3. Add `company_id: profile.company_id` to every object in `flocksToCreate`.
+4. Apply the same `company_id` inclusion to the **edit/update** path further down in `handleSubmit` if it re-inserts or upserts (verify and patch if needed — update path normally doesn't need it because RLS UPDATE uses USING on existing row, but we'll confirm during implementation).
 
-```typescript
-navigateFallbackDenylist: [/^\/api/, /^\/auth\/callback/, /^\/auth\/v1/],
-```
+## Out of scope
 
----
+- No DB migration needed — `company_id` column and RLS policies are already correct.
+- No changes to other tables; this is isolated to flock creation in `FlockManager.tsx`.
 
-### That's It -- Just Those Two Changes
+## Verification
 
-After saving and publishing, the updated service worker will auto-install on Corey's and your tablets the next time you open the app in Chrome. Sign-in requests will go straight to Supabase without any interference.
-
+- Log in as a Wayne Sanderson user (e.g., Justin Anderson) and create a flock across one and multiple hatcheries → should succeed.
+- Confirm the new flock rows have `company_id` matching the Wayne Sanderson company, not the Default Company.
+- Staff role users should still be blocked (UI already hides the action; RLS still enforces).
