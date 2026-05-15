@@ -151,6 +151,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -163,7 +164,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType })
+        candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Cull check saved!');
