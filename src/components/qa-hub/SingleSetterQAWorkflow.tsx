@@ -25,7 +25,7 @@ import {
 import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { submitSpecificGravityTest, submitWeightTracking } from '@/services/qaSubmissionService';
+import { submitSpecificGravityTest, submitWeightTracking, getUserCompanyId } from '@/services/qaSubmissionService';
 import RectalTempEntry from './RectalTempEntry';
 import TrayWashEntry from './TrayWashEntry';
 import CullChecksEntry from './CullChecksEntry';
@@ -95,6 +95,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -106,7 +107,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'rectal_temperature', location: data.location })
+        candling_results: JSON.stringify({ type: 'rectal_temperature', location: data.location }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Rectal temperature saved!');
@@ -121,6 +123,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -132,7 +135,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck })
+        candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Tray wash temperatures saved!');
@@ -147,6 +151,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -159,7 +164,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType })
+        candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Cull check saved!');
@@ -199,6 +205,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -210,7 +217,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'hatch_progression', flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour })
+        candling_results: JSON.stringify({ type: 'hatch_progression', flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Hatch progression saved!');

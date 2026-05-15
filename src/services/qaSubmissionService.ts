@@ -8,7 +8,7 @@ import {
 /**
  * Get the current user's company_id from their profile
  */
-async function getUserCompanyId(): Promise<string> {
+export async function getUserCompanyId(): Promise<string> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData?.user?.id) {
     throw new Error('User not authenticated');
@@ -424,6 +424,7 @@ export async function submitSpecificGravityTest(data: {
     const sinkCount = data.sample_size - data.float_count;
     const threshold = data.age_weeks >= 25 && data.age_weeks <= 40 ? 10 : 15;
     const meetsStandard = data.float_percentage < threshold;
+    const companyId = await getUserCompanyId();
 
     const { error } = await supabase.from('specific_gravity_tests').insert({
       flock_id: data.flock_id,
@@ -438,7 +439,8 @@ export async function submitSpecificGravityTest(data: {
       standard_min: 0,
       standard_max: threshold,
       difference: data.float_percentage - threshold,
-      notes: data.notes || null
+      notes: data.notes || null,
+      company_id: companyId,
     });
 
     if (error) throw error;
@@ -464,6 +466,7 @@ export async function submitWeightTracking(data: {
   notes?: string | null;
 }): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
     const { error } = await supabase.from('weight_tracking').insert({
       batch_id: data.batch_id,
       flock_id: data.flock_id,
@@ -472,7 +475,8 @@ export async function submitWeightTracking(data: {
       day_of_incubation: data.day_of_incubation,
       total_weight: data.total_weight,
       percent_loss: data.percent_loss,
-      notes: data.notes || null
+      notes: data.notes || null,
+      company_id: companyId,
     });
 
     if (error) throw error;
@@ -497,6 +501,7 @@ export async function submitWeightTrackingMulti(
   notes?: string | null
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
     const records = flocks.map(flock => ({
       batch_id: flock.batch_id || '00000000-0000-0000-0000-000000000000', // Placeholder if no batch
       flock_id: flock.flock_id,
@@ -505,7 +510,8 @@ export async function submitWeightTrackingMulti(
       day_of_incubation: dayOfIncubation,
       total_weight: totalWeight,
       percent_loss: percentLoss,
-      notes: notes || null
+      notes: notes || null,
+      company_id: companyId,
     }));
 
     // Filter out records without valid batch_id (weight_tracking requires batch_id)

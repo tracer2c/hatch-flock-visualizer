@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getUserCompanyId } from '@/services/qaSubmissionService';
 
 export const useSOPTemplates = () => {
   return useQuery({
@@ -139,9 +140,10 @@ export const useCreateSOPTemplate = () => {
       day_of_incubation?: number;
       content?: any;
     }) => {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase
         .from('sop_templates')
-        .insert(template);
+        .insert({ ...template, company_id: companyId });
 
       if (error) throw error;
     },
@@ -175,9 +177,10 @@ export const useCreateChecklistItem = () => {
       is_required: boolean;
       applicable_days: number[];
     }) => {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase
         .from('daily_checklist_items')
-        .insert(item);
+        .insert({ ...item, company_id: companyId });
 
       if (error) throw error;
     },

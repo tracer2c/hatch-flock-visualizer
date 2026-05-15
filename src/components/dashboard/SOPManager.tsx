@@ -66,14 +66,29 @@ const SOPManager = () => {
 
   const handleCreateItem = async () => {
     const orderIndex = (checklistItems?.length || 0) + 1;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Not signed in", variant: "destructive" });
+      return;
+    }
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!profile?.company_id) {
+      toast({ title: "Missing company", description: "Your profile has no company assigned.", variant: "destructive" });
+      return;
+    }
     const insertData: any = {
       ...newItem,
       order_index: orderIndex,
-      machine_id: newItem.target_type === 'machine' && newItem.machine_id ? newItem.machine_id : null
+      machine_id: newItem.target_type === 'machine' && newItem.machine_id ? newItem.machine_id : null,
+      company_id: profile.company_id,
     };
-    
+
     const { error } = await supabase.from('daily_checklist_items').insert(insertData);
-    
+
     if (error) {
       toast({ title: "Error creating item", description: error.message, variant: "destructive" });
     } else {
