@@ -140,9 +140,10 @@ export const useCreateSOPTemplate = () => {
       day_of_incubation?: number;
       content?: any;
     }) => {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase
         .from('sop_templates')
-        .insert(template);
+        .insert({ ...template, company_id: companyId });
 
       if (error) throw error;
     },
