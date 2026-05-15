@@ -401,6 +401,68 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          data_payload: Json | null
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          data_payload?: Json | null
+          id?: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          data_payload?: Json | null
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       checklist_completions: {
         Row: {
           batch_id: string | null
@@ -607,6 +669,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dashboard_pins: {
+        Row: {
+          chart_type: string
+          created_at: string
+          data_payload: Json
+          id: string
+          question: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          chart_type: string
+          created_at?: string
+          data_payload: Json
+          id?: string
+          question: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          chart_type?: string
+          created_at?: string
+          data_payload?: Json
+          id?: string
+          question?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: []
       }
       data_entry_images: {
         Row: {
@@ -1884,6 +1976,27 @@ export type Database = {
           },
         ]
       }
+      schema_chunks: {
+        Row: {
+          content: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       sop_templates: {
         Row: {
           category: string
@@ -2019,6 +2132,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unicorns: {
+        Row: {
+          city: string
+          company: string
+          country: string
+          date_joined: string | null
+          id: number
+          industry: string
+          select_investors: string
+          valuation: number
+        }
+        Insert: {
+          city: string
+          company: string
+          country: string
+          date_joined?: string | null
+          id?: number
+          industry: string
+          select_investors: string
+          valuation: number
+        }
+        Update: {
+          city?: string
+          company?: string
+          country?: string
+          date_joined?: string | null
+          id?: number
+          industry?: string
+          select_investors?: string
+          valuation?: number
+        }
+        Relationships: []
       }
       units: {
         Row: {
