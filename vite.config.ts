@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["hatch.haktopus.com", "app.haktopus.com", "hatcheries.tracer2c.com"],
   },
   plugins: [
     react(),
