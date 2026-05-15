@@ -466,6 +466,7 @@ export async function submitWeightTracking(data: {
   notes?: string | null;
 }): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
     const { error } = await supabase.from('weight_tracking').insert({
       batch_id: data.batch_id,
       flock_id: data.flock_id,
@@ -474,7 +475,8 @@ export async function submitWeightTracking(data: {
       day_of_incubation: data.day_of_incubation,
       total_weight: data.total_weight,
       percent_loss: data.percent_loss,
-      notes: data.notes || null
+      notes: data.notes || null,
+      company_id: companyId,
     });
 
     if (error) throw error;
