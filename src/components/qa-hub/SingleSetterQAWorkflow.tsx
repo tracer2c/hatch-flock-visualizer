@@ -95,6 +95,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -106,7 +107,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'rectal_temperature', location: data.location })
+        candling_results: JSON.stringify({ type: 'rectal_temperature', location: data.location }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Rectal temperature saved!');
