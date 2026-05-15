@@ -424,6 +424,7 @@ export async function submitSpecificGravityTest(data: {
     const sinkCount = data.sample_size - data.float_count;
     const threshold = data.age_weeks >= 25 && data.age_weeks <= 40 ? 10 : 15;
     const meetsStandard = data.float_percentage < threshold;
+    const companyId = await getUserCompanyId();
 
     const { error } = await supabase.from('specific_gravity_tests').insert({
       flock_id: data.flock_id,
@@ -438,7 +439,8 @@ export async function submitSpecificGravityTest(data: {
       standard_min: 0,
       standard_max: threshold,
       difference: data.float_percentage - threshold,
-      notes: data.notes || null
+      notes: data.notes || null,
+      company_id: companyId,
     });
 
     if (error) throw error;
