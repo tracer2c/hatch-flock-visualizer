@@ -25,7 +25,7 @@ import {
 import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { submitSpecificGravityTest, submitWeightTracking } from '@/services/qaSubmissionService';
+import { submitSpecificGravityTest, submitWeightTracking, getUserCompanyId } from '@/services/qaSubmissionService';
 import RectalTempEntry from './RectalTempEntry';
 import TrayWashEntry from './TrayWashEntry';
 import CullChecksEntry from './CullChecksEntry';
