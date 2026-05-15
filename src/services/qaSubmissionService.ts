@@ -501,6 +501,7 @@ export async function submitWeightTrackingMulti(
   notes?: string | null
 ): Promise<SubmissionResult> {
   try {
+    const companyId = await getUserCompanyId();
     const records = flocks.map(flock => ({
       batch_id: flock.batch_id || '00000000-0000-0000-0000-000000000000', // Placeholder if no batch
       flock_id: flock.flock_id,
@@ -509,7 +510,8 @@ export async function submitWeightTrackingMulti(
       day_of_incubation: dayOfIncubation,
       total_weight: totalWeight,
       percent_loss: percentLoss,
-      notes: notes || null
+      notes: notes || null,
+      company_id: companyId,
     }));
 
     // Filter out records without valid batch_id (weight_tracking requires batch_id)
