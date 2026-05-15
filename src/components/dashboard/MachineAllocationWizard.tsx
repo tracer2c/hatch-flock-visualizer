@@ -180,6 +180,25 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
     setIsSubmitting(true);
     
     try {
+      // Fetch user's company_id for multi-tenant RLS
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Not authenticated", description: "Please sign in again.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      if (profileError || !profile?.company_id) {
+        toast({ title: "Company not found", description: "Your account is not assigned to a company.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      const companyId = profile.company_id;
+
       const houseNumber = `${selectedFlock.flock_name} #${formData.customHouseNumber.trim()}`;
       const expectedHatchDate = calculateHatchDate(formData.setDate);
 
@@ -219,7 +238,8 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           set_time: formData.setTime,
           expected_hatch_date: expectedHatchDate,
           total_eggs_set: totalEggs,
-          status: batchStatus
+          status: batchStatus,
+          company_id: companyId
         })
         .select()
         .single();
@@ -234,7 +254,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           eggs_allocated: allocation.eggsAllocated,
           allocation_date: formData.setDate,
           allocation_time: formData.setTime,
-          company_id: '00000000-0000-0000-0000-000000000001',
+          company_id: companyId,
         });
 
         // For multi-setters, create position records
