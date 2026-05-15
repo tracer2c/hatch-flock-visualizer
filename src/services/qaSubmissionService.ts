@@ -8,7 +8,7 @@ import {
 /**
  * Get the current user's company_id from their profile
  */
-async function getUserCompanyId(): Promise<string> {
+export async function getUserCompanyId(): Promise<string> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData?.user?.id) {
     throw new Error('User not authenticated');
