@@ -123,6 +123,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
@@ -134,7 +135,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck })
+        candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck }),
+        company_id: companyId,
       });
       if (error) throw error;
       toast.success('Tray wash temperatures saved!');
