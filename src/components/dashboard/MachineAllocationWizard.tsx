@@ -254,7 +254,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           eggs_allocated: allocation.eggsAllocated,
           allocation_date: formData.setDate,
           allocation_time: formData.setTime,
-          company_id: '00000000-0000-0000-0000-000000000001',
+          company_id: companyId,
         });
 
         // For multi-setters, create position records
