@@ -177,9 +177,10 @@ export const useCreateChecklistItem = () => {
       is_required: boolean;
       applicable_days: number[];
     }) => {
+      const companyId = await getUserCompanyId();
       const { error } = await supabase
         .from('daily_checklist_items')
-        .insert(item);
+        .insert({ ...item, company_id: companyId });
 
       if (error) throw error;
     },
