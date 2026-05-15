@@ -238,7 +238,8 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
           set_time: formData.setTime,
           expected_hatch_date: expectedHatchDate,
           total_eggs_set: totalEggs,
-          status: batchStatus
+          status: batchStatus,
+          company_id: companyId
         })
         .select()
         .single();
