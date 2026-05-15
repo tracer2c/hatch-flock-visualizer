@@ -133,9 +133,31 @@ export function useCreateTransfer() {
       days_in_previous_machine?: number;
       notes?: string;
     }) => {
+      // Validate UUIDs before sending to avoid "invalid input syntax for type uuid" errors
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRe.test(transfer.batch_id || '')) throw new Error('Missing or invalid batch reference.');
+      if (!uuidRe.test(transfer.from_machine_id || '')) throw new Error('Missing source (setter) machine. Please reopen the transfer dialog.');
+      if (!uuidRe.test(transfer.to_machine_id || '')) throw new Error('Please select a destination hatcher machine.');
+
+      // Stamp company_id for multi-tenant RLS compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('You must be signed in to record a transfer.');
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!profile?.company_id) throw new Error('Your user profile is missing a company. Contact your admin.');
+
+      const payload = {
+        ...transfer,
+        company_id: profile.company_id,
+        transferred_by: user.id,
+      };
+
       const { data, error } = await supabase
         .from('machine_transfers')
-        .insert(transfer)
+        .insert(payload)
         .select()
         .single();
 
