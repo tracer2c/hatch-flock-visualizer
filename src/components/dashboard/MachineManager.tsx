@@ -105,6 +105,26 @@ const MachineManager = () => {
     setEditingMachine(null);
   };
 
+  const getCurrentUserCompanyId = async () => {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('You must be signed in to create a machine.');
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      throw new Error('Unable to find your company profile.');
+    }
+
+    return profile.company_id;
+  };
+
   const handleSubmit = async () => {
     if (!formData.machine_number || !formData.machine_type || !formData.capacity || !formData.unit_id) {
       toast({
@@ -154,9 +174,21 @@ const MachineManager = () => {
         loadMachines();
       }
     } else {
+      let companyId: string;
+      try {
+        companyId = await getCurrentUserCompanyId();
+      } catch (error: unknown) {
+        toast({
+          title: "Error creating machine",
+          description: error instanceof Error ? error.message : 'Unable to verify your company profile.',
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('machines')
-        .insert(machineData);
+        .insert({ ...machineData, company_id: companyId });
 
       if (error) {
         toast({
