@@ -8,7 +8,7 @@ import { ArrowLeft, Activity, Info, Settings, AlertTriangle, ExternalLink, Therm
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import QADataEntry from "@/components/dashboard/QADataEntry";
-import { submitMachineLevelQA, fetchMachineQARecords } from "@/services/qaSubmissionService";
+import { submitMachineLevelQA, fetchMachineQARecords, getUserCompanyId } from "@/services/qaSubmissionService";
 import type { OccupancyInfo } from "@/utils/setterPositionMapping";
 
 
@@ -501,9 +501,11 @@ const QAEntryPage = () => {
       });
 
       // Insert into database
+      const companyId = await getUserCompanyId();
+      const recordsWithCompany = qaRecords.map((r: any) => ({ ...r, company_id: companyId }));
       const { error } = await supabase
         .from('qa_monitoring')
-        .insert(qaRecords);
+        .insert(recordsWithCompany);
 
       if (error) throw error;
 

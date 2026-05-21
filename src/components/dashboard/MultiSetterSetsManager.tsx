@@ -252,6 +252,22 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
       return;
     }
 
+    // Fetch user's company_id for RLS
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Not authenticated", variant: "destructive" });
+      return;
+    }
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profileError || !profile?.company_id) {
+      toast({ title: "Could not determine company", description: profileError?.message, variant: "destructive" });
+      return;
+    }
+
     const setData = {
       machine_id: machine.id,
       flock_id: formData.flock_id,
@@ -261,7 +277,8 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
       side: formData.side as 'Left' | 'Right',
       level: formData.level as 'Top' | 'Middle' | 'Bottom',
       set_date: formData.set_date,
-      notes: formData.notes || null
+      notes: formData.notes || null,
+      company_id: profile.company_id
     };
 
     if (editingSet) {

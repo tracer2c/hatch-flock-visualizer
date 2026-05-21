@@ -166,6 +166,22 @@ export const ResidueScheduleManager = () => {
     const selectedBatch = batches.find(b => b.id === formData.batch_id);
     const flockId = selectedBatch?.flock_id || formData.flock_id || null;
 
+    // Fetch user's company_id for RLS
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Not authenticated", variant: "destructive" });
+      return;
+    }
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profileError || !profile?.company_id) {
+      toast({ title: "Could not determine company", description: profileError?.message, variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase
       .from('residue_analysis_schedule')
       .insert({
@@ -175,7 +191,8 @@ export const ResidueScheduleManager = () => {
         due_date: formData.due_date,
         notes: formData.notes || null,
         technician_name: formData.technician_name || null,
-        status: 'pending'
+        status: 'pending',
+        company_id: profile.company_id
       });
 
     if (error) {
