@@ -177,10 +177,10 @@ const MachineManager = () => {
       let companyId: string;
       try {
         companyId = await getCurrentUserCompanyId();
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Error creating machine",
-          description: error.message,
+          description: error instanceof Error ? error.message : 'Unable to verify your company profile.',
           variant: "destructive"
         });
         return;
