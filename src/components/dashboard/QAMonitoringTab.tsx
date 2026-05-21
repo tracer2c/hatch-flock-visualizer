@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Edit, Trash2, Filter, ChevronDown, X, Thermometer, Download, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { getUserCompanyId } from "@/services/qaSubmissionService";
 import { toast } from "sonner";
 import Setter18PointDisplay from "./Setter18PointDisplay";
 import { ExportService } from "@/services/exportService";
@@ -168,10 +169,12 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
       console.log("QA Monitoring - UPDATE result:", { error, data: result.data });
     } else {
       // Insert new record
+      const companyId = await getUserCompanyId();
       const result = await supabase
         .from('qa_monitoring')
         .insert([{
           batch_id: editingRecord.batch_id,
+          company_id: companyId,
           day_of_incubation: parseInt(formData.day_of_incubation) || 1,
           temperature: parseFloat(formData.temperature) || 0,
           humidity: parseFloat(formData.humidity) || 0,

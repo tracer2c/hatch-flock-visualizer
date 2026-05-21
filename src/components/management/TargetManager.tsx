@@ -142,6 +142,18 @@ export const TargetManager = () => {
     e.preventDefault();
     
     try {
+      // Fetch user's company_id for RLS
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profileError || !profile?.company_id) {
+        throw new Error(profileError?.message || 'Could not determine company');
+      }
+
       const targetData = {
         target_type: formData.target_type,
         entity_id: formData.target_type === 'global' ? null : formData.entity_id,
@@ -149,7 +161,8 @@ export const TargetManager = () => {
         target_value: parseFloat(formData.target_value),
         effective_from: formData.effective_from,
         effective_to: formData.effective_to || null,
-        is_active: true
+        is_active: true,
+        company_id: profile.company_id
       };
 
       const { error } = await supabase
