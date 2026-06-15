@@ -6,7 +6,9 @@ import {
   submitGenericQAWithLinkage,
   submitSpecificGravityTest,
   submitWeightTracking,
+  submitWeightTrackingMulti,
   submitCandlingQA,
+  submitCandlingQAMulti,
   type MachineWideQARecord,
   type FlockLinkage,
 } from './qaSubmissionService';
@@ -179,7 +181,7 @@ export async function submitWeightTrackingOffline(
 }
 
 /**
- * Offline-aware wrapper for candling QA
+ * Offline-aware wrapper for candling QA (single-setter)
  */
 export async function submitCandlingQAOffline(
   data: Parameters<typeof submitCandlingQA>[0],
@@ -196,6 +198,83 @@ export async function submitCandlingQAOffline(
     data: {
       ...data,
       _qaType: 'candling'
+    }
+  });
+
+  return { success: true, offline: true };
+}
+
+/**
+ * Offline-aware wrapper for weight tracking multi (multi-setter moisture loss)
+ */
+export async function submitWeightTrackingMultiOffline(
+  machineId: string,
+  checkDate: string,
+  dayOfIncubation: number,
+  totalWeight: number,
+  percentLoss: number,
+  flocks: FlockLinkage[],
+  isOnline: boolean,
+  notes?: string | null
+): Promise<OfflineSubmissionResult> {
+  if (isOnline) {
+    const result = await submitWeightTrackingMulti(machineId, checkDate, dayOfIncubation, totalWeight, percentLoss, flocks, notes);
+    return { ...result, offline: false };
+  }
+
+  // Queue one entry per flock (mirrors what submitWeightTrackingMulti does online)
+  for (const flock of flocks) {
+    if (!flock.batch_id) continue;
+    await offlineQueue.add({
+      table: 'weight_tracking',
+      operation: 'insert',
+      data: {
+        batch_id: flock.batch_id,
+        flock_id: flock.flock_id,
+        machine_id: machineId,
+        check_date: checkDate,
+        day_of_incubation: dayOfIncubation,
+        total_weight: totalWeight,
+        percent_loss: percentLoss,
+        notes: notes || null,
+      }
+    });
+  }
+
+  return { success: true, offline: true };
+}
+
+/**
+ * Offline-aware wrapper for candling QA multi (multi-setter)
+ */
+export async function submitCandlingQAMultiOffline(
+  machineId: string,
+  inspectorName: string,
+  checkDate: string,
+  sampleSize: number,
+  fertileEggs: number,
+  infertileEggs: number,
+  fertilityPercent: number,
+  flocks: FlockLinkage[],
+  isOnline: boolean,
+  notes?: string | null
+): Promise<OfflineSubmissionResult> {
+  if (isOnline) {
+    const result = await submitCandlingQAMulti(machineId, inspectorName, checkDate, sampleSize, fertileEggs, infertileEggs, fertilityPercent, flocks, notes);
+    return { ...result, offline: false };
+  }
+
+  await offlineQueue.add({
+    table: 'qa_monitoring',
+    operation: 'insert',
+    data: {
+      machine_id: machineId,
+      inspector_name: inspectorName,
+      check_date: checkDate,
+      notes,
+      _qaType: 'candling_multi',
+      _uniqueFlocks: flocks,
+      _candlingData: { sampleSize, fertileEggs, infertileEggs, fertilityPercent }
     }
   });
 

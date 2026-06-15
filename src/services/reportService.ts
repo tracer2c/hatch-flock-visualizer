@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,7 +14,122 @@ export interface ReportData {
   }>;
 }
 
+export interface VisualReportOptions {
+  /** Title at the top of page 1 */
+  title: string;
+  /** Scope line, e.g. "Active houses · All hatcheries" */
+  subtitle?: string;
+  /** Template-based explanation bullet lines, built from the actual numbers */
+  summary: string[];
+  /** DOM element id whose charts + numbers get captured into the report */
+  captureElementId?: string;
+  /** Output filename (no extension) */
+  filename: string;
+}
+
 export class ReportService {
+  /**
+   * Generic "report generation" PDF used by the per-page export buttons.
+   * Page 1 = title + template explanation of the charts/data; following pages =
+   * the on-screen charts & numbers captured as an image (sliced across pages).
+   * This is what powers "download numbers + charts + explanation as 1 PDF".
+   */
+  static async generateVisualReport(opts: VisualReportOptions): Promise<void> {
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const MARGIN = 15;
+    const contentWidth = pageWidth - MARGIN * 2;
+    let y = MARGIN;
+
+    // Header
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(20);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(opts.title, MARGIN, y + 4);
+    y += 11;
+
+    if (opts.subtitle) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(opts.subtitle, MARGIN, y);
+      y += 6;
+    }
+    pdf.setFontSize(9);
+    pdf.setTextColor(148, 163, 184);
+    pdf.text(`Generated ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, MARGIN, y);
+    y += 6;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(MARGIN, y, pageWidth - MARGIN, y);
+    y += 8;
+
+    // Summary & Explanation
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Summary & Explanation', MARGIN, y);
+    y += 7;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(51, 65, 85);
+    for (const line of opts.summary) {
+      const wrapped = pdf.splitTextToSize(`•  ${line}`, contentWidth);
+      if (y + wrapped.length * 5 > pageHeight - MARGIN) {
+        pdf.addPage();
+        y = MARGIN;
+      }
+      pdf.text(wrapped, MARGIN, y);
+      y += wrapped.length * 5 + 2;
+    }
+
+    // Captured charts + numbers
+    if (opts.captureElementId) {
+      const el = document.getElementById(opts.captureElementId);
+      if (el) {
+        const canvas = await html2canvas(el, { scale: 2, logging: false, backgroundColor: '#ffffff' });
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        pdf.addPage();
+        y = MARGIN;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(13);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text('Charts & Figures', MARGIN, y);
+        y += 6;
+
+        const pxPerMm = canvas.height / imgHeight;
+        let remaining = imgHeight;
+        let sourceY = 0;
+        while (remaining > 0) {
+          const avail = pageHeight - MARGIN - y;
+          const sliceMm = Math.min(remaining, avail);
+          const slicePx = sliceMm * pxPerMm;
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = slicePx;
+          const ctx = sliceCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(canvas, 0, sourceY, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', MARGIN, y, imgWidth, sliceMm);
+          }
+          remaining -= sliceMm;
+          sourceY += slicePx;
+          if (remaining > 0.5) {
+            pdf.addPage();
+            y = MARGIN;
+          } else {
+            y += sliceMm;
+          }
+        }
+      }
+    }
+
+    pdf.save(`${opts.filename}.pdf`);
+  }
+
   static async generateBatchReport(batchId: string): Promise<Blob> {
     // Fetch batch data
     const { data: batch, error } = await supabase

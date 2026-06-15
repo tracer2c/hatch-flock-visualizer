@@ -9,6 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { fetchWithOfflineFallback } from "@/lib/offlineDataCache";
+import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
+import { PendingSyncList } from "@/components/ui/pending-sync-list";
 
 interface EggPackData {
   id: string;
@@ -91,7 +94,10 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
     };
 
     try {
-      await offlineSubmit(entry, 'insert');
+      await offlineSubmit(entry, 'insert', {
+        batchId: batchInfo.id,
+        optimisticData: entry,
+      });
       
       toast({
         title: isOnline ? "Entry Added" : "Saved Offline",
@@ -121,6 +127,27 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       // Refresh data if online
       if (isOnline) {
         loadEggPackData();
+      } else {
+        const optimisticEntry = {
+          id: `temp-${Date.now()}`,
+          flock: batchInfo.flock_name,
+          flockNumber: batchInfo.flock_number,
+          houseNumber: batchInfo.house_number || '1',
+          totalEggsPulled: entry.sample_size,
+          stained: newEntry.stained || 0,
+          dirty: entry.dirty,
+          small: entry.small,
+          cracked: entry.cracked,
+          abnormal: newEntry.abnormal || 0,
+          contaminated: newEntry.contaminated || 0,
+          totalSampled: entry.sample_size,
+          usd: newEntry.usd || 0,
+          setWeek: newEntry.setWeek,
+          hatchWeek: newEntry.hatchWeek,
+        };
+        const nextData = [optimisticEntry, ...localData];
+        setLocalData(nextData);
+        onDataUpdate(nextData);
       }
     } catch (error: any) {
       toast({
@@ -132,15 +159,16 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
   };
 
   const loadEggPackData = async () => {
-    const { data, error } = await supabase
-      .from('egg_pack_quality')
-      .select('*')
-      .eq('batch_id', batchInfo.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading egg pack data:', error);
-    } else {
+    try {
+      const data = await fetchWithOfflineFallback(`egg-pack-${batchInfo.id}`, async () => {
+        const { data, error } = await supabase
+          .from('egg_pack_quality')
+          .select('*')
+          .eq('batch_id', batchInfo.id)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+      });
       // Convert database records to component format
       const convertedData = data.map(record => ({
         id: record.id,
@@ -161,6 +189,8 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       }));
       setLocalData(convertedData);
       onDataUpdate(convertedData);
+    } catch (error) {
+      console.error('Error loading egg pack data:', error);
     }
   };
 
@@ -217,6 +247,12 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       )}
 
       {/* Quality Summary - Moved to Top */}
+      <PendingSyncList
+        table="egg_pack_quality"
+        batchId={batchInfo.id}
+        title="Egg pack records waiting to sync"
+      />
+
       {localData.length > 0 && (
         <Card>
           <CardHeader>
@@ -266,7 +302,10 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
       {showDataEntry && (
         <Card>
           <CardHeader>
-            <CardTitle>Add New Egg Pack Entry</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Add New Egg Pack Entry
+              <PendingSyncBadge table="egg_pack_quality" batchId={batchInfo.id} />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">

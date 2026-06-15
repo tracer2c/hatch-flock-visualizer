@@ -177,8 +177,9 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
     let query = supabase
       .from('flocks')
       .select('id, flock_name, flock_number, unit_id')
+      .is('archived_at', null)
       .order('flock_name', { ascending: true });
-    
+
     // Filter by same hatchery if machine has unit_id
     if (machine.unit_id) {
       query = query.eq('unit_id', machine.unit_id);

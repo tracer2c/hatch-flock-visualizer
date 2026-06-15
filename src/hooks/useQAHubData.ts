@@ -1,20 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchWithOfflineFallback } from '@/lib/offlineDataCache';
 
 // Fetch all hatcheries (units)
 export function useHatcheries() {
   return useQuery({
     queryKey: ['hatcheries'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('units')
-        .select('id, name, code, status')
-        .eq('status', 'active')
-        .order('name');
-      
-      if (error) throw error;
-      return data || [];
-    }
+    queryFn: () =>
+      fetchWithOfflineFallback('units', async () => {
+        const { data, error } = await supabase
+          .from('units')
+          .select('id, name, code, status')
+          .eq('status', 'active')
+          .order('name');
+        if (error) throw error;
+        return data || [];
+      }),
   });
 }
 
@@ -160,66 +161,90 @@ export function useMultiSetterMachines(hatcheryId?: string) {
   return useQuery({
     queryKey: ['multi-setter-machines', hatcheryId],
     queryFn: async () => {
-      let query = supabase
-        .from('machines')
-        .select(`
-          id,
-          machine_number,
-          machine_type,
-          setter_mode,
-          location,
-          capacity,
-          status,
-          unit:units!machines_unit_id_fkey(
-            id,
-            name,
-            code
-          )
-        `)
-        .eq('setter_mode', 'multi_setter')
-        .in('machine_type', ['setter', 'combo']);
-      
-      if (hatcheryId) {
-        query = query.eq('unit_id', hatcheryId);
-      }
-      
-      const { data: machines, error: machineError } = await query.order('machine_number');
-      
-      if (machineError) throw machineError;
-      
-      // Get occupancy counts for each machine
       const today = new Date().toISOString().split('T')[0];
-      const machinesWithOccupancy = await Promise.all(
-        (machines || []).map(async (machine) => {
-          // Get active sets (not transferred)
-          const { data: sets } = await supabase
-            .from('multi_setter_sets')
-            .select('id, flock_id')
-            .eq('machine_id', machine.id)
-            .lte('set_date', today);
-          
-          // Get transfers out
-          const { data: transfers } = await supabase
-            .from('machine_transfers')
-            .select('batch_id')
-            .eq('from_machine_id', machine.id)
-            .lte('transfer_date', today);
-          
-          const transferredBatchIds = new Set((transfers || []).map(t => t.batch_id));
-          const activeSets = (sets || []).filter(s => !transferredBatchIds.has(s.id));
-          const uniqueFlocks = new Set(activeSets.map(s => s.flock_id));
-          
+
+      try {
+        let query = supabase
+          .from('machines')
+          .select(`
+            id,
+            machine_number,
+            machine_type,
+            setter_mode,
+            location,
+            capacity,
+            status,
+            unit:units!machines_unit_id_fkey(
+              id,
+              name,
+              code
+            )
+          `)
+          .eq('setter_mode', 'multi_setter')
+          .in('machine_type', ['setter', 'combo']);
+
+        if (hatcheryId) {
+          query = query.eq('unit_id', hatcheryId);
+        }
+
+        const { data: machines, error: machineError } = await query.order('machine_number');
+        if (machineError) throw machineError;
+
+        const machinesWithOccupancy = await Promise.all(
+          (machines || []).map(async (machine) => {
+            const { data: sets } = await supabase
+              .from('multi_setter_sets')
+              .select('id, flock_id')
+              .eq('machine_id', machine.id)
+              .lte('set_date', today);
+
+            const { data: transfers } = await supabase
+              .from('machine_transfers')
+              .select('batch_id')
+              .eq('from_machine_id', machine.id)
+              .lte('transfer_date', today);
+
+            const transferredBatchIds = new Set((transfers || []).map(t => t.batch_id));
+            const activeSets = (sets || []).filter(s => !transferredBatchIds.has(s.id));
+            const uniqueFlocks = new Set(activeSets.map(s => s.flock_id));
+
+            return {
+              ...machine,
+              occupiedPositions: activeSets.length,
+              totalPositions: 18,
+              activeFlocks: uniqueFlocks.size,
+            };
+          })
+        );
+
+        return machinesWithOccupancy;
+      } catch {
+        // Network failure — rebuild from cached machines + cached multi_setter_sets
+        const { getOfflineData } = await import('@/lib/offlineDataCache');
+        const cachedMachines = await getOfflineData<any[]>('machines') ?? [];
+        const cachedSets = await getOfflineData<any[]>('multi_setter_sets') ?? [];
+
+        const multiSetterMachines = cachedMachines.filter(
+          m =>
+            m.setter_mode === 'multi_setter' &&
+            ['setter', 'combo'].includes(m.machine_type) &&
+            (!hatcheryId || m.unit_id === hatcheryId)
+        );
+
+        return multiSetterMachines.map(machine => {
+          const machineSets = cachedSets.filter(
+            s => s.machine_id === machine.id && s.set_date <= today
+          );
+          const uniqueFlocks = new Set(machineSets.map((s: any) => s.flock_id));
           return {
             ...machine,
-            occupiedPositions: activeSets.length,
+            occupiedPositions: machineSets.length,
             totalPositions: 18,
-            activeFlocks: uniqueFlocks.size
+            activeFlocks: uniqueFlocks.size,
           };
-        })
-      );
-      
-      return machinesWithOccupancy;
-    }
+        });
+      }
+    },
   });
 }
 

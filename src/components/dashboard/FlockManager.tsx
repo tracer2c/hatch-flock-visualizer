@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User, Egg } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User, Egg, Archive, ArchiveRestore } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FlockHistoryService } from "@/services/flockHistoryService";
 import FlockUpdateHistory from "./FlockUpdateHistory";
+import { useArchive } from "@/hooks/useArchive";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Flock {
   id: string;
@@ -36,6 +38,8 @@ interface Flock {
   updated_by?: string | null;
   last_modified_at?: string | null;
   flock_group_id?: string | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
   updated_by_profile?: {
     first_name: string | null;
     last_name: string | null;
@@ -54,6 +58,10 @@ const FlockManager = () => {
   const [editingFlock, setEditingFlock] = useState<Flock | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [flockToDelete, setFlockToDelete] = useState<Flock | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const { archive: archiveFlock, restore: restoreFlock, isMutating: archiveBusy } = useArchive("flocks");
+  const { hasWriteAccess } = usePermissions();
+  const canArchive = hasWriteAccess("flocks_management");
   const [filters, setFilters] = useState({
     flockNumber: '',
     flockName: '',
@@ -81,7 +89,7 @@ const FlockManager = () => {
   useEffect(() => {
     loadFlocks();
     loadUnits();
-  }, []);
+  }, [showArchived]);
 
   const loadUnits = async () => {
     const { data, error } = await supabase
@@ -101,13 +109,20 @@ const FlockManager = () => {
   };
 
   const loadFlocks = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('flocks')
       .select(`
         *,
         unit:units(id, name)
       `)
       .order('flock_number', { ascending: true });
+
+    // Default view: hide archived. Toggle reveals them.
+    if (!showArchived) {
+      query = query.is('archived_at', null);
+    }
+
+    const { data, error } = await query;
     
     if (error) {
       toast({
@@ -489,6 +504,16 @@ const FlockManager = () => {
           </span>
           <div className="flex items-center gap-2">
             <Button
+              variant={showArchived ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex items-center gap-2"
+              title={showArchived ? "Hide archived flocks" : "Show archived flocks"}
+            >
+              <Archive className="h-4 w-4" />
+              {showArchived ? "Showing Archived" : "Show Archived"}
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
@@ -638,44 +663,6 @@ const FlockManager = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, arrival_date: e.target.value }))}
                   />
                 </div>
-
-                {/* 6. Total Eggs - Show per-hatchery inputs when multiple selected */}
-                {!editingFlock && selectedHatcheries.length > 1 ? (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Total Eggs per Hatchery</Label>
-                    <div className="border rounded-lg p-3 space-y-2">
-                      {selectedHatcheries.map(unitId => {
-                        const unit = activeUnits.find(u => u.id === unitId);
-                        return (
-                          <div key={unitId} className="flex items-center gap-3">
-                            <span className="w-24 text-sm font-medium">{unit?.name}:</span>
-                            <Input
-                              type="number"
-                              className="flex-1"
-                              value={birdCountsPerHatchery[unitId] || ''}
-                              onChange={(e) => setBirdCountsPerHatchery(prev => ({
-                                ...prev,
-                                [unitId]: e.target.value
-                              }))}
-                              placeholder="e.g., 25000 eggs"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Enter the egg count for each hatchery separately</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Total Eggs</Label>
-                    <Input
-                      type="number"
-                      value={formData.total_birds}
-                      onChange={(e) => setFormData(prev => ({ ...prev, total_birds: e.target.value }))}
-                      placeholder="e.g., 25000 eggs"
-                    />
-                  </div>
-                )}
 
                 {/* 7. Technician Name */}
                 <div className="space-y-2">
@@ -859,16 +846,55 @@ const FlockManager = () => {
               )}
               <div className="flex gap-4">
                 {flocks.map(flock => (
-                  <div key={flock.id} className="flex-shrink-0 w-[300px] p-4 border rounded-lg hover:border-primary/50 transition-colors">
+                  <div key={flock.id} className={`flex-shrink-0 w-[300px] p-4 border rounded-lg hover:border-primary/50 transition-colors ${flock.archived_at ? 'opacity-60 bg-muted/30' : ''}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
+                        {flock.archived_at && (
+                          <Badge variant="outline" className="text-xs">
+                            <Archive className="h-3 w-3 mr-1" />
+                            Archived
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id, flock.flock_number, flock.flock_name)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {!flock.archived_at && (
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canArchive && (
+                          flock.archived_at ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={archiveBusy}
+                              onClick={() => restoreFlock(flock.id)}
+                              title="Restore flock"
+                            >
+                              <ArchiveRestore className="h-4 w-4 text-primary" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={archiveBusy}
+                              onClick={() => {
+                                if (confirm(`Archive flock #${flock.flock_number} (${flock.flock_name})?\n\nIt will be hidden from active dropdowns but all batches and historical data remain visible.`)) {
+                                  archiveFlock(flock.id);
+                                }
+                              }}
+                              title="Archive flock"
+                            >
+                              <Archive className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          )
+                        )}
+                        {!flock.archived_at && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id, flock.flock_number, flock.flock_name)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">

@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    allowedHosts: ["hatch.haktopus.com", "app.haktopus.com", "hatcheries.tracer2c.com"],
+    allowedHosts: ["hatch.haktopus.com", "app.haktopus.com", "hatcheries.tracer2c.com", "thankful-striking-snapper.ngrok-free.app"],
   },
   plugins: [
     react(),

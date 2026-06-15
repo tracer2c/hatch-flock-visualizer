@@ -54,7 +54,7 @@ export const useActiveBatches = () => {
         .from('batches')
         .select(`
           *,
-          flocks (flock_number, flock_name, age_weeks),
+          flocks (flock_number, flock_name, age_weeks, house_number),
           machines (machine_number, machine_type, status)
         `)
         .in('status', ['scheduled', 'in_setter', 'in_hatcher'])

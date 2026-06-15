@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, ArrowRight, Activity, CheckCircle, Eye } from "lucide-react";
+import { TrendingUp, ArrowRight, Activity, CheckCircle, Eye, Layers, GitCompare, FileText } from "lucide-react";
 import { useCompletedBatchMetrics, useActiveBatchFlowData } from '@/hooks/useHouseData';
 import { Building2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ReportService } from "@/services/reportService";
+import { useToast } from "@/hooks/use-toast";
 
 interface HouseFlowSankeyProps {
   className?: string;
@@ -13,7 +16,8 @@ interface HouseFlowSankeyProps {
 
 const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
   const [viewMode, setViewMode] = useState<'active' | 'completed' | 'all'>('active');
-  
+  const [breakdown, setBreakdown] = useState<'aggregate' | 'flock'>('aggregate');
+
   const { data: completedBatches, isLoading: loadingCompleted } = useCompletedBatchMetrics();
   const { data: activeBatches, isLoading: loadingActive } = useActiveBatchFlowData();
 
@@ -89,7 +93,56 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
     batchCount: 0
   });
 
-  const FlowBox = ({ title, value, color, percentage, description }: { 
+  // Per-flock aggregation for flock-wise numbers & comparison
+  const flockStats = useMemo(() => {
+    const map = new Map<string, {
+      flockNumber: number | string;
+      flockName: string;
+      ageSum: number;
+      houses: number;
+      totalEggs: number;
+      fertile: number;
+      hatched: number;
+    }>();
+
+    batchesToAnalyze.forEach((batch: any) => {
+      const key = `${batch.flockNumber}|${batch.flockName}`;
+      const totalEggs = batch.totalEggs || 0;
+      const fertile = Math.round(totalEggs * ((batch.fertility || 0) / 100));
+      const hatched = Math.round(fertile * ((batch.hatch || 0) / 100));
+      const cur = map.get(key) || {
+        flockNumber: batch.flockNumber,
+        flockName: batch.flockName,
+        ageSum: 0, houses: 0, totalEggs: 0, fertile: 0, hatched: 0,
+      };
+      cur.ageSum += batch.age || 0;
+      cur.houses += 1;
+      cur.totalEggs += totalEggs;
+      cur.fertile += fertile;
+      cur.hatched += hatched;
+      map.set(key, cur);
+    });
+
+    return Array.from(map.values())
+      .map((f) => ({
+        ...f,
+        avgAge: f.houses ? Math.round(f.ageSum / f.houses) : 0,
+        fertilityPct: f.totalEggs ? (f.fertile / f.totalEggs) * 100 : 0,
+        hatchPct: f.fertile ? (f.hatched / f.fertile) * 100 : 0,
+        hofPct: f.totalEggs ? (f.hatched / f.totalEggs) * 100 : 0,
+        label: `#${f.flockNumber} ${f.flockName}`,
+      }))
+      .sort((a, b) => b.hatchPct - a.hatchPct);
+  }, [batchesToAnalyze]);
+
+  const chartData = flockStats.map((f) => ({
+    name: `#${f.flockNumber}`,
+    Fertility: Number(f.fertilityPct.toFixed(1)),
+    Hatch: Number(f.hatchPct.toFixed(1)),
+    HOF: Number(f.hofPct.toFixed(1)),
+  }));
+
+  const FlowBox = ({ title, value, color, percentage, description }: {
     title: string; 
     value: number; 
     color: string; 
@@ -119,6 +172,54 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
     </div>
   );
 
+  const { toast } = useToast();
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Build a template-based, numbers-driven explanation for the PDF report.
+  const buildSummary = (): string[] => {
+    const fertilityPct = flowData.totalEggs ? (flowData.fertile / flowData.totalEggs) * 100 : 0;
+    const hatchPct = flowData.fertile ? (flowData.hatched / flowData.fertile) * 100 : 0;
+    const hofPct = flowData.totalEggs ? (flowData.hatched / flowData.totalEggs) * 100 : 0;
+    const mortality = flowData.earlyDead + flowData.midDead + flowData.lateDead + flowData.pipped;
+    const lines = [
+      `This report covers ${flowData.batchCount} ${viewMode} house(s) with a combined ${flowData.totalEggs.toLocaleString()} eggs set.`,
+      `Fertility was ${fertilityPct.toFixed(1)}% — ${flowData.fertile.toLocaleString()} fertile eggs out of ${flowData.totalEggs.toLocaleString()} set.`,
+      `Of the fertile eggs, ${hatchPct.toFixed(1)}% hatched (${flowData.hatched.toLocaleString()} chicks). Hatch of total eggs set (HOF) was ${hofPct.toFixed(1)}%.`,
+      `Embryonic mortality totalled ${mortality.toLocaleString()} eggs: ${flowData.earlyDead.toLocaleString()} early dead, ${flowData.midDead.toLocaleString()} mid dead, ${flowData.lateDead.toLocaleString()} late dead, ${flowData.pipped.toLocaleString()} pipped-not-hatched.`,
+    ];
+    if (breakdown === 'flock' && flockStats.length > 0) {
+      const best = flockStats[0];
+      const worst = flockStats[flockStats.length - 1];
+      lines.push(
+        `Across ${flockStats.length} flock(s), the strongest hatch was flock #${best.flockNumber} (${best.flockName}) at ${best.hatchPct.toFixed(1)}%, and the weakest was flock #${worst.flockNumber} (${worst.flockName}) at ${worst.hatchPct.toFixed(1)}%.`
+      );
+    }
+    return lines;
+  };
+
+  const handlePdfReport = async () => {
+    if (flowData.batchCount === 0) {
+      toast({ title: 'Nothing to export', description: 'No house data in the current view.', variant: 'destructive' });
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      toast({ title: 'Generating PDF report…', description: 'Capturing charts and numbers.' });
+      await ReportService.generateVisualReport({
+        title: 'House Flow Analysis Report',
+        subtitle: `${viewMode[0].toUpperCase()}${viewMode.slice(1)} houses · ${breakdown === 'flock' ? 'Flock comparison' : 'Aggregate flow'}`,
+        summary: buildSummary(),
+        captureElementId: 'batch-flow-sankey',
+        filename: `house-flow-report_${viewMode}_${new Date().toISOString().slice(0, 10)}`,
+      });
+      toast({ title: 'Report downloaded', description: 'Your PDF report is ready.' });
+    } catch (e: any) {
+      toast({ title: 'Report failed', description: e?.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -139,7 +240,19 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
               )}
             </CardDescription>
           </div>
-          <ChartDownloadButton chartId="batch-flow-sankey" filename="batch-flow-analysis" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePdfReport}
+              disabled={generatingPdf}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {generatingPdf ? 'Generating…' : 'PDF Report'}
+            </Button>
+            <ChartDownloadButton chartId="batch-flow-sankey" filename="batch-flow-analysis" />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -188,6 +301,33 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
             </Button>
           </div>
 
+          {/* Breakdown toggle: aggregate flow vs per-flock comparison */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              variant={breakdown === 'aggregate' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setBreakdown('aggregate')}
+              className="flex items-center gap-2"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Aggregate Flow
+            </Button>
+            <Button
+              variant={breakdown === 'flock' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setBreakdown('flock')}
+              className="flex items-center gap-2"
+            >
+              <GitCompare className="h-4 w-4" />
+              Flock Comparison
+              {flockStats.length > 0 && (
+                <span className="ml-1 bg-primary/20 text-primary px-1.5 py-0.5 rounded-full text-xs">
+                  {flockStats.length}
+                </span>
+              )}
+            </Button>
+          </div>
+
           {/* Data Quality Indicator */}
           {hasProjectedData && (
             <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -219,8 +359,8 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
             </div>
           )}
 
-          {/* Flow Visualization */}
-          {flowData.batchCount > 0 && (
+          {/* Flow Visualization (aggregate) */}
+          {flowData.batchCount > 0 && breakdown === 'aggregate' && (
             <div className="space-y-6">
               {/* How to Read This Chart */}
               <div className="mb-6 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
@@ -376,6 +516,87 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
                     <span>{flowData.pipped.toLocaleString()} ({((flowData.pipped / flowData.fertile) * 100).toFixed(1)}%)</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Flock-wise Comparison */}
+          {flowData.batchCount > 0 && breakdown === 'flock' && (
+            <div className="space-y-6">
+              <div className="mb-2 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-primary" />
+                  Flock-wise Performance
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Numbers aggregated per flock across {flowData.batchCount} {viewMode} houses.
+                  Compare fertility, hatch, and HOF across {flockStats.length} flock(s).
+                </p>
+              </div>
+
+              {/* Comparison chart */}
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} unit="%" domain={[0, 100]} />
+                    <Tooltip formatter={(v: number) => `${v}%`} />
+                    <Legend />
+                    <Bar dataKey="Fertility" fill="#059669" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="Hatch" fill="#0d9488" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="HOF" fill="#2563eb" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Per-flock table */}
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/60 text-muted-foreground">
+                    <tr>
+                      <th className="text-left font-medium px-3 py-2">Flock</th>
+                      <th className="text-right font-medium px-3 py-2">Houses</th>
+                      <th className="text-right font-medium px-3 py-2">Avg Age</th>
+                      <th className="text-right font-medium px-3 py-2">Eggs Set</th>
+                      <th className="text-right font-medium px-3 py-2">Fertile</th>
+                      <th className="text-right font-medium px-3 py-2">Hatched</th>
+                      <th className="text-right font-medium px-3 py-2">Fertility %</th>
+                      <th className="text-right font-medium px-3 py-2">Hatch %</th>
+                      <th className="text-right font-medium px-3 py-2">HOF %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flockStats.map((f) => (
+                      <tr key={f.label} className="border-t hover:bg-muted/30">
+                        <td className="px-3 py-2 font-medium">#{f.flockNumber} {f.flockName}</td>
+                        <td className="px-3 py-2 text-right">{f.houses}</td>
+                        <td className="px-3 py-2 text-right">{f.avgAge}w</td>
+                        <td className="px-3 py-2 text-right">{f.totalEggs.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right">{f.fertile.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right text-green-600 font-medium">{f.hatched.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right">{f.fertilityPct.toFixed(1)}%</td>
+                        <td className="px-3 py-2 text-right">{f.hatchPct.toFixed(1)}%</td>
+                        <td className="px-3 py-2 text-right">{f.hofPct.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {flockStats.length > 1 && (
+                    <tfoot className="border-t bg-muted/40 font-medium">
+                      <tr>
+                        <td className="px-3 py-2">Total ({flockStats.length} flocks)</td>
+                        <td className="px-3 py-2 text-right">{flowData.batchCount}</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">{flowData.totalEggs.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right">{flowData.fertile.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right">{flowData.hatched.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right">{flowData.totalEggs ? ((flowData.fertile / flowData.totalEggs) * 100).toFixed(1) : '0.0'}%</td>
+                        <td className="px-3 py-2 text-right">{flowData.fertile ? ((flowData.hatched / flowData.fertile) * 100).toFixed(1) : '0.0'}%</td>
+                        <td className="px-3 py-2 text-right">{flowData.totalEggs ? ((flowData.hatched / flowData.totalEggs) * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
               </div>
             </div>
           )}

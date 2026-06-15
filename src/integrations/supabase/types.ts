@@ -322,7 +322,7 @@ export type Database = {
           chicks_hatched?: number
           clears_notes?: string | null
           clears_technician_name?: string | null
-          company_id?: string
+          company_id: string
           created_at?: string
           data_type?: string
           eggs_cleared?: number | null
@@ -954,6 +954,8 @@ export type Database = {
       flocks: {
         Row: {
           age_weeks: number
+          archived_at: string | null
+          archived_by: string | null
           arrival_date: string
           breed: Database["public"]["Enums"]["breed_type"]
           company_id: string
@@ -975,9 +977,11 @@ export type Database = {
         }
         Insert: {
           age_weeks: number
+          archived_at?: string | null
+          archived_by?: string | null
           arrival_date: string
           breed: Database["public"]["Enums"]["breed_type"]
-          company_id?: string
+          company_id: string
           created_at?: string
           created_by?: string | null
           data_type?: string
@@ -996,6 +1000,8 @@ export type Database = {
         }
         Update: {
           age_weeks?: number
+          archived_at?: string | null
+          archived_by?: string | null
           arrival_date?: string
           breed?: Database["public"]["Enums"]["breed_type"]
           company_id?: string
@@ -1185,6 +1191,8 @@ export type Database = {
       }
       machines: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           capacity: number
           company_id: string
           created_at: string
@@ -1201,8 +1209,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           capacity: number
-          company_id?: string
+          company_id: string
           created_at?: string
           data_type?: string
           id?: string
@@ -1217,6 +1227,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           capacity?: number
           company_id?: string
           created_at?: string
@@ -1366,6 +1378,164 @@ export type Database = {
           },
         ]
       }
+      multi_stage_operation_rows: {
+        Row: {
+          age_weeks: number | null
+          batch_id: string | null
+          buggies_set: number
+          buggies_transferred: number
+          buggy_numbers: string[] | null
+          created_at: string
+          expected_hatch_percent: number | null
+          flock_id: string
+          house_number: string | null
+          id: string
+          machine_id: string
+          notes: string | null
+          operation_id: string
+          row_order: number
+        }
+        Insert: {
+          age_weeks?: number | null
+          batch_id?: string | null
+          buggies_set?: number
+          buggies_transferred?: number
+          buggy_numbers?: string[] | null
+          created_at?: string
+          expected_hatch_percent?: number | null
+          flock_id: string
+          house_number?: string | null
+          id?: string
+          machine_id: string
+          notes?: string | null
+          operation_id: string
+          row_order?: number
+        }
+        Update: {
+          age_weeks?: number | null
+          batch_id?: string | null
+          buggies_set?: number
+          buggies_transferred?: number
+          buggy_numbers?: string[] | null
+          created_at?: string
+          expected_hatch_percent?: number | null
+          flock_id?: string
+          house_number?: string | null
+          id?: string
+          machine_id?: string
+          notes?: string | null
+          operation_id?: string
+          row_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_stage_operation_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_stage_operation_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_stage_operation_rows_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_stage_operation_rows_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_stage_operation_rows_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "multi_stage_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      multi_stage_operations: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          carry_overs: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          day_number: number | null
+          eggs_per_buggy: number
+          hatch_date: string
+          id: string
+          notes: string | null
+          operation_date: string
+          projected_hatch_count: number | null
+          set_color: string
+          total_buggies: number
+          total_eggs_set: number | null
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          carry_overs?: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          day_number?: number | null
+          eggs_per_buggy?: number
+          hatch_date: string
+          id?: string
+          notes?: string | null
+          operation_date?: string
+          projected_hatch_count?: number | null
+          set_color: string
+          total_buggies?: number
+          total_eggs_set?: number | null
+          transfer_date: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          carry_overs?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          day_number?: number | null
+          eggs_per_buggy?: number
+          hatch_date?: string
+          id?: string
+          notes?: string | null
+          operation_date?: string
+          projected_hatch_count?: number | null
+          set_color?: string
+          total_buggies?: number
+          total_eggs_set?: number | null
+          transfer_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_stage_operations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           browser_enabled: boolean
@@ -1505,7 +1675,7 @@ export type Database = {
           check_date?: string
           check_time?: string
           co2_level?: number | null
-          company_id?: string
+          company_id: string
           created_at?: string
           day_of_incubation: number
           entry_mode?: string
@@ -1997,6 +2167,120 @@ export type Database = {
         }
         Relationships: []
       }
+      single_stage_operations: {
+        Row: {
+          age_weeks: number | null
+          archived_at: string | null
+          archived_by: string | null
+          batch_id: string | null
+          buggy_numbers: string[] | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          eggs_per_buggy: number
+          expected_hatch_percent: number | null
+          flock_id: string
+          hatch_date: string
+          house_number: string | null
+          id: string
+          machine_id: string
+          notes: string | null
+          projected_hatch_count: number | null
+          set_color: string
+          set_date: string
+          total_buggies: number
+          total_eggs_set: number
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          age_weeks?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
+          batch_id?: string | null
+          buggy_numbers?: string[] | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          eggs_per_buggy?: number
+          expected_hatch_percent?: number | null
+          flock_id: string
+          hatch_date: string
+          house_number?: string | null
+          id?: string
+          machine_id: string
+          notes?: string | null
+          projected_hatch_count?: number | null
+          set_color?: string
+          set_date?: string
+          total_buggies?: number
+          total_eggs_set?: number
+          transfer_date: string
+          updated_at?: string
+        }
+        Update: {
+          age_weeks?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
+          batch_id?: string | null
+          buggy_numbers?: string[] | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          eggs_per_buggy?: number
+          expected_hatch_percent?: number | null
+          flock_id?: string
+          hatch_date?: string
+          house_number?: string | null
+          id?: string
+          machine_id?: string
+          notes?: string | null
+          projected_hatch_count?: number | null
+          set_color?: string
+          set_date?: string
+          total_buggies?: number
+          total_eggs_set?: number
+          transfer_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "single_stage_operations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "single_stage_operations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches_with_fertility"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "single_stage_operations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "single_stage_operations_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "single_stage_operations_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sop_templates: {
         Row: {
           category: string
@@ -2168,6 +2452,8 @@ export type Database = {
       }
       units: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           code: string | null
           company_id: string
           created_at: string
@@ -2178,6 +2464,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           code?: string | null
           company_id?: string
           created_at?: string
@@ -2188,6 +2476,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           code?: string | null
           company_id?: string
           created_at?: string
@@ -2354,6 +2644,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_visual_preferences: {
+        Row: {
+          company_id: string
+          created_at: string
+          hidden_columns: string[]
+          id: string
+          page_key: string
+          section_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          hidden_columns?: string[]
+          id?: string
+          page_key: string
+          section_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          hidden_columns?: string[]
+          id?: string
+          page_key?: string
+          section_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_visual_preferences_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

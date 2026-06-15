@@ -1,13 +1,17 @@
 import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useVisualPreferences } from "@/hooks/useVisualPreferences";
+import { useArchive } from "@/hooks/useArchive";
+
+const SECTION = "embrex_hoi";
 
 interface EmbrexHOITabProps {
   data: any[];
@@ -27,7 +31,20 @@ interface EmbrexHOITabProps {
 
 export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
+  const { archive: archiveHouse } = useArchive("batches");
+
+  const handleArchive = async (id: string) => {
+    if (!confirm("Archive this house? It will be hidden from the data sheet but kept for the audit trail and restorable from Management → Archived Items → Houses.")) return;
+    try {
+      await archiveHouse(id);
+      onDataUpdate();
+    } catch {
+      /* toast handled in hook */
+    }
+  };
   const [formData, setFormData] = useState<any>({});
+  const { isColumnHidden } = useVisualPreferences();
+  const show = (col: string) => !isColumnHidden(SECTION, col);
 
   // Apply filters to data
   const filteredData = useMemo(() => {
@@ -165,27 +182,27 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Flock #</TableHead>
-              <TableHead>Flock Name</TableHead>
-              <TableHead>House #</TableHead>
-              <TableHead>Age (weeks)</TableHead>
-              <TableHead>Set Date</TableHead>
-              <TableHead>Total Eggs Set</TableHead>
-              <TableHead>Clears</TableHead>
-              <TableHead>Clear %</TableHead>
-              <TableHead>Injected</TableHead>
-              <TableHead>Injected %</TableHead>
-              <TableHead>Machine</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Technician Name</TableHead>
-              <TableHead>Notes</TableHead>
+              {show("flock_number") && <TableHead>Flock #</TableHead>}
+              {show("flock_name") && <TableHead>Flock Name</TableHead>}
+              {show("house_number") && <TableHead>House #</TableHead>}
+              {show("age_weeks") && <TableHead>Age (weeks)</TableHead>}
+              {show("set_date") && <TableHead>Set Date</TableHead>}
+              {show("total_eggs_set") && <TableHead>Total Eggs Set</TableHead>}
+              {show("eggs_cleared") && <TableHead>Clears</TableHead>}
+              {show("clear_percent") && <TableHead>Clear %</TableHead>}
+              {show("eggs_injected") && <TableHead>Injected</TableHead>}
+              {show("injected_percent") && <TableHead>Injected %</TableHead>}
+              {show("machine_number") && <TableHead>Machine</TableHead>}
+              {show("status") && <TableHead>Status</TableHead>}
+              {show("technician_name") && <TableHead>Technician Name</TableHead>}
+              {show("notes") && <TableHead>Notes</TableHead>}
               {!readOnly && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center text-muted-foreground">
+                <TableCell colSpan={99} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
@@ -200,28 +217,30 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
 
                 return (
                   <TableRow key={item.id}>
-                    <TableCell>{item.flock_number || "-"}</TableCell>
-                    <TableCell>{item.flock_name || "-"}</TableCell>
-                    <TableCell>{item.house_number || "-"}</TableCell>
-                    <TableCell>{item.age_weeks || "-"}</TableCell>
-                    <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>
-                    <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>
-                    <TableCell>{item.eggs_cleared?.toLocaleString() || "0"}</TableCell>
-                    <TableCell>{clearPercent}%</TableCell>
-                    <TableCell>{item.eggs_injected?.toLocaleString() || "0"}</TableCell>
-                    <TableCell>{injectedPercent}%</TableCell>
-                    <TableCell>{item.machine_number || "-"}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        item.status === 'incubating' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {item.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>{item.hoi_technician_name || item.clears_technician_name || item.fertility_technician_name || "-"}</TableCell>
-                    <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>
+                    {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
+                    {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
+                    {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                    {show("age_weeks") && <TableCell>{item.age_weeks || "-"}</TableCell>}
+                    {show("set_date") && <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>}
+                    {show("total_eggs_set") && <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>}
+                    {show("eggs_cleared") && <TableCell>{item.eggs_cleared?.toLocaleString() || "0"}</TableCell>}
+                    {show("clear_percent") && <TableCell>{clearPercent}%</TableCell>}
+                    {show("eggs_injected") && <TableCell>{item.eggs_injected?.toLocaleString() || "0"}</TableCell>}
+                    {show("injected_percent") && <TableCell>{injectedPercent}%</TableCell>}
+                    {show("machine_number") && <TableCell>{item.machine_number || "-"}</TableCell>}
+                    {show("status") && (
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          item.status === 'incubating' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </TableCell>
+                    )}
+                    {show("technician_name") && <TableCell>{item.hoi_technician_name || item.clears_technician_name || item.fertility_technician_name || "-"}</TableCell>}
+                    {show("notes") && <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>}
                     {!readOnly && (
                       <TableCell>
                         <div className="flex gap-2">
@@ -231,6 +250,16 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                             onClick={() => handleEdit(item)}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleArchive(item.id)}
+                            title="Archive house (keeps audit trail, restorable)"
+                            className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                          >
+                            <Archive className="h-4 w-4 mr-1" />
+                            Archive
                           </Button>
                           <Button
                             variant="ghost"

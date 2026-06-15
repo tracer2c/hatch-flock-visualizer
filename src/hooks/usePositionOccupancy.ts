@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  buildPositionOccupancyMap, 
+import {
+  buildPositionOccupancyMap,
   getOccupancyStats,
   getUniqueFlocks,
   ALL_POSITION_KEYS,
   type OccupancyInfo,
-  type MultiSetterSet 
+  type MultiSetterSet
 } from '@/utils/setterPositionMapping';
+import { getOfflineData } from '@/lib/offlineDataCache';
 
 interface FlockDetail {
   flock_id: string;
@@ -48,34 +49,51 @@ export function usePositionOccupancy(
 
     try {
       // Fetch multi_setter_sets for this machine where set_date <= checkDate
-      const { data: setsData, error: setsError } = await supabase
-        .from('multi_setter_sets')
-        .select(`
-          id,
-          machine_id,
-          flock_id,
-          batch_id,
-          zone,
-          side,
-          level,
-          set_date,
-          capacity,
-          flocks(flock_name, flock_number),
-          batches(batch_number)
-        `)
-        .eq('machine_id', machineId)
-        .lte('set_date', checkDate)
-        .order('set_date', { ascending: false });
+      let setsData: MultiSetterSet[] | null = null;
+      let transfers: { batch_id: string; transfer_date: string }[] | null = null;
 
-      if (setsError) throw setsError;
+      try {
+        const { data, error: setsError } = await supabase
+          .from('multi_setter_sets')
+          .select(`
+            id,
+            machine_id,
+            flock_id,
+            batch_id,
+            zone,
+            side,
+            level,
+            set_date,
+            capacity,
+            flocks(flock_name, flock_number),
+            batches(batch_number)
+          `)
+          .eq('machine_id', machineId)
+          .lte('set_date', checkDate)
+          .order('set_date', { ascending: false });
 
-      // Check for transfers - exclude sets that have been transferred out before checkDate
-      const { data: transfers, error: transferError } = await supabase
-        .from('machine_transfers')
-        .select('batch_id, transfer_date')
-        .lte('transfer_date', checkDate);
+        if (setsError) throw setsError;
+        setsData = data;
 
-      if (transferError) throw transferError;
+        const { data: transferData, error: transferError } = await supabase
+          .from('machine_transfers')
+          .select('batch_id, transfer_date')
+          .lte('transfer_date', checkDate);
+
+        if (transferError) throw transferError;
+        transfers = transferData;
+      } catch (fetchErr: any) {
+        // Network failure — fall back to prefetched cache
+        const cached = await getOfflineData<MultiSetterSet[]>('multi_setter_sets');
+        if (cached) {
+          setsData = cached.filter(
+            s => s.machine_id === machineId && s.set_date <= checkDate
+          );
+          transfers = [];
+        } else {
+          throw fetchErr;
+        }
+      }
 
       // Create a set of batch_ids that have been transferred out
       const transferredBatchIds = new Set(

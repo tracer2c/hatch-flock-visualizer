@@ -6,10 +6,11 @@ import { offlineQueue } from '@/lib/offlineQueue';
 interface PendingSyncBadgeProps {
   table: string;
   recordId?: string;
+  batchId?: string;
   className?: string;
 }
 
-export function PendingSyncBadge({ table, recordId, className }: PendingSyncBadgeProps) {
+export function PendingSyncBadge({ table, recordId, batchId, className }: PendingSyncBadgeProps) {
   const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
@@ -17,7 +18,8 @@ export function PendingSyncBadge({ table, recordId, className }: PendingSyncBadg
       const entries = await offlineQueue.getAll();
       const pending = entries.some(e => {
         if (e.table !== table) return false;
-        if (recordId && e.data.id !== recordId) return false;
+        if (recordId && e.data.id !== recordId && e.localId !== recordId && e.serverId !== recordId) return false;
+        if (batchId && e.batchId !== batchId && e.data.batch_id !== batchId && e.data.id !== batchId) return false;
         return e.status === 'pending' || e.status === 'failed';
       });
       setIsPending(pending);
@@ -26,7 +28,7 @@ export function PendingSyncBadge({ table, recordId, className }: PendingSyncBadg
     checkPending();
     const interval = setInterval(checkPending, 3000);
     return () => clearInterval(interval);
-  }, [table, recordId]);
+  }, [table, recordId, batchId]);
 
   if (!isPending) return null;
 

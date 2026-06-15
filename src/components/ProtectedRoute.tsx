@@ -1,5 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { WifiOff } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,6 +13,7 @@ export default function ProtectedRoute({
   requiredRole 
 }: ProtectedRouteProps) {
   const { user, loading, hasRole } = useAuth();
+  const { isOnline } = useOnlineStatus();
 
   if (loading) {
     return (
@@ -24,6 +27,19 @@ export default function ProtectedRoute({
   }
 
   if (!user) {
+    if (!isOnline) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="max-w-md text-center">
+            <WifiOff className="h-12 w-12 mx-auto mb-4 text-amber-600" />
+            <h2 className="text-2xl font-bold mb-2">Sign in online first</h2>
+            <p className="text-muted-foreground">
+              Offline mode is available after a successful sign-in on this device. Reconnect to the network and sign in once to enable offline data entry.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return <Navigate to="/auth" replace />;
   }
 

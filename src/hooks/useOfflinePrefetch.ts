@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOnlineStatus } from './useOnlineStatus';
+import { cacheOfflineData } from '@/lib/offlineDataCache';
 
 export function useOfflinePrefetch() {
   const queryClient = useQueryClient();
@@ -24,7 +25,7 @@ export function useOfflinePrefetch() {
             `)
             .order('set_date', { ascending: false })
             .limit(100);
-          return data || [];
+          return cacheOfflineData('batches', data || []);
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
       });
@@ -37,7 +38,7 @@ export function useOfflinePrefetch() {
             .from('flocks')
             .select('*')
             .order('flock_name', { ascending: true });
-          return data || [];
+          return cacheOfflineData('flocks', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -50,7 +51,7 @@ export function useOfflinePrefetch() {
             .from('machines')
             .select('*')
             .order('machine_number', { ascending: true });
-          return data || [];
+          return cacheOfflineData('machines', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -63,7 +64,7 @@ export function useOfflinePrefetch() {
             .from('units')
             .select('*')
             .order('name', { ascending: true });
-          return data || [];
+          return cacheOfflineData('units', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -77,7 +78,7 @@ export function useOfflinePrefetch() {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
-          return data || [];
+          return cacheOfflineData('fertility_analysis', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -91,7 +92,7 @@ export function useOfflinePrefetch() {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
-          return data || [];
+          return cacheOfflineData('qa_monitoring', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -105,7 +106,7 @@ export function useOfflinePrefetch() {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
-          return data || [];
+          return cacheOfflineData('residue_analysis', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -119,7 +120,33 @@ export function useOfflinePrefetch() {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(200);
-          return data || [];
+          return cacheOfflineData('egg_pack_quality', data || []);
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+
+      // Prefetch multi_setter_sets (needed for position occupancy in multi-setter QA)
+      queryClient.prefetchQuery({
+        queryKey: ['multi_setter_sets'],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('multi_setter_sets')
+            .select(`
+              id,
+              machine_id,
+              flock_id,
+              batch_id,
+              zone,
+              side,
+              level,
+              set_date,
+              capacity,
+              flocks(flock_name, flock_number),
+              batches(batch_number)
+            `)
+            .order('set_date', { ascending: false })
+            .limit(500);
+          return cacheOfflineData('multi_setter_sets', data || []);
         },
         staleTime: 5 * 60 * 1000,
       });

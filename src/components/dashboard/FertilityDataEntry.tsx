@@ -15,6 +15,8 @@ import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
 import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
+import { fetchWithOfflineFallback } from "@/lib/offlineDataCache";
+import { PendingSyncList } from "@/components/ui/pending-sync-list";
 
 interface FertilityRecord {
   id: string;
@@ -63,14 +65,17 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
 
   const loadFertilityData = async () => {
     try {
-      const { data: fertilityData, error } = await supabase
-        .from('fertility_analysis')
-        .select('*')
-        .eq('batch_id', batchInfo.id)
-        .order('analysis_date', { ascending: false });
+      const fertilityData = await fetchWithOfflineFallback(`fertility-${batchInfo.id}`, async () => {
+        const { data: fertilityData, error } = await supabase
+          .from('fertility_analysis')
+          .select('*')
+          .eq('batch_id', batchInfo.id)
+          .order('analysis_date', { ascending: false });
 
-      if (error) throw error;
-      
+        if (error) throw error;
+        return fertilityData || [];
+      });
+
       if (fertilityData) {
         onDataUpdate(fertilityData);
       }
@@ -157,7 +162,15 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       };
 
       // Use offline-aware submit
-      const result = await offlineSubmit(recordData, 'upsert');
+      const result = await offlineSubmit(recordData, 'upsert', {
+        batchId: batchInfo.id,
+        serverId: editingId || undefined,
+        localId: editingId || `fertility-${batchInfo.id}`,
+        optimisticData: {
+          ...recordData,
+          fertility_percent: calculated.fertilityPercent,
+        },
+      });
 
       // If we got data back (online mode), update local state
       if (result) {
@@ -331,11 +344,18 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
       )}
 
       {/* Form Section */}
+      <PendingSyncList
+        table="fertility_analysis"
+        batchId={batchInfo.id}
+        title="Fertility records waiting to sync"
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             {editingId ? 'Edit Fertility Record' : 'Add New Fertility Record'}
+            <PendingSyncBadge table="fertility_analysis" batchId={batchInfo.id} />
           </CardTitle>
         </CardHeader>
         <CardContent>

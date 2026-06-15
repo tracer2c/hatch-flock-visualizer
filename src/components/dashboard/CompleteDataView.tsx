@@ -137,6 +137,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, 
             *
           )
         `)
+        .is("archived_at", null)
         .order("set_date", { ascending: false });
 
       if (batchesError) {

@@ -28,6 +28,10 @@ import TargetsPage from "./pages/management/TargetsPage";
 import ResidueSchedulePage from "./pages/management/ResidueSchedulePage";
 import ReportsPage from "./pages/management/ReportsPage";
 import ActivityLogPage from "./pages/management/ActivityLogPage";
+import VisualOptionsPage from "./pages/management/VisualOptionsPage";
+import ArchivePage from "./pages/management/ArchivePage";
+import MultiStagePage from "./pages/MultiStagePage";
+import SingleStagePage from "./pages/SingleStagePage";
 import ChecklistPage from "./pages/ChecklistPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
@@ -52,7 +56,6 @@ import DocumentationWhitePaper from "./pages/DocumentationWhitePaper";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
-import ContextualHelpBot from "./components/ContextualHelpBot";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
@@ -97,6 +100,12 @@ function AppContent() {
                   <main className="flex-1 overflow-auto pt-12">
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/multi-stage" element={
+                        <RoleProtectedRoute featureKey="multi_stage"><MultiStagePage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/single-stage" element={
+                        <RoleProtectedRoute featureKey="single_stage"><SingleStagePage /></RoleProtectedRoute>
+                      } />
                       <Route path="/performance" element={
                         <RoleProtectedRoute featureKey="performance"><PerformancePage /></RoleProtectedRoute>
                       } />
@@ -193,6 +202,10 @@ function AppContent() {
                       <Route path="/management/activity-log" element={
                         <RoleProtectedRoute featureKey="activity_log"><ActivityLogPage /></RoleProtectedRoute>
                       } />
+                      {/* Visual Options is per-user personalization — open to all authenticated users */}
+                      <Route path="/management/visual-options" element={<VisualOptionsPage />} />
+                      {/* Archive is read-open; restore actions self-gate via usePermissions */}
+                      <Route path="/management/archive" element={<ArchivePage />} />
                       <Route path="/bulk-import" element={
                         <RoleProtectedRoute featureKey="bulk_import"><BulkDataImportPage /></RoleProtectedRoute>
                       } />
@@ -207,7 +220,6 @@ function AppContent() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
-                  <ContextualHelpBot />
                 </div>
               </div>
             </SidebarProvider>

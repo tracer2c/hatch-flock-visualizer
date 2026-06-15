@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown, Layers } from "lucide-react";
+import { Plus, Edit, Trash2, Factory, MapPin, Wrench, Filter, X, ChevronDown, Layers, Archive, ArchiveRestore } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MultiSetterSetsManager from './MultiSetterSetsManager';
+import { useArchive } from "@/hooks/useArchive";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Machine {
   id: string;
@@ -23,6 +25,8 @@ interface Machine {
   last_maintenance: string | null;
   notes: string | null;
   unit_id: string | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
 }
 
 const MachineManager = () => {
@@ -32,6 +36,10 @@ const MachineManager = () => {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedMachineForSets, setSelectedMachineForSets] = useState<Machine | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const { archive: archiveMachine, restore: restoreMachine, isMutating: archiveBusy } = useArchive("machines");
+  const { hasWriteAccess } = usePermissions();
+  const canArchive = hasWriteAccess("machines_management");
   const [filters, setFilters] = useState({
     machineNumber: '',
     machineType: [] as string[],
@@ -57,7 +65,7 @@ const MachineManager = () => {
   useEffect(() => {
     loadMachines();
     loadUnits();
-  }, []);
+  }, [showArchived]);
 
   const loadUnits = async () => {
     const { data, error } = await supabase
@@ -74,11 +82,17 @@ const MachineManager = () => {
   };
 
   const loadMachines = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('machines')
       .select('*')
       .order('machine_number', { ascending: true });
-    
+
+    if (!showArchived) {
+      query = query.is('archived_at', null);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       toast({
         title: "Error loading machines",
@@ -174,21 +188,25 @@ const MachineManager = () => {
         loadMachines();
       }
     } else {
-      let companyId: string;
-      try {
-        companyId = await getCurrentUserCompanyId();
-      } catch (error: unknown) {
+      // Resolve the user's company_id — machines have no parent to derive from,
+      // so we must stamp it explicitly. (Trigger only exists for batches/qa_monitoring.)
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', user?.id || '')
+        .maybeSingle();
+      if (!profile?.company_id) {
         toast({
-          title: "Error creating machine",
-          description: error instanceof Error ? error.message : 'Unable to verify your company profile.',
+          title: "Unable to create machine",
+          description: "Your user profile is missing a company assignment.",
           variant: "destructive"
         });
         return;
       }
-
       const { error } = await supabase
         .from('machines')
-        .insert({ ...machineData, company_id: companyId });
+        .insert({ ...machineData, company_id: profile.company_id });
 
       if (error) {
         toast({
@@ -367,6 +385,16 @@ const MachineManager = () => {
             )}
           </span>
           <div className="flex items-center gap-2">
+            <Button
+              variant={showArchived ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex items-center gap-2"
+              title={showArchived ? "Hide archived machines" : "Show archived machines"}
+            >
+              <Archive className="h-4 w-4" />
+              {showArchived ? "Showing Archived" : "Show Archived"}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -690,27 +718,63 @@ const MachineManager = () => {
         </Collapsible>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMachines.map((machine) => (
-            <div key={machine.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+            <div key={machine.id} className={`p-4 border rounded-lg hover:border-primary/50 transition-colors ${machine.archived_at ? 'opacity-60 bg-muted/30' : ''}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-lg">{machine.machine_number}</h3>
                   <Badge className={getTypeColor(machine.machine_type)}>
                     {machine.machine_type}
                   </Badge>
-                  {/* Show setter mode badge for setter/combo machines */}
                   {(machine.machine_type === 'setter' || machine.machine_type === 'combo') && machine.setter_mode && (
                     <Badge className={getSetterModeColor(machine.setter_mode)}>
                       {getSetterModeLabel(machine.setter_mode)}
                     </Badge>
                   )}
+                  {machine.archived_at && (
+                    <Badge variant="outline" className="text-xs">
+                      <Archive className="h-3 w-3 mr-1" />
+                      Archived
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(machine)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(machine)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!machine.archived_at && (
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(machine)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canArchive && (
+                    machine.archived_at ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={archiveBusy}
+                        onClick={() => restoreMachine(machine.id)}
+                        title="Restore machine"
+                      >
+                        <ArchiveRestore className="h-4 w-4 text-primary" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={archiveBusy}
+                        onClick={() => {
+                          if (confirm(`Archive machine ${machine.machine_number}?\n\nIt will be hidden from active dropdowns. Existing batches and history remain visible.`)) {
+                            archiveMachine(machine.id);
+                          }
+                        }}
+                        title="Archive machine"
+                      >
+                        <Archive className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )
+                  )}
+                  {!machine.archived_at && (
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(machine)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className="space-y-2 text-sm text-muted-foreground">

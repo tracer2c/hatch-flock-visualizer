@@ -56,6 +56,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
     const { data: machinesData, error } = await supabase
       .from('machines')
       .select('*')
+      .is('archived_at', null)  // hide archived machines from active picker
       .order('machine_number');
     
     if (error) {

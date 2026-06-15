@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Clock, FileText, Users, Cog, UserCheck, Home, Target, 
-  Calendar, ListChecks, Download, ClipboardList, ChevronRight, Search 
+import {
+  Clock, FileText, Users, Cog, UserCheck, Home, Target,
+  Calendar, ListChecks, Download, ClipboardList, ChevronRight, Search, Eye, Archive
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -68,6 +68,27 @@ const settingsCategories: SettingCategory[] = [
         icon: Cog,
         iconColor: "text-purple-600",
         route: "/management/machines",
+      },
+    ],
+  },
+  {
+    name: "Personalization",
+    items: [
+      {
+        id: "visual-options",
+        title: "Visual Options",
+        description: "Choose which columns appear on each data sheet tab (per-user preferences)",
+        icon: Eye,
+        iconColor: "text-violet-600",
+        route: "/management/visual-options",
+      },
+      {
+        id: "archive",
+        title: "Archived Items",
+        description: "View and restore archived flocks, machines, and hatcheries",
+        icon: Archive,
+        iconColor: "text-slate-600",
+        route: "/management/archive",
       },
     ],
   },

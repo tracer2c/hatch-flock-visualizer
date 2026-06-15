@@ -1,11 +1,12 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
@@ -15,16 +16,18 @@ interface FilterOption {
   name: string;
 }
 
+interface DataSheetFilters {
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  selectedHatcheries: string[];
+  selectedMachines: string[];
+  technicianSearch: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface DataSheetCenteredFilterDialogProps {
-  filters: {
-    sortBy: string;
-    sortOrder: 'asc' | 'desc';
-    selectedHatcheries: string[];
-    selectedMachines: string[];
-    technicianSearch: string;
-    dateFrom: string;
-    dateTo: string;
-  };
+  filters: DataSheetFilters;
   setFilters: React.Dispatch<React.SetStateAction<any>>;
   hatcheries: FilterOption[];
   machines: FilterOption[];
@@ -46,8 +49,50 @@ export const DataSheetCenteredFilterDialog = ({
   onToggleHatchery,
   onToggleMachine,
 }: DataSheetCenteredFilterDialogProps) => {
+  const [open, setOpen] = useState(false);
+  // Local draft so nothing applies until the user clicks "Apply Filters".
+  const [draft, setDraft] = useState<DataSheetFilters>(filters);
+
+  // Reset the draft from the live filters every time the dialog opens.
+  useEffect(() => {
+    if (open) setDraft(filters);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleDraftHatchery = (id: string) =>
+    setDraft((prev) => ({
+      ...prev,
+      selectedHatcheries: prev.selectedHatcheries.includes(id)
+        ? prev.selectedHatcheries.filter((h) => h !== id)
+        : [...prev.selectedHatcheries, id],
+    }));
+
+  const toggleDraftMachine = (id: string) =>
+    setDraft((prev) => ({
+      ...prev,
+      selectedMachines: prev.selectedMachines.includes(id)
+        ? prev.selectedMachines.filter((m) => m !== id)
+        : [...prev.selectedMachines, id],
+    }));
+
+  const handleApply = () => {
+    setFilters(draft);
+    setOpen(false);
+  };
+
+  const handleClearDraft = () => {
+    setDraft({
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+      selectedHatcheries: [],
+      selectedMachines: [],
+      technicianSearch: '',
+      dateFrom: '',
+      dateTo: '',
+    });
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
@@ -61,16 +106,14 @@ export const DataSheetCenteredFilterDialog = ({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Filter Options</DialogTitle>
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={onClearFilters}>
-                <X className="h-4 w-4 mr-1" />
-                Clear All
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" onClick={handleClearDraft}>
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
           </div>
         </DialogHeader>
-        
-        <ScrollArea className="max-h-[60vh] pr-4">
+
+        <ScrollArea className="max-h-[55vh] pr-4">
           <div className="space-y-6">
             {/* Sorting Section */}
             <div className="space-y-4">
@@ -78,9 +121,9 @@ export const DataSheetCenteredFilterDialog = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-xs">Sort By</Label>
-                  <Select 
-                    value={filters.sortBy} 
-                    onValueChange={(value) => setFilters((prev: any) => ({ ...prev, sortBy: value }))}
+                  <Select
+                    value={draft.sortBy}
+                    onValueChange={(value) => setDraft((prev) => ({ ...prev, sortBy: value }))}
                   >
                     <SelectTrigger className="h-9">
                       <SelectValue />
@@ -97,9 +140,9 @@ export const DataSheetCenteredFilterDialog = ({
 
                 <div className="space-y-2">
                   <Label className="text-xs">Order</Label>
-                  <Select 
-                    value={filters.sortOrder} 
-                    onValueChange={(value: 'asc' | 'desc') => setFilters((prev: any) => ({ ...prev, sortOrder: value }))}
+                  <Select
+                    value={draft.sortOrder}
+                    onValueChange={(value: 'asc' | 'desc') => setDraft((prev) => ({ ...prev, sortOrder: value }))}
                   >
                     <SelectTrigger className="h-9">
                       <SelectValue />
@@ -120,10 +163,10 @@ export const DataSheetCenteredFilterDialog = ({
                 <div className="space-y-2">
                   <Label className="text-xs">From</Label>
                   <DatePicker
-                    date={filters.dateFrom}
+                    date={draft.dateFrom}
                     onSelect={(date) => {
                       const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
-                      setFilters((prev: any) => ({ ...prev, dateFrom: dateStr }));
+                      setDraft((prev) => ({ ...prev, dateFrom: dateStr }));
                     }}
                     placeholder="From date"
                     className="h-9"
@@ -132,10 +175,10 @@ export const DataSheetCenteredFilterDialog = ({
                 <div className="space-y-2">
                   <Label className="text-xs">To</Label>
                   <DatePicker
-                    date={filters.dateTo}
+                    date={draft.dateTo}
                     onSelect={(date) => {
                       const dateStr = date ? format(date, 'yyyy-MM-dd') : '';
-                      setFilters((prev: any) => ({ ...prev, dateTo: dateStr }));
+                      setDraft((prev) => ({ ...prev, dateTo: dateStr }));
                     }}
                     placeholder="To date"
                     className="h-9"
@@ -149,8 +192,8 @@ export const DataSheetCenteredFilterDialog = ({
               <Label className="text-xs">Technician Name</Label>
               <Input
                 placeholder="Search by technician..."
-                value={filters.technicianSearch}
-                onChange={(e) => setFilters((prev: any) => ({ ...prev, technicianSearch: e.target.value }))}
+                value={draft.technicianSearch}
+                onChange={(e) => setDraft((prev) => ({ ...prev, technicianSearch: e.target.value }))}
                 className="h-9"
               />
             </div>
@@ -164,8 +207,8 @@ export const DataSheetCenteredFilterDialog = ({
                     <div key={hatchery.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`hatchery-${hatchery.id}`}
-                        checked={filters.selectedHatcheries.includes(hatchery.id)}
-                        onCheckedChange={() => onToggleHatchery(hatchery.id)}
+                        checked={draft.selectedHatcheries.includes(hatchery.id)}
+                        onCheckedChange={() => toggleDraftHatchery(hatchery.id)}
                       />
                       <label
                         htmlFor={`hatchery-${hatchery.id}`}
@@ -188,8 +231,8 @@ export const DataSheetCenteredFilterDialog = ({
                     <div key={machine.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`machine-${machine.id}`}
-                        checked={filters.selectedMachines.includes(machine.id)}
-                        onCheckedChange={() => onToggleMachine(machine.id)}
+                        checked={draft.selectedMachines.includes(machine.id)}
+                        onCheckedChange={() => toggleDraftMachine(machine.id)}
                       />
                       <label
                         htmlFor={`machine-${machine.id}`}
@@ -204,6 +247,14 @@ export const DataSheetCenteredFilterDialog = ({
             </div>
           </div>
         </ScrollArea>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleApply}>
+            <Check className="h-4 w-4 mr-1" />
+            Apply Filters
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

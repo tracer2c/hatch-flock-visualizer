@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Archive } from "lucide-react";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useArchive } from "@/hooks/useArchive";
 
 interface AllDataTabProps {
   data: any[];
@@ -15,6 +16,28 @@ interface AllDataTabProps {
 
 export const AllDataTab = ({ data, searchTerm, onDataUpdate }: AllDataTabProps) => {
   const { showPercentages, formatValue } = usePercentageToggle();
+  const { archive: archiveBatch } = useArchive("batches");
+  const { archive: archiveFertility } = useArchive("fertility_analysis");
+  const { archive: archiveResidue } = useArchive("residue_analysis");
+  const { archive: archiveQa } = useArchive("qa_monitoring");
+  const { archive: archiveEggPack } = useArchive("egg_pack_quality");
+
+  // Archive the house (batch) or the individual data-entry row, depending on type.
+  const handleArchive = async (item: any) => {
+    const isRow = !!item.data_type && item.data_type !== 'embrex';
+    const what = isRow ? `${item.data_type} record` : 'house';
+    if (!confirm(`Archive this ${what}? It will be hidden from the data sheet but kept for the audit trail and restorable from Management → Archived Items.`)) return;
+    try {
+      if (item.data_type === 'fertility') await archiveFertility(item.id);
+      else if (item.data_type === 'residue') await archiveResidue(item.id);
+      else if (item.data_type === 'qa') await archiveQa(item.id);
+      else if (item.data_type === 'egg_pack') await archiveEggPack(item.id);
+      else await archiveBatch(item.batch_id);
+      onDataUpdate();
+    } catch {
+      /* toast handled in hook */
+    }
+  };
 
   const filteredData = data.filter((item) =>
     Object.values(item).some((val) =>
@@ -196,6 +219,14 @@ export const AllDataTab = ({ data, searchTerm, onDataUpdate }: AllDataTabProps) 
                         onClick={() => handleEdit(item)}
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleArchive(item)}
+                        title="Archive (keeps audit trail, restorable)"
+                      >
+                        <Archive className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"

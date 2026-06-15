@@ -68,6 +68,7 @@ const TransferManager = ({
       .from('machines')
       .select('id, machine_number, machine_type, unit_id')
       .in('machine_type', ['hatcher', 'combo'])
+      .is('archived_at', null)
       .order('machine_number');
 
     // Filter by same hatchery if available

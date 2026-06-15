@@ -1,6 +1,8 @@
 // Feature keys mapped to routes and display labels
 export const FEATURE_CONFIG = {
   dashboard: { label: 'Dashboard', routes: ['/'] },
+  multi_stage: { label: 'Multi-Stage', routes: ['/multi-stage'] },
+  single_stage: { label: 'Single-Stage', routes: ['/single-stage'] },
   data_entry: { label: 'Data Entry', routes: ['/data-entry'] },
   qa_hub: { label: 'QA Hub', routes: ['/qa-hub'] },
   embrex_data_sheet: { label: 'Data Sheet', routes: ['/embrex-data-sheet'] },
@@ -36,6 +38,8 @@ export type FeatureKey = keyof typeof FEATURE_CONFIG;
 // Features shown in the permissions matrix (admin UI)
 export const PERMISSION_MATRIX_FEATURES: FeatureKey[] = [
   'dashboard',
+  'multi_stage',
+  'single_stage',
   'data_entry',
   'qa_hub',
   'embrex_data_sheet',
@@ -66,6 +70,8 @@ export const PERMISSION_MATRIX_FEATURES: FeatureKey[] = [
 
 // Features that support write protection (have data entry / mutation actions)
 export const WRITABLE_FEATURES: FeatureKey[] = [
+  'multi_stage',
+  'single_stage',
   'data_entry',
   'qa_hub',
   'checklist',
@@ -86,6 +92,8 @@ export const WRITABLE_FEATURES: FeatureKey[] = [
 // Map sidebar nav items to feature keys
 export const SIDEBAR_FEATURE_MAP: Record<string, FeatureKey> = {
   '/': 'dashboard',
+  '/multi-stage': 'multi_stage',
+  '/single-stage': 'single_stage',
   '/data-entry': 'data_entry',
   '/qa-hub': 'qa_hub',
   '/embrex-data-sheet': 'embrex_data_sheet',

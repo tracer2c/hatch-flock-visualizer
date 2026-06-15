@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, AlertTriangle, Egg, Bird, Syringe, Upload } from "lucide-react";
+import { Clock, AlertCircle, Activity, TrendingUp, Building2, CheckCircle, Gauge, Search, Grid3X3, List, Download, Filter, RefreshCw, AlertTriangle, Egg, Bird, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBatchData, useBatchPerformanceMetrics, useMachineUtilization, useQAAlerts } from "@/hooks/useHouseData";
@@ -20,6 +20,7 @@ import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { ExportService } from "@/services/exportService";
 import { useChartExport } from "@/hooks/useChartExport";
 import CriticalEventsPanel from "./CriticalEventsPanel";
+import { DateRangeSlider } from "./DateRangeSlider";
 
 const BatchOverviewDashboard = () => {
   const { data: activeBatches, isLoading: batchesLoading, refetch: refetchBatches } = useBatchData();
@@ -31,8 +32,6 @@ const BatchOverviewDashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { updateContext } = useHelpContext();
-  const [totalBatchesCount, setTotalBatchesCount] = useState(0);
-  const [lastWeekBatchesCount, setLastWeekBatchesCount] = useState(0);
   const [targets, setTargets] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
   
@@ -183,42 +182,62 @@ const BatchOverviewDashboard = () => {
     return filteredActiveBatches;
   }, [filteredActiveBatches]);
 
+  // "This week" = last 7 days based on set_date
+  const weekAgoStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
+  // Total eggs set this week
+  const weeklyEggsSet = useMemo(() => {
+    if (!activeBatches) return 0;
+    return activeBatches
+      .filter((b: any) => {
+        const hatcheryMatch = hatcheryFilter === "all" || b.unit_id === hatcheryFilter;
+        return hatcheryMatch && b.set_date >= weekAgoStr;
+      })
+      .reduce((sum: number, b: any) => sum + (b.total_eggs_set || 0), 0);
+  }, [activeBatches, hatcheryFilter, weekAgoStr]);
+
+  // Batch numbers set this week (to cross-reference performanceMetrics)
+  const weeklyBatchNumbers = useMemo(() => {
+    if (!activeBatches) return new Set<string>();
+    return new Set(
+      activeBatches
+        .filter((b: any) => {
+          const hatcheryMatch = hatcheryFilter === "all" || b.unit_id === hatcheryFilter;
+          return hatcheryMatch && b.set_date >= weekAgoStr;
+        })
+        .map((b: any) => b.batch_number)
+    );
+  }, [activeBatches, hatcheryFilter, weekAgoStr]);
+
+  // Weekly slice of performanceMetrics
+  const weeklyPerf = useMemo(() => {
+    return performanceMetrics?.filter((b: any) =>
+      (hatcheryFilter === "all" || b.unitId === hatcheryFilter) &&
+      weeklyBatchNumbers.has(b.batchNumber)
+    ) || [];
+  }, [performanceMetrics, hatcheryFilter, weeklyBatchNumbers]);
+
   const avgFert = useMemo(() => {
-    const validBatches = performanceMetrics?.filter((batch: any) => {
-      const hatcheryMatch = hatcheryFilter === "all" || 
-        activeBatches?.find((b: any) => b.batch_number === batch.batchNumber)?.unit_id === hatcheryFilter;
-      return batch.fertility != null && !isNaN(batch.fertility) && hatcheryMatch;
-    }) || [];
-    
-    if (validBatches.length === 0) return 0;
-    
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.fertility, 0);
-    return Math.round(sum / validBatches.length);
-  }, [performanceMetrics, hatcheryFilter, activeBatches]);
+    const valid = weeklyPerf.filter((b: any) => b.fertility != null && !isNaN(b.fertility));
+    if (!valid.length) return 0;
+    return Math.min(100, Math.round(valid.reduce((s: number, b: any) => s + b.fertility, 0) / valid.length));
+  }, [weeklyPerf]);
 
   const avgHOF = useMemo(() => {
-    const validBatches = performanceMetrics?.filter((batch: any) => {
-      const hatcheryMatch = hatcheryFilter === "all" || batch.unitId === hatcheryFilter;
-      return batch.hof != null && !isNaN(batch.hof) && hatcheryMatch;
-    }) || [];
-    
-    if (validBatches.length === 0) return 0;
-    
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hof, 0);
-    return Math.round(sum / validBatches.length);
-  }, [performanceMetrics, hatcheryFilter]);
+    const valid = weeklyPerf.filter((b: any) => b.hof != null && !isNaN(b.hof));
+    if (!valid.length) return 0;
+    return Math.min(100, Math.round(valid.reduce((s: number, b: any) => s + b.hof, 0) / valid.length));
+  }, [weeklyPerf]);
 
-  const avgHOI = useMemo(() => {
-    const validBatches = performanceMetrics?.filter((batch: any) => {
-      const hatcheryMatch = hatcheryFilter === "all" || batch.unitId === hatcheryFilter;
-      return batch.hoi != null && !isNaN(batch.hoi) && hatcheryMatch;
-    }) || [];
-    
-    if (validBatches.length === 0) return 0;
-    
-    const sum = validBatches.reduce((acc: number, batch: any) => acc + batch.hoi, 0);
-    return Math.round(sum / validBatches.length);
-  }, [performanceMetrics, hatcheryFilter]);
+  const avgHatch = useMemo(() => {
+    const valid = weeklyPerf.filter((b: any) => b.hatch != null && !isNaN(b.hatch));
+    if (!valid.length) return 0;
+    return Math.min(100, Math.round(valid.reduce((s: number, b: any) => s + b.hatch, 0) / valid.length));
+  }, [weeklyPerf]);
 
   const systemUtilization = useMemo(() => {
     if (!machineUtilization || machineUtilization.length === 0) return 0;
@@ -241,37 +260,10 @@ const BatchOverviewDashboard = () => {
     const fetchMetrics = async () => {
       try {
         // Fetch all queries in parallel for better performance
-        const [unitsResult, totalResult, lastWeekResult, targetsResult] = await Promise.all([
+        const [unitsResult, targetsResult] = await Promise.all([
           // Units query
           supabase.from('units').select('id, name').order('name', { ascending: true }),
-          
-          // Total batches query
-          (async () => {
-            let query = supabase
-              .from('batches')
-              .select('*', { count: 'exact', head: true });
-            
-            if (hatcheryFilter !== 'all') {
-              query = query.eq('unit_id', hatcheryFilter);
-            }
-            return query;
-          })(),
-          
-          // Last week batches query
-          (async () => {
-            const lastWeekDate = new Date();
-            lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-            let query = supabase
-              .from('batches')
-              .select('*', { count: 'exact', head: true })
-              .gte('created_at', lastWeekDate.toISOString());
-            
-            if (hatcheryFilter !== 'all') {
-              query = query.eq('unit_id', hatcheryFilter);
-            }
-            return query;
-          })(),
-          
+
           // Targets query
           supabase
             .from('custom_targets')
@@ -282,9 +274,7 @@ const BatchOverviewDashboard = () => {
 
         // Process results
         if (unitsResult.data) setUnits(unitsResult.data);
-        if (totalResult.count !== null) setTotalBatchesCount(totalResult.count);
-        if (lastWeekResult.count !== null) setLastWeekBatchesCount(lastWeekResult.count);
-        
+
         if (targetsResult.data && targetsResult.data.length > 0) {
           const targetsMap: any = {};
           targetsResult.data.forEach((t: any) => {
@@ -313,15 +303,16 @@ const BatchOverviewDashboard = () => {
         visibleElements: ["Active Batches", "Performance Metrics", "QA Alerts", "Machine Utilization"],
         currentMetrics: {
           totalBatches: listForDisplay.length,
+          weeklyEggsSet,
           avgFertility: avgFert,
           avgHOF: avgHOF,
-          avgHOI: avgHOI,
+          avgHatch: avgHatch,
           alerts: qaAlerts?.length || 0
         },
         selectedFilters: { hatchery: hatcheryFilter, machine: selectedMachine, search: searchTerm }
       });
     }
-  }, [isLoading, listForDisplay, avgFert, avgHOF, avgHOI, qaAlerts, hatcheryFilter, selectedMachine, searchTerm, updateContext]);
+  }, [isLoading, listForDisplay, weeklyEggsSet, avgFert, avgHOF, avgHatch, qaAlerts, hatcheryFilter, selectedMachine, searchTerm, updateContext]);
 
   return (
     <>
@@ -385,6 +376,12 @@ const BatchOverviewDashboard = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Date Range Slider */}
+              <DateRangeSlider
+                value={selectedDateRange}
+                onChange={setSelectedDateRange}
+              />
             </div>
 
             {/* Right Section: View Controls + Actions */}
@@ -419,29 +416,25 @@ const BatchOverviewDashboard = () => {
             </div>
           </div>
 
-          {/* KPI Cards Section */}
+          {/* KPI Cards Section — weekly metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatCard
-              title="All Houses"
-              value={totalBatchesCount.toString()}
-              icon={<Building2 className="h-5 w-5 text-primary" />}
-              description="Total number of houses in the system across all hatcheries."
-              trendLabel={
-                lastWeekBatchesCount > 0 
-                  ? `${totalBatchesCount - lastWeekBatchesCount > 0 ? '+' : ''}${totalBatchesCount - lastWeekBatchesCount} from last week`
-                  : `Total houses`
-              }
-              trendDirection={totalBatchesCount > lastWeekBatchesCount ? "up" : totalBatchesCount < lastWeekBatchesCount ? "down" : null}
+              title="Total Eggs Set"
+              value={weeklyEggsSet.toLocaleString()}
+              icon={<Egg className="h-5 w-5 text-primary" />}
+              description="Total eggs set this week across all active batches."
+              trendLabel="This week"
+              trendDirection={weeklyEggsSet > 0 ? "up" : null}
             />
             <StatCard
               title="Avg Fertility"
               value={`${avgFert}%`}
-              icon={<Egg className="h-5 w-5 text-primary" />}
-              description="Average fertility percentage across all analyzed houses."
+              icon={<TrendingUp className="h-5 w-5 text-primary" />}
+              description="Average fertility % for batches set this week."
               trendLabel={
-                targets?.fertility_rate 
+                targets?.fertility_rate
                   ? `${avgFert >= targets.fertility_rate ? '+' : ''}${(avgFert - targets.fertility_rate).toFixed(1)}% vs target`
-                  : "Target: 85%"
+                  : "This week · Target: 85%"
               }
               trendDirection={targets?.fertility_rate ? (avgFert >= targets.fertility_rate ? "up" : "down") : null}
             />
@@ -449,46 +442,46 @@ const BatchOverviewDashboard = () => {
               title="Average HOF%"
               value={`${avgHOF}%`}
               icon={<Bird className="h-5 w-5 text-primary" />}
-              description="Average Hatch of Fertile percentage. HOF% = (Chicks Hatched / Fertile Eggs) × 100"
+              description="Average Hatch of Fertile % for batches set this week."
               trendLabel={
-                targets?.hof_rate 
+                targets?.hof_rate
                   ? `${avgHOF >= targets.hof_rate ? '+' : ''}${(avgHOF - targets.hof_rate).toFixed(1)}% vs target`
-                  : "Target: 88%"
+                  : "This week · Target: 88%"
               }
               trendDirection={targets?.hof_rate ? (avgHOF >= targets.hof_rate ? "up" : "down") : null}
             />
             <StatCard
-              title="Average HOI%"
-              value={`${avgHOI}%`}
-              icon={<Syringe className="h-5 w-5 text-primary" />}
-              description="Average Hatch of Injection percentage. HOI% = (Chicks Hatched / Eggs Injected) × 100"
+              title="Avg Hatch %"
+              value={`${avgHatch}%`}
+              icon={<CheckCircle className="h-5 w-5 text-primary" />}
+              description="Average hatch % for batches set this week."
               trendLabel={
-                targets?.hoi_rate 
-                  ? `${avgHOI >= targets.hoi_rate ? '+' : ''}${(avgHOI - targets.hoi_rate).toFixed(1)}% vs target`
-                  : "Target: 90%"
+                targets?.hatch_rate
+                  ? `${avgHatch >= targets.hatch_rate ? '+' : ''}${(avgHatch - targets.hatch_rate).toFixed(1)}% vs target`
+                  : "This week · Target: 85%"
               }
-              trendDirection={targets?.hoi_rate ? (avgHOI >= targets.hoi_rate ? "up" : "down") : null}
+              trendDirection={targets?.hatch_rate ? (avgHatch >= targets.hatch_rate ? "up" : "down") : null}
             />
             <StatCard
               title="Avg Flock Age"
               value={flockAgeData?.average ? `${flockAgeData.average}w` : "—"}
               icon={<Clock className="h-5 w-5 text-primary" />}
               description={
-                flockAgeData 
+                flockAgeData
                   ? `Range: ${flockAgeData.min}-${flockAgeData.max} weeks. Peak: 35-50 weeks.`
                   : "No active flocks"
               }
               trendLabel={
-                flockAgeData?.average 
+                flockAgeData?.average
                   ? flockAgeData.average >= 35 && flockAgeData.average <= 50
-                    ? "Peak Performance" 
+                    ? "Peak Performance"
                     : flockAgeData.average > 50
                     ? "Aging Range"
                     : "Young Range"
                   : "N/A"
               }
               trendDirection={
-                flockAgeData?.average 
+                flockAgeData?.average
                   ? flockAgeData.average >= 35 && flockAgeData.average <= 50
                     ? "up"
                     : null

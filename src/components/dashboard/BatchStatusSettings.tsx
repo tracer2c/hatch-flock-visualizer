@@ -44,6 +44,15 @@ export const BatchStatusSettings = () => {
     runAutomation.mutate();
   };
 
+  // Derive day ranges from the actual (editable) automation rules so the
+  // Status Flow visual stays in sync with what's configured.
+  const ruleDay = (from: string, to: string) =>
+    rules?.find((r) => r.from_status === from && r.to_status === to)?.min_days_after_set;
+
+  const setterStart = ruleDay('scheduled', 'in_setter') ?? 0;
+  const hatcherStart = ruleDay('in_setter', 'in_hatcher') ?? 18;
+  const completeStart = ruleDay('in_hatcher', 'completed') ?? 21;
+
   if (isLoading) {
     return (
       <Card>
@@ -249,17 +258,23 @@ export const BatchStatusSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle>Status Flow</CardTitle>
-          <CardDescription>Visual representation of house progression (USDA-accurate)</CardDescription>
+          <CardDescription>
+            Reflects the Min Days set in the Automation Rules above — edit those values and this updates.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge className="bg-gray-500">Scheduled</Badge>
             <span>→</span>
-            <Badge className="bg-amber-500">In Setter (Day 0-18)</Badge>
+            <Badge className="bg-amber-500">
+              In Setter (Day {setterStart + 1}–{hatcherStart})
+            </Badge>
             <span>→</span>
-            <Badge className="bg-orange-500">In Hatcher (Day 18-21)</Badge>
+            <Badge className="bg-orange-500">
+              In Hatcher (Day {hatcherStart + 1}–{completeStart})
+            </Badge>
             <span>→</span>
-            <Badge className="bg-green-500">Completed</Badge>
+            <Badge className="bg-green-500">Completed (Day {completeStart}+)</Badge>
           </div>
         </CardContent>
       </Card>

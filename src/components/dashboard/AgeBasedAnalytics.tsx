@@ -7,6 +7,9 @@ import { useAverageFlockAge } from "@/hooks/useAverageFlockAge";
 import { Users, Filter, Info, Download, Image, Calendar, Eye, Building2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parseISO } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,18 +19,27 @@ import { AgeRangeService } from "@/services/ageRangeService";
 import { ChartDownloadButton } from "@/components/ui/chart-download-button";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { ExportService } from "@/services/exportService";
+import { ReportService } from "@/services/reportService";
 
 const AgeBasedAnalytics = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedHatcheries, setSelectedHatcheries] = useState<string[]>([]);
   const [selectedFlock, setSelectedFlock] = useState<string>("all");
   const [selectedFlockGroup, setSelectedFlockGroup] = useState<string>("all");
-  
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [flockNumMin, setFlockNumMin] = useState<string>("");
+  const [flockNumMax, setFlockNumMax] = useState<string>("");
+
   // Pass filters to the hook - use first selected hatchery or undefined for all
   const { data: metrics, isLoading, refetch } = useAgeBasedPerformance({
     unitId: selectedHatcheries.length === 1 ? selectedHatcheries[0] : undefined,
     flockId: selectedFlock !== "all" ? selectedFlock : undefined,
-    flockGroupId: selectedFlockGroup !== "all" ? selectedFlockGroup : undefined
+    flockGroupId: selectedFlockGroup !== "all" ? selectedFlockGroup : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    flockNumberMin: flockNumMin ? parseInt(flockNumMin) : undefined,
+    flockNumberMax: flockNumMax ? parseInt(flockNumMax) : undefined,
   });
   
   // Average flock age hook
@@ -232,7 +244,39 @@ const AgeBasedAnalytics = () => {
     }));
     ExportService.exportToExcel(exportData, 'age-based-analytics', 'Age Based Analytics');
   };
-  
+
+  const handleExportPDF = async () => {
+    if (!filteredMetrics) return;
+    const withData = filteredMetrics.filter(m => m.batchCount > 0);
+    const best = [...withData].sort((a, b) => b.avgHatch - a.avgHatch)[0];
+    const worst = [...withData].sort((a, b) => a.avgHatch - b.avgHatch)[0];
+    const scopeBits: string[] = [];
+    if (dateFrom || dateTo) scopeBits.push(`Set dates ${dateFrom || '…'} → ${dateTo || '…'}`);
+    if (flockNumMin || flockNumMax) scopeBits.push(`Flocks #${flockNumMin || '…'}–${flockNumMax || '…'}`);
+
+    const summary: string[] = [
+      `Performance is broken down across ${withData.length} age range(s) covering ${withData.reduce((s, m) => s + m.batchCount, 0)} house(s).`,
+      ...withData.map(m =>
+        `${m.label}: ${m.batchCount} house(s) — fertility ${m.avgFertility}%, hatch ${m.avgHatch}%, HOF ${m.avgHOF}%, HOI ${m.avgHOI}%.`
+      ),
+    ];
+    if (best && worst && best !== worst) {
+      summary.push(`Best-performing age range by hatch: ${best.label} (${best.avgHatch}%). Lowest: ${worst.label} (${worst.avgHatch}%).`);
+    }
+
+    try {
+      await ReportService.generateVisualReport({
+        title: 'Age-Based Performance Report',
+        subtitle: scopeBits.length ? scopeBits.join(' · ') : 'All set dates · All flocks',
+        summary,
+        captureElementId: 'age-performance-chart',
+        filename: `age-based-report_${new Date().toISOString().slice(0, 10)}`,
+      });
+    } catch (e) {
+      // surfaced via export dropdown; no-op
+    }
+  };
+
   if (isLoading) return <div>Loading age-based analytics...</div>;
   
   return (
@@ -319,7 +363,8 @@ const AgeBasedAnalytics = () => {
               <ExportDropdown
                 onExportCSV={handleExportCSV}
                 onExportExcel={handleExportExcel}
-                availableFormats={['csv', 'excel']}
+                onExportPDF={handleExportPDF}
+                availableFormats={['csv', 'excel', 'pdf']}
                 disabled={!filteredMetrics || filteredMetrics.length === 0}
               />
               <AgeRangeSettings onRangesUpdate={handleRangesUpdate} />
@@ -401,6 +446,72 @@ const AgeBasedAnalytics = () => {
                 </Select>
               </div>
             </div>
+
+            {/* Date Range & Flock Range — for performance comparison across windows */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" /> Set Date Range
+                </Label>
+                <div className="flex items-center gap-2">
+                  <DatePicker
+                    date={dateFrom}
+                    onSelect={(d) => setDateFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                    placeholder="From date"
+                    maxDate={dateTo ? parseISO(dateTo) : undefined}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <DatePicker
+                    date={dateTo}
+                    onSelect={(d) => setDateTo(d ? format(d, "yyyy-MM-dd") : "")}
+                    placeholder="To date"
+                    minDate={dateFrom ? parseISO(dateFrom) : undefined}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" /> Flock Number Range
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="From #"
+                    value={flockNumMin}
+                    onChange={(e) => setFlockNumMin(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <Input
+                    type="number"
+                    placeholder="To #"
+                    value={flockNumMax}
+                    onChange={(e) => setFlockNumMax(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {(dateFrom || dateTo || flockNumMin || flockNumMax) && (
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Comparing performance within the selected date / flock range
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => { setDateFrom(""); setDateTo(""); setFlockNumMin(""); setFlockNumMax(""); }}
+                >
+                  Clear ranges
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

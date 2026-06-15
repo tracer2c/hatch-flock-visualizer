@@ -21,11 +21,24 @@ export interface AgeBasedPerformanceFilters {
   unitId?: string;
   flockId?: string;
   flockGroupId?: string;
+  /** Restrict to batches with set_date >= this (YYYY-MM-DD) */
+  dateFrom?: string;
+  /** Restrict to batches with set_date <= this (YYYY-MM-DD) */
+  dateTo?: string;
+  /** Restrict to flocks whose flock_number is >= this */
+  flockNumberMin?: number;
+  /** Restrict to flocks whose flock_number is <= this */
+  flockNumberMax?: number;
 }
 
 export const useAgeBasedPerformance = (filters?: AgeBasedPerformanceFilters) => {
   return useQuery({
-    queryKey: ['age-based-performance', filters?.unitId, filters?.flockId, filters?.flockGroupId],
+    queryKey: [
+      'age-based-performance',
+      filters?.unitId, filters?.flockId, filters?.flockGroupId,
+      filters?.dateFrom, filters?.dateTo,
+      filters?.flockNumberMin, filters?.flockNumberMax,
+    ],
     queryFn: async () => {
       let query = supabase
         .from('batches_with_fertility')
@@ -33,8 +46,10 @@ export const useAgeBasedPerformance = (filters?: AgeBasedPerformanceFilters) => 
           *,
           unit_id,
           flock_id,
+          set_date,
           flocks (
             id,
+            flock_number,
             age_weeks,
             unit_id,
             flock_group_id
@@ -49,25 +64,45 @@ export const useAgeBasedPerformance = (filters?: AgeBasedPerformanceFilters) => 
           )
         `)
         .not('fertility_percent', 'is', null);
-      
+
       // Apply filters
       if (filters?.unitId) {
         query = query.eq('unit_id', filters.unitId);
       }
-      
+
       if (filters?.flockId) {
         query = query.eq('flock_id', filters.flockId);
       }
-      
+
+      // Date range on set_date
+      if (filters?.dateFrom) {
+        query = query.gte('set_date', filters.dateFrom);
+      }
+      if (filters?.dateTo) {
+        query = query.lte('set_date', filters.dateTo);
+      }
+
       const { data: batches, error } = await query;
-      
+
       if (error) throw error;
-      
+
       // Filter by flock group if specified (need to do client-side as it's in flocks table)
       let filteredBatches = batches || [];
       if (filters?.flockGroupId) {
         filteredBatches = filteredBatches.filter(
           batch => batch.flocks?.flock_group_id === filters.flockGroupId
+        );
+      }
+
+      // Flock-number range (client-side; lives on flocks table)
+      if (filters?.flockNumberMin != null) {
+        filteredBatches = filteredBatches.filter(
+          batch => (batch.flocks?.flock_number ?? -Infinity) >= filters.flockNumberMin!
+        );
+      }
+      if (filters?.flockNumberMax != null) {
+        filteredBatches = filteredBatches.filter(
+          batch => (batch.flocks?.flock_number ?? Infinity) <= filters.flockNumberMax!
         );
       }
       

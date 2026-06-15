@@ -3,12 +3,29 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useQueryClient } from "@tanstack/react-query";
 import { WifiOff, Wifi, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { offlineQueue } from "@/lib/offlineQueue";
 
 export const OfflineBanner: React.FC = () => {
   const { isOnline, wasOffline, clearWasOffline } = useOnlineStatus();
   const queryClient = useQueryClient();
+  const [pendingCount, setPendingCount] = useState(0);
   const [showBackOnline, setShowBackOnline] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const refreshPendingCount = async () => {
+      setPendingCount(await offlineQueue.getCount());
+    };
+
+    refreshPendingCount();
+    window.addEventListener('offline-queue-changed', refreshPendingCount);
+    const interval = setInterval(refreshPendingCount, 5000);
+
+    return () => {
+      window.removeEventListener('offline-queue-changed', refreshPendingCount);
+      clearInterval(interval);
+    };
+  }, []);
 
   // When coming back online, show the "back online" message and trigger refetch
   useEffect(() => {
@@ -63,7 +80,9 @@ export const OfflineBanner: React.FC = () => {
       ) : (
         <>
           <WifiOff className="h-4 w-4" />
-          <span>You're offline. Showing cached data.</span>
+          <span>
+            You're offline. Showing cached data{pendingCount > 0 ? ` with ${pendingCount} pending sync item${pendingCount === 1 ? '' : 's'}.` : '.'}
+          </span>
           <button
             onClick={() => setDismissed(true)}
             className="ml-2 p-1 hover:bg-amber-600 rounded-full transition-colors"

@@ -7,6 +7,8 @@ import { ArrowLeft, Package, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import EggPackDataEntry from "@/components/dashboard/EggPackDataEntry";
+import { fetchWithOfflineFallback, getOfflineData } from "@/lib/offlineDataCache";
+import type { House } from "@/hooks/useHousesData";
 
 
 interface HouseInfo {
@@ -39,45 +41,63 @@ const EggPackEntryPage = () => {
   const loadHouseInfo = async () => {
     if (!houseId) return;
     
-    const { data, error } = await supabase
-      .from('batches')
-      .select(`
-        *,
-        flocks(flock_name, flock_number, house_number),
-        machines(id, machine_number, machine_type, location)
-      `)
-      .eq('id', houseId)
-      .single();
+    try {
+      const data = await fetchWithOfflineFallback(`batch-${houseId}`, async () => {
+        try {
+          const { data, error } = await supabase
+            .from('batches')
+            .select(`
+              *,
+              flocks(flock_name, flock_number, house_number),
+              machines(id, machine_number, machine_type, location)
+            `)
+            .eq('id', houseId)
+            .single();
+          if (error) throw error;
+          return data;
+        } catch (error) {
+          const house = (await getOfflineData<House[]>('houses'))?.find((cachedHouse) => cachedHouse.id === houseId);
+          if (!house) throw error;
+          return {
+            id: house.id,
+            batch_number: house.batch_number,
+            set_date: house.set_date,
+            expected_hatch_date: house.expected_hatch_date,
+            total_eggs_set: house.total_eggs_set,
+            status: house.status,
+            flocks: { flock_name: house.flock_name, flock_number: house.flock_number, house_number: house.house_number },
+            machines: { machine_number: house.machine_number },
+          };
+        }
+      });
 
-    if (error) {
+      if (data) {
+        // Extract house number from batch_number if not in flocks table
+        let houseNumber = data.flocks?.house_number || '';
+        if (!houseNumber && data.batch_number.includes('#')) {
+          const parts = data.batch_number.split('#');
+          houseNumber = parts[1]?.trim() || '1';
+        }
+
+        setHouseInfo({
+          id: data.id,
+          batch_number: data.batch_number,
+          flock_name: data.flocks?.flock_name || '',
+          flock_number: data.flocks?.flock_number || 0,
+          machine_number: data.machines?.machine_number || '',
+          house_number: houseNumber,
+          set_date: data.set_date,
+          expected_hatch_date: data.expected_hatch_date,
+          total_eggs_set: data.total_eggs_set,
+          status: data.status
+        });
+      }
+    } catch (error: any) {
       console.error("Error loading house:", error);
       toast({
         title: "Error loading house",
         description: `${error.message}. Please try refreshing the page.`,
         variant: "destructive"
-      });
-      return;
-    }
-    
-    if (data) {
-      // Extract house number from batch_number if not in flocks table
-      let houseNumber = data.flocks?.house_number || '';
-      if (!houseNumber && data.batch_number.includes('#')) {
-        const parts = data.batch_number.split('#');
-        houseNumber = parts[1]?.trim() || '1';
-      }
-      
-      setHouseInfo({
-        id: data.id,
-        batch_number: data.batch_number,
-        flock_name: data.flocks?.flock_name || '',
-        flock_number: data.flocks?.flock_number || 0,
-        machine_number: data.machines?.machine_number || '',
-        house_number: houseNumber,
-        set_date: data.set_date,
-        expected_hatch_date: data.expected_hatch_date,
-        total_eggs_set: data.total_eggs_set,
-        status: data.status
       });
     }
   };
@@ -85,19 +105,22 @@ const EggPackEntryPage = () => {
   const loadEggPackData = async () => {
     if (!houseId) return;
     
-    const { data, error } = await supabase
-      .from('egg_pack_quality')
-      .select('*')
-      .eq('batch_id', houseId);
-
-    if (error) {
+    try {
+      const data = await fetchWithOfflineFallback(`egg-pack-${houseId}`, async () => {
+        const { data, error } = await supabase
+          .from('egg_pack_quality')
+          .select('*')
+          .eq('batch_id', houseId);
+        if (error) throw error;
+        return data || [];
+      });
+      setEggPackData(data || []);
+    } catch (error: any) {
       toast({
         title: "Error loading egg pack data",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      setEggPackData(data || []);
     }
   };
 

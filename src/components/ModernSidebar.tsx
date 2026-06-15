@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  FileInput, 
-  CheckSquare, 
-  Settings, 
+import {
+  FileInput,
+  CheckSquare,
+  Settings,
   MessageSquare,
   PanelLeftClose,
   PanelLeft,
   Home,
   TrendingUp,
   FileSpreadsheet,
-  ClipboardCheck
+  ClipboardCheck,
+  Layers,
+  Box
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +40,8 @@ const navigationItems: Array<{
   featureKey?: FeatureKey;
 }> = [
   { path: '/', label: 'Dashboard', icon: Home, requiresAuth: true, featureKey: 'dashboard' },
+  { path: '/multi-stage', label: 'Multi-Stage', icon: Layers, requiresAuth: true, featureKey: 'multi_stage' },
+  { path: '/single-stage', label: 'Single-Stage', icon: Box, requiresAuth: true, featureKey: 'single_stage' },
   { path: '/data-entry', label: 'Data Entry', icon: FileInput, requiresAuth: true, featureKey: 'data_entry' },
   { path: '/qa-hub', label: 'QA Hub', icon: ClipboardCheck, requiresAuth: true, featureKey: 'qa_hub' },
   { path: '/embrex-data-sheet', label: 'Data Sheet', icon: FileSpreadsheet, requiresAuth: true, featureKey: 'embrex_data_sheet' },

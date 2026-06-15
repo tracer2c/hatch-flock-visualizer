@@ -24,8 +24,12 @@ import {
 } from "lucide-react";
 import { useHatcheries, useSingleSetterMachines } from '@/hooks/useQAHubData';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { submitSpecificGravityTest, submitWeightTracking, getUserCompanyId } from '@/services/qaSubmissionService';
+import { getUserCompanyId } from '@/services/qaSubmissionService';
+import { useOfflineSubmit } from '@/hooks/useOfflineSubmit';
+import { useAuth } from '@/hooks/useAuth';
+import { PendingSyncList } from '@/components/ui/pending-sync-list';
+import { getOfflineData } from '@/lib/offlineDataCache';
+import type { UserProfile } from '@/hooks/useAuth';
 import RectalTempEntry from './RectalTempEntry';
 import TrayWashEntry from './TrayWashEntry';
 import CullChecksEntry from './CullChecksEntry';
@@ -65,6 +69,23 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState('rectal-temps');
+  const { profile } = useAuth();
+  const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
+    invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
+  });
+  const { submit: submitSpecificGravity } = useOfflineSubmit('specific_gravity_tests', {
+    invalidateQueries: ['specific_gravity_tests'],
+  });
+  const { submit: submitWeightTrackingRecord } = useOfflineSubmit('weight_tracking', {
+    invalidateQueries: ['weight_tracking'],
+  });
+
+  const resolveCompanyId = async () => {
+    if (profile?.company_id) return profile.company_id;
+    const cachedProfile = await getOfflineData<UserProfile>('current-user-profile');
+    if (cachedProfile?.company_id) return cachedProfile.company_id;
+    return getUserCompanyId();
+  };
 
   const { data: hatcheries, isLoading: hatcheriesLoading } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
@@ -95,8 +116,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const companyId = await getUserCompanyId();
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const companyId = await resolveCompanyId();
+      await submitQAMonitoring({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.checkDate,
@@ -109,8 +130,9 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         entry_mode: 'house',
         candling_results: JSON.stringify({ type: 'rectal_temperature', location: data.location }),
         company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-      if (error) throw error;
       toast.success('Rectal temperature saved!');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -123,8 +145,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const companyId = await getUserCompanyId();
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const companyId = await resolveCompanyId();
+      await submitQAMonitoring({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.washDate,
@@ -137,8 +159,9 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         entry_mode: 'house',
         candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck }),
         company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-      if (error) throw error;
       toast.success('Tray wash temperatures saved!');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -151,8 +174,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const companyId = await getUserCompanyId();
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const companyId = await resolveCompanyId();
+      await submitQAMonitoring({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.checkDate,
@@ -166,8 +189,9 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         entry_mode: 'house',
         candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType }),
         company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-      if (error) throw error;
       toast.success('Cull check saved!');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -180,19 +204,29 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const result = await submitSpecificGravityTest({
+      const sinkCount = data.sampleSize - data.floatCount;
+      const threshold = data.age >= 25 && data.age <= 40 ? 10 : 15;
+      const companyId = await resolveCompanyId();
+
+      await submitSpecificGravity({
         flock_id: data.flock_id,
         batch_id: selectedMachine.currentHouse.id,
         test_date: data.testDate,
         age_weeks: data.age,
         sample_size: data.sampleSize,
         float_count: data.floatCount,
+        sink_count: sinkCount,
         float_percentage: data.floatPercentage,
-        notes: notes || null
+        meets_standard: data.floatPercentage < threshold,
+        standard_min: 0,
+        standard_max: threshold,
+        difference: data.floatPercentage - threshold,
+        notes: notes || null,
+        company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-
-      if (!result.success) throw new Error(result.error);
-      toast.success('Specific gravity test saved to dedicated table!');
+      toast.success('Specific gravity test saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -205,8 +239,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const companyId = await getUserCompanyId();
-      const { error } = await supabase.from('qa_monitoring').insert({
+      const companyId = await resolveCompanyId();
+      await submitQAMonitoring({
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.hatchDate,
@@ -219,8 +253,9 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         entry_mode: 'house',
         candling_results: JSON.stringify({ type: 'hatch_progression', flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour }),
         company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-      if (error) throw error;
       toast.success('Hatch progression saved!');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -233,7 +268,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
-      const result = await submitWeightTracking({
+      const companyId = await resolveCompanyId();
+      await submitWeightTrackingRecord({
         batch_id: selectedMachine.currentHouse.id,
         flock_id: selectedMachine.currentHouse.flock?.id || null,
         machine_id: selectedMachine.id,
@@ -241,11 +277,12 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         day_of_incubation: data.dayOfIncubation,
         total_weight: data.day1Weight,
         percent_loss: data.lossPercentage,
-        notes: notes ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}` : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`
+        notes: notes ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}` : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`,
+        company_id: companyId,
+      }, 'insert', {
+        batchId: selectedMachine.currentHouse.id,
       });
-
-      if (!result.success) throw new Error(result.error);
-      toast.success('Moisture loss saved to weight tracking table!');
+      toast.success('Moisture loss saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -401,6 +438,22 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
           </div>
         </CardHeader>
       </Card>
+
+      <PendingSyncList
+        table="qa_monitoring"
+        batchId={selectedMachine.currentHouse?.id}
+        title="QA records waiting to sync"
+      />
+      <PendingSyncList
+        table="specific_gravity_tests"
+        batchId={selectedMachine.currentHouse?.id}
+        title="Specific gravity records waiting to sync"
+      />
+      <PendingSyncList
+        table="weight_tracking"
+        batchId={selectedMachine.currentHouse?.id}
+        title="Moisture loss records waiting to sync"
+      />
 
       {!selectedMachine.currentHouse ? (
         <Alert variant="destructive">

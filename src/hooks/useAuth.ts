@@ -3,6 +3,7 @@ import { User, Session, Factor } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { activityLogger } from '@/services/activityLogger';
+import { cacheOfflineData, getOfflineData } from '@/lib/offlineDataCache';
 
 export interface UserProfile {
   id: string;
@@ -110,8 +111,13 @@ export const useAuth = () => {
 
       if (error) throw error;
       setProfile(data);
+      await cacheOfflineData('current-user-profile', data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      const cachedProfile = await getOfflineData<UserProfile>('current-user-profile');
+      if (cachedProfile?.id === userId) {
+        setProfile(cachedProfile);
+      }
     }
   };
 
@@ -123,9 +129,15 @@ export const useAuth = () => {
         .eq('user_id', userId);
 
       if (error) throw error;
-      setRoles(data || []);
+      const nextRoles = data || [];
+      setRoles(nextRoles);
+      await cacheOfflineData(`current-user-roles-${userId}`, nextRoles);
     } catch (error) {
       console.error('Error fetching user roles:', error);
+      const cachedRoles = await getOfflineData<UserRole[]>(`current-user-roles-${userId}`);
+      if (cachedRoles) {
+        setRoles(cachedRoles);
+      }
     }
   };
 

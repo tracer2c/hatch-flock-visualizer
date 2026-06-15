@@ -197,12 +197,43 @@ const UserManager = () => {
 
   const updateUserRole = async (userId: string, role: 'company_admin' | 'operations_head' | 'staff') => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role })
-        .eq('user_id', userId);
+      const companyId = profile?.company_id;
+      if (!companyId) throw new Error("Company not found on your profile");
 
-      if (error) throw error;
+      // A user can legitimately have only one role in a company. Some users ended
+      // up with multiple user_roles rows, which made a blanket
+      // `UPDATE ... WHERE user_id = ?` hit several rows and violate the
+      // UNIQUE(user_id, company_id, role) constraint (HTTP 409). So we consolidate
+      // to a single row: keep one, delete the rest, and set the kept row's role.
+      const { data: existing, error: fetchErr } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('company_id', companyId);
+      if (fetchErr) throw fetchErr;
+
+      if (!existing || existing.length === 0) {
+        // No role yet — create one.
+        const { error: insertErr } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, company_id: companyId, role });
+        if (insertErr) throw insertErr;
+      } else {
+        const [keep, ...extras] = existing;
+        // Remove duplicate rows first so the update below can't collide.
+        if (extras.length > 0) {
+          const { error: delErr } = await supabase
+            .from('user_roles')
+            .delete()
+            .in('id', extras.map((r) => r.id));
+          if (delErr) throw delErr;
+        }
+        const { error: updErr } = await supabase
+          .from('user_roles')
+          .update({ role })
+          .eq('id', keep.id);
+        if (updErr) throw updErr;
+      }
 
       toast({
         title: "Success",
@@ -210,11 +241,11 @@ const UserManager = () => {
       });
 
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user role:', error);
       toast({
         title: "Error",
-        description: "Failed to update user role",
+        description: error?.message || "Failed to update user role",
         variant: "destructive"
       });
     }

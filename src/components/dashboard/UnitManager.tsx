@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Archive, ArchiveRestore } from "lucide-react";
+import { useArchive } from "@/hooks/useArchive";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Badge } from "@/components/ui/badge";
 
 type Unit = {
   id: string;
@@ -15,6 +18,8 @@ type Unit = {
   code: string | null;
   description: string | null;
   status: string;
+  archived_at?: string | null;
+  archived_by?: string | null;
 };
 
 const UnitManager = () => {
@@ -37,6 +42,10 @@ const UnitManager = () => {
     description: "",
     status: "active",
   });
+  const [showArchived, setShowArchived] = useState(false);
+  const { archive: archiveUnit, restore: restoreUnit, isMutating: archiveBusy } = useArchive("units");
+  const { hasWriteAccess } = usePermissions();
+  const canArchive = hasWriteAccess("hatcheries");
 
   const loadUserCompany = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -61,11 +70,17 @@ const UnitManager = () => {
     const cid = companyId || userCompanyId;
     if (!cid) return;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("units")
       .select("*")
       .eq("company_id", cid)
       .order("name", { ascending: true });
+
+    if (!showArchived) {
+      query = query.is("archived_at", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
@@ -86,7 +101,7 @@ const UnitManager = () => {
       }
     };
     init();
-  }, []);
+  }, [showArchived]);
 
   const resetCreateForm = () => {
     setForm({
@@ -212,7 +227,17 @@ const UnitManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Hatchery Management</span>
-            <Button variant={showCreate ? "outline" : "default"} onClick={() => setShowCreate((s) => !s)}>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showArchived ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowArchived(!showArchived)}
+                title={showArchived ? "Hide archived hatcheries" : "Show archived hatcheries"}
+              >
+                <Archive className="h-4 w-4 mr-2" />
+                {showArchived ? "Showing Archived" : "Show Archived"}
+              </Button>
+              <Button variant={showCreate ? "outline" : "default"} onClick={() => setShowCreate((s) => !s)}>
               {showCreate ? (
                 <span className="inline-flex items-center gap-2">
                   <X className="h-4 w-4" /> Cancel
@@ -222,7 +247,8 @@ const UnitManager = () => {
                   <Plus className="h-4 w-4" /> New Hatchery
                 </span>
               )}
-            </Button>
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         {showCreate && (
@@ -290,18 +316,57 @@ const UnitManager = () => {
               {units.map((u) => {
                 const isEditing = editingId === u.id;
                 return (
-                  <div key={u.id} className="p-4 border rounded-lg">
+                  <div key={u.id} className={`p-4 border rounded-lg ${u.archived_at ? 'opacity-60 bg-muted/30' : ''}`}>
                     {!isEditing ? (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="font-semibold">{u.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">{u.name}</div>
+                            {u.archived_at && (
+                              <Badge variant="outline" className="text-xs">
+                                <Archive className="h-3 w-3 mr-1" />
+                                Archived
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => startEdit(u)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => deleteUnit(u.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!u.archived_at && (
+                              <Button variant="ghost" size="sm" onClick={() => startEdit(u)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canArchive && (
+                              u.archived_at ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={archiveBusy}
+                                  onClick={() => restoreUnit(u.id)}
+                                  title="Restore hatchery"
+                                >
+                                  <ArchiveRestore className="h-4 w-4 text-primary" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={archiveBusy}
+                                  onClick={() => {
+                                    if (confirm(`Archive hatchery "${u.name}"?\n\nIt will be hidden from active dropdowns. Existing data remains visible.`)) {
+                                      archiveUnit(u.id);
+                                    }
+                                  }}
+                                  title="Archive hatchery"
+                                >
+                                  <Archive className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )
+                            )}
+                            {!u.archived_at && (
+                              <Button variant="ghost" size="sm" onClick={() => deleteUnit(u.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         {u.code && <div className="text-sm text-gray-600">Code: {u.code}</div>}

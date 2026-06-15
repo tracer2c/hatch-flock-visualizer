@@ -500,12 +500,11 @@ const QAEntryPage = () => {
         return baseRecord;
       });
 
-      // Insert into database
-      const companyId = await getUserCompanyId();
-      const recordsWithCompany = qaRecords.map((r: any) => ({ ...r, company_id: companyId }));
+      // Insert into database — company_id auto-derived from parent batch
+      // via qa_monitoring_set_company_id trigger.
       const { error } = await supabase
         .from('qa_monitoring')
-        .insert(recordsWithCompany);
+        .insert(qaRecords as any);
 
       if (error) throw error;
 

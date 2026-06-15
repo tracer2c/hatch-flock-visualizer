@@ -7,6 +7,12 @@ import { ArrowLeft, Syringe, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ClearsInjectedDataEntry from "@/components/dashboard/ClearsInjectedDataEntry";
+import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { fetchWithOfflineFallback, getOfflineData } from "@/lib/offlineDataCache";
+import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
+import type { House } from "@/hooks/useHousesData";
+import { PendingSyncList } from "@/components/ui/pending-sync-list";
 
 interface HouseInfo {
   id: string;
@@ -29,6 +35,10 @@ const ClearsInjectedEntryPage = () => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { isOnline } = useOnlineStatus();
+  const { submit: offlineSubmit } = useOfflineSubmit('batches', {
+    invalidateQueries: ['batches', 'houses', 'dataCounts'],
+  });
 
   useEffect(() => {
     if (houseId) {
@@ -39,47 +49,67 @@ const ClearsInjectedEntryPage = () => {
   const loadHouseInfo = async () => {
     if (!houseId) return;
     
-    const { data, error } = await supabase
-      .from('batches')
-      .select(`
-        *,
-        flocks(flock_name, flock_number, house_number),
-        machines(id, machine_number, machine_type, location)
-      `)
-      .eq('id', houseId)
-      .single();
+    try {
+      const data = await fetchWithOfflineFallback(`batch-${houseId}`, async () => {
+        try {
+          const { data, error } = await supabase
+            .from('batches')
+            .select(`
+              *,
+              flocks(flock_name, flock_number, house_number),
+              machines(id, machine_number, machine_type, location)
+            `)
+            .eq('id', houseId)
+            .single();
+          if (error) throw error;
+          return data;
+        } catch (error) {
+          const house = (await getOfflineData<House[]>('houses'))?.find((cachedHouse) => cachedHouse.id === houseId);
+          if (!house) throw error;
+          return {
+            id: house.id,
+            batch_number: house.batch_number,
+            set_date: house.set_date,
+            expected_hatch_date: house.expected_hatch_date,
+            total_eggs_set: house.total_eggs_set,
+            status: house.status,
+            eggs_cleared: null,
+            eggs_injected: null,
+            flocks: { flock_name: house.flock_name, flock_number: house.flock_number, house_number: house.house_number },
+            machines: { machine_number: house.machine_number },
+          };
+        }
+      });
 
-    if (error) {
+      if (data) {
+        // Extract house number from batch_number if not in flocks table
+        let houseNumber = data.flocks?.house_number || '';
+        if (!houseNumber && data.batch_number.includes('#')) {
+          const parts = data.batch_number.split('#');
+          houseNumber = parts[1]?.trim() || '1';
+        }
+
+        setHouseInfo({
+          id: data.id,
+          batch_number: data.batch_number,
+          flock_name: data.flocks?.flock_name || '',
+          flock_number: data.flocks?.flock_number || 0,
+          machine_number: data.machines?.machine_number || '',
+          house_number: houseNumber,
+          set_date: data.set_date,
+          expected_hatch_date: data.expected_hatch_date,
+          total_eggs_set: data.total_eggs_set,
+          status: data.status,
+          eggs_cleared: (data as any).eggs_cleared,
+          eggs_injected: data.eggs_injected
+        });
+      }
+    } catch (error: any) {
       console.error("Error loading house:", error);
       toast({
         title: "Error loading house",
         description: `${error.message}. Please try refreshing the page.`,
         variant: "destructive"
-      });
-      return;
-    }
-    
-    if (data) {
-      // Extract house number from batch_number if not in flocks table
-      let houseNumber = data.flocks?.house_number || '';
-      if (!houseNumber && data.batch_number.includes('#')) {
-        const parts = data.batch_number.split('#');
-        houseNumber = parts[1]?.trim() || '1';
-      }
-      
-      setHouseInfo({
-        id: data.id,
-        batch_number: data.batch_number,
-        flock_name: data.flocks?.flock_name || '',
-        flock_number: data.flocks?.flock_number || 0,
-        machine_number: data.machines?.machine_number || '',
-        house_number: houseNumber,
-        set_date: data.set_date,
-        expected_hatch_date: data.expected_hatch_date,
-        total_eggs_set: data.total_eggs_set,
-        status: data.status,
-        eggs_cleared: (data as any).eggs_cleared,
-        eggs_injected: data.eggs_injected
       });
     }
   };
@@ -89,38 +119,34 @@ const ClearsInjectedEntryPage = () => {
     
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('batches')
-        .update({
-          eggs_cleared: values.clear_number,
-          eggs_injected: values.injected_number,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', houseId);
+      await offlineSubmit({
+        id: houseId,
+        eggs_cleared: values.clear_number,
+        eggs_injected: values.injected_number,
+        clears_technician_name: values.clears_technician_name,
+        clears_notes: values.clears_notes,
+        updated_at: new Date().toISOString()
+      }, 'update', {
+        batchId: houseId,
+        serverId: houseId,
+      });
 
-      if (error) {
-        toast({
-          title: "Error saving data",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Data saved successfully",
-          description: "Clears and injected numbers have been updated"
-        });
-        
-        // Update local state
-        setHouseInfo(prev => prev ? {
-          ...prev,
-          eggs_cleared: values.clear_number,
-          eggs_injected: values.injected_number
-        } : null);
-      }
-    } catch (error) {
+      toast({
+        title: isOnline ? "Data saved successfully" : "Saved offline",
+        description: isOnline
+          ? "Clears and injected numbers have been updated"
+          : "Clears and injected numbers will sync when back online"
+      });
+
+      setHouseInfo(prev => prev ? {
+        ...prev,
+        eggs_cleared: values.clear_number,
+        eggs_injected: values.injected_number
+      } : null);
+    } catch (error: any) {
       toast({
         title: "Error saving data",
-        description: "An unexpected error occurred",
+        description: error?.message || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {
@@ -180,6 +206,7 @@ const ClearsInjectedEntryPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-2">
               <Syringe className="h-8 w-8 text-blue-600" />
               Clears & Injected Data Entry
+              <PendingSyncBadge table="batches" batchId={houseInfo.id} />
             </h1>
             <p className="text-gray-600">Record the number of cleared eggs and injected eggs for this batch.</p>
           </div>
@@ -210,6 +237,12 @@ const ClearsInjectedEntryPage = () => {
             </div>
           </div>
         </div>
+
+        <PendingSyncList
+          table="batches"
+          batchId={houseInfo.id}
+          title="Clears & Injected updates waiting to sync"
+        />
 
         {/* Clears & Injected Data Entry Component */}
         <ClearsInjectedDataEntry 

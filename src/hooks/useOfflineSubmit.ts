@@ -1,12 +1,10 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { offlineQueue } from '@/lib/offlineQueue';
+import { offlineQueue, OfflineOperation, OfflineTable } from '@/lib/offlineQueue';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useToast } from './use-toast';
 import { activityLogger } from '@/services/activityLogger';
-
-type Operation = 'insert' | 'update' | 'upsert' | 'delete';
 
 interface UseOfflineSubmitOptions {
   onSuccess?: () => void;
@@ -14,8 +12,20 @@ interface UseOfflineSubmitOptions {
   invalidateQueries?: string[];
 }
 
+interface OfflineSubmitMeta {
+  localId?: string;
+  serverId?: string;
+  batchId?: string;
+  optimisticData?: Record<string, any>;
+}
+
+function isNetworkFailure(error: any): boolean {
+  const message = String(error?.message || error?.details || error || '').toLowerCase();
+  return error instanceof TypeError || message.includes('failed to fetch') || message.includes('networkerror') || message.includes('network request failed');
+}
+
 export function useOfflineSubmit(
-  table: string,
+  table: OfflineTable,
   options: UseOfflineSubmitOptions = {}
 ) {
   const { isOnline } = useOnlineStatus();
@@ -23,7 +33,43 @@ export function useOfflineSubmit(
   const { toast } = useToast();
 
   const submit = useCallback(
-    async (data: Record<string, any>, operation: Operation = 'insert') => {
+    async (data: Record<string, any>, operation: OfflineOperation = 'insert', meta: OfflineSubmitMeta = {}) => {
+      const queueOffline = async () => {
+        const queueId = await offlineQueue.add({
+          table,
+          operation,
+          payload: data,
+          localId: meta.localId,
+          serverId: meta.serverId,
+          batchId: meta.batchId,
+        });
+
+        toast({
+          title: "Saved offline",
+          description: "Data will sync when you're back online",
+        });
+
+        options.onSuccess?.();
+        queryClient.invalidateQueries({ queryKey: [table] });
+        if (options.invalidateQueries) {
+          options.invalidateQueries.forEach((queryKey) => {
+            queryClient.invalidateQueries({ queryKey: [queryKey] });
+          });
+        }
+        window.dispatchEvent(new CustomEvent('offline-queue-changed'));
+        window.dispatchEvent(new CustomEvent('offline-record-queued', {
+          detail: {
+            queueId,
+            table,
+            operation,
+            payload: data,
+            optimisticData: meta.optimisticData || data,
+            batchId: meta.batchId || data.batch_id || data.id,
+          },
+        }));
+        return null;
+      };
+
       try {
         if (isOnline) {
           // Direct Supabase operation
@@ -86,22 +132,14 @@ export function useOfflineSubmit(
           options.onSuccess?.();
           return result?.data;
         } else {
-          // Queue for later sync
-          await offlineQueue.add({
-            table,
-            operation,
-            data,
-          });
-
-          toast({
-            title: "Saved offline",
-            description: "Data will sync when you're back online",
-          });
-
-          options.onSuccess?.();
-          return null;
+          return queueOffline();
         }
       } catch (error: any) {
+        if (isOnline && isNetworkFailure(error)) {
+          console.warn('Network save failed; queued for offline sync:', error);
+          return queueOffline();
+        }
+
         console.error('Submit error:', error);
         
         toast({

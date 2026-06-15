@@ -1,5 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchWithOfflineFallback, getOfflineData } from '@/lib/offlineDataCache';
 
 export interface House {
   id: string;
@@ -8,6 +9,7 @@ export interface House {
   flock_number: number;
   house_number: string;
   machine_number: string;
+  machine_id?: string;
   machine_type: string;
   set_date: string;
   expected_hatch_date: string;
@@ -26,10 +28,11 @@ async function fetchHouses(): Promise<House[]> {
     .select(`
       *,
       flocks(flock_name, flock_number, house_number, technician_name),
-      machines(machine_number, machine_type),
+      machines(id, machine_number, machine_type),
       fertility_analysis!left(id),
       residue_analysis!left(id)
     `)
+    .is('archived_at', null)
     .order('set_date', { ascending: false });
 
   if (error) throw error;
@@ -59,6 +62,7 @@ async function fetchHouses(): Promise<House[]> {
       flock_number: batch.flocks?.flock_number || 0,
       house_number: houseNumber,
       machine_number: batch.machines?.machine_number || '',
+      machine_id: batch.machines?.id || '',
       machine_type: batch.machines?.machine_type || '',
       set_date: batch.set_date,
       expected_hatch_date: batch.expected_hatch_date,
@@ -76,104 +80,140 @@ async function fetchHouses(): Promise<House[]> {
 export function useHousesData() {
   return useQuery({
     queryKey: ['houses'],
-    queryFn: fetchHouses,
+    queryFn: () => fetchWithOfflineFallback('houses', fetchHouses),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    networkMode: 'offlineFirst',
   });
 }
 
 export function useFlocksData() {
   return useQuery({
     queryKey: ['flocks'],
-    queryFn: async () => {
+    queryFn: () => fetchWithOfflineFallback('flocks', async () => {
       const { data, error } = await supabase
         .from('flocks')
         .select('*')
         .order('flock_number', { ascending: true });
       if (error) throw error;
       return data || [];
-    },
+    }),
     staleTime: 5 * 60 * 1000,
+    networkMode: 'offlineFirst',
   });
 }
 
 export function useMachinesData() {
   return useQuery({
     queryKey: ['machines'],
-    queryFn: async () => {
+    queryFn: () => fetchWithOfflineFallback('machines', async () => {
       const { data, error } = await supabase
         .from('machines')
         .select('*')
         .order('machine_number', { ascending: true });
       if (error) throw error;
       return data || [];
-    },
+    }),
     staleTime: 5 * 60 * 1000,
+    networkMode: 'offlineFirst',
   });
 }
 
 export function useUnitsData() {
   return useQuery({
     queryKey: ['units'],
-    queryFn: async () => {
+    queryFn: () => fetchWithOfflineFallback('units', async () => {
       const { data, error } = await supabase
         .from('units')
         .select('*')
         .order('name', { ascending: true });
       if (error) throw error;
       return data || [];
-    },
+    }),
     staleTime: 5 * 60 * 1000,
+    networkMode: 'offlineFirst',
   });
 }
 
 export function useBatchData(batchId: string | null) {
   return useQuery({
     queryKey: ['batch', batchId],
-    queryFn: async () => {
+    queryFn: () => fetchWithOfflineFallback(`batch-${batchId}`, async () => {
       if (!batchId) return null;
-      const { data, error } = await supabase
-        .from('batches')
-        .select(`
-          *,
-          flocks(flock_name, flock_number, house_number),
-          machines(id, machine_number, machine_type, location)
-        `)
-        .eq('id', batchId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+      try {
+        const { data, error } = await supabase
+          .from('batches')
+          .select(`
+            *,
+            flocks(flock_name, flock_number, house_number),
+            machines(id, machine_number, machine_type, location)
+          `)
+          .eq('id', batchId)
+          .single();
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        const houses = await getOfflineData<House[]>('houses');
+        const house = houses?.find((cachedHouse) => cachedHouse.id === batchId);
+        if (!house) throw error;
+
+        return {
+          id: house.id,
+          batch_number: house.batch_number,
+          set_date: house.set_date,
+          expected_hatch_date: house.expected_hatch_date,
+          total_eggs_set: house.total_eggs_set,
+          status: house.status,
+          unit_id: house.unit_id ?? null,
+          flocks: {
+            flock_name: house.flock_name,
+            flock_number: house.flock_number,
+            house_number: house.house_number,
+          },
+          machines: {
+            id: house.machine_id || '',
+            machine_number: house.machine_number,
+            machine_type: house.machine_type,
+            location: '',
+          },
+        };
+      }
+    }),
     enabled: !!batchId,
     staleTime: 5 * 60 * 1000,
+    networkMode: 'offlineFirst',
   });
 }
 
 export function useDataCounts(batchId: string | null) {
   return useQuery({
     queryKey: ['dataCounts', batchId],
-    queryFn: async () => {
+    queryFn: () => fetchWithOfflineFallback(`data-counts-${batchId}`, async () => {
       if (!batchId) return { eggPack: 0, fertility: 0, qa: 0, residue: 0, clearsInjected: 0 };
-      
-      const [eggPackResult, fertilityResult, qaResult, residueResult, clearsInjectedResult] = await Promise.all([
-        supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', batchId),
-        supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId),
-        supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', batchId),
-        supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId),
-        supabase.from('batches').select('eggs_cleared, eggs_injected').eq('id', batchId).single()
-      ]);
+      try {
+        const [eggPackResult, fertilityResult, qaResult, residueResult, clearsInjectedResult] = await Promise.all([
+          supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', batchId),
+          supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId),
+          supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', batchId),
+          supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', batchId),
+          supabase.from('batches').select('eggs_cleared, eggs_injected').eq('id', batchId).single()
+        ]);
 
-      const clearsInjectedCount = clearsInjectedResult.data &&
-        ((clearsInjectedResult.data as any).eggs_cleared !== null || (clearsInjectedResult.data as any).eggs_injected !== null) ? 1 : 0;
+        const clearsInjectedCount = clearsInjectedResult.data &&
+          ((clearsInjectedResult.data as any).eggs_cleared !== null || (clearsInjectedResult.data as any).eggs_injected !== null) ? 1 : 0;
 
-      return {
-        eggPack: eggPackResult.count || 0,
-        fertility: fertilityResult.count || 0,
-        qa: qaResult.count || 0,
-        residue: residueResult.count || 0,
-        clearsInjected: clearsInjectedCount
-      };
-    },
+        return {
+          eggPack: eggPackResult.count || 0,
+          fertility: fertilityResult.count || 0,
+          qa: qaResult.count || 0,
+          residue: residueResult.count || 0,
+          clearsInjected: clearsInjectedCount
+        };
+      } catch {
+        return { eggPack: 0, fertility: 0, qa: 0, residue: 0, clearsInjected: 0 };
+      }
+    }),
     enabled: !!batchId,
     staleTime: 2 * 60 * 1000,
+    networkMode: 'offlineFirst',
   });
 }

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRecentQAEntries } from '@/hooks/useQAHubData';
 import { format } from 'date-fns';
+import { PendingSyncList } from '@/components/ui/pending-sync-list';
 
 const PAGE_SIZE = 20;
 
@@ -45,6 +46,11 @@ const RecentQAEntries: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <PendingSyncList
+        table="qa_monitoring"
+        title="QA records waiting to sync"
+      />
+
       {/* Filter */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

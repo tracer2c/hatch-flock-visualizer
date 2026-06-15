@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle, Wand2, CloudOff } from "lucide-react";
+import { Plus, Package2, Factory, Calendar, AlertCircle, Building2, ChevronDown, X, Filter, Pencil, Clock, AlertTriangle, Wand2, CloudOff, Archive, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Baby } from "lucide-react";
 import { MachineAllocationWizard } from "./MachineAllocationWizard";
 import { useHousesData, useFlocksData, useMachinesData, useUnitsData } from "@/hooks/useHousesData";
+import { useArchive } from "@/hooks/useArchive";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -110,6 +111,29 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
   // Edit state
   const [editingHouse, setEditingHouse] = useState<House | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const { archive: archiveHouse } = useArchive("batches");
+
+  const handleArchiveHouse = async (house: House, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Archive house "${house.flock_name} #${house.house_number}"?\n\nIt will be hidden from active lists but kept for the audit trail and restorable from Management → Archived Items → Houses.`)) return;
+    try {
+      await archiveHouse(house.id);
+    } catch {
+      /* toast handled in hook */
+    }
+  };
+
+  const handleDeleteHouse = async (house: House, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Permanently delete house "${house.flock_name} #${house.house_number}"?\n\nThis removes the house and its data entirely and cannot be undone. To keep the record, use Archive instead.`)) return;
+    const { error } = await supabase.from('batches').delete().eq('id', house.id);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "House deleted", description: `${house.flock_name} #${house.house_number} was removed.` });
+      refetchHouses();
+    }
+  };
   const [editFormData, setEditFormData] = useState({
     setDate: '',
     setTime: '',
@@ -440,23 +464,8 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
     const today = new Date().toISOString().split('T')[0];
     const status = formData.setDate > today ? 'scheduled' : 'in_setter';
 
-    // Fetch current user's company_id for RLS
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Not authenticated", variant: "destructive" });
-      return;
-    }
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    if (profileError || !profile?.company_id) {
-      toast({ title: "Could not determine company", description: profileError?.message, variant: "destructive" });
-      return;
-    }
-
-    const { data, error } = await supabase
+    // company_id auto-derived from parent flock via batches_set_company_id trigger
+    const { data, error } = await (supabase
       .from('batches')
       .insert({
         batch_number: houseNumber,
@@ -467,11 +476,10 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
         set_time: formData.setTime,
         expected_hatch_date: expectedHatchDate,
         total_eggs_set: formData.totalEggs ? parseInt(formData.totalEggs) : 0,
-        status: status,
-        company_id: profile.company_id
-      })
+        status: status
+      } as any)
       .select()
-      .single();
+      .single());
 
     if (error) {
       toast({
@@ -873,6 +881,15 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                       >
                         <Pencil className="h-3.5 w-3.5 text-primary" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 p-0 text-amber-700 border-amber-300 hover:bg-amber-50"
+                        onClick={(e) => handleArchiveHouse(house, e)}
+                        title="Archive house (keeps audit trail, restorable)"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                      </Button>
                       <Badge className={getStatusColor(house.status)}>
                         {house.status}
                       </Badge>
@@ -918,6 +935,19 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                       <AlertCircle className="h-4 w-4" />
                       {house.total_eggs_set.toLocaleString()} eggs
                     </div>
+                  </div>
+
+                  {/* Bottom-right delete */}
+                  <div className="flex justify-end mt-3 pt-2 border-t border-border/40">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleDeleteHouse(house, e)}
+                      title="Delete house permanently"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
               );

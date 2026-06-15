@@ -4,27 +4,34 @@ import {
   columnToPositionKey,
   type OccupancyInfo 
 } from '@/utils/setterPositionMapping';
+import { getOfflineData } from '@/lib/offlineDataCache';
+import type { UserProfile } from '@/hooks/useAuth';
 
 /**
  * Get the current user's company_id from their profile
  */
 export async function getUserCompanyId(): Promise<string> {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user?.id) {
-    throw new Error('User not authenticated');
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user?.id) {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (!error && profile?.company_id) {
+        return profile.company_id;
+      }
+    }
+  } catch (error) {
+    console.warn('Could not fetch live user company, falling back to cached profile:', error);
   }
-  
-  const { data: profile, error } = await supabase
-    .from('user_profiles')
-    .select('company_id')
-    .eq('id', userData.user.id)
-    .single();
-    
-  if (error || !profile?.company_id) {
-    throw new Error('Could not determine user company');
-  }
-  
-  return profile.company_id;
+
+  const cachedProfile = await getOfflineData<UserProfile>('current-user-profile');
+  if (cachedProfile?.company_id) return cachedProfile.company_id;
+
+  throw new Error('Could not determine user company');
 }
 
 interface SubmissionResult {

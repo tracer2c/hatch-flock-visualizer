@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe, ArrowRightLeft, ClipboardCheck } from "lucide-react";
+import { Package, Egg, Activity, AlertTriangle, ArrowLeft, Info, Syringe, ClipboardCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import TransferManager from "@/components/dashboard/TransferManager";
-import { useBatchTransfers } from "@/hooks/useMachineTransfers";
+import { useBatchData, useDataCounts } from "@/hooks/useHousesData";
 
 interface HouseInfo {
   id: string;
@@ -33,7 +31,6 @@ interface DataTypeSelectionProps {
 
 const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
   const [houseInfo, setHouseInfo] = useState<HouseInfo | null>(null);
-  const [showTransferModal, setShowTransferModal] = useState(false);
   const [dataCounts, setDataCounts] = useState({
     eggPack: 0,
     fertility: 0,
@@ -44,77 +41,55 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: transfers = [], refetch: refetchTransfers } = useBatchTransfers(houseId);
+  const { data: batchData, error: batchError } = useBatchData(houseId);
+  const { data: countsData } = useDataCounts(houseId);
 
   useEffect(() => {
-    if (houseId) {
-      loadHouseInfo();
-      loadDataCounts();
-    }
-  }, [houseId]);
-
-  const loadHouseInfo = async () => {
-    const { data, error } = await supabase
-      .from('batches')
-      .select(`
-        *,
-        flocks(flock_name, flock_number, house_number),
-        machines(id, machine_number, machine_type, location)
-      `)
-      .eq('id', houseId)
-      .single();
-
-    if (error) {
+    if (batchError) {
       toast({
         title: "Error loading house",
-        description: error.message,
+        description: batchError.message,
         variant: "destructive"
       });
-    } else {
-      let houseNumber = data.flocks?.house_number || '';
-      if (!houseNumber && data.batch_number.includes('#')) {
-        const parts = data.batch_number.split('#');
+    }
+  }, [batchError, toast]);
+
+  useEffect(() => {
+    if (batchData) {
+      let houseNumber = batchData.flocks?.house_number || '';
+      if (!houseNumber && batchData.batch_number.includes('#')) {
+        const parts = batchData.batch_number.split('#');
         houseNumber = parts[1]?.trim() || '1';
       }
-      
+
       setHouseInfo({
-        id: data.id,
-        batch_number: data.batch_number,
-        flock_name: data.flocks?.flock_name || '',
-        flock_number: data.flocks?.flock_number || 0,
-        machine_number: data.machines?.machine_number || '',
-        machine_id: data.machines?.id || '',
-        machine_type: data.machines?.machine_type || '',
+        id: batchData.id,
+        batch_number: batchData.batch_number,
+        flock_name: batchData.flocks?.flock_name || '',
+        flock_number: batchData.flocks?.flock_number || 0,
+        machine_number: batchData.machines?.machine_number || '',
+        machine_id: batchData.machines?.id || '',
+        machine_type: batchData.machines?.machine_type || '',
         house_number: houseNumber,
-        set_date: data.set_date,
-        expected_hatch_date: data.expected_hatch_date,
-        total_eggs_set: data.total_eggs_set,
-        status: data.status,
-        unit_id: data.unit_id
+        set_date: batchData.set_date,
+        expected_hatch_date: batchData.expected_hatch_date,
+        total_eggs_set: batchData.total_eggs_set,
+        status: batchData.status,
+        unit_id: batchData.unit_id
       });
     }
-  };
+  }, [batchData]);
 
-  const loadDataCounts = async () => {
-    const [eggPackResult, fertilityResult, qaResult, residueResult, clearsInjectedResult] = await Promise.all([
-      supabase.from('egg_pack_quality').select('id', { count: 'exact' }).eq('batch_id', houseId),
-      supabase.from('fertility_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId),
-      supabase.from('qa_monitoring').select('id', { count: 'exact' }).eq('batch_id', houseId),
-      supabase.from('residue_analysis').select('id', { count: 'exact' }).eq('batch_id', houseId),
-      supabase.from('batches').select('eggs_cleared, eggs_injected').eq('id', houseId).single()
-    ]);
-
-    const clearsInjectedCount = clearsInjectedResult.data && 
-      ((clearsInjectedResult.data as any).eggs_cleared !== null || (clearsInjectedResult.data as any).eggs_injected !== null) ? 1 : 0;
-
+  useEffect(() => {
+    if (!countsData) return;
     setDataCounts({
-      eggPack: eggPackResult.count || 0,
-      fertility: fertilityResult.count || 0,
-      qa: qaResult.count || 0,
-      residue: residueResult.count || 0,
-      clearsInjected: clearsInjectedCount
+      eggPack: countsData.eggPack,
+      fertility: countsData.fertility,
+      qa: countsData.qa,
+      residue: countsData.residue,
+      clearsInjected: countsData.clearsInjected
     });
-  };
+  }, [countsData]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -241,83 +216,6 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           </AlertDescription>
         </Alert>
 
-        {/* Machine Transfer Card */}
-        <Card className="mb-6 bg-white">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 text-white">
-                  <ArrowRightLeft className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Machine Transfer</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Record Day-18 setter → hatcher transfers
-                  </p>
-                </div>
-              </div>
-              <Button onClick={() => setShowTransferModal(true)}>
-                Record Transfer
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Current Machine Info */}
-            <div className="p-3 bg-muted/40 rounded-lg mb-4">
-              <p className="text-xs text-muted-foreground">Current Machine</p>
-              <p className="font-medium">
-                {houseInfo.machine_number} 
-                <span className="text-muted-foreground ml-2">({houseInfo.machine_type})</span>
-              </p>
-            </div>
-            
-            {/* Transfer History */}
-            {transfers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No transfers recorded for this house yet.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Transfer History</p>
-                <div className="rounded-md border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Date</th>
-                        <th className="px-3 py-2 text-left font-medium">From</th>
-                        <th className="px-3 py-2 text-left font-medium">To</th>
-                        <th className="px-3 py-2 text-right font-medium">Day</th>
-                        <th className="px-3 py-2 text-left font-medium">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transfers.map(t => (
-                        <tr key={t.id} className="border-t">
-                          <td className="px-3 py-2">
-                            {new Date(t.transfer_date).toLocaleDateString()}
-                          </td>
-                          <td className="px-3 py-2">{t.from_machine?.machine_number || '—'}</td>
-                          <td className="px-3 py-2">{t.to_machine?.machine_number || '—'}</td>
-                          <td className="px-3 py-2 text-right">
-                            <Badge className={
-                              t.days_in_previous_machine === 18 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }>
-                              {t.days_in_previous_machine ?? '—'}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">{t.notes || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Data Type Selection */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Data Entry Type</h2>
@@ -357,20 +255,6 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
           })}
         </div>
       </div>
-
-      {/* Transfer Manager Modal */}
-      <TransferManager
-        open={showTransferModal}
-        onOpenChange={(open) => {
-          setShowTransferModal(open);
-          if (!open) refetchTransfers();
-        }}
-        batchId={houseId}
-        currentMachineId={houseInfo.machine_id}
-        currentMachineNumber={houseInfo.machine_number}
-        setDate={houseInfo.set_date}
-        unitId={houseInfo.unit_id}
-      />
     </div>
   );
 };

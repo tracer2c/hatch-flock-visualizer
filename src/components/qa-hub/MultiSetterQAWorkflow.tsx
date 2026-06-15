@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Settings, 
-  Building2, 
-  ArrowLeft, 
+import {
+  Settings,
+  Building2,
+  ArrowLeft,
   Search,
   Layers,
   Thermometer,
@@ -20,22 +20,27 @@ import {
   Droplets,
   AlertTriangle,
   Scale,
-  RotateCcw,
   Timer,
-  Eye
+  Eye,
+  WifiOff,
 } from "lucide-react";
 import { useHatcheries, useMultiSetterMachines } from '@/hooks/useQAHubData';
 import { usePositionOccupancy } from '@/hooks/usePositionOccupancy';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  submitMachineLevelQA, 
-  submitMachineWideQA, 
-  submitGenericQAWithLinkage,
-  submitSpecificGravityTest,
-  submitWeightTrackingMulti,
-  type FlockLinkage 
-} from '@/services/qaSubmissionService';
+import { type FlockLinkage } from '@/services/qaSubmissionService';
+import {
+  submitMachineLevelQAOffline,
+  submitMachineWideQAOffline,
+  submitGenericQAOffline,
+  submitSpecificGravityOffline,
+  submitWeightTrackingMultiOffline,
+  submitCandlingQAMultiOffline,
+} from '@/services/offlineQASubmissionService';
+import { getOfflineData } from '@/lib/offlineDataCache';
+import type { UserProfile } from '@/hooks/useAuth';
+import { getUserCompanyId } from '@/services/qaSubmissionService';
 import MultiSetterQAEntry from '@/components/dashboard/MultiSetterQAEntry';
 import MachineWideAnglesEntry from '@/components/qa-hub/MachineWideAnglesEntry';
 import MachineWideHumidityEntry from '@/components/qa-hub/MachineWideHumidityEntry';
@@ -46,7 +51,7 @@ import SpecificGravityEntry from './SpecificGravityEntry';
 import HatchProgressionEntry from './HatchProgressionEntry';
 import MoistureLossEntry from './MoistureLossEntry';
 import CandlingEntry from './CandlingEntry';
-import { submitCandlingQAMulti } from '@/services/qaSubmissionService';
+import { PendingSyncList } from '@/components/ui/pending-sync-list';
 import { OccupancyInfo } from '@/utils/setterPositionMapping';
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
@@ -69,6 +74,16 @@ const MultiSetterQAWorkflow: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const { isOnline } = useOnlineStatus();
+  const { profile } = useAuth();
+
+  const resolveCompanyId = async (): Promise<string> => {
+    if (profile?.company_id) return profile.company_id;
+    const cached = await getOfflineData<UserProfile>('current-user-profile');
+    if (cached?.company_id) return cached.company_id;
+    return getUserCompanyId();
+  };
 
   const { data: hatcheries } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useMultiSetterMachines(
@@ -119,7 +134,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitMachineLevelQA(
+      const result = await submitMachineLevelQAOffline(
         {
           machine_id: selectedMachine.id,
           check_date: data.checkDate,
@@ -135,13 +150,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
           temp_avg_middle: data.averages.middle,
           temp_avg_back: data.averages.back,
         },
-        data.positionOccupancy
+        data.positionOccupancy,
+        isOnline
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-level temperature QA saved with position linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Machine-level temperature QA saved!');
       setNotes('');
-      refetch();
+      if (!result.offline) refetch();
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -163,7 +179,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
     try {
       const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({ flock_id: f.flock_id, batch_id: f.batch_id }));
 
-      const result = await submitMachineWideQA(
+      const result = await submitMachineWideQAOffline(
         {
           machine_id: selectedMachine.id,
           check_date: data.checkDate,
@@ -180,13 +196,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
           angle_mid_right: data.angles.angle_mid_right,
           angle_bottom_right: data.angles.angle_bottom_right,
         },
-        flockLinkages
+        flockLinkages,
+        isOnline
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-wide angles saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Machine-wide angles saved!');
       setNotes('');
-      refetch();
+      if (!result.offline) refetch();
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -209,7 +226,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
     try {
       const flockLinkages: FlockLinkage[] = data.uniqueFlocks.map(f => ({ flock_id: f.flock_id, batch_id: f.batch_id }));
 
-      const result = await submitMachineWideQA(
+      const result = await submitMachineWideQAOffline(
         {
           machine_id: selectedMachine.id,
           check_date: data.checkDate,
@@ -220,13 +237,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
           notes: notes || undefined,
           qa_type: 'humidity',
         },
-        flockLinkages
+        flockLinkages,
+        isOnline
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Machine-wide humidity saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Machine-wide humidity saved!');
       setNotes('');
-      refetch();
+      if (!result.offline) refetch();
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -234,7 +252,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Rectal temp with machine-wide flock linkage
   const handleSubmitRectalTemp = async (data: { location: string; temperature: number; checkTime: string; checkDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -243,18 +260,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitGenericQAWithLinkage(
+      const result = await submitGenericQAOffline(
         selectedMachine.id,
         technicianName,
         data.checkDate,
         'rectal_temperature',
         { location: data.location, temperature: data.temperature, checkTime: data.checkTime },
         getFlockLinkages(),
+        isOnline,
         notes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Rectal temperature saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Rectal temperature saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -263,7 +281,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Tray wash with machine-wide flock linkage
   const handleSubmitTrayWash = async (data: { firstCheck: number; secondCheck: number; thirdCheck: number; washDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -273,18 +290,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
     setIsSubmitting(true);
     try {
       const avgTemp = (data.firstCheck + data.secondCheck + data.thirdCheck) / 3;
-      const result = await submitGenericQAWithLinkage(
+      const result = await submitGenericQAOffline(
         selectedMachine.id,
         technicianName,
         data.washDate,
         'tray_wash',
         { firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck, temperature: avgTemp },
         getFlockLinkages(),
+        isOnline,
         notes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Tray wash saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Tray wash saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -293,7 +311,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Cull checks with flock linkage
   const handleSubmitCullCheck = async (data: { flock_id: string; batch_id: string | null; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -302,18 +319,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitGenericQAWithLinkage(
+      const result = await submitGenericQAOffline(
         selectedMachine.id,
         technicianName,
         data.checkDate,
         'cull_check',
         { flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType, mortalityCount: data.maleCount + data.femaleCount },
-        [{ flock_id: data.flock_id, batch_id: data.batch_id }], // Link to specific flock
+        [{ flock_id: data.flock_id, batch_id: data.batch_id }],
+        isOnline,
         notes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Cull check saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Cull check saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -322,7 +340,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Specific gravity saves to dedicated table
   const handleSubmitSpecificGravity = async (data: { flock_id: string; batch_id: string | null; age: number; sampleSize: number; floatCount: number; floatPercentage: number; testDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -331,19 +348,22 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitSpecificGravityTest({
-        flock_id: data.flock_id,
-        batch_id: data.batch_id,
-        test_date: data.testDate,
-        age_weeks: data.age,
-        sample_size: data.sampleSize,
-        float_count: data.floatCount,
-        float_percentage: data.floatPercentage,
-        notes: notes || null
-      });
+      const result = await submitSpecificGravityOffline(
+        {
+          flock_id: data.flock_id,
+          batch_id: data.batch_id,
+          test_date: data.testDate,
+          age_weeks: data.age,
+          sample_size: data.sampleSize,
+          float_count: data.floatCount,
+          float_percentage: data.floatPercentage,
+          notes: notes || null
+        },
+        isOnline
+      );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Specific gravity saved to dedicated table!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Specific gravity saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -352,7 +372,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Hatch progression with flock linkage
   const handleSubmitHatchProgression = async (data: { flock_id: string; batch_id: string | null; stage: string; percentageOut: number; totalCount: number; hatchedCount: number; checkHour: number; hatchDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -361,18 +380,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitGenericQAWithLinkage(
+      const result = await submitGenericQAOffline(
         selectedMachine.id,
         technicianName,
         data.hatchDate,
         'hatch_progression',
         { flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour, humidity: data.percentageOut },
-        [{ flock_id: data.flock_id, batch_id: data.batch_id }], // Link to specific flock
+        [{ flock_id: data.flock_id, batch_id: data.batch_id }],
+        isOnline,
         notes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Hatch progression saved with flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Hatch progression saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -381,7 +401,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Fixed: Moisture loss saves to weight_tracking table for all flocks
   const handleSubmitMoistureLoss = async (data: { flock_id: string; batch_id: string | null; machine_id: string | null; day1Weight: number; day18Weight: number; lossPercentage: number; dayOfIncubation: number; testDate: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -390,19 +409,23 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Save to weight_tracking for the selected flock
-      const result = await submitWeightTrackingMulti(
+      const combinedNotes = notes
+        ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}`
+        : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`;
+
+      const result = await submitWeightTrackingMultiOffline(
         selectedMachine.id,
         data.testDate,
         data.dayOfIncubation,
         data.day1Weight,
         data.lossPercentage,
         [{ flock_id: data.flock_id, batch_id: data.batch_id }],
-        notes ? `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g. ${notes}` : `Day 1: ${data.day1Weight}g, Day 18: ${data.day18Weight}g`
+        isOnline,
+        combinedNotes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Moisture loss saved to weight tracking table!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Moisture loss saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -411,7 +434,6 @@ const MultiSetterQAWorkflow: React.FC = () => {
     }
   };
 
-  // Candling QA handler for multi-setter mode
   const handleSubmitCandling = async (data: { flock_id: string; batch_id: string | null; checkDate: string; sampleSize: number; fertileEggs: number; infertileEggs: number; fertilityPercent: number; notes: string }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
@@ -420,7 +442,7 @@ const MultiSetterQAWorkflow: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await submitCandlingQAMulti(
+      const result = await submitCandlingQAMultiOffline(
         selectedMachine.id,
         technicianName,
         data.checkDate,
@@ -429,13 +451,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
         data.infertileEggs,
         data.fertilityPercent,
         getFlockLinkages(),
+        isOnline,
         data.notes || notes || null
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success('Candling results saved with machine-wide flock linkage!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Candling results saved!');
       setNotes('');
-      refetch();
+      if (!result.offline) refetch();
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
@@ -447,6 +470,14 @@ const MultiSetterQAWorkflow: React.FC = () => {
   if (!selectedMachine) {
     return (
       <div className="space-y-4">
+        {!isOnline && (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You're offline. Machine list shown from cache. QA entries will be saved locally and synced when back online.
+            </AlertDescription>
+          </Alert>
+        )}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -529,9 +560,18 @@ const MultiSetterQAWorkflow: React.FC = () => {
     );
   }
 
-  // QA Entry View with 9 Tabs
+  // QA Entry View with 10 Tabs
   return (
     <div className="space-y-4">
+      {!isOnline && (
+        <Alert className="border-amber-300 bg-amber-50 text-amber-800">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You're offline. QA entries will be saved locally and synced automatically when back online.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -576,6 +616,19 @@ const MultiSetterQAWorkflow: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <PendingSyncList
+        table="qa_monitoring"
+        title="QA records waiting to sync"
+      />
+      <PendingSyncList
+        table="specific_gravity_tests"
+        title="Specific gravity records waiting to sync"
+      />
+      <PendingSyncList
+        table="weight_tracking"
+        title="Moisture loss records waiting to sync"
+      />
 
       <Tabs defaultValue="temperatures" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">

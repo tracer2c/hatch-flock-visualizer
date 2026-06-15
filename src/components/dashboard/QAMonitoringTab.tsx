@@ -16,6 +16,9 @@ import { getUserCompanyId } from "@/services/qaSubmissionService";
 import { toast } from "sonner";
 import Setter18PointDisplay from "./Setter18PointDisplay";
 import { ExportService } from "@/services/exportService";
+import { useVisualPreferences } from "@/hooks/useVisualPreferences";
+
+const SECTION = "qa_monitoring";
 
 interface QAMonitoringTabProps {
   data: any[];
@@ -36,6 +39,8 @@ interface QAMonitoringTabProps {
 export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: QAMonitoringTabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const { isColumnHidden } = useVisualPreferences();
+  const show = (col: string) => !isColumnHidden(SECTION, col);
 
   // Apply filters to data
   const filteredData = useMemo(() => {
@@ -94,7 +99,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
         bVal = new Date(bVal).getTime();
       }
       // Handle numbers
-      else if (['flock_number', 'age_weeks', 'day_of_incubation', 'temperature', 'humidity', 'co2_level', 'ventilation_rate', 'turning_frequency'].includes(sortBy)) {
+      else if (['flock_number', 'age_weeks', 'day_of_incubation', 'temperature', 'humidity', 'co2_level'].includes(sortBy)) {
         aVal = parseFloat(aVal) || 0;
         bVal = parseFloat(bVal) || 0;
       }
@@ -224,33 +229,35 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
     }
   };
 
-  // Export handler
+  // Export handler — only includes columns the user has visible
   const handleExportQAData = () => {
-    const exportData = filteredData.map(item => ({
-      'Flock #': item.flock_number || '',
-      'Flock Name': item.flock_name || '',
-      'House #': item.house_number || '',
-      'Age (wks)': item.age_weeks || '',
-      'Check Date': item.check_date ? format(new Date(item.check_date), "yyyy-MM-dd") : '',
-      'Day of Incubation': item.day_of_incubation || '',
-      'Temperature (°F)': item.temperature || '',
-      'Temp Avg Overall': item.temp_avg_overall || '',
-      'Temp Avg Front': item.temp_avg_front || '',
-      'Temp Avg Middle': item.temp_avg_middle || '',
-      'Temp Avg Back': item.temp_avg_back || '',
-      'Humidity (%)': item.humidity || '',
-      'CO2 Level (ppm)': item.co2_level || '',
-      'Ventilation Rate': item.ventilation_rate || '',
-      'Turning Freq': item.turning_frequency || '',
-      'Angle Top L': item.angle_top_left || '',
-      'Angle Mid L': item.angle_mid_left || '',
-      'Angle Bot L': item.angle_bottom_left || '',
-      'Angle Top R': item.angle_top_right || '',
-      'Angle Mid R': item.angle_mid_right || '',
-      'Angle Bot R': item.angle_bottom_right || '',
-      'Inspector': item.inspector_name || '',
-      'Notes': item.notes || '',
-    }));
+    const exportData = filteredData.map(item => {
+      const row: Record<string, any> = {};
+      if (show("flock_number")) row['Flock #'] = item.flock_number || '';
+      if (show("flock_name")) row['Flock Name'] = item.flock_name || '';
+      if (show("house_number")) row['House #'] = item.house_number || '';
+      if (show("age_weeks")) row['Age (wks)'] = item.age_weeks || '';
+      if (show("check_date")) row['Check Date'] = item.check_date ? format(new Date(item.check_date), "yyyy-MM-dd") : '';
+      if (show("day_of_incubation")) row['Day of Incubation'] = item.day_of_incubation || '';
+      if (show("temperature")) row['Temperature (°F)'] = item.temperature || '';
+      if (show("temp_avg_overall")) row['Temp Avg Overall'] = item.temp_avg_overall || '';
+      if (show("temp_avg_front")) row['Temp Avg Front'] = item.temp_avg_front || '';
+      if (show("temp_avg_middle")) row['Temp Avg Middle'] = item.temp_avg_middle || '';
+      if (show("temp_avg_back")) row['Temp Avg Back'] = item.temp_avg_back || '';
+      if (show("humidity")) row['Humidity (%)'] = item.humidity || '';
+      if (show("co2_level")) row['CO2 Level (ppm)'] = item.co2_level || '';
+      if (show("ventilation_rate")) row['Ventilation Rate'] = item.ventilation_rate || '';
+      if (show("turning_frequency")) row['Turning Freq'] = item.turning_frequency || '';
+      if (show("angle_top_left")) row['Angle Top L'] = item.angle_top_left || '';
+      if (show("angle_mid_left")) row['Angle Mid L'] = item.angle_mid_left || '';
+      if (show("angle_bottom_left")) row['Angle Bot L'] = item.angle_bottom_left || '';
+      if (show("angle_top_right")) row['Angle Top R'] = item.angle_top_right || '';
+      if (show("angle_mid_right")) row['Angle Mid R'] = item.angle_mid_right || '';
+      if (show("angle_bottom_right")) row['Angle Bot R'] = item.angle_bottom_right || '';
+      if (show("inspector_name")) row['Inspector'] = item.inspector_name || '';
+      if (show("notes")) row['Notes'] = item.notes || '';
+      return row;
+    });
     ExportService.exportToExcel(exportData, 'qa-monitoring-data', 'QA Monitoring');
   };
 
@@ -288,79 +295,83 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Flock #</TableHead>
-            <TableHead>Flock Name</TableHead>
-            <TableHead>House #</TableHead>
-            <TableHead>Age (wks)</TableHead>
-            <TableHead>Check Date</TableHead>
-            <TableHead>Day of Incubation</TableHead>
-            <TableHead>Temperature (°F)</TableHead>
-            <TableHead>Temp Avg Overall</TableHead>
-            <TableHead>Temp Avg Front</TableHead>
-            <TableHead>Temp Avg Middle</TableHead>
-            <TableHead>Temp Avg Back</TableHead>
-            <TableHead>Humidity (%)</TableHead>
-            <TableHead>CO2 Level (ppm)</TableHead>
-            <TableHead>Ventilation Rate</TableHead>
-            <TableHead>Turning Freq</TableHead>
-            <TableHead>Angle Top L</TableHead>
-            <TableHead>Angle Mid L</TableHead>
-            <TableHead>Angle Bot L</TableHead>
-            <TableHead>Angle Top R</TableHead>
-            <TableHead>Angle Mid R</TableHead>
-            <TableHead>Angle Bot R</TableHead>
-            <TableHead>Inspector</TableHead>
-            <TableHead>Notes</TableHead>
+            {show("flock_number") && <TableHead>Flock #</TableHead>}
+            {show("flock_name") && <TableHead>Flock Name</TableHead>}
+            {show("house_number") && <TableHead>House #</TableHead>}
+            {show("age_weeks") && <TableHead>Age (wks)</TableHead>}
+            {show("check_date") && <TableHead>Check Date</TableHead>}
+            {show("day_of_incubation") && <TableHead>Day of Incubation</TableHead>}
+            {show("temperature") && <TableHead>Temperature (°F)</TableHead>}
+            {show("temp_avg_overall") && <TableHead>Temp Avg Overall</TableHead>}
+            {show("temp_avg_front") && <TableHead>Temp Avg Front</TableHead>}
+            {show("temp_avg_middle") && <TableHead>Temp Avg Middle</TableHead>}
+            {show("temp_avg_back") && <TableHead>Temp Avg Back</TableHead>}
+            {show("humidity") && <TableHead>Humidity (%)</TableHead>}
+            {show("co2_level") && <TableHead>CO2 Level (ppm)</TableHead>}
+            {show("ventilation_rate") && <TableHead>Ventilation Rate</TableHead>}
+            {show("turning_frequency") && <TableHead>Turning Freq</TableHead>}
+            {show("angle_top_left") && <TableHead>Angle Top L</TableHead>}
+            {show("angle_mid_left") && <TableHead>Angle Mid L</TableHead>}
+            {show("angle_bottom_left") && <TableHead>Angle Bot L</TableHead>}
+            {show("angle_top_right") && <TableHead>Angle Top R</TableHead>}
+            {show("angle_mid_right") && <TableHead>Angle Mid R</TableHead>}
+            {show("angle_bottom_right") && <TableHead>Angle Bot R</TableHead>}
+            {show("inspector_name") && <TableHead>Inspector</TableHead>}
+            {show("notes") && <TableHead>Notes</TableHead>}
             {!readOnly && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={20} className="text-center text-muted-foreground">
+              <TableCell colSpan={99} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
           ) : (
             filteredData.map((item) => (
               <TableRow key={item.id}>
-                <TableCell>{item.flock_number || "-"}</TableCell>
-                <TableCell>{item.flock_name || "-"}</TableCell>
-                <TableCell>{item.house_number || "-"}</TableCell>
-                <TableCell>{item.age_weeks || "-"}</TableCell>
-                <TableCell>
-                  {item.check_date ? format(new Date(item.check_date), "M/d/yyyy") : "-"}
-                </TableCell>
-                <TableCell>{item.day_of_incubation || "-"}</TableCell>
-                <TableCell>{item.temperature || "-"}</TableCell>
-                <TableCell>
-                  {item.temp_avg_overall != null ? (
-                    <Badge variant="outline" className={
-                      item.temp_avg_overall >= 99.5 && item.temp_avg_overall <= 100.5 
-                        ? 'bg-green-100 text-green-800' 
-                        : item.temp_avg_overall >= 99.0 && item.temp_avg_overall <= 101.0
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                    }>
-                      {item.temp_avg_overall.toFixed(1)}°F
-                    </Badge>
-                  ) : "-"}
-                </TableCell>
-                <TableCell>{item.temp_avg_front?.toFixed(1) || "-"}</TableCell>
-                <TableCell>{item.temp_avg_middle?.toFixed(1) || "-"}</TableCell>
-                <TableCell>{item.temp_avg_back?.toFixed(1) || "-"}</TableCell>
-                <TableCell>{item.humidity || "-"}</TableCell>
-                <TableCell>{item.co2_level || "-"}</TableCell>
-                <TableCell>{item.ventilation_rate || "-"}</TableCell>
-                <TableCell>{item.turning_frequency || "-"}</TableCell>
-                <TableCell>{item.angle_top_left || "-"}</TableCell>
-                <TableCell>{item.angle_mid_left || "-"}</TableCell>
-                <TableCell>{item.angle_bottom_left || "-"}</TableCell>
-                <TableCell>{item.angle_top_right || "-"}</TableCell>
-                <TableCell>{item.angle_mid_right || "-"}</TableCell>
-                <TableCell>{item.angle_bottom_right || "-"}</TableCell>
-                <TableCell>{item.inspector_name || "-"}</TableCell>
-                <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
+                {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
+                {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
+                {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                {show("age_weeks") && <TableCell>{item.age_weeks || "-"}</TableCell>}
+                {show("check_date") && (
+                  <TableCell>
+                    {item.check_date ? format(new Date(item.check_date), "M/d/yyyy") : "-"}
+                  </TableCell>
+                )}
+                {show("day_of_incubation") && <TableCell>{item.day_of_incubation || "-"}</TableCell>}
+                {show("temperature") && <TableCell>{item.temperature || "-"}</TableCell>}
+                {show("temp_avg_overall") && (
+                  <TableCell>
+                    {item.temp_avg_overall != null ? (
+                      <Badge variant="outline" className={
+                        item.temp_avg_overall >= 99.5 && item.temp_avg_overall <= 100.5
+                          ? 'bg-green-100 text-green-800'
+                          : item.temp_avg_overall >= 99.0 && item.temp_avg_overall <= 101.0
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                      }>
+                        {item.temp_avg_overall.toFixed(1)}°F
+                      </Badge>
+                    ) : "-"}
+                  </TableCell>
+                )}
+                {show("temp_avg_front") && <TableCell>{item.temp_avg_front?.toFixed(1) || "-"}</TableCell>}
+                {show("temp_avg_middle") && <TableCell>{item.temp_avg_middle?.toFixed(1) || "-"}</TableCell>}
+                {show("temp_avg_back") && <TableCell>{item.temp_avg_back?.toFixed(1) || "-"}</TableCell>}
+                {show("humidity") && <TableCell>{item.humidity || "-"}</TableCell>}
+                {show("co2_level") && <TableCell>{item.co2_level || "-"}</TableCell>}
+                {show("ventilation_rate") && <TableCell>{item.ventilation_rate || "-"}</TableCell>}
+                {show("turning_frequency") && <TableCell>{item.turning_frequency || "-"}</TableCell>}
+                {show("angle_top_left") && <TableCell>{item.angle_top_left || "-"}</TableCell>}
+                {show("angle_mid_left") && <TableCell>{item.angle_mid_left || "-"}</TableCell>}
+                {show("angle_bottom_left") && <TableCell>{item.angle_bottom_left || "-"}</TableCell>}
+                {show("angle_top_right") && <TableCell>{item.angle_top_right || "-"}</TableCell>}
+                {show("angle_mid_right") && <TableCell>{item.angle_mid_right || "-"}</TableCell>}
+                {show("angle_bottom_right") && <TableCell>{item.angle_bottom_right || "-"}</TableCell>}
+                {show("inspector_name") && <TableCell>{item.inspector_name || "-"}</TableCell>}
+                {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
                 {!readOnly && (
                   <TableCell>
                     <div className="flex gap-2">
@@ -428,77 +439,93 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
                 onChange={(e) => setFormData({ ...formData, co2_level: e.target.value })}
               />
             </div>
-            <div>
-              <Label>Ventilation Rate</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.ventilation_rate || ''}
-                onChange={(e) => setFormData({ ...formData, ventilation_rate: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Turning Frequency</Label>
-              <Input
-                type="number"
-                value={formData.turning_frequency || ''}
-                onChange={(e) => setFormData({ ...formData, turning_frequency: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Top Left</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_top_left || ''}
-                onChange={(e) => setFormData({ ...formData, angle_top_left: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Mid Left</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_mid_left || ''}
-                onChange={(e) => setFormData({ ...formData, angle_mid_left: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Bottom Left</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_bottom_left || ''}
-                onChange={(e) => setFormData({ ...formData, angle_bottom_left: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Top Right</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_top_right || ''}
-                onChange={(e) => setFormData({ ...formData, angle_top_right: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Mid Right</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_mid_right || ''}
-                onChange={(e) => setFormData({ ...formData, angle_mid_right: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Angle Bottom Right</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.angle_bottom_right || ''}
-                onChange={(e) => setFormData({ ...formData, angle_bottom_right: e.target.value })}
-              />
-            </div>
+            {show("ventilation_rate") && (
+              <div>
+                <Label>Ventilation Rate</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.ventilation_rate || ''}
+                  onChange={(e) => setFormData({ ...formData, ventilation_rate: e.target.value })}
+                />
+              </div>
+            )}
+            {show("turning_frequency") && (
+              <div>
+                <Label>Turning Frequency</Label>
+                <Input
+                  type="number"
+                  value={formData.turning_frequency || ''}
+                  onChange={(e) => setFormData({ ...formData, turning_frequency: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_top_left") && (
+              <div>
+                <Label>Angle Top Left</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_top_left || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_top_left: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_mid_left") && (
+              <div>
+                <Label>Angle Mid Left</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_mid_left || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_mid_left: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_bottom_left") && (
+              <div>
+                <Label>Angle Bottom Left</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_bottom_left || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_bottom_left: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_top_right") && (
+              <div>
+                <Label>Angle Top Right</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_top_right || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_top_right: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_mid_right") && (
+              <div>
+                <Label>Angle Mid Right</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_mid_right || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_mid_right: e.target.value })}
+                />
+              </div>
+            )}
+            {show("angle_bottom_right") && (
+              <div>
+                <Label>Angle Bottom Right</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.angle_bottom_right || ''}
+                  onChange={(e) => setFormData({ ...formData, angle_bottom_right: e.target.value })}
+                />
+              </div>
+            )}
             <div className="col-span-2">
               <Label>Inspector Name</Label>
               <Input
