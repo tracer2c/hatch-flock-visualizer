@@ -21,7 +21,25 @@ interface DateRangeSliderProps {
 export function DateRangeSlider({ value, onChange, className }: DateRangeSliderProps) {
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = React.useState<React.CSSProperties>({});
+
+  // Close on outside click WITHOUT an intercepting overlay — an invisible
+  // full-screen div would eat the click meant for whatever's underneath
+  // (e.g. a sidebar nav link), so the user has to click twice: once to
+  // close us, once to actually navigate. A plain listener lets the same
+  // click both close this popover and reach its real target.
+  React.useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
 
   const dateToOffset = (d?: Date): number => {
     if (!d) return RANGE_DAYS;
@@ -82,15 +100,9 @@ export function DateRangeSlider({ value, onChange, className }: DateRangeSliderP
   const popover = open
     ? ReactDOM.createPortal(
         <>
-          {/* Backdrop — closes on outside click */}
-          <div
-            className="fixed inset-0"
-            style={{ zIndex: 9998 }}
-            onClick={() => setOpen(false)}
-          />
-
           {/* Popover panel */}
           <div
+            ref={panelRef}
             style={popoverStyle}
             className={cn(
               "w-72 p-4 rounded-xl",

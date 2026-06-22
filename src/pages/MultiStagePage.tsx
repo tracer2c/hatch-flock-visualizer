@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Layers } from "lucide-react";
+import { Plus, Trash2, Sparkles, Save, RotateCcw, Layers, History, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
@@ -42,6 +43,7 @@ import {
   type DraftRow,
   type DraftHeader,
 } from "@/hooks/useMultiStage";
+import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
 
 // Operating weekdays.
@@ -114,6 +116,40 @@ const MultiStagePage = () => {
   }
 
   const saveMutation = useSaveMultiStageOperation();
+
+  // Resumable draft: autosaves as the tech types so a closed tab / shift
+  // change doesn't lose an in-progress operation.
+  const { draft, isLoadingDraft, saveDraft, lastSavedAt, clearDraft } =
+    useOperationDraft<DraftHeader, DraftRow>("multi");
+  const [resumeDecided, setResumeDecided] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const resumeDraft = () => {
+    if (!draft) return;
+    setHeader(draft.header);
+    setRows(draft.rows.length > 0 ? draft.rows : [newRow()]);
+    setResumeDecided(true);
+  };
+  const discardDraft = () => {
+    clearDraft();
+    setResumeDecided(true);
+  };
+
+  // Debounced autosave — only once the resume prompt has been resolved (or
+  // there was nothing to resume), so we never silently overwrite a draft
+  // before the tech has chosen to keep or discard it.
+  useEffect(() => {
+    if (isLoadingDraft) return;
+    if (draft && !resumeDecided) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      saveDraft(header, rows);
+    }, 1500);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [header, rows, isLoadingDraft, draft, resumeDecided]);
 
   // Keep hatch/transfer dates in sync with operation_date
   const updateOperationDate = (iso: string) => {
@@ -213,6 +249,7 @@ const MultiStagePage = () => {
       rows: validRows,
       flockLookup,
     });
+    await clearDraft();
     // Reset for next entry
     setHeader(initialHeader(nextDay ? ((nextDay % 3) + 1) : null));
     setRows([newRow()]);
@@ -220,6 +257,7 @@ const MultiStagePage = () => {
 
   const handleReset = () => {
     if (!confirm("Discard the current entry?")) return;
+    clearDraft();
     setHeader(initialHeader(nextDay ?? null));
     setRows([newRow()]);
   };
@@ -237,7 +275,13 @@ const MultiStagePage = () => {
             Today&apos;s setting operation. Dates auto-compute from the set date; flock fields auto-fill when you pick a flock.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {resumeDecided && lastSavedAt && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Check className="h-3 w-3 text-green-600" />
+              Draft saved {format(lastSavedAt, "h:mm:ss a")}
+            </span>
+          )}
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
@@ -248,6 +292,25 @@ const MultiStagePage = () => {
           </Button>
         </div>
       </div>
+
+      {/* Resume prompt — only shown until the tech picks Resume or Discard */}
+      {!isLoadingDraft && draft && !resumeDecided && (
+        <Alert>
+          <History className="h-4 w-4" />
+          <AlertTitle>Unsaved set from {format(parseISO(draft.updated_at), "MMM d, h:mm a")}</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>You left this operation mid-entry. Resume where you left off, or discard it and start fresh.</span>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={discardDraft}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={resumeDraft}>
+                Resume
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Header card: two columns side-by-side */}
       <Card>

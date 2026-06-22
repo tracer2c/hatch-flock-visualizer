@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Save, RotateCcw, Box } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
@@ -20,14 +29,19 @@ import {
   computeHatchDate,
   computeTransferDate,
   computeFlockAgeWeeks,
+  rowEggsSet,
+  rowProjectedHatch,
   toIsoDate,
 } from "@/config/multiStage";
 import { useMultiStageOptions } from "@/hooks/useMultiStage";
 import {
   useSaveSingleStageOperation,
-  type SingleStageDraft,
+  type SingleStageRow,
+  type SingleStageHeader,
 } from "@/hooks/useSingleStage";
+import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { SetColorPicker } from "@/components/dashboard/SetColorPicker";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -38,7 +52,22 @@ const weekdayOf = (iso: string): string => {
 // Single-setter slot positions 1–18.
 const LOCATIONS_1_18 = Array.from({ length: 18 }, (_, i) => String(i + 1));
 
-const initialDraft = (): SingleStageDraft => {
+const newRow = (): SingleStageRow => ({
+  tempId: crypto.randomUUID(),
+  machine_id: "",
+  flock_id: "",
+  house_number: "",
+  age_weeks: null,
+  expected_hatch_percent: null,
+  buggies_set: 0,
+  buggies_transferred: 0,
+  eggs_per_buggy: DEFAULT_BUGGY_SIZE,
+  location: "",
+  buggy_numbers: [],
+  notes: "",
+});
+
+const initialHeader = (): SingleStageHeader => {
   const today = new Date();
   const set_date = toIsoDate(today);
   return {
@@ -48,16 +77,9 @@ const initialDraft = (): SingleStageDraft => {
     day_of_week: weekdayOf(set_date),
     number_of_machines: null,
     carry_overs: 0,
-    machine_id: "",
-    flock_id: "",
-    house_number: "",
-    age_weeks: null,
     total_buggies: DEFAULT_TOTAL_BUGGIES,
     eggs_per_buggy: DEFAULT_BUGGY_SIZE,
-    location: "",
-    expected_hatch_percent: null,
     set_color: "blue",
-    buggy_numbers: [],
     notes: "",
   };
 };
@@ -77,15 +99,51 @@ const SingleStagePage = () => {
   const { hasWriteAccess } = usePermissions();
   const canWrite = hasWriteAccess("single_stage");
   const { setters, flocks, isLoading: optionsLoading } = useMultiStageOptions("single");
-  const [draft, setDraft] = useState<SingleStageDraft>(initialDraft);
+
+  const [header, setHeader] = useState<SingleStageHeader>(initialHeader);
+  const [rows, setRows] = useState<SingleStageRow[]>(() => [newRow()]);
   const saveMutation = useSaveSingleStageOperation();
+
+  // Resumable draft: autosaves as the tech types so a closed tab / shift
+  // change doesn't lose an in-progress operation.
+  const { draft, isLoadingDraft, saveDraft, lastSavedAt, clearDraft } =
+    useOperationDraft<SingleStageHeader, SingleStageRow>("single");
+  const [resumeDecided, setResumeDecided] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const resumeDraft = () => {
+    if (!draft) return;
+    setHeader(draft.header);
+    setRows(draft.rows.length > 0 ? draft.rows : [newRow()]);
+    setResumeDecided(true);
+  };
+  const discardDraft = () => {
+    clearDraft();
+    setResumeDecided(true);
+  };
+
+  // Debounced autosave — only once the resume prompt has been resolved (or
+  // there was nothing to resume), so we never silently overwrite a draft
+  // before the tech has chosen to keep or discard it.
+  useEffect(() => {
+    if (isLoadingDraft) return;
+    if (draft && !resumeDecided) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      saveDraft(header, rows);
+    }, 1500);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [header, rows, isLoadingDraft, draft, resumeDecided]);
 
   // Keep hatch/transfer in sync with set_date
   const updateSetDate = (iso: string) => {
     if (!iso) return;
     const d = parseISO(iso);
-    setDraft((s) => ({
-      ...s,
+    setHeader((h) => ({
+      ...h,
       set_date: iso,
       day_of_week: weekdayOf(iso),
       hatch_date: toIsoDate(computeHatchDate(d)),
@@ -93,46 +151,101 @@ const SingleStagePage = () => {
     }));
   };
 
-  // Picking a flock auto-fills house_number + age_weeks
-  const pickFlock = (flockId: string) => {
+  // When a flock is picked, auto-fill house_number + age_weeks
+  const updateRowFlock = (tempId: string, flockId: string) => {
     const flock = flocks.find((f) => f.id === flockId);
-    setDraft((s) => ({
-      ...s,
-      flock_id: flockId,
-      house_number: flock?.house_number ?? s.house_number,
-      age_weeks:
-        flock?.age_weeks ??
-        computeFlockAgeWeeks(flock?.arrival_date) ??
-        s.age_weeks,
-    }));
+    setRows((rs) =>
+      rs.map((r) =>
+        r.tempId === tempId
+          ? {
+              ...r,
+              flock_id: flockId,
+              house_number: flock?.house_number ?? r.house_number,
+              age_weeks:
+                flock?.age_weeks ??
+                computeFlockAgeWeeks(flock?.arrival_date) ??
+                r.age_weeks,
+            }
+          : r
+      )
+    );
+  };
+
+  const updateRow = <K extends keyof SingleStageRow>(
+    tempId: string,
+    key: K,
+    value: SingleStageRow[K]
+  ) => {
+    setRows((rs) => rs.map((r) => (r.tempId === tempId ? { ...r, [key]: value } : r)));
   };
 
   const flockLookup = (id: string) => flocks.find((f) => f.id === id);
+  const setterLookup = (id: string) => setters.find((s) => s.id === id);
 
-  // Live totals — use the chosen buggy size
+  // Options for the searchable dropdowns
+  const setterOptions = useMemo(
+    () =>
+      setters.map((s) => ({
+        value: s.id,
+        label: s.machine_number,
+        keywords: `${s.machine_type ?? ""} ${s.location ?? ""}`,
+      })),
+    [setters]
+  );
+  const flockOptions = useMemo(
+    () =>
+      flocks.map((f) => ({
+        value: f.id,
+        label: `#${f.flock_number} — ${f.flock_name}`,
+        keywords: String(f.flock_number),
+      })),
+    [flocks]
+  );
+
+  // Live totals — use each row's chosen buggy size
   const totals = useMemo(() => {
-    const eggsSet = Math.max(0, draft.total_buggies * draft.eggs_per_buggy);
-    const projectedHatch = draft.expected_hatch_percent
-      ? Math.round(eggsSet * (draft.expected_hatch_percent / 100))
-      : 0;
-    return { eggsSet, projectedHatch };
-  }, [draft.total_buggies, draft.eggs_per_buggy, draft.expected_hatch_percent]);
+    const buggiesSet = rows.reduce((s, r) => s + (Number(r.buggies_set) || 0), 0);
+    const buggiesTransferred = rows.reduce(
+      (s, r) => s + (Number(r.buggies_transferred) || 0),
+      0
+    );
+    const eggsSet = rows.reduce(
+      (s, r) => s + rowEggsSet(Number(r.buggies_set) || 0, r.eggs_per_buggy || DEFAULT_BUGGY_SIZE),
+      0
+    );
+    const projectedHatch = rows.reduce(
+      (s, r) =>
+        s +
+        rowProjectedHatch(
+          Number(r.buggies_set) || 0,
+          Number(r.expected_hatch_percent) || 0,
+          r.eggs_per_buggy || DEFAULT_BUGGY_SIZE
+        ),
+      0
+    );
+    return { buggiesSet, buggiesTransferred, eggsSet, projectedHatch };
+  }, [rows]);
 
   const handleSave = async () => {
-    await saveMutation.mutateAsync({ draft, flockLookup });
-    setDraft(initialDraft());
+    const validRows = rows.filter((r) => r.machine_id && r.flock_id);
+    if (validRows.length === 0) {
+      return; // useSaveSingleStageOperation will toast a sensible error
+    }
+    await saveMutation.mutateAsync({ header, rows: validRows, flockLookup });
+    await clearDraft();
+    setHeader(initialHeader());
+    setRows([newRow()]);
   };
 
   const handleReset = () => {
     if (!confirm("Discard the current entry?")) return;
-    setDraft(initialDraft());
+    clearDraft();
+    setHeader(initialHeader());
+    setRows([newRow()]);
   };
 
-  const selectedFlock = flockLookup(draft.flock_id);
-  const selectedSetter = setters.find((s) => s.id === draft.machine_id);
-
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
@@ -141,20 +254,45 @@ const SingleStagePage = () => {
             Single-Stage Set Sheet
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            One setter, one flock, one set. Dates auto-compute from the set date.
+            Today&apos;s setting operation. Dates auto-compute from the set date; flock fields auto-fill when you pick a flock.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {resumeDecided && lastSavedAt && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Check className="h-3 w-3 text-green-600" />
+              Draft saved {format(lastSavedAt, "h:mm:ss a")}
+            </span>
+          )}
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
           </Button>
           <Button onClick={handleSave} disabled={!canWrite || saveMutation.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            {saveMutation.isPending ? "Saving…" : "Save Set"}
+            {saveMutation.isPending ? "Saving…" : "Save Operation"}
           </Button>
         </div>
       </div>
+
+      {/* Resume prompt — only shown until the tech picks Resume or Discard */}
+      {!isLoadingDraft && draft && !resumeDecided && (
+        <Alert>
+          <History className="h-4 w-4" />
+          <AlertTitle>Unsaved set from {format(parseISO(draft.updated_at), "MMM d, h:mm a")}</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>You left this operation mid-entry. Resume where you left off, or discard it and start fresh.</span>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={discardDraft}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={resumeDraft}>
+                Resume
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Header card: two columns side-by-side (mirrors Multi-Stage) */}
       <Card>
@@ -172,9 +310,9 @@ const SingleStagePage = () => {
                   </Label>
                   <Input
                     type="date"
-                    value={draft.transfer_date}
+                    value={header.transfer_date}
                     onChange={(e) =>
-                      setDraft((s) => ({ ...s, transfer_date: e.target.value }))
+                      setHeader((h) => ({ ...h, transfer_date: e.target.value }))
                     }
                   />
                 </div>
@@ -184,9 +322,9 @@ const SingleStagePage = () => {
                   </Label>
                   <Input
                     type="date"
-                    value={draft.hatch_date}
+                    value={header.hatch_date}
                     onChange={(e) =>
-                      setDraft((s) => ({ ...s, hatch_date: e.target.value }))
+                      setHeader((h) => ({ ...h, hatch_date: e.target.value }))
                     }
                   />
                 </div>
@@ -197,9 +335,9 @@ const SingleStagePage = () => {
                   <Input
                     type="number"
                     min={0}
-                    value={draft.total_buggies}
+                    value={header.total_buggies}
                     onChange={(e) =>
-                      setDraft((s) => ({ ...s, total_buggies: parseInt(e.target.value) || 0 }))
+                      setHeader((h) => ({ ...h, total_buggies: parseInt(e.target.value) || 0 }))
                     }
                   />
                 </div>
@@ -208,9 +346,9 @@ const SingleStagePage = () => {
                   <Input
                     type="number"
                     min={0}
-                    value={draft.carry_overs}
+                    value={header.carry_overs}
                     onChange={(e) =>
-                      setDraft((s) => ({ ...s, carry_overs: parseInt(e.target.value) || 0 }))
+                      setHeader((h) => ({ ...h, carry_overs: parseInt(e.target.value) || 0 }))
                     }
                   />
                 </div>
@@ -220,10 +358,10 @@ const SingleStagePage = () => {
                     type="number"
                     min={0}
                     placeholder="—"
-                    value={draft.number_of_machines ?? ""}
+                    value={header.number_of_machines ?? ""}
                     onChange={(e) =>
-                      setDraft((s) => ({
-                        ...s,
+                      setHeader((h) => ({
+                        ...h,
                         number_of_machines: e.target.value === "" ? null : parseInt(e.target.value),
                       }))
                     }
@@ -243,8 +381,8 @@ const SingleStagePage = () => {
                     Day <AutoBadge />
                   </Label>
                   <Select
-                    value={draft.day_of_week}
-                    onValueChange={(v) => setDraft((s) => ({ ...s, day_of_week: v }))}
+                    value={header.day_of_week}
+                    onValueChange={(v) => setHeader((h) => ({ ...h, day_of_week: v }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Day" />
@@ -262,15 +400,15 @@ const SingleStagePage = () => {
                   </Label>
                   <Input
                     type="date"
-                    value={draft.set_date}
+                    value={header.set_date}
                     onChange={(e) => updateSetDate(e.target.value)}
                   />
                 </div>
               </div>
 
               <SetColorPicker
-                value={draft.set_color}
-                onChange={(c) => setDraft((s) => ({ ...s, set_color: c }))}
+                value={header.set_color}
+                onChange={(c) => setHeader((h) => ({ ...h, set_color: c }))}
               />
 
               {/* Live totals */}
@@ -293,187 +431,270 @@ const SingleStagePage = () => {
         </CardContent>
       </Card>
 
-      {/* Setter + Flock + counts */}
+      {/* Rows table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Set Details</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Pick the setter and source flock. House # and Age fill automatically once a flock is selected.
-          </p>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Setters</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              One row per house/flock being set today. <strong>S</strong> = buggies set in, <strong>T</strong> = buggies transferred out.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRows((rs) => [...rs, newRow()])}
+            disabled={!canWrite}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Setter
+          </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Setter */}
-            <div className="space-y-1.5">
-              <Label>Setter</Label>
-              <Select
-                value={draft.machine_id}
-                onValueChange={(v) => setDraft((s) => ({ ...s, machine_id: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a setter machine" />
-                </SelectTrigger>
-                <SelectContent>
-                  {optionsLoading ? (
-                    <SelectItem value="_loading" disabled>
-                      Loading…
-                    </SelectItem>
-                  ) : setters.length === 0 ? (
-                    <SelectItem value="_empty" disabled>
-                      No active setters
-                    </SelectItem>
-                  ) : (
-                    setters.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.machine_number} <span className="text-muted-foreground ml-2">({s.machine_type})</span>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {selectedSetter && (
-                <p className="text-xs text-muted-foreground">
-                  Type: <span className="capitalize">{selectedSetter.machine_type}</span>
-                </p>
-              )}
-            </div>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[170px]">Setter</TableHead>
+                  <TableHead className="min-w-[90px]">Age (wks)</TableHead>
+                  <TableHead className="min-w-[90px]">House</TableHead>
+                  <TableHead className="min-w-[110px]">Location</TableHead>
+                  <TableHead className="min-w-[100px]">Machine No.</TableHead>
+                  <TableHead className="min-w-[200px]">Flock</TableHead>
+                  <TableHead className="min-w-[120px]">Buggie</TableHead>
+                  <TableHead className="min-w-[90px]">Hatch %</TableHead>
+                  <TableHead className="min-w-[70px]">S</TableHead>
+                  <TableHead className="min-w-[70px]">T</TableHead>
+                  <TableHead className="w-[40px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => {
+                  const flock = flockLookup(r.flock_id);
+                  const setter = setterLookup(r.machine_id);
+                  return (
+                    <TableRow key={r.tempId}>
+                      {/* Setter — searchable */}
+                      <TableCell>
+                        <SearchableSelect
+                          options={setterOptions}
+                          value={r.machine_id}
+                          onChange={(v) => updateRow(r.tempId, "machine_id", v)}
+                          placeholder="Select setter"
+                          searchPlaceholder="Search setters…"
+                          emptyText={optionsLoading ? "Loading…" : "No active setters"}
+                        />
+                      </TableCell>
 
-            {/* Flock */}
-            <div className="space-y-1.5">
-              <Label>Flock</Label>
-              <Select
-                value={draft.flock_id}
-                onValueChange={pickFlock}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source flock" />
-                </SelectTrigger>
-                <SelectContent>
-                  {flocks.length === 0 ? (
-                    <SelectItem value="_empty" disabled>
-                      No active flocks
-                    </SelectItem>
-                  ) : (
-                    flocks.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        #{f.flock_number} — {f.flock_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {selectedFlock && (
-                <p className="text-xs text-muted-foreground">
-                  #{selectedFlock.flock_number} · {selectedFlock.flock_name}
-                </p>
-              )}
-            </div>
+                      {/* Age (auto from flock, range 1–56) */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min={1}
+                          max={56}
+                          value={r.age_weeks ?? ""}
+                          placeholder="—"
+                          onChange={(e) =>
+                            updateRow(
+                              r.tempId,
+                              "age_weeks",
+                              e.target.value === "" ? null : parseFloat(e.target.value)
+                            )
+                          }
+                        />
+                      </TableCell>
+
+                      {/* House (auto from flock) */}
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <Input
+                            value={r.house_number}
+                            placeholder="—"
+                            onChange={(e) =>
+                              updateRow(r.tempId, "house_number", e.target.value)
+                            }
+                          />
+                          {flock?.house_number && (
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Sparkles className="h-2.5 w-2.5" />
+                              from flock
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      {/* Location — slot 1–18 */}
+                      <TableCell>
+                        <Select
+                          value={r.location}
+                          onValueChange={(v) => updateRow(r.tempId, "location", v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="1–18" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LOCATIONS_1_18.map((loc) => (
+                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      {/* Machine No. — derived from setter */}
+                      <TableCell>
+                        <span className="text-sm font-medium">
+                          {setter?.machine_number || "—"}
+                        </span>
+                      </TableCell>
+
+                      {/* Flock — searchable */}
+                      <TableCell>
+                        <SearchableSelect
+                          options={flockOptions}
+                          value={r.flock_id}
+                          onChange={(v) => updateRowFlock(r.tempId, v)}
+                          placeholder="Select flock"
+                          searchPlaceholder="Search flocks…"
+                          emptyText="No active flocks"
+                        />
+                      </TableCell>
+
+                      {/* Buggie — per-row size */}
+                      <TableCell>
+                        <Select
+                          value={String(r.eggs_per_buggy)}
+                          onValueChange={(v) =>
+                            updateRow(r.tempId, "eggs_per_buggy", parseInt(v))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BUGGY_SIZES.map((size) => (
+                              <SelectItem key={size} value={String(size)}>
+                                {size.toLocaleString()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      {/* Expected hatch % */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={100}
+                          value={r.expected_hatch_percent ?? ""}
+                          placeholder="—"
+                          onChange={(e) =>
+                            updateRow(
+                              r.tempId,
+                              "expected_hatch_percent",
+                              e.target.value === "" ? null : parseFloat(e.target.value)
+                            )
+                          }
+                        />
+                      </TableCell>
+
+                      {/* S */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={r.buggies_set}
+                          onChange={(e) =>
+                            updateRow(r.tempId, "buggies_set", parseInt(e.target.value) || 0)
+                          }
+                          className="tabular-nums font-medium"
+                        />
+                      </TableCell>
+
+                      {/* T */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={r.buggies_transferred}
+                          onChange={(e) =>
+                            updateRow(
+                              r.tempId,
+                              "buggies_transferred",
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="tabular-nums font-medium"
+                        />
+                      </TableCell>
+
+                      {/* Remove */}
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setRows((rs) => rs.filter((x) => x.tempId !== r.tempId))
+                          }
+                          disabled={rows.length === 1}
+                          title={rows.length === 1 ? "At least one row required" : "Remove row"}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-2">
-                House #
-                {selectedFlock?.house_number && <AutoBadge />}
-              </Label>
-              <Input
-                value={draft.house_number}
-                placeholder="—"
-                onChange={(e) =>
-                  setDraft((s) => ({ ...s, house_number: e.target.value }))
-                }
-              />
+          {/* Footer summary */}
+          <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">Rows:</span>{" "}
+              <strong>{rows.length}</strong>
             </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-2">
-                Age (wks)
-                {draft.age_weeks != null && selectedFlock && <AutoBadge />}
-              </Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={draft.age_weeks ?? ""}
-                placeholder="—"
-                onChange={(e) =>
-                  setDraft((s) => ({
-                    ...s,
-                    age_weeks: e.target.value === "" ? null : parseFloat(e.target.value),
-                  }))
-                }
-              />
+            <div>
+              <span className="text-muted-foreground">Buggies in (Σ S):</span>{" "}
+              <strong className="tabular-nums">{totals.buggiesSet}</strong>
             </div>
-            <div className="space-y-1.5">
-              <Label>Location</Label>
-              <Select
-                value={draft.location}
-                onValueChange={(v) => setDraft((s) => ({ ...s, location: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="1–18" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LOCATIONS_1_18.map((loc) => (
-                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <span className="text-muted-foreground">Buggies out (Σ T):</span>{" "}
+              <strong className="tabular-nums">{totals.buggiesTransferred}</strong>
             </div>
-            <div className="space-y-1.5">
-              <Label>Buggy Size</Label>
-              <Select
-                value={String(draft.eggs_per_buggy)}
-                onValueChange={(v) =>
-                  setDraft((s) => ({ ...s, eggs_per_buggy: parseInt(v) }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUGGY_SIZES.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size.toLocaleString()} eggs
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <span className="text-muted-foreground">Total Eggs Set:</span>{" "}
+              <strong className="tabular-nums">{totals.eggsSet.toLocaleString()}</strong>
             </div>
-            <div className="space-y-1.5">
-              <Label>Expected Hatch %</Label>
-              <Input
-                type="number"
-                step="0.1"
-                min={0}
-                max={100}
-                value={draft.expected_hatch_percent ?? ""}
-                placeholder="—"
-                onChange={(e) =>
-                  setDraft((s) => ({
-                    ...s,
-                    expected_hatch_percent:
-                      e.target.value === "" ? null : parseFloat(e.target.value),
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Textarea
-              value={draft.notes}
-              placeholder="Anything worth recording about this set…"
-              onChange={(e) =>
-                setDraft((s) => ({ ...s, notes: e.target.value }))
-              }
-              rows={2}
-            />
+            {totals.buggiesSet + header.carry_overs > header.total_buggies && (
+              <Badge variant="destructive">
+                Capacity exceeded:{" "}
+                {totals.buggiesSet + header.carry_overs} / {header.total_buggies}
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Optional notes */}
+      <Card>
+        <CardContent className="pt-6">
+          <Label htmlFor="op-notes">Notes</Label>
+          <Input
+            id="op-notes"
+            placeholder="Anything worth recording about today's set…"
+            value={header.notes}
+            onChange={(e) => setHeader((h) => ({ ...h, notes: e.target.value }))}
+            className="mt-2"
+          />
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-muted-foreground text-center">
-        Today: {format(new Date(), "EEEE, MMMM d, yyyy")} · Saving creates a batch you'll see in the Data Sheet.
+        Today: {format(new Date(), "EEEE, MMMM d, yyyy")} · Each saved row becomes a batch in your data sheet.
       </p>
     </div>
   );

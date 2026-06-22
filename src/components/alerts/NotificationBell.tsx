@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,11 +10,25 @@ import { useNavigate } from 'react-router-dom';
 const NotificationBell = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { data: alerts, isLoading } = useActiveAlerts();
   const checkAlerts = useCheckAlerts();
   const acknowledgeAlert = useAcknowledgeAlert();
   const resolveAlert = useResolveAlert();
   const dismissAlert = useDismissAlert();
+
+  // Close on outside click WITHOUT an intercepting overlay — see DateRangeSlider
+  // for why a full-screen backdrop div would swallow the click meant for
+  // whatever's underneath (e.g. a sidebar nav link).
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (containerRef.current?.contains(e.target as Node)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [isOpen]);
 
   // Smart navigation based on alert type
   const handleAlertClick = (alert: any) => {
@@ -83,7 +97,7 @@ const NotificationBell = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {/* Notification Bell Button */}
       <Button
         variant="ghost"
@@ -93,7 +107,7 @@ const NotificationBell = () => {
       >
         <Bell className="h-5 w-5" />
         {alertCount > 0 && (
-          <Badge 
+          <Badge
             variant={criticalCount > 0 ? "destructive" : "default"}
             className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 min-w-0"
           >
@@ -105,12 +119,6 @@ const NotificationBell = () => {
       {/* Dropdown Menu */}
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
-          />
-          
           {/* Dropdown Content */}
           <div className="absolute right-0 top-full mt-2 w-96 bg-background border border-border rounded-lg shadow-lg z-50">
             {/* Header */}

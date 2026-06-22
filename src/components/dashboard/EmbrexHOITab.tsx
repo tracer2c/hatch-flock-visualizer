@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Archive } from "lucide-react";
+import { Edit, Trash2, Archive, Rows3, LayoutGrid } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useVisualPreferences } from "@/hooks/useVisualPreferences";
 import { useArchive } from "@/hooks/useArchive";
+import { FlockSummaryView } from "@/components/dashboard/FlockSummaryView";
 
 const SECTION = "embrex_hoi";
 
@@ -31,6 +32,7 @@ interface EmbrexHOITabProps {
 
 export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [view, setView] = useState<"rows" | "flock-summary">("rows");
   const { archive: archiveHouse } = useArchive("batches");
 
   const handleArchive = async (id: string) => {
@@ -178,6 +180,37 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
 
   return (
     <>
+      <div className="flex justify-end mb-3">
+        <div className="inline-flex rounded-md border p-0.5">
+          <Button
+            variant={view === "rows" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 gap-1.5"
+            onClick={() => setView("rows")}
+          >
+            <Rows3 className="h-3.5 w-3.5" />
+            By House
+          </Button>
+          <Button
+            variant={view === "flock-summary" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 gap-1.5"
+            onClick={() => setView("flock-summary")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            By Flock
+          </Button>
+        </div>
+      </div>
+
+      {view === "flock-summary" ? (
+        <FlockSummaryView
+          data={filteredData}
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+          readOnly={readOnly}
+        />
+      ) : (
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -278,6 +311,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
           </TableBody>
         </Table>
       </div>
+      )}
 
       <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
         <DialogContent>

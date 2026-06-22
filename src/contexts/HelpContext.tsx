@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 interface HelpContextData {
   activePage: string;
@@ -22,16 +22,27 @@ export const HelpProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     activePage: 'Dashboard Overview'
   });
 
-  const updateContext = (data: Partial<HelpContextData>) => {
+  // Stable identities are critical here: HelpProvider wraps the entire app,
+  // and several pages call updateContext inside a useEffect with
+  // updateContext itself in the dependency array. A function recreated on
+  // every render would make that effect's deps "change" on every call,
+  // re-running it forever — an app-wide render loop that eats clicks
+  // (the element under the cursor keeps getting torn down and rebuilt).
+  const updateContext = useCallback((data: Partial<HelpContextData>) => {
     setContextData(prev => ({ ...prev, ...data }));
-  };
+  }, []);
 
-  const clearContext = () => {
+  const clearContext = useCallback(() => {
     setContextData({ activePage: 'Dashboard Overview' });
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ contextData, updateContext, clearContext }),
+    [contextData, updateContext, clearContext]
+  );
 
   return (
-    <HelpContext.Provider value={{ contextData, updateContext, clearContext }}>
+    <HelpContext.Provider value={value}>
       {children}
     </HelpContext.Provider>
   );
