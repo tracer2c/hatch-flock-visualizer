@@ -40,7 +40,15 @@ export function useOperationDraft<H, R>(stageType: StageDraftType) {
         updated_at: data.updated_at,
       };
     },
-    staleTime: Infinity, // only fetched once on mount; we don't want a background refetch clobbering live edits
+    // Always re-check on mount, never serve a persisted/cached answer — the
+    // whole point of this query is "is there a draft to resume right now."
+    // The app persists React Query's cache to IndexedDB across reloads, so a
+    // long staleTime here would freeze in whatever this query returned the
+    // very first time the page was ever visited (typically "no draft"),
+    // permanently hiding the resume banner even after later autosaves.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);

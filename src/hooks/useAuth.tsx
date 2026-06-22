@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, createContext, type ReactNode } from 'react';
 import { User, Session, Factor } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +29,17 @@ export interface MFAStatus {
   isVerified: boolean;
 }
 
-export const useAuth = () => {
+// Internal: holds the actual auth state/effects. Must only be called ONCE,
+// inside AuthProvider — call sites consume it via useAuth() (the context
+// reader below). Previously every component called this hook directly,
+// which meant every consumer ran its own independent getSession() +
+// fetchUserProfile() + fetchUserRoles() sequence with its own `loading`
+// flag. Those raced against each other: RoleProtectedRoute's own instance
+// could report loading=false while a *different* instance backing
+// usePermissions() still had stale/empty roles, so isAdmin() briefly
+// returned false and the route redirected away before the real state
+// settled. Routing through a single shared instance removes the race.
+const useProvideAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -551,4 +561,21 @@ export const useAuth = () => {
     resetPasswordForEmail,
     resetPassword,
   };
+};
+
+type AuthContextValue = ReturnType<typeof useProvideAuth>;
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const value = useProvideAuth();
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+/** Same shape as before — every existing call site keeps working unchanged. */
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return ctx;
 };

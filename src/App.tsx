@@ -56,6 +56,7 @@ import DocumentationWhitePaper from "./pages/DocumentationWhitePaper";
 import { ModernSidebar } from "./components/ModernSidebar";
 import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
+import { AuthProvider } from "./hooks/useAuth";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
@@ -244,11 +245,13 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <InitializeApp>
-            <HelpProvider>
-              <AppContent />
-            </HelpProvider>
-          </InitializeApp>
+          <AuthProvider>
+            <InitializeApp>
+              <HelpProvider>
+                <AppContent />
+              </HelpProvider>
+            </InitializeApp>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </PersistQueryClientProvider>

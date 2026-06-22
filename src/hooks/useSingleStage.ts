@@ -22,6 +22,8 @@ export type SingleStageRow = {
   location: string;              // slot/position 1–18
   buggy_numbers: string[];
   notes: string;
+  /** UI-only: locked/"saved" in the sequential entry flow. Not sent to the DB. */
+  confirmed?: boolean;
 };
 
 /**

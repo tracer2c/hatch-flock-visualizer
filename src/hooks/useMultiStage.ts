@@ -56,6 +56,8 @@ export type DraftRow = {
   location: string;              // zone A / B / C
   buggy_numbers: string[];
   notes: string;
+  /** UI-only: locked/"saved" in the sequential entry flow. Not sent to the DB. */
+  confirmed?: boolean;
 };
 
 /**

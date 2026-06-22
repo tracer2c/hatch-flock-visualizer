@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -20,8 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check } from "lucide-react";
+import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import {
   DEFAULT_TOTAL_BUGGIES,
   DEFAULT_BUGGY_SIZE,
@@ -65,6 +67,7 @@ const newRow = (): SingleStageRow => ({
   location: "",
   buggy_numbers: [],
   notes: "",
+  confirmed: false,
 });
 
 const initialHeader = (): SingleStageHeader => {
@@ -177,6 +180,42 @@ const SingleStagePage = () => {
     value: SingleStageRow[K]
   ) => {
     setRows((rs) => rs.map((r) => (r.tempId === tempId ? { ...r, [key]: value } : r)));
+  };
+
+  // Sequential entry flow: confirming a row locks it into a compact "saved"
+  // line and — as long as the running buggy total hasn't hit the header's
+  // declared # of Buggies yet, and no other open row is already waiting —
+  // opens a fresh blank row underneath so the tech can keep going without
+  // touching "Add Setter" each time.
+  const confirmRow = (tempId: string) => {
+    const row = rows.find((r) => r.tempId === tempId);
+    if (!row) return;
+    if (!row.machine_id || !row.flock_id) {
+      toast.error("Pick a setter and flock before confirming this row");
+      return;
+    }
+    setRows((rs) => {
+      const next = rs.map((r) => (r.tempId === tempId ? { ...r, confirmed: true } : r));
+      const buggiesSoFar = next.reduce((s, r) => s + (Number(r.buggies_set) || 0), 0);
+      const hasOpenRow = next.some((r) => !r.confirmed);
+      if (!hasOpenRow && buggiesSoFar < header.total_buggies) {
+        return [...next, newRow()];
+      }
+      return next;
+    });
+  };
+
+  const unconfirmRow = (tempId: string) => {
+    setRows((rs) => rs.map((r) => (r.tempId === tempId ? { ...r, confirmed: false } : r)));
+  };
+
+  // "Done with this set" — locks any still-open row that has enough to save,
+  // and stops here even if the declared total hasn't been reached (a
+  // partial set that continues tomorrow, for instance).
+  const handleDoneWithSet = () => {
+    setRows((rs) =>
+      rs.map((r) => (!r.confirmed && r.machine_id && r.flock_id ? { ...r, confirmed: true } : r))
+    );
   };
 
   const flockLookup = (id: string) => flocks.find((f) => f.id === id);
@@ -437,20 +476,44 @@ const SingleStagePage = () => {
           <div>
             <CardTitle>Setters</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              One row per house/flock being set today. <strong>S</strong> = buggies set in, <strong>T</strong> = buggies transferred out.
+              One row per house/flock being set today. Fill in a row and press{" "}
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-semibold">Enter</kbd>{" "}
+              (or hit Confirm) to lock it in and open the next one. <strong>S</strong> = buggies set in, <strong>T</strong> = buggies transferred out.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRows((rs) => [...rs, newRow()])}
-            disabled={!canWrite}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Setter
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDoneWithSet}
+              disabled={!canWrite || rows.every((r) => r.confirmed)}
+            >
+              <CheckCheck className="h-4 w-4 mr-1" />
+              Done with this set
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRows((rs) => [...rs, newRow()])}
+              disabled={!canWrite}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Setter
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {/* Progress against the declared # of Buggies */}
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Buggies entered</span>
+              <span className="font-medium tabular-nums">
+                {totals.buggiesSet} / {header.total_buggies}
+              </span>
+            </div>
+            <Progress value={Math.min(100, (totals.buggiesSet / Math.max(1, header.total_buggies)) * 100)} />
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -472,6 +535,49 @@ const SingleStagePage = () => {
                 {rows.map((r) => {
                   const flock = flockLookup(r.flock_id);
                   const setter = setterLookup(r.machine_id);
+
+                  // Confirmed rows collapse to a compact "saved" line — the
+                  // detail is still there, just not taking up a full row of
+                  // editable fields while the tech keeps entering new ones.
+                  if (r.confirmed) {
+                    return (
+                      <TableRow key={r.tempId} className="bg-green-50/60 hover:bg-green-50">
+                        <TableCell colSpan={10}>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                            <span className="font-medium">{setter?.machine_number || "—"}</span>
+                            <span className="text-muted-foreground">·</span>
+                            <span>{flock ? `#${flock.flock_number} — ${flock.flock_name}` : "—"}</span>
+                            <span className="text-muted-foreground">·</span>
+                            <span>Loc {r.location || "—"}</span>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="tabular-nums">{r.buggies_set} buggies</span>
+                            <Badge variant="outline" className="ml-1 border-green-300 text-green-700 bg-green-100">
+                              Saved
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => unconfirmRow(r.tempId)}
+                            title="Edit this row"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  const confirmOnEnter = (e: React.KeyboardEvent) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmRow(r.tempId);
+                    }
+                  };
+
                   return (
                     <TableRow key={r.tempId}>
                       {/* Setter — searchable */}
@@ -495,6 +601,7 @@ const SingleStagePage = () => {
                           max={56}
                           value={r.age_weeks ?? ""}
                           placeholder="—"
+                          onKeyDown={confirmOnEnter}
                           onChange={(e) =>
                             updateRow(
                               r.tempId,
@@ -511,6 +618,7 @@ const SingleStagePage = () => {
                           <Input
                             value={r.house_number}
                             placeholder="—"
+                            onKeyDown={confirmOnEnter}
                             onChange={(e) =>
                               updateRow(r.tempId, "house_number", e.target.value)
                             }
@@ -590,6 +698,7 @@ const SingleStagePage = () => {
                           max={100}
                           value={r.expected_hatch_percent ?? ""}
                           placeholder="—"
+                          onKeyDown={confirmOnEnter}
                           onChange={(e) =>
                             updateRow(
                               r.tempId,
@@ -606,6 +715,7 @@ const SingleStagePage = () => {
                           type="number"
                           min={0}
                           value={r.buggies_set}
+                          onKeyDown={confirmOnEnter}
                           onChange={(e) =>
                             updateRow(r.tempId, "buggies_set", parseInt(e.target.value) || 0)
                           }
@@ -619,6 +729,7 @@ const SingleStagePage = () => {
                           type="number"
                           min={0}
                           value={r.buggies_transferred}
+                          onKeyDown={confirmOnEnter}
                           onChange={(e) =>
                             updateRow(
                               r.tempId,
@@ -630,19 +741,29 @@ const SingleStagePage = () => {
                         />
                       </TableCell>
 
-                      {/* Remove */}
+                      {/* Confirm + Remove */}
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setRows((rs) => rs.filter((x) => x.tempId !== r.tempId))
-                          }
-                          disabled={rows.length === 1}
-                          title={rows.length === 1 ? "At least one row required" : "Remove row"}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmRow(r.tempId)}
+                            title="Confirm this row (or press Enter)"
+                          >
+                            <Check className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setRows((rs) => rs.filter((x) => x.tempId !== r.tempId))
+                            }
+                            disabled={rows.length === 1}
+                            title={rows.length === 1 ? "At least one row required" : "Remove row"}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
