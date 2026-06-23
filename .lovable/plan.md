@@ -1,44 +1,67 @@
-## Problem
+## Two errors observed (Wayne side)
 
-When a Wayne Sanderson Farms user (or any non–Default Company user) tries to create a flock, the insert fails with:
-`new row violates row-level security policy for table 'flocks'`
+### 1. "Could not find the 'early_dead' column of 'fertility_analysis' in the schema cache"
+The Edit Fertility Analysis / Hatch Results dialog (`HatchPerformanceTab.tsx`) writes `early_dead` and `late_dead` to the `fertility_analysis` table, but those columns don't exist in the DB. Current columns: `sample_size, fertile_eggs, infertile_eggs, fertility_percent, hatch_percent, hof_percent, hoi_percent, if_dev_percent, technician_name, notes, ...` — no early/late dead.
 
-## Root cause
+### 2. "update or delete on table 'batches' violates foreign key constraint 'single_stage_operation_rows_batch_id_fkey'"
+House delete (`HouseManager.handleDeleteHouse`) runs `DELETE FROM batches WHERE id=?`. Five FKs pointing at `batches.id` are defined with NO ACTION, so any related row blocks the delete:
 
-`src/components/dashboard/FlockManager.tsx` (lines 222–245) builds the flock insert payload **without `company_id`**. The column then falls back to its DB default of `'00000000-0000-0000-0000-000000000001'` (Default Company).
+- `single_stage_operation_rows.batch_id` ← this is the one in the screenshot
+- `fertility_analysis.batch_id`
+- `egg_pack_quality.batch_id`
+- `qa_monitoring.batch_id`
+- `residue_analysis.batch_id`
 
-The RLS INSERT policy on `flocks` requires:
-```
-company_id = get_user_company(auth.uid()) AND NOT has_role(auth.uid(), 'staff')
-```
+All other batch-referencing tables already have `ON DELETE CASCADE` or `SET NULL`, so Default Company users rarely hit it; Wayne does because their houses have single‑stage operation rows + QA/residue/fertility data attached.
 
-For users belonging to Wayne Sanderson Farms (or any non-default company), the default-injected `company_id` does not match `get_user_company(auth.uid())`, so the insert is rejected.
-
-This is the exact same multi-tenant RLS gap previously fixed in `machineService.ts` and `UnitManager.tsx` (per the architecture memory), but `FlockManager` was missed.
+---
 
 ## Fix
 
-In `src/components/dashboard/FlockManager.tsx`:
+### Migration A — add the two missing columns
+```sql
+ALTER TABLE public.fertility_analysis
+  ADD COLUMN IF NOT EXISTS early_dead integer,
+  ADD COLUMN IF NOT EXISTS late_dead  integer;
+```
+No code change needed afterwards — the dialog already reads/writes these fields and `chicks_hatched = fertile - early_dead - late_dead` already works once the columns exist.
 
-1. Before building `flocksToCreate`, fetch the user's `company_id` from `user_profiles`:
-   ```ts
-   const { data: profile } = await supabase
-     .from('user_profiles')
-     .select('company_id')
-     .eq('id', user.id)
-     .single();
-   ```
-2. Guard against missing profile/company_id with a clear toast error (so we never silently fall back to Default Company).
-3. Add `company_id: profile.company_id` to every object in `flocksToCreate`.
-4. Apply the same `company_id` inclusion to the **edit/update** path further down in `handleSubmit` if it re-inserts or upserts (verify and patch if needed — update path normally doesn't need it because RLS UPDATE uses USING on existing row, but we'll confirm during implementation).
+### Migration B — make house delete actually cascade
+Drop + recreate the five FKs with `ON DELETE CASCADE` so deleting a house cleans up its child rows (matches the behavior already in place for alerts, checklists, weight_tracking, machine_transfers, etc.):
 
-## Out of scope
+```sql
+ALTER TABLE public.single_stage_operation_rows
+  DROP CONSTRAINT single_stage_operation_rows_batch_id_fkey,
+  ADD  CONSTRAINT single_stage_operation_rows_batch_id_fkey
+       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
 
-- No DB migration needed — `company_id` column and RLS policies are already correct.
-- No changes to other tables; this is isolated to flock creation in `FlockManager.tsx`.
+ALTER TABLE public.fertility_analysis
+  DROP CONSTRAINT fertility_analysis_batch_id_fkey,
+  ADD  CONSTRAINT fertility_analysis_batch_id_fkey
+       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
 
-## Verification
+ALTER TABLE public.egg_pack_quality
+  DROP CONSTRAINT egg_pack_quality_batch_id_fkey,
+  ADD  CONSTRAINT egg_pack_quality_batch_id_fkey
+       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
 
-- Log in as a Wayne Sanderson user (e.g., Justin Anderson) and create a flock across one and multiple hatcheries → should succeed.
-- Confirm the new flock rows have `company_id` matching the Wayne Sanderson company, not the Default Company.
-- Staff role users should still be blocked (UI already hides the action; RLS still enforces).
+ALTER TABLE public.qa_monitoring
+  DROP CONSTRAINT qa_monitoring_batch_id_fkey,
+  ADD  CONSTRAINT qa_monitoring_batch_id_fkey
+       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+
+ALTER TABLE public.residue_analysis
+  DROP CONSTRAINT residue_analysis_batch_id_fkey,
+  ADD  CONSTRAINT residue_analysis_batch_id_fkey
+       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+```
+
+Note: this means deleting a house permanently removes its fertility/QA/residue/egg-pack/operation-row history. The confirm dialog (`HouseManager.handleDeleteHouse`) already warns "removes the house and its data entirely and cannot be undone" and points users at Archive to retain history, so semantics match. No frontend changes required.
+
+### Chained risks reviewed
+- No code paths assume those FKs are RESTRICT — nothing else breaks.
+- Other delete blockers (`flocks`, `machines`, etc.) are not in scope for these two reports.
+- After Migration A, the existing INSERT/UPDATE in `HatchPerformanceTab.tsx` will succeed; no client edits.
+
+## Summary
+Run two migrations: add `early_dead`/`late_dead` to `fertility_analysis`, and switch the five remaining `batches` child FKs to `ON DELETE CASCADE` so house deletion works end-to-end.
