@@ -860,6 +860,7 @@ export type Database = {
           archived_by: string | null
           batch_id: string
           created_at: string
+          early_dead: number | null
           fertile_eggs: number
           fertility_percent: number | null
           hatch_percent: number | null
@@ -868,6 +869,7 @@ export type Database = {
           id: string
           if_dev_percent: number | null
           infertile_eggs: number
+          late_dead: number | null
           notes: string | null
           sample_size: number
           technician_name: string | null
@@ -878,6 +880,7 @@ export type Database = {
           archived_by?: string | null
           batch_id: string
           created_at?: string
+          early_dead?: number | null
           fertile_eggs: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -886,6 +889,7 @@ export type Database = {
           id?: string
           if_dev_percent?: number | null
           infertile_eggs: number
+          late_dead?: number | null
           notes?: string | null
           sample_size: number
           technician_name?: string | null
@@ -896,6 +900,7 @@ export type Database = {
           archived_by?: string | null
           batch_id?: string
           created_at?: string
+          early_dead?: number | null
           fertile_eggs?: number
           fertility_percent?: number | null
           hatch_percent?: number | null
@@ -904,6 +909,7 @@ export type Database = {
           id?: string
           if_dev_percent?: number | null
           infertile_eggs?: number
+          late_dead?: number | null
           notes?: string | null
           sample_size?: number
           technician_name?: string | null

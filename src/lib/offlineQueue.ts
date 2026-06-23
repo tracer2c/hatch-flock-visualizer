@@ -190,7 +190,7 @@ async function syncQAPositionLinkage(
 
   if (linkageRecords.length === 0) return;
 
-  const { error } = await supabase.from('qa_position_linkage').insert(linkageRecords);
+  const { error } = await supabase.from('qa_position_linkage').insert(linkageRecords as any);
   if (error) {
     // Non-fatal: qa_monitoring row landed; log and continue
     console.warn('[offlineQueue] qa_position_linkage insert failed during sync:', error.message);

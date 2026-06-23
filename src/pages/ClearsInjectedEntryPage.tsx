@@ -114,7 +114,7 @@ const ClearsInjectedEntryPage = () => {
     }
   };
 
-  const handleSave = async (values: { clear_number: number; injected_number: number }) => {
+  const handleSave = async (values: { clear_number: number; injected_number: number; clears_technician_name?: string; clears_notes?: string }) => {
     if (!houseId) return;
     
     setSaving(true);

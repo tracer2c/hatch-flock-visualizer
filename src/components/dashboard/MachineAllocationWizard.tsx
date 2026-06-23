@@ -269,6 +269,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
             level: pos.level,
             set_date: formData.setDate,
             capacity: Math.ceil(allocation.eggsAllocated / allocation.selectedPositions.length),
+            company_id: companyId,
           }));
 
           const { error: setsError } = await supabase
