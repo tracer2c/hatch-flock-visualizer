@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -333,7 +334,7 @@ const ResidueEntryPage = () => {
                 </div>
                 <div>
                   <p className="text-gray-600">Set Date</p>
-                  <p className="font-medium">{new Date(houseInfo.set_date).toLocaleDateString()}</p>
+                  <p className="font-medium">{formatLocalDate(houseInfo.set_date)}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Total Eggs</p>

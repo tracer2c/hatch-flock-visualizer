@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -870,7 +871,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {new Date(set.set_date).toLocaleDateString()}
+                            {formatLocalDate(set.set_date)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -996,7 +997,7 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              {new Date(record.check_date).toLocaleDateString()}
+                              {formatLocalDate(record.check_date)}
                             </div>
                           </TableCell>
                           <TableCell>

@@ -1,4 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatLocalDate } from "@/utils/localDate";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 
 interface EmbrexTabProps {
@@ -52,7 +53,7 @@ export const EmbrexTab = ({ data, searchTerm }: EmbrexTabProps) => {
                 <TableCell>{item.flock_name || "-"}</TableCell>
                 <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>
                 <TableCell>{item.house_number || "-"}</TableCell>
-                <TableCell>{item.set_date ? new Date(item.set_date).toLocaleDateString() : "-"}</TableCell>
+                <TableCell>{item.set_date ? formatLocalDate(item.set_date) : "-"}</TableCell>
                 <TableCell className="text-right">{item.set_date ? calculateWeek(item.set_date) : "-"}</TableCell>
                 <TableCell className="text-right">{item.total_eggs_set || "-"}</TableCell>
                 <TableCell className="text-right">

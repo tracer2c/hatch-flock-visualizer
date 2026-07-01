@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -536,7 +537,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                 {data.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">
-                      {new Date(record.analysis_date).toLocaleDateString()}
+                      {formatLocalDate(record.analysis_date)}
                     </TableCell>
                     <TableCell>{record.sample_size}</TableCell>
                     <TableCell>{record.infertile_eggs}</TableCell>

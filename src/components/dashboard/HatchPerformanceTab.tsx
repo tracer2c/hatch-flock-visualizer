@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatLocalDate } from "@/utils/localDate";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -342,7 +343,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
                 {show("age_weeks") && <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>}
                 {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
-                {show("set_date") && <TableCell>{item.set_date ? new Date(item.set_date).toLocaleDateString() : "-"}</TableCell>}
+                {show("set_date") && <TableCell>{item.set_date ? formatLocalDate(item.set_date) : "-"}</TableCell>}
                 {show("sample_size") && <TableCell className="text-right">{item.sample_size || "-"}</TableCell>}
                 {show("fertility_percent") && (
                   <TableCell className="text-right">

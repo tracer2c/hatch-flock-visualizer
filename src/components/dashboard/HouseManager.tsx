@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -925,7 +926,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Set: {new Date(house.set_date).toLocaleDateString()}
+                      Set: {formatLocalDate(house.set_date)}
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />

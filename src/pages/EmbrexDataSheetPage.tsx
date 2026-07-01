@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { todayLocalISO } from "@/utils/localDate";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -249,7 +250,7 @@ const EmbrexDataSheetPage = () => {
       });
       return formatted;
     });
-    ExportService.exportToCSV(formattedData, `${activeTab}-data-${new Date().toISOString().split('T')[0]}`, headers);
+    ExportService.exportToCSV(formattedData, `${activeTab}-data-${todayLocalISO()}`, headers);
     toast.success("CSV exported successfully");
   };
 
@@ -267,7 +268,7 @@ const EmbrexDataSheetPage = () => {
       });
       return formatted;
     });
-    ExportService.exportToExcel(formattedData, `${activeTab}-data-${new Date().toISOString().split('T')[0]}`, activeTab.charAt(0).toUpperCase() + activeTab.slice(1), headers);
+    ExportService.exportToExcel(formattedData, `${activeTab}-data-${todayLocalISO()}`, activeTab.charAt(0).toUpperCase() + activeTab.slice(1), headers);
     toast.success("Excel exported successfully");
   };
 

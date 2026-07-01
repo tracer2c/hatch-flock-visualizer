@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,7 @@ const MachineTransfersTab = ({ machineId, machineType, dateFrom, dateTo }: Machi
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(t.transfer_date).toLocaleDateString()}
+                          {formatLocalDate(t.transfer_date)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -251,7 +252,7 @@ const MachineTransfersTab = ({ machineId, machineType, dateFrom, dateTo }: Machi
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(t.transfer_date).toLocaleDateString()}
+                          {formatLocalDate(t.transfer_date)}
                         </div>
                       </TableCell>
                       <TableCell>

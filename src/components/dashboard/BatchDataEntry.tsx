@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -218,7 +219,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Set Date</p>
-              <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
+              <p className="font-medium">{formatLocalDate(batchInfo.set_date)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Eggs</p>
@@ -284,7 +285,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Set Date</p>
-                <p className="font-medium">{new Date(batchInfo.set_date).toLocaleDateString()}</p>
+                <p className="font-medium">{formatLocalDate(batchInfo.set_date)}</p>
               </div>
             </div>
           </div>
@@ -305,7 +306,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
                   <div className="flex-1 pt-0.5">
                     <p className="text-sm font-medium">Set in {batchInfo.machine_number}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(batchInfo.set_date).toLocaleDateString()}
+                      {formatLocalDate(batchInfo.set_date)}
                     </p>
                   </div>
                 </div>
@@ -321,7 +322,7 @@ const BatchDataEntry = ({ batchId }: BatchDataEntryProps) => {
                         Transferred to {t.to_machine?.machine_number}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(t.transfer_date).toLocaleDateString()}
+                        {formatLocalDate(t.transfer_date)}
                         {t.days_in_previous_machine && (
                           <Badge variant="outline" className="ml-2 text-xs">
                             Day {t.days_in_previous_machine}

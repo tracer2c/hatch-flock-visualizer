@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { formatLocalDate } from "@/utils/localDate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -907,7 +908,7 @@ const FlockManager = () => {
                       )}
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>{new Date(flock.arrival_date).toLocaleDateString()}</span>
+                        <span>{formatLocalDate(flock.arrival_date)}</span>
                         <Badge variant="outline" className="ml-auto">{flock.age_weeks} weeks</Badge>
                       </div>
                       {flock.total_birds && (

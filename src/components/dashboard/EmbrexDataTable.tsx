@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatLocalDate } from "@/utils/localDate";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -145,7 +146,7 @@ export const EmbrexDataTable = () => {
       item.flock_name,
       item.age_weeks,
       item.batch_number,
-      new Date(item.set_date).toLocaleDateString(),
+      formatLocalDate(item.set_date),
       item.status,
       item.total_eggs_set,
       item.eggs_cleared ?? "—",
@@ -269,7 +270,7 @@ export const EmbrexDataTable = () => {
                       <TableCell>{item.flock_name}</TableCell>
                       <TableCell>{item.age_weeks}</TableCell>
                       <TableCell>{item.batch_number}</TableCell>
-                      <TableCell>{new Date(item.set_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatLocalDate(item.set_date)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Badge variant={
