@@ -49,6 +49,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<DataSheetViewMode>("rows");
+
 
   // Apply filters to data
   const filteredData = useMemo(() => {
