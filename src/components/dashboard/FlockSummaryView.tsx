@@ -59,7 +59,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
     const byKey = new Map<string, FlockGroup>();
     for (const item of data) {
       if (!item.flock_id) continue;
-      const key = `${item.flock_number ?? "—"}|${normalizeName(item.flock_name)}`;
+      const key = `${normalizeFlockNumber(item.flock_number)}|${normalizeName(item.flock_name)}`;
       let g = byKey.get(key);
       if (!g) {
         g = {
