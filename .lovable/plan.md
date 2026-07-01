@@ -1,16 +1,13 @@
 ## Problem
+In `EmbrexHOITab.tsx`, the `view` state (`"rows"` = By House, `"flock-summary"` = By Flock) is local component state. When Save runs, `onDataUpdate()` triggers the parent refetch, which remounts the tab, resetting `view` back to the default `"rows"` (By House).
 
-On the Embrex Data Sheet → **By Flock** view, when you edit Hatch/Clears and click **Save changes**, the input snaps back to the old computed value. Only a full browser refresh shows the saved number.
+## Fix
+Persist the view mode so it survives remounts/refetches.
 
-Root cause: `FlockSummaryView` renders from the `data` prop fed by `CompleteDataView.loadCompleteData()` (a manual fetch, not React Query). The save hook only invalidates React Query caches (`["batches"]`, `["complete-data"]`) — nothing tells the parent to re-run `loadCompleteData`, so the stale `data` prop keeps re-showing the old value (via `batches_chicks_hatched` fallback) and wipes the just-saved edit from local state.
+- In `src/components/dashboard/EmbrexHOITab.tsx`:
+  - Initialize `view` from `localStorage.getItem("embrex-hoi-view")` (fallback `"rows"`).
+  - On toggle click, write the new value to `localStorage` alongside `setView`.
 
-## Fix (small, frontend-only)
+Result: after clicking **Save changes**, the page refreshes with the latest data and stays on **By Flock** (or whichever view the user had selected).
 
-1. `src/components/dashboard/FlockSummaryView.tsx`
-   - Add optional `onDataUpdate?: () => void` prop.
-   - After `saveAll()` finishes successfully (all dirty rows committed), call `onDataUpdate?.()` so the parent refetches from `batches`.
-
-2. `src/components/dashboard/EmbrexHOITab.tsx`
-   - Pass `onDataUpdate={onDataUpdate}` down to `<FlockSummaryView />`.
-
-No hook, DB, or aggregation changes. After save, the parent refetch pulls the new `batches.chicks_hatched`, `batches_chicks_hatched` recomputes to the saved value, and the row displays the correct number without a manual refresh.
+No other tabs/files change.

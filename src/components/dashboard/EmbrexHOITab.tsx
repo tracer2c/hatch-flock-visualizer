@@ -34,7 +34,15 @@ interface EmbrexHOITabProps {
 
 export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [view, setView] = useState<"rows" | "flock-summary">("rows");
+  const [view, setView] = useState<"rows" | "flock-summary">(() => {
+    if (typeof window === "undefined") return "rows";
+    const saved = window.localStorage.getItem("embrex-hoi-view");
+    return saved === "flock-summary" || saved === "rows" ? saved : "rows";
+  });
+  const updateView = (next: "rows" | "flock-summary") => {
+    setView(next);
+    try { window.localStorage.setItem("embrex-hoi-view", next); } catch { /* ignore */ }
+  };
   const { archive: archiveHouse } = useArchive("batches");
 
   const handleArchive = async (id: string) => {
@@ -211,7 +219,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
             variant={view === "rows" ? "secondary" : "ghost"}
             size="sm"
             className="h-7 gap-1.5"
-            onClick={() => setView("rows")}
+            onClick={() => updateView("rows")}
           >
             <Rows3 className="h-3.5 w-3.5" />
             By House
@@ -220,7 +228,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
             variant={view === "flock-summary" ? "secondary" : "ghost"}
             size="sm"
             className="h-7 gap-1.5"
-            onClick={() => setView("flock-summary")}
+            onClick={() => updateView("flock-summary")}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
             By Flock
