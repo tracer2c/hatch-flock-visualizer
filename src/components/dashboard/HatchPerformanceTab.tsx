@@ -242,11 +242,25 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
     }
   };
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateHatchByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
   return (
     <TooltipProvider>
       <>
+        <DataSheetViewModeToggle value={view} onChange={setView} />
+        {isAggregated && (
+          <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+          </div>
+        )}
         <div className="rounded-md border">
         <Table>
+
         <TableHeader>
           <TableRow>
             {show("flock_number") && <TableHead>Flock#</TableHead>}
