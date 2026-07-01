@@ -14,8 +14,10 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  calculateHatchPercent, 
+import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
+import { aggregateResidueByFlock } from "@/utils/dataSheetAggregation";
+import {
+  calculateHatchPercent,
   calculateHOFPercent,
   calculateHOIPercent,
   calculateIFPercent,
@@ -24,6 +26,7 @@ import {
   calculateFertilityPercent,
   calculateEmbryonicMortality
 } from "@/utils/hatcheryFormulas";
+
 
 interface ResidueBreakoutTableProps {
   data: any[];
