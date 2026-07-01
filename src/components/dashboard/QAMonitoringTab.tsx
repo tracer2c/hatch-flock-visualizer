@@ -39,6 +39,8 @@ interface QAMonitoringTabProps {
 export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: QAMonitoringTabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [view, setView] = useState<import("./DataSheetViewModeToggle").DataSheetViewMode>("rows");
+
   const { isColumnHidden } = useVisualPreferences();
   const show = (col: string) => !isColumnHidden(SECTION, col);
 
