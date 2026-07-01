@@ -13,6 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
+import { aggregateEggPackByFlock } from "@/utils/dataSheetAggregation";
+
 
 interface EggPackQualityTabProps {
   data: any[];
@@ -34,6 +37,8 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [view, setView] = useState<DataSheetViewMode>("rows");
+
 
   // Apply filters to data
   const filteredData = useMemo(() => {
@@ -248,10 +253,24 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
     }
   };
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateEggPackByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
   return (
     <>
+      <DataSheetViewModeToggle value={view} onChange={setView} />
+      {isAggregated && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <Table>
+
           <TableHeader>
             <TableRow>
               <TableHead>Flock Name</TableHead>
@@ -271,18 +290,18 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
               <TableHead>Set Week</TableHead>
               <TableHead>Inspector Name</TableHead>
               <TableHead>Notes</TableHead>
-              {!readOnly && <TableHead>Actions</TableHead>}
+              {showActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {displayData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={18} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => {
+              displayData.map((item) => {
                 const sampleSize = item.epq_sample_size || 648;
                 const stained = extractFromNotes(item.notes, 'Stained');
                 const abnormal = extractFromNotes(item.notes, 'Abnormal');
@@ -294,7 +313,11 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                   <TableRow key={item.batch_id}>
                     <TableCell>{item.flock_name || "-"}</TableCell>
                     <TableCell>{item.flock_number || "-"}</TableCell>
-                    <TableCell>{item.house_number || "-"}</TableCell>
+                    <TableCell>
+                      {item._flock_house_count > 1
+                        ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                        : (item.house_number || "-")}
+                    </TableCell>
                     <TableCell>{item.age_weeks || "-"}</TableCell>
                     <TableCell>{item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}</TableCell>
                     <TableCell>{sampleSize}</TableCell>
@@ -309,7 +332,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                     <TableCell>{setWeek || "-"}</TableCell>
                     <TableCell>{item.inspector_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    {!readOnly && (
+                    {showActions && (
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -334,6 +357,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
               })
             )}
           </TableBody>
+
         </Table>
       </div>
 

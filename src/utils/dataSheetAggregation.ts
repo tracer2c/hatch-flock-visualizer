@@ -193,3 +193,252 @@ export function proportionalSplit(
   }
   return slices.map((s, i) => ({ id: s.id, value: rounded[i] }));
 }
+
+// ---------------------------------------------------------------------------
+// Flock-level aggregation for the non-Embrex Data Sheet tabs.
+// Read-only rollups keyed strictly by normalized flock_number so a flock
+// spread across multiple houses / hatcheries collapses to one row.
+// ---------------------------------------------------------------------------
+
+export function normalizeFlockNumber(v: unknown): string {
+  if (v == null) return "";
+  return String(v).trim().toLowerCase();
+}
+
+function uniqStr(values: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const s = (v ?? "").toString().trim();
+    if (!s) continue;
+    const k = s.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out;
+}
+
+function joinList(values: (string | null | undefined)[], sep = " • "): string {
+  const parts = uniqStr(values);
+  return parts.length ? parts.join(sep) : "";
+}
+
+function earliest(dates: (string | null | undefined)[]): string | null {
+  const parsed = dates
+    .filter((d): d is string => !!d)
+    .map((d) => ({ d, t: new Date(d).getTime() }))
+    .filter((x) => Number.isFinite(x.t));
+  if (!parsed.length) return null;
+  parsed.sort((a, b) => a.t - b.t);
+  return parsed[0].d;
+}
+
+function maxNum(values: unknown[]): number | null {
+  const nums = values.map(num).filter((n) => n > 0);
+  if (!nums.length) return null;
+  return Math.max(...nums);
+}
+
+function groupByFlock<T extends { flock_number?: unknown; flock_id?: unknown }>(
+  rows: T[]
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key =
+      normalizeFlockNumber(row.flock_number) ||
+      String(row.flock_id ?? "") ||
+      "__ungrouped__";
+    const bucket = groups.get(key) ?? [];
+    bucket.push(row);
+    groups.set(key, bucket);
+  }
+  return groups;
+}
+
+function commonFlockFields(bucket: any[]) {
+  const houseCount = new Set(
+    bucket.map((r) => String(r.house_number ?? "").trim().toLowerCase()).filter(Boolean)
+  ).size;
+  return {
+    flock_number: bucket[0].flock_number,
+    flock_name: joinList(bucket.map((r) => r.flock_name)) || bucket[0].flock_name || null,
+    house_number: houseCount > 1 ? null : bucket[0].house_number,
+    age_weeks: maxNum(bucket.map((r) => r.age_weeks)),
+    set_date: earliest(bucket.map((r) => r.set_date)),
+    _flock_house_count: houseCount || 1,
+    _aggregated_count: bucket.length,
+  };
+}
+
+/** Residue Analysis: sum sample & mortality; recompute HOF/HOI %. */
+export function aggregateResidueByFlock(rows: any[]): any[] {
+  const out: any[] = [];
+  for (const [, bucket] of groupByFlock(rows)) {
+    const sample = bucket.reduce(
+      (a, r) => a + num(r.residue_sample_size ?? r.sample_size),
+      0
+    );
+    const infertile = bucket.reduce((a, r) => a + num(r.infertile_eggs), 0);
+    const earlyD = bucket.reduce((a, r) => a + num(r.early_dead), 0);
+    const midD = bucket.reduce((a, r) => a + num(r.mid_dead), 0);
+    const lateD = bucket.reduce((a, r) => a + num(r.late_dead), 0);
+    const cull = bucket.reduce((a, r) => a + num(r.malformed_chicks), 0);
+    const livePips = bucket.reduce((a, r) => a + num(r.live_pip_number), 0);
+    const deadPips = bucket.reduce((a, r) => a + num(r.dead_pip_number), 0);
+    const handlingCracks = bucket.reduce((a, r) => a + num(r.handling_cracks), 0);
+    const transferCrack = bucket.reduce((a, r) => a + num(r.transfer_crack), 0);
+    const contaminated = bucket.reduce((a, r) => a + num(r.contaminated_eggs), 0);
+    const mold = bucket.reduce((a, r) => a + num(r.mold), 0);
+    const abnormal = bucket.reduce((a, r) => a + num(r.abnormal), 0);
+    const brainDefects = bucket.reduce((a, r) => a + num(r.brain_defects), 0);
+    const dryEgg = bucket.reduce((a, r) => a + num(r.dry_egg), 0);
+    const malpositioned = bucket.reduce((a, r) => a + num(r.malpositioned), 0);
+    const upsideDown = bucket.reduce((a, r) => a + num(r.upside_down), 0);
+    const chicks = bucket.reduce((a, r) => a + num(r.chicks_hatched), 0);
+    const injected = bucket.reduce((a, r) => a + num(r.eggs_injected), 0);
+    const fertile = Math.max(0, sample - infertile);
+
+    out.push({
+      ...commonFlockFields(bucket),
+      batch_id: `flock-${normalizeFlockNumber(bucket[0].flock_number)}`,
+      residue_sample_size: sample || null,
+      sample_size: sample || null,
+      infertile_eggs: infertile || null,
+      fertile_eggs: fertile || null,
+      early_dead: earlyD || null,
+      mid_dead: midD || null,
+      late_dead: lateD || null,
+      malformed_chicks: cull || null,
+      live_pip_number: livePips || null,
+      dead_pip_number: deadPips || null,
+      pip_number: livePips + deadPips || null,
+      handling_cracks: handlingCracks || null,
+      transfer_crack: transferCrack || null,
+      contaminated_eggs: contaminated || null,
+      mold: mold || null,
+      abnormal: abnormal || null,
+      brain_defects: brainDefects || null,
+      dry_egg: dryEgg || null,
+      malpositioned: malpositioned || null,
+      upside_down: upsideDown || null,
+      chicks_hatched: chicks || null,
+      eggs_injected: injected || null,
+      hof_percent: pct(chicks, fertile),
+      hoi_percent: pct(chicks, injected),
+      lab_technician: joinList(bucket.map((r) => r.lab_technician)),
+      notes: joinList(bucket.map((r) => r.notes ?? r.residue_notes)),
+    });
+  }
+  return out;
+}
+
+/** Egg Pack Quality: sum sample + defects. */
+export function aggregateEggPackByFlock(rows: any[]): any[] {
+  const out: any[] = [];
+  for (const [, bucket] of groupByFlock(rows)) {
+    const sample = bucket.reduce((a, r) => a + num(r.epq_sample_size), 0);
+    const sum = (f: string) => bucket.reduce((a, r) => a + num(r[f]), 0) || null;
+    // Extract stained/abnormal/contaminated/usd from notes string of each row
+    const extract = (notes: string | null | undefined, field: string): number => {
+      if (!notes) return 0;
+      const m = notes.match(new RegExp(`${field}:\\s*(\\d+)`));
+      return m ? parseInt(m[1]) : 0;
+    };
+    const stained = bucket.reduce((a, r) => a + extract(r.notes, "Stained"), 0);
+    const abnormal = bucket.reduce((a, r) => a + extract(r.notes, "Abnormal"), 0);
+    const contaminated = bucket.reduce((a, r) => a + extract(r.notes, "Contaminated"), 0);
+    const usd = bucket.reduce((a, r) => a + extract(r.notes, "USD"), 0);
+    const setWeek =
+      bucket
+        .map((r) => {
+          const m = (r.notes ?? "").match(/Set Week:\s*([^,]+)/);
+          return m ? m[1].trim() : "";
+        })
+        .find((v) => v) || "";
+
+    // Build a merged notes string so the existing table extractor still works
+    const notesMerged =
+      `Stained: ${stained}, Abnormal: ${abnormal}, Contaminated: ${contaminated}, USD: ${usd}` +
+      (setWeek ? `, Set Week: ${setWeek}` : "");
+
+    out.push({
+      ...commonFlockFields(bucket),
+      batch_id: `flock-${normalizeFlockNumber(bucket[0].flock_number)}`,
+      epq_sample_size: sample || null,
+      sample_size: sample || null,
+      cracked: sum("cracked"),
+      dirty: sum("dirty"),
+      small: sum("small"),
+      large: sum("large"),
+      grade_a: sum("grade_a"),
+      grade_b: sum("grade_b"),
+      grade_c: sum("grade_c"),
+      inspector_name: joinList(bucket.map((r) => r.inspector_name)),
+      notes: notesMerged,
+    });
+  }
+  return out;
+}
+
+/** Hatch Results: sum eggs/fertile/chicks; recompute all %. */
+export function aggregateHatchByFlock(rows: any[]): any[] {
+  const out: any[] = [];
+  for (const [, bucket] of groupByFlock(rows)) {
+    const sample = bucket.reduce((a, r) => a + num(r.sample_size), 0);
+    const fertile = bucket.reduce((a, r) => a + num(r.fertile_eggs), 0);
+    const infertile = bucket.reduce((a, r) => a + num(r.infertile_eggs), 0);
+    const chicks = bucket.reduce((a, r) => a + num(r.chicks_hatched), 0);
+    const injected = bucket.reduce((a, r) => a + num(r.eggs_injected), 0);
+
+    out.push({
+      ...commonFlockFields(bucket),
+      batch_id: `flock-${normalizeFlockNumber(bucket[0].flock_number)}`,
+      sample_size: sample || null,
+      fertile_eggs: fertile || null,
+      infertile_eggs: infertile || null,
+      chicks_hatched: chicks || null,
+      eggs_injected: injected || null,
+      fertility_percent: pct(fertile, sample),
+      hatch_percent: pct(chicks, sample),
+      hof_percent: pct(chicks, fertile),
+      hoi_percent: pct(chicks, injected),
+      if_dev_percent: pct(infertile, fertile),
+      technician_name: joinList(bucket.map((r) => r.technician_name)),
+      notes: joinList(bucket.map((r) => r.notes)),
+    });
+  }
+  return out;
+}
+
+/** QA Monitoring: latest reading per house, then latest per flock. */
+export function aggregateQAByFlock(rows: any[]): any[] {
+  const rank = (r: any) => {
+    const t = r.check_date ? new Date(r.check_date).getTime() : 0;
+    const d = num(r.day_of_incubation);
+    return (Number.isFinite(t) ? t : 0) + d * 1000;
+  };
+  const out: any[] = [];
+  for (const [, bucket] of groupByFlock(rows)) {
+    // Per-house latest
+    const byHouse = new Map<string, any>();
+    for (const r of bucket) {
+      const hk = String(r.house_number ?? "").trim().toLowerCase() || "__nohouse__";
+      const cur = byHouse.get(hk);
+      if (!cur || rank(r) > rank(cur)) byHouse.set(hk, r);
+    }
+    const latestPerHouse = Array.from(byHouse.values());
+    latestPerHouse.sort((a, b) => rank(b) - rank(a));
+    const latest = latestPerHouse[0] ?? bucket[0];
+
+    out.push({
+      ...latest,
+      ...commonFlockFields(bucket),
+      id: `flock-${normalizeFlockNumber(bucket[0].flock_number)}`,
+      inspector_name: joinList(latestPerHouse.map((r) => r.inspector_name)),
+      notes: joinList(latestPerHouse.map((r) => r.notes)),
+    });
+  }
+  return out;
+}
+

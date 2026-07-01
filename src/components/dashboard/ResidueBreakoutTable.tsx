@@ -14,8 +14,10 @@ import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  calculateHatchPercent, 
+import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
+import { aggregateResidueByFlock } from "@/utils/dataSheetAggregation";
+import {
+  calculateHatchPercent,
   calculateHOFPercent,
   calculateHOIPercent,
   calculateIFPercent,
@@ -24,6 +26,7 @@ import {
   calculateFertilityPercent,
   calculateEmbryonicMortality
 } from "@/utils/hatcheryFormulas";
+
 
 interface ResidueBreakoutTableProps {
   data: any[];
@@ -46,6 +49,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<DataSheetViewMode>("rows");
+
 
   // Apply filters to data
   const filteredData = useMemo(() => {
@@ -291,11 +296,25 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
     }
   };
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateResidueByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
   return (
     <TooltipProvider>
       <>
+        <DataSheetViewModeToggle value={view} onChange={setView} />
+        {isAggregated && (
+          <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+          </div>
+        )}
         <div className="overflow-x-auto">
         <Table>
+
           <TableHeader>
             <TableRow>
               <TableHead>Flock #</TableHead>
@@ -327,24 +346,30 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
               <TableHead>HOI %</TableHead>
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
-              {!readOnly && <TableHead>Actions</TableHead>}
+              {showActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {displayData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={27} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => {
+              displayData.map((item) => {
+
                 const sampleSize = item.residue_sample_size || item.sample_size || 648;
                 return (
                   <TableRow key={item.batch_id}>
                     <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>{item.flock_name || "-"}</TableCell>
-                    <TableCell>{item.house_number || "-"}</TableCell>
+                    <TableCell>
+                      {item._flock_house_count > 1
+                        ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                        : (item.house_number || "-")}
+                    </TableCell>
+
                     <TableCell>{item.age_weeks || "-"}</TableCell>
                     <TableCell>
                       {item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}
@@ -390,7 +415,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                     </TableCell>
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    {!readOnly && (
+                    {showActions && (
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -411,6 +436,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                         </div>
                       </TableCell>
                     )}
+
                   </TableRow>
                 );
               })

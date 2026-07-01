@@ -1,57 +1,59 @@
-## Problem
+## Goal
 
-On the Data Sheet → Embrex/HOI → **By Flock** view, editing "Hatch" appears to revert (e.g. Barron: 56,152 → 8,424).
+The Data Sheet's "By House / By Flock" toggle is only on the Embrex/HOI tab today. The client wants the same flock-level merger on **every** tab (Residue Analysis, Egg Quality, Hatch Results, Quality Assurance) so a flock spread across multiple houses / hatcheries appears as one row.
 
-Root cause: two sources of truth for `chicks_hatched`.
+## Scope
 
-- **Write path (what our By-Flock input saves):** `useSaveFlockTotalsToBatches` → `batches.chicks_hatched` + `flock_weekly_clears.chicks_hatched`. This works.
-- **Display path (what the row actually renders):** `CompleteDataView.tsx` recomputes `chicks_hatched` on every fetch from the residue-analysis formula (`sample_size − infertile − dead − culls + pips`). This overrides whatever we saved.
+- Read-only "By Flock" aggregation on the four remaining tabs.
+- Editing continues to live on "By House" (unchanged).
+- Same grouping rules as Embrex: group strictly by normalized `flock_number`, show a "N houses" badge when the flock spans more than one house/hatchery, and respect the current search + filter set.
 
-Result: the save succeeds, refetch happens, formula wins, UI shows the derived number again. It looks like the edit "reverts".
+## Per-tab aggregation rules
 
-## Fix
+| Tab              | Group by       | Numeric roll-up (sum)                                                     | Recomputed after roll-up            |
+| ---------------- | -------------- | ------------------------------------------------------------------------- | ----------------------------------- |
+| Residue Analysis | `flock_number` | sample_size, infertile, early_dead, mid_dead, late_dead, cull_chicks      | HOF %, HOI %, Total Dead %          |
+| Egg Quality      | `flock_number` | sample_size, grade_a, grade_b, grade_c, cracked, dirty                    | Grade % columns                     |
+| Hatch Results    | `flock_number` | total_eggs_set, fertile_eggs, chicks_hatched                              | Fertility %, Hatch %, HOF %, HOI %  |
+| Quality Assurance| `flock_number` | none — take **latest** temp / humidity / CO₂ per house, then latest per flock (by `check_date` + `day_of_incubation`) | n/a — display latest reading      |
 
-Make the manually-entered value authoritative when it exists, and fall back to the residue-derived formula only when it doesn't.
+Common columns collapsed on every tab: Flock #, Flock Name, House # → "N houses" badge, earliest Set Date, max Age (weeks), technician list de-duplicated, notes concatenated with " • ".
 
-### 1. `src/components/dashboard/CompleteDataView.tsx`
-Change the row mapping so `chicks_hatched` prefers the DB column:
+## Implementation
 
-```ts
-chicks_hatched:
-  batch.chicks_hatched != null && batch.chicks_hatched > 0
-    ? batch.chicks_hatched
-    : calculateChicksHatched(/* residue-derived fallback, unchanged */),
-```
+### New / extended utilities — `src/utils/dataSheetAggregation.ts`
+Add sibling helpers next to the existing `aggregateByHouse` / `aggregateByFlock`:
+- `aggregateResidueByFlock(rows)`
+- `aggregateEggQualityByFlock(rows)`
+- `aggregateHatchByFlock(rows)`
+- `aggregateQAByFlock(rows)` (latest-wins reducer)
 
-Keep `chicks_hatched_db` as-is so anything reading the raw column still works. This is the single behavioural change that makes Corey's 56,152 stick.
+Each returns rows shaped like the existing per-tab row so the tab's current table renderer works without a schema change. All use the shared `normalizeFlockNumber` from `FlockSummaryView` (extracted to the util so we don't duplicate it).
 
-### 2. `src/components/dashboard/FlockSummaryView.tsx`
-`storedFor("chicks_hatched")` currently prefers `batches_chicks_hatched > 0` then falls back to `flock_weekly_clears`. That's already correct — but because the aggregated `data` prop now carries the DB-preferred value (from step 1), the fallback will trigger far less often. No code change required; verify it still renders correctly with a single-house flock like Barron.
+### Tab-level changes
+For each of the four tabs (`ResidueBreakoutTab.tsx`, `EggPackQualityTab.tsx`, `HatchPerformanceTab.tsx`, `QAMonitoringTab.tsx`):
+1. Add `view` state (`"rows" | "flock-summary"`, default `"rows"`).
+2. Render the same segmented `By House / By Flock` control used in `EmbrexHOITab.tsx` (extract to a small `<ViewModeToggle />` in `src/components/dashboard/DataSheet/ViewModeToggle.tsx` so all five tabs share it).
+3. When `view === "flock-summary"`, run the tab's aggregator on `filteredData` and render the same table with:
+   - House # cell replaced by a "N houses" chip when > 1.
+   - Row actions (edit/delete) hidden.
+   - A small info banner: *"Aggregated view — edits are done on the By House tab."*
+4. Preserve existing filters, search, sort, and percentage toggle — they run **before** aggregation.
 
-### 3. Analytics / exports sanity check (read-only audit, no code changes unless needed)
-Grep for other consumers of `chicks_hatched` to confirm none of them assume the residue-derived formula:
-- `HatchPerformanceTab.tsx`
-- `useMachinePerformanceMetrics.ts`
-- Export column maps in `EmbrexDataSheetPage.tsx`
+### Shared components
+- Extract the segmented control markup from `EmbrexHOITab` into `ViewModeToggle` so behavior stays consistent (icons, sizing, active style).
+- Extract the "N houses" badge cell into a small helper for reuse.
 
-If any of them independently recompute Hatch from residue, apply the same "prefer stored value" pattern.
+## Non-goals
 
-### 4. Verify
+- No editing on the aggregated view for the four new tabs (client confirmed).
+- No DB / RLS / migration changes.
+- Embrex/HOI tab behavior unchanged.
+- No changes to Timeline View or Export (exports continue to use the underlying rows).
 
-1. Log in as a Wayne Sanderson user, open `/embrex-data-sheet` → Embrex/HOI → By Flock.
-2. Change Barron's Hatch from 8,424 → 56,152, tab out.
-3. Confirm toast success, refetch shows 56,152, Hatch % becomes ~88.9%.
-4. Switch to By House view — same house shows 56,152.
-5. Reload the page — value persists.
-6. Re-open By Flock — still 56,152.
+## Verification
 
-## What this does NOT change
-
-- No DB schema changes. No migration.
-- Residue-analysis formula is preserved as a fallback for rows that were never manually entered (backwards compatible with existing derived displays).
-- `flock_weekly_clears` continues to store culls (no `batches` column for that).
-- No changes to the four previously-closed client items (flock rollup, single-source entry, date sweep, aggregation).
-
-## Technical note
-
-The formula fallback was originally there because early data didn't have `batches.chicks_hatched` populated. Now that users are entering Hatch directly, the stored value must win. This is a one-line precedence flip in `CompleteDataView.tsx`.
+- Toggle appears on all five tabs with identical placement and styling.
+- Wayne Sanderson flock 6343 (spans two hatcheries) shows as one row on Residue, Egg Quality, Hatch, and QA.
+- Filters + search still narrow results before aggregation.
+- "By House" behavior on every tab is byte-identical to today.

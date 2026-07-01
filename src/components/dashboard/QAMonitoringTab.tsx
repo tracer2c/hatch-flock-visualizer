@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import Setter18PointDisplay from "./Setter18PointDisplay";
 import { ExportService } from "@/services/exportService";
 import { useVisualPreferences } from "@/hooks/useVisualPreferences";
+import { DataSheetViewModeToggle } from "./DataSheetViewModeToggle";
+import { aggregateQAByFlock } from "@/utils/dataSheetAggregation";
+
 
 const SECTION = "qa_monitoring";
 
@@ -39,6 +42,8 @@ interface QAMonitoringTabProps {
 export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: QAMonitoringTabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [view, setView] = useState<import("./DataSheetViewModeToggle").DataSheetViewMode>("rows");
+
   const { isColumnHidden } = useVisualPreferences();
   const show = (col: string) => !isColumnHidden(SECTION, col);
 
@@ -269,6 +274,14 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
     }).length;
   }, [filteredData]);
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateQAByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
+
   return (
     <>
       {/* Temperature Alert Banner */}
@@ -291,9 +304,16 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
         </Button>
       </div>
 
+      <DataSheetViewModeToggle value={view} onChange={setView} />
+      {view === "flock-summary" && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Aggregated view — latest reading per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+        </div>
+      )}
       <div className="overflow-x-auto">
       <Table>
         <TableHeader>
+
           <TableRow>
             {show("flock_number") && <TableHead>Flock #</TableHead>}
             {show("flock_name") && <TableHead>Flock Name</TableHead>}
@@ -318,22 +338,29 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
             {show("angle_bottom_right") && <TableHead>Angle Bot R</TableHead>}
             {show("inspector_name") && <TableHead>Inspector</TableHead>}
             {show("notes") && <TableHead>Notes</TableHead>}
-            {!readOnly && <TableHead>Actions</TableHead>}
+            {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.length === 0 ? (
+          {displayData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
           ) : (
-            filteredData.map((item) => (
+            displayData.map((item) => (
               <TableRow key={item.id}>
                 {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
-                {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                {show("house_number") && (
+                  <TableCell>
+                    {item._flock_house_count > 1
+                      ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                      : (item.house_number || "-")}
+                  </TableCell>
+                )}
+
                 {show("age_weeks") && <TableCell>{item.age_weeks || "-"}</TableCell>}
                 {show("check_date") && (
                   <TableCell>
@@ -372,7 +399,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
                 {show("angle_bottom_right") && <TableCell>{item.angle_bottom_right || "-"}</TableCell>}
                 {show("inspector_name") && <TableCell>{item.inspector_name || "-"}</TableCell>}
                 {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
-                {!readOnly && (
+                {showActions && (
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
