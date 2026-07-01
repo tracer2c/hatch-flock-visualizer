@@ -399,7 +399,7 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
                 {show("angle_bottom_right") && <TableCell>{item.angle_bottom_right || "-"}</TableCell>}
                 {show("inspector_name") && <TableCell>{item.inspector_name || "-"}</TableCell>}
                 {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
-                {!readOnly && (
+                {showActions && (
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
