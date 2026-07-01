@@ -1,13 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Info, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   useFlockWeeklyClearsMap,
   useSaveFlockTotalsToBatches,
 } from "@/hooks/useFlockWeeklyClears";
 import { formatLocalDate } from "@/utils/localDate";
+
+
 
 interface FlockSummaryViewProps {
   data: any[]; // already filtered/sorted batches for the active date range
@@ -171,39 +174,95 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
     setEdits((prev) => ({ ...prev, [g.key]: { ...prev[g.key], [field]: value } }));
   };
 
+  // Count rows that actually differ from what's stored — this drives the
+  // "N unsaved changes" bar and the navigation guard prompt.
+  const dirtyKeys = useMemo(() => {
+    const keys: string[] = [];
+    for (const g of groups) {
+      const rowEdits = edits[g.key];
+      if (!rowEdits) continue;
+      const changed = (["chicks_hatched", "eggs_culled", "eggs_cleared"] as const).some(
+        (field) => {
+          if (rowEdits[field] === undefined) return false;
+          const stored = storedFor(g, field);
+          const storedStr = stored != null ? String(stored) : "";
+          return (rowEdits[field] ?? "") !== storedStr;
+        }
+      );
+      if (changed) keys.push(g.key);
+    }
+    return keys;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, edits, clearsByFlock]);
+
+  const dirtyCount = dirtyKeys.length;
+  const isSaving = saveMutation.isPending;
+
   const commitRow = (g: FlockGroup) => {
-    if (readOnly || !periodStart || !periodEnd) return;
+    if (readOnly || !periodStart || !periodEnd) return Promise.resolve();
     const parsed = (field: "chicks_hatched" | "eggs_culled" | "eggs_cleared") => {
       const v = valueFor(g, field);
       return v === "" ? null : parseFloat(v);
     };
-    saveMutation.mutate(
-      {
-        flock_id: g.primary_flock_id,
-        period_start: periodStart,
-        period_end: periodEnd,
-        eggs_set_total: g.eggs_set_total,
-        chicks_hatched: parsed("chicks_hatched"),
-        eggs_culled: parsed("eggs_culled"),
-        eggs_cleared: parsed("eggs_cleared"),
-        batch_slices: g.batch_slices.map((s) => ({
-          id: s.id,
-          total_eggs_set: s.total_eggs_set,
-        })),
-      },
-      {
-        onSuccess: () => {
-          // Clear the edit buffer for this row so it reflects saved values
-          // on the next data refresh instead of sticking to typed text.
-          setEdits((prev) => {
-            const next = { ...prev };
-            delete next[g.key];
-            return next;
-          });
+    return new Promise<void>((resolve, reject) => {
+      saveMutation.mutate(
+        {
+          flock_id: g.primary_flock_id,
+          period_start: periodStart,
+          period_end: periodEnd,
+          eggs_set_total: g.eggs_set_total,
+          chicks_hatched: parsed("chicks_hatched"),
+          eggs_culled: parsed("eggs_culled"),
+          eggs_cleared: parsed("eggs_cleared"),
+          batch_slices: g.batch_slices.map((s) => ({
+            id: s.id,
+            total_eggs_set: s.total_eggs_set,
+          })),
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            setEdits((prev) => {
+              const next = { ...prev };
+              delete next[g.key];
+              return next;
+            });
+            resolve();
+          },
+          onError: (e) => reject(e),
+        }
+      );
+    });
   };
+
+  const saveAll = async () => {
+    if (readOnly || dirtyCount === 0) return;
+    const groupsByKey = new Map(groups.map((g) => [g.key, g] as const));
+    for (const key of dirtyKeys) {
+      const g = groupsByKey.get(key);
+      if (!g) continue;
+      try {
+        await commitRow(g);
+      } catch {
+        // toast handled inside the mutation; stop the batch on error
+        return;
+      }
+    }
+  };
+
+  const discardAll = () => setEdits({});
+
+  // Warn on full-page close/reload while edits are pending.
+  useEffect(() => {
+    if (dirtyCount === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirtyCount]);
+
+
 
   const totals = useMemo(() => {
     return groups.reduce(
@@ -226,14 +285,47 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
         <span>
           Values entered here are saved to each house in the flock, split by egg
           count. They appear in <strong>By House</strong>, exports, and analytics —
-          no need to re-enter anywhere else.
+          no need to re-enter anywhere else. Changes are <strong>not saved automatically</strong>
+          {" "}— click <strong>Save changes</strong> when done.
         </span>
       </div>
-      <div className="text-sm text-muted-foreground">
-        Period: {formatLocalDate(periodStart, "—")} – {formatLocalDate(periodEnd, "—")}
-        {" · "}Set the date range filter above to control which week (or day)
-        this groups by.
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-sm text-muted-foreground">
+          Period: {formatLocalDate(periodStart, "—")} – {formatLocalDate(periodEnd, "—")}
+          {" · "}Set the date range filter above to control which week (or day)
+          this groups by.
+        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {dirtyCount > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"}
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={dirtyCount === 0 || isSaving}
+              onClick={discardAll}
+              className="gap-1.5"
+            >
+              <X className="h-3.5 w-3.5" />
+              Discard
+            </Button>
+            <Button
+              size="sm"
+              disabled={dirtyCount === 0 || isSaving}
+              onClick={saveAll}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {isSaving ? "Saving…" : `Save changes${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
+            </Button>
+          </div>
+        )}
       </div>
+
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -299,7 +391,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "chicks_hatched")}
                         onChange={(e) => setEdit(g, "chicks_hatched", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground tabular-nums">
@@ -313,7 +404,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "eggs_culled")}
                         onChange={(e) => setEdit(g, "eggs_culled", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground tabular-nums">
@@ -327,7 +417,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "eggs_cleared")}
                         onChange={(e) => setEdit(g, "eggs_cleared", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                   </TableRow>
