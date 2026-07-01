@@ -33,6 +33,7 @@ type FlockGroup = {
   flock_ids: Set<string>;
   house_count: number;
   machine_count: number;
+  name_variants: string[];
 };
 
 const pct = (n: number | null | undefined, total: number): string => {
