@@ -33,6 +33,7 @@ type FlockGroup = {
   flock_ids: Set<string>;
   house_count: number;
   machine_count: number;
+  name_variants: string[];
 };
 
 const pct = (n: number | null | undefined, total: number): string => {
@@ -57,10 +58,21 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
 
   const groups = useMemo<FlockGroup[]>(() => {
     const byKey = new Map<string, FlockGroup>();
+    const nameVariants = new Map<string, Set<string>>();
     for (const item of data) {
       if (!item.flock_id) continue;
-      const key = `${normalizeFlockNumber(item.flock_number)}|${normalizeName(item.flock_name)}`;
+      // Group by flock_number ONLY. Per the multi-hatchery pattern, the same
+      // flock number placed in different hatcheries creates separate flocks
+      // rows but represents the same logical flock to the user.
+      const key = normalizeFlockNumber(item.flock_number);
+      if (!key) continue; // rows without a flock # can't be summarized
       let g = byKey.get(key);
+      const nameKey = String(item.flock_name ?? "").trim();
+      if (nameKey) {
+        const set = nameVariants.get(key) ?? new Set<string>();
+        set.add(nameKey);
+        nameVariants.set(key, set);
+      }
       if (!g) {
         g = {
           key,
@@ -75,6 +87,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
           flock_ids: new Set<string>(),
           house_count: 0,
           machine_count: 0,
+          name_variants: [],
         };
         byKey.set(key, g);
       }
@@ -109,6 +122,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
       }
       const winner = Object.entries(byFlockShare).sort((a, b) => b[1] - a[1])[0];
       if (winner) g.primary_flock_id = winner[0];
+      g.name_variants = Array.from(nameVariants.get(g.key) ?? []);
     }
     return Array.from(byKey.values()).sort(
       (a, b) => Number(b.flock_number) - Number(a.flock_number)
@@ -260,6 +274,15 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         {g.batch_slices.length > 1 && (
                           <Badge variant="secondary" className="text-[10px]">
                             {g.house_count} {g.house_count === 1 ? "house" : "houses"}
+                          </Badge>
+                        )}
+                        {g.name_variants.length > 1 && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px]"
+                            title={g.name_variants.join(" · ")}
+                          >
+                            +{g.name_variants.length - 1} variant{g.name_variants.length - 1 === 1 ? "" : "s"}
                           </Badge>
                         )}
                       </div>
