@@ -338,22 +338,29 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
             {show("angle_bottom_right") && <TableHead>Angle Bot R</TableHead>}
             {show("inspector_name") && <TableHead>Inspector</TableHead>}
             {show("notes") && <TableHead>Notes</TableHead>}
-            {!readOnly && <TableHead>Actions</TableHead>}
+            {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.length === 0 ? (
+          {displayData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
           ) : (
-            filteredData.map((item) => (
+            displayData.map((item) => (
               <TableRow key={item.id}>
                 {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
-                {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                {show("house_number") && (
+                  <TableCell>
+                    {item._flock_house_count > 1
+                      ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                      : (item.house_number || "-")}
+                  </TableCell>
+                )}
+
                 {show("age_weeks") && <TableCell>{item.age_weeks || "-"}</TableCell>}
                 {show("check_date") && (
                   <TableCell>
