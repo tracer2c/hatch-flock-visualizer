@@ -1,42 +1,63 @@
-## What I found in the data
 
-Pulled the actual rows for flocks 6342 / 6343 straight from the database:
+# Full Date Sweep — Item #4 Closure
 
-- Flock 6343 "Hen valley" exists as **two separate `flocks` rows** with different `flock_id`s — one per hatchery (`3348bd29…` on ENT-01, `719c85f6…` on the other). Total eggs: 120,000 + 92,000 = 212,000.
-- Flock 6342 "sun valley" exists as **two separate `flocks` rows** — one on DHN-09, one on ENT-26. Total eggs: 28,000 + 28,000 = 56,000.
+## Goal
+Every `YYYY-MM-DD` date column read from Supabase must render as the same calendar date the user typed, in every US timezone. Today, most Data Sheet displays still call `new Date(item.set_date).toLocaleDateString()` which parses as UTC midnight and shifts back one day west of Greenwich.
 
-This matches the project's documented multi-hatchery pattern: the same flock number is re-created as a fresh `flocks` row for each hatchery it's placed into.
+## Findings from audit
 
-## Why By Flock still shows duplicates
+**Already safe (no change needed):**
+- Filter range comparisons (`item.set_date >= filters.dateFrom`) — string vs string, no Date involved.
+- `DataSheetFilterSheet` / `DataSheetCenteredFilterDialog` — use `date-fns format(date, 'yyyy-MM-dd')` on a local Date from the picker (correct).
+- `DateRangeSlider` — operates on "now", no stored-date parsing.
+- `AllDataTab` + `EmbrexHOITab` main tables — already migrated to `formatLocalDate`.
 
-My last fix keyed the grouping by `flock_number + normalized(flock_name)`. That should have collapsed them, but two things can still split the buckets in production data:
+**Unsafe — will be migrated to `formatLocalDate`:**
 
-1. **Case / whitespace drift in `flock_name`** — e.g. "Hen valley" vs "Hen Valley " on one row. `normalizeName` handles it, but any hidden character (non-breaking space, tab) survives.
-2. **A trailing enrichment field polluting the key** — not currently the case, but adding name to the key adds fragility without upside: the client's mental model is that flock number is the identity.
+| File | Line(s) | Column |
+|---|---|---|
+| `EmbrexDataTable.tsx` | 148 (CSV export), 272 (table row) | `set_date` |
+| `EmbrexTab.tsx` | 55 | `set_date` |
+| `HatchPerformanceTab.tsx` | 345 | `set_date` |
+| `EmbrexTimelinePage.tsx` | 2129 | `set_date` |
+| `EmbrexDataSheetPage.tsx` | 252, 270 (export filename) | today's date — replace with `formatLocalDate(new Date())` variant |
+| `HouseManager.tsx` | 928 | `set_date` |
+| `FlockManager.tsx` | 910 | `arrival_date` |
+| `MultiSetterSetsManager.tsx` | 873, 999 | `set_date`, `check_date` |
+| `MachineTransfersTab.tsx` | 160, 254 | `transfer_date` |
+| `TransferManager.tsx` | 169, 250 | `set_date`, `transfer_date` |
+| `BatchDataEntry.tsx` | 221, 287, 308, 324 | `set_date`, `transfer_date` |
+| `ClearsInjectedEntryPage.tsx` | 232 | `set_date` |
+| `EggPackEntryPage.tsx` | 214 | `set_date` |
+| `FertilityEntryPage.tsx` | 223 | `set_date` |
+| `ResidueEntryPage.tsx` | 336 | `set_date` |
+| `QAEntryPage.tsx` | 609 | `set_date` |
+| `DataTypeSelection.tsx` | 191 | `set_date` |
+| `FertilityDataEntry.tsx` | 539 | `analysis_date` |
+| `UserManager.tsx` | 436 | `created_at` (timestamp — keep `toLocaleDateString` but wrap safely) |
+| `MachineManager.tsx` | 800 | `last_maintenance` |
 
-Since the memory rule `[Flock Mult-Hatchery Setup]` says flock numbers are intentionally re-used across hatcheries as the same logical flock, grouping by **flock number alone** is the correct identity for the By Flock view.
+**Sorting risk (low):** `EmbrexHOITab.tsx:108-109` uses `new Date(str).getTime()` for sort. Sort order stays consistent even with UTC shift, so no functional bug — leave as-is.
 
-## The change
+## Approach
 
-**`src/components/dashboard/FlockSummaryView.tsx`**
+1. **Extend `src/utils/localDate.ts`** — add one helper `todayLocalISO()` returning `YYYY-MM-DD` for local today (for export filenames), so we don't shift dates westward at midnight UTC.
 
-1. Change the group key from `flock_number + name` to just the normalized flock number.
-2. Skip rows with a blank/null flock number (they can't be grouped meaningfully — surface them separately at the bottom of the table instead of merging them into an "empty" bucket).
-3. Show the farm/flock name from the first row of the group, and if names diverge across the group (rare), append a subtle "+N variants" chip so the user knows.
-4. Keep the existing badge showing house/machine count and the proportional save logic — those already handle multi-hatchery slices correctly because `batch_slices` is collected from every row in the group regardless of `flock_id`.
+2. **Search-and-replace pass** on the ~20 files above:
+   - `new Date(X).toLocaleDateString()` → `formatLocalDate(X)`
+   - `new Date().toISOString().split('T')[0]` (export filenames) → `todayLocalISO()`
+   - Add `import { formatLocalDate } from "@/utils/localDate";` where missing.
 
-## Expected result after the change
+3. **Timestamps with time-of-day** (`created_at`, `last_maintenance` if it's a timestamptz): these legitimately carry a time. Keep them on `toLocaleDateString()` but route through a small `formatTimestampDate` wrapper that guards nulls consistently. Only truly date-only columns get `formatLocalDate`.
 
-```text
-Flock  Farm         Age  Eggs Set   Hatch  Hatch%  Culls  Cull%  Clear
-6343   Hen valley   46   212,000    [   ]  0.0%    [   ]  0.0%   [   ]   (2 houses)
-6342   sun valley   55    56,000    [   ]  0.0%    [   ]  0.0%   [   ]   (2 houses)
-6420   Ammu Valley  41    10,000    [   ]  0.0%    [   ]  0.0%   [   ]
-…
-```
+4. **Sanity check** with a quick grep after edits — ensure no remaining `new Date(...).toLocaleDateString()` on the known DATE columns (`set_date`, `hatch_date`, `transfer_date`, `arrival_date`, `analysis_date`, `check_date`).
 
-Editing Hatch / Clear / Culls on the 6343 row will split proportionally by egg share (120k / 212k → 56.6% to ENT-01's batch, 92k / 212k → 43.4% to the other), writing straight into the `batches` table for those two houses.
+## Out of scope
+- Timeline analysis charts (numeric axis math is timezone-agnostic).
+- QA hub filter behavior (already string-based).
+- Backend/edge functions (they use ISO end-to-end).
 
-## If it's still duplicated after this ships
-
-Fall-through diagnostic (only if needed): add a one-time `console.debug` in the grouping loop printing the raw `flock_number` bytes and length for each row, so we can catch invisible-character contamination if it ever recurs.
+## Verification
+- Load `/embrex-data-sheet`, pick a row with `set_date = 2026-05-25`, confirm it renders `5/25/2026` and not `5/24/2026`.
+- Export CSV/XLSX at 8pm CDT and confirm the filename uses today's local date, not tomorrow's UTC.
+- Open a Batch Data Entry drawer and confirm the header date matches the sheet.

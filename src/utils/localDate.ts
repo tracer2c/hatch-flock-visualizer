@@ -43,3 +43,12 @@ export function calculateWeekLocal(value: string | Date | null | undefined): num
   );
   return Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
 }
+
+/** Local today as YYYY-MM-DD (safe for export filenames). */
+export function todayLocalISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
