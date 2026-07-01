@@ -2,15 +2,17 @@ import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Archive, Rows3, LayoutGrid } from "lucide-react";
-import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useVisualPreferences } from "@/hooks/useVisualPreferences";
 import { useArchive } from "@/hooks/useArchive";
 import { FlockSummaryView } from "@/components/dashboard/FlockSummaryView";
+import { aggregateByHouse, proportionalSplit } from "@/utils/dataSheetAggregation";
+import { formatLocalDate } from "@/utils/localDate";
 
 const SECTION = "embrex_hoi";
 
@@ -125,6 +127,10 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
     return result;
   }, [data, searchTerm, filters]);
 
+  // Collapse per-machine batches into one row per house. Kept behind a
+  // "By House" toggle-esque default so a house appears once with its full
+  // 87k total instead of split across TROY-15/20/18.
+  const houseData = useMemo(() => aggregateByHouse(filteredData), [filteredData]);
 
   const handleEdit = (record: any) => {
     setEditingRecord(record);
@@ -138,21 +144,40 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
 
   const handleSave = async () => {
     try {
-      const { error } = await supabase
-        .from("batches")
-        .update({
-          eggs_cleared: parseInt(formData.eggs_cleared) || 0,
-          eggs_injected: parseInt(formData.eggs_injected) || 0,
-          hoi_technician_name: formData.technician_name,
-          hoi_notes: formData.notes,
-          clears_technician_name: formData.technician_name,
-          clears_notes: formData.notes,
-        })
-        .eq("id", editingRecord.id);
+      const cleared = parseInt(formData.eggs_cleared) || 0;
+      const injected = parseInt(formData.eggs_injected) || 0;
+      const slices: Array<{ id: string; total_eggs_set: number }> =
+        editingRecord?._batch_slices || [{ id: editingRecord.id, total_eggs_set: editingRecord.total_eggs_set || 0 }];
 
-      if (error) throw error;
+      const clearedSplit = proportionalSplit(cleared, slices);
+      const injectedSplit = proportionalSplit(injected, slices);
 
-      toast.success("Record updated successfully");
+      // Distribute clears/injected across the house's underlying batches
+      // proportionally by egg share. Technician/notes copy to every slice.
+      const results = await Promise.all(
+        slices.map((s, i) =>
+          Promise.resolve(
+            supabase
+              .from("batches")
+              .update({
+                eggs_cleared: clearedSplit[i].value,
+                eggs_injected: injectedSplit[i].value ?? 0,
+                hoi_technician_name: formData.technician_name,
+                hoi_notes: formData.notes,
+                clears_technician_name: formData.technician_name,
+                clears_notes: formData.notes,
+              })
+              .eq("id", s.id)
+          )
+        )
+      );
+      for (const r of results) if (r.error) throw r.error;
+
+      toast.success(
+        slices.length > 1
+          ? `Updated across ${slices.length} machine allocations`
+          : "Record updated successfully"
+      );
       setEditingRecord(null);
       onDataUpdate();
     } catch (error: any) {
@@ -233,34 +258,56 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {houseData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={99} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => {
-                const clearPercent = item.total_eggs_set > 0 
+              houseData.map((item) => {
+                const clearPercent = item.total_eggs_set > 0
                   ? ((item.eggs_cleared / item.total_eggs_set) * 100).toFixed(1)
                   : "0";
                 const injectedPercent = item.total_eggs_set > 0
                   ? ((item.eggs_injected / item.total_eggs_set) * 100).toFixed(1)
                   : "0";
+                const aggregated = (item._aggregated_count ?? 1) > 1;
 
                 return (
                   <TableRow key={item.id}>
                     {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                     {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
-                    {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                    {show("house_number") && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{item.house_number || "-"}</span>
+                          {aggregated && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {item._aggregated_count} machines
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                     {show("age_weeks") && <TableCell>{item.age_weeks || "-"}</TableCell>}
-                    {show("set_date") && <TableCell>{item.set_date ? format(new Date(item.set_date), "MMM dd, yyyy") : "-"}</TableCell>}
+                    {show("set_date") && <TableCell>{formatLocalDate(item.set_date)}</TableCell>}
                     {show("total_eggs_set") && <TableCell>{item.total_eggs_set?.toLocaleString() || "0"}</TableCell>}
                     {show("eggs_cleared") && <TableCell>{item.eggs_cleared?.toLocaleString() || "0"}</TableCell>}
                     {show("clear_percent") && <TableCell>{clearPercent}%</TableCell>}
                     {show("eggs_injected") && <TableCell>{item.eggs_injected?.toLocaleString() || "0"}</TableCell>}
                     {show("injected_percent") && <TableCell>{injectedPercent}%</TableCell>}
-                    {show("machine_number") && <TableCell>{item.machine_number || "-"}</TableCell>}
+                    {show("machine_number") && (
+                      <TableCell>
+                        {aggregated ? (
+                          <span className="text-muted-foreground text-xs">
+                            {item._aggregated_count} machines
+                          </span>
+                        ) : (
+                          item.machine_number || "-"
+                        )}
+                      </TableCell>
+                    )}
                     {show("status") && (
                       <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${
@@ -287,7 +334,13 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleArchive(item.id)}
+                            onClick={() => {
+                              if (aggregated) {
+                                toast.info("This row aggregates multiple machine allocations. Archive from Management → Houses for full control.");
+                                return;
+                              }
+                              handleArchive(item.id);
+                            }}
                             title="Archive house (keeps audit trail, restorable)"
                             className="text-amber-700 border-amber-300 hover:bg-amber-50"
                           >
@@ -297,7 +350,13 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => {
+                              if (aggregated) {
+                                toast.info("This row aggregates multiple machine allocations. Delete from Management → Houses.");
+                                return;
+                              }
+                              handleDelete(item.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

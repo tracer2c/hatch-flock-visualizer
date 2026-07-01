@@ -1,61 +1,76 @@
 ## Goal
-Fix the 5 client complaints about the Data Sheet on Single-Stage Setter view, and the off-by-one date bug — without breaking the existing Data Entry workflow.
+Fix the client's actual complaints on `/embrex-data-sheet` — the page they're using — where **By House** shows duplicate/split rows and **By Flock** input cells go to a disconnected table, forcing double entry.
+
+## Root causes found
+
+1. **By House view** renders one row per `batches` record — and each batch is one house-machine allocation. So flock 6343 shows as `Hen valley 120,000` + `Hen valley 92,000` instead of one house with the full total.
+2. **By Flock view** groups by `flock_id`, so the same flock number reused across hatcheries (e.g. 6343 at two farms) appears as two "flock" rows.
+3. **"Entering data twice"** — Hatch / Culls / Clear cells on By Flock save to a **separate table** (`flock_weekly_clears`) that never touches `batches`. So values entered here never show up on By House, in exports, in analytics, or anywhere else.
+4. **Date off-by-one** — `format(new Date("2026-05-25"))` parses as UTC midnight → May 24 in local time. Same bug on the "Period: …" line and the Set Date column.
+5. **Empty input boxes** in By Flock have no hint that they're auto-computable or where the value comes from.
 
 ---
 
 ## What will change (user-visible)
 
-### 1. Data Sheet becomes flock-level by default
-Today: one row per machine/buggy/set for the same flock (TROY-15, TROY-20, TROY-18…) — cluttered.
-After: **one consolidated row per Flock + House + Set Date**, showing the full flock total (e.g. 87,480 eggs) — matching the House Management card.
+### By House tab (Embrex/HOI)
+- Rows collapse to **one row per House per Set Date** (flock_id + house_number + set_date). Machine-level breakdown moves under an expandable detail (kept for QA/audit).
+- `Total Eggs Set`, `Clears`, `Injected`, `Chicks Hatched` are **summed** across all machine allocations for that house — matches the "House Management card" total (e.g. 87,480).
+- `Clear %` and `Injected %` recompute from the summed totals (not averaged).
+- `Set Date` uses timezone-safe formatting.
+- Edit dialog shows an info line: "This house has N machine allocations — edits distribute proportionally by eggs set."
 
-A new toggle at the top of the Data Sheet:
-- **"Flock View"** (default) — one row per flock/house/set-date, totals summed across machines.
-- **"Machine View"** — the current granular per-machine rows (kept for people who need it).
+### By Flock tab (FlockSummaryView)
+- Grouping key changes from `flock_id` to `flock_number + flock_name` (case-insensitive, trimmed). Same flock across hatcheries collapses into one row. A small "2 houses" / "3 machines" badge on the row shows what it consolidates.
+- Hatch / Culls / Clear inputs now **write back to `batches`** (distributed proportionally by each batch's share of `total_eggs_set`) instead of the disconnected `flock_weekly_clears` table. On save:
+  - `chicks_hatched` → distributed across the flock's batches
+  - `eggs_cleared` → distributed across the flock's batches
+  - `eggs_culled` → distributed across the flock's batches (uses existing `cull_chicks` or `eggs_culled` column on batches; verified during build)
+  - `hatch_percent` becomes a read-only computed value from `Σ chicks_hatched / Σ total_eggs_set` — the manual override is removed to eliminate the "which number wins" confusion.
+- Because everything lands in `batches`, By House refreshes and shows the same totals — **no more re-entry**.
+- A helper line appears above the table: "Values you enter here are saved to each house in the flock, split by egg count. They will appear in By House, exports, and analytics."
+- Inputs show placeholder text with the current stored total so users see what's already saved.
+- "Period: …" line uses timezone-safe date formatting.
 
-### 2. Data Sheet total matches House Management
-The consolidated row will sum `total_eggs_set`, `eggs_cleared`, `eggs_injected`, sample counts, fertile/infertile/dead, chicks, etc. across all machine allocations for that house. Percent columns (Clears %, HOF %, HOI %, I/F %) recompute from the summed totals so they stay mathematically correct — not an average of averages.
-
-### 3. Removes the "enter data twice" pain
-Root cause: to make the Data Sheet show 87k eggs, users were re-entering flock-level data on top of the per-machine rows created by the allocation wizard. Once Flock View aggregates automatically, that duplication is unnecessary. We will also add a small info banner: *"Totals are summed from all machine allocations for this house — no need to re-enter."*
-
-### 4. Inline edit from the Data Sheet (scoped)
-The Data Sheet stays a **read + edit** surface, not a create surface (create still happens in House Management / Data Entry, which handles multi-setter splits properly). We will:
-- Replace the "please use the X tab" toast on the Edit button with an actual inline edit dialog for the fields on that row (Hatch Results, Egg Quality, Residue, QA).
-- Embrex/HOI edit stays routed to the wizard because it touches machine allocations.
-
-If they truly want full create-from-Data-Sheet, that's a separate larger project — noted, not in this plan.
-
-### 5. Date filter off-by-one (May 25 → May 24)
-Cause: `new Date("2026-05-25")` parses as UTC midnight, then renders in local time (CDT), showing May 24. Fix: parse `set_date` / filter dates as **local calendar dates** (no timezone shift) everywhere the Data Sheet reads/writes/filters/displays them. Same fix applied to `calculateWeek` and the `format(new Date(...))` display.
+### What's kept
+- `flock_weekly_clears` table is NOT dropped — existing saved values continue to display as fallback if a flock has no batches yet. New writes just prefer `batches`. This preserves history and avoids a destructive migration.
+- Machine View / audit detail still available.
+- All other tabs (Residue, Egg Quality, Hatch Results, QA) unchanged in this pass.
 
 ---
 
 ## Technical details
 
-**Files touched (frontend only, no schema changes):**
-- `src/components/dashboard/AllDataTab.tsx` — add Flock/Machine view toggle, aggregation reducer, inline edit dialog wiring, local-date parsing.
-- `src/pages/EmbrexDataSheetPage.tsx` (and any parent that assembles `allData`) — pass raw rows through; aggregation done in the tab.
-- New helper `src/utils/dataSheetAggregation.ts` — groups rows by `flock_id + house_number + set_date`, sums numeric fields, recomputes % from summed totals.
-- New helper `src/utils/localDate.ts` — `parseLocalDate(str)` and `formatLocalDate(str)` to eliminate UTC shift.
-- New small dialogs (or reuse existing entry forms in "edit mode") for inline edit of Hatch Results / Egg Quality / Residue / QA rows.
+**Files touched (frontend only):**
 
-**No DB migrations, no RLS changes, no changes to Data Entry / QA Hub / wizards.**
+- `src/components/dashboard/EmbrexHOITab.tsx`
+  - New `aggregateByHouse(batches)` helper: group by `flock_id|house_number|set_date`, sum numeric fields, recompute %.
+  - Swap `format(new Date(...))` for `formatLocalDate` from `@/utils/localDate.ts`.
+  - Edit handler: when editing an aggregated house row, split saves across the underlying batch IDs proportionally.
+  - Expandable row (optional in v1) to reveal the per-machine breakdown.
 
-**Aggregation rules:**
-- Sum: `total_eggs_set`, `eggs_cleared`, `eggs_injected`, `sample_size`, `fertile_eggs`, `infertile_eggs`, `early_dead`, `mid_dead`, `late_dead`, `pipped_not_hatched`, `contaminated_eggs`, `malformed_chicks`, `chicks_hatched`.
-- Recompute from sums: `clear %`, `injected %`, `fertility %`, `HOF %`, `HOI %`, `I/F %`, per-category %.
-- Group key: `flock_id | house_number | set_date | data_type`.
+- `src/components/dashboard/FlockSummaryView.tsx`
+  - Change grouping key to `${flock_number}|${flock_name.toLowerCase().trim()}`. Track the list of `batch_id`s per group.
+  - Replace `useSaveFlockWeeklyClear` save with a new `saveFlockTotalsToBatches` mutation that:
+    1. Reads each batch's `total_eggs_set` in the group.
+    2. Computes a proportional split: `share_i = round(value * total_eggs_set_i / Σ total_eggs_set)`. Adjust the last batch to absorb rounding drift so the sum matches exactly.
+    3. Runs a single batched `update` against `batches` per row via `supabase.rpc` or a small helper (`Promise.all` of `update().eq('id', ...)` is fine for the current volume).
+  - Read Hatch/Clear/Cull display values from `Σ` of `batches` fields, falling back to `flock_weekly_clears` for legacy rows that have no batch data.
+  - Remove the editable `hatch_percent` cell; render it as computed text.
+  - Swap `format(new Date(periodStart))` for `formatLocalDate`.
+  - Add helper banner + input placeholders.
+
+- `src/utils/dataSheetAggregation.ts` — extend with `aggregateByHouse` (or add a sibling helper). Reuse the sum/pct utilities from the existing file.
+
+- `src/hooks/useFlockWeeklyClears.ts` — keep the read side. Add or replace the write path with the batches-distribution mutation. Invalidate both the `batches` query and any dependent dashboard queries on save.
+
+**Column verification during build:** confirm the `batches` table has `chicks_hatched`, `eggs_cleared`, and a culls column (`cull_chicks` or similar). If the culls column is missing on `batches`, culls stays in `flock_weekly_clears` for now and I'll flag it for a schema migration.
+
+**No DB migrations, no RLS changes, no changes to Data Entry / QA Hub / Allocation Wizard.**
 
 ---
 
-## What stays the same
-- Data Entry / QA Hub / Machine Allocation Wizard — unchanged.
-- Database schema and RLS — unchanged.
-- Machine-level detail — still available via the toggle, and still the source of truth for QA linkage.
-
----
-
-## Out of scope (flagging for later if they want it)
-- Making the Data Sheet a full create surface (would need to route new rows through machine-split logic).
-- Bulk edit across multiple flocks.
+## Out of scope (flag for later)
+- Retiring `flock_weekly_clears` entirely (needs a data migration and confirmation that no reports depend on it).
+- Making the Residue / Egg Quality / Hatch Results / QA tabs also flock-aggregated (same pattern can be applied later if the client asks).
+- Undo / audit trail for the proportional split.
