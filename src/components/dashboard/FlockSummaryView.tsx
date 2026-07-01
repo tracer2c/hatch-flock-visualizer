@@ -41,6 +41,7 @@ const pct = (n: number | null | undefined, total: number): string => {
 };
 
 const normalizeName = (s: any) => String(s ?? "").trim().toLowerCase();
+const normalizeFlockNumber = (n: any) => String(n ?? "").trim();
 
 export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSummaryViewProps) => {
   // Anchor the period to the active filter range; fall back to the data's own
@@ -58,7 +59,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
     const byKey = new Map<string, FlockGroup>();
     for (const item of data) {
       if (!item.flock_id) continue;
-      const key = `${item.flock_number ?? "—"}|${normalizeName(item.flock_name)}`;
+      const key = `${normalizeFlockNumber(item.flock_number)}|${normalizeName(item.flock_name)}`;
       let g = byKey.get(key);
       if (!g) {
         g = {
