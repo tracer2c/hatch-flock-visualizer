@@ -345,23 +345,30 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
             )}
             {show("technician_name") && <TableHead>Technician Name</TableHead>}
             {show("notes") && <TableHead>Notes</TableHead>}
-            {!readOnly && <TableHead>Actions</TableHead>}
+            {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.length === 0 ? (
+          {displayData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground">
                 No data available
               </TableCell>
             </TableRow>
           ) : (
-            filteredData.map((item) => (
+            displayData.map((item) => (
               <TableRow key={item.batch_id} className="hover:bg-muted/50">
                 {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
                 {show("age_weeks") && <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>}
-                {show("house_number") && <TableCell>{item.house_number || "-"}</TableCell>}
+                {show("house_number") && (
+                  <TableCell>
+                    {item._flock_house_count > 1
+                      ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                      : (item.house_number || "-")}
+                  </TableCell>
+                )}
+
                 {show("set_date") && <TableCell>{item.set_date ? formatLocalDate(item.set_date) : "-"}</TableCell>}
                 {show("sample_size") && <TableCell className="text-right">{item.sample_size || "-"}</TableCell>}
                 {show("fertility_percent") && (
