@@ -453,7 +453,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "chicks_hatched")}
                         onChange={(e) => setEdit(g, "chicks_hatched", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground tabular-nums">
@@ -467,7 +466,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "eggs_culled")}
                         onChange={(e) => setEdit(g, "eggs_culled", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground tabular-nums">
@@ -481,7 +479,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                         disabled={readOnly}
                         value={valueFor(g, "eggs_cleared")}
                         onChange={(e) => setEdit(g, "eggs_cleared", e.target.value)}
-                        onBlur={() => commitRow(g)}
                       />
                     </TableCell>
                   </TableRow>
