@@ -276,6 +276,15 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
                             {g.house_count} {g.house_count === 1 ? "house" : "houses"}
                           </Badge>
                         )}
+                        {g.name_variants.length > 1 && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px]"
+                            title={g.name_variants.join(" · ")}
+                          >
+                            +{g.name_variants.length - 1} variant{g.name_variants.length - 1 === 1 ? "" : "s"}
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{g.age_weeks ?? "-"}</TableCell>
