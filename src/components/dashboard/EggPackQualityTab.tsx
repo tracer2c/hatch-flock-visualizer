@@ -37,6 +37,8 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [view, setView] = useState<DataSheetViewMode>("rows");
+
 
   // Apply filters to data
   const filteredData = useMemo(() => {
