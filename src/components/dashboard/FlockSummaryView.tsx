@@ -17,7 +17,9 @@ interface FlockSummaryViewProps {
   dateFrom: string;
   dateTo: string;
   readOnly?: boolean;
+  onDataUpdate?: () => void;
 }
+
 
 type FlockGroup = {
   // Composite key = normalized flock_number + flock_name
