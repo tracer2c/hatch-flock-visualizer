@@ -1,67 +1,61 @@
-## Two errors observed (Wayne side)
-
-### 1. "Could not find the 'early_dead' column of 'fertility_analysis' in the schema cache"
-The Edit Fertility Analysis / Hatch Results dialog (`HatchPerformanceTab.tsx`) writes `early_dead` and `late_dead` to the `fertility_analysis` table, but those columns don't exist in the DB. Current columns: `sample_size, fertile_eggs, infertile_eggs, fertility_percent, hatch_percent, hof_percent, hoi_percent, if_dev_percent, technician_name, notes, ...` — no early/late dead.
-
-### 2. "update or delete on table 'batches' violates foreign key constraint 'single_stage_operation_rows_batch_id_fkey'"
-House delete (`HouseManager.handleDeleteHouse`) runs `DELETE FROM batches WHERE id=?`. Five FKs pointing at `batches.id` are defined with NO ACTION, so any related row blocks the delete:
-
-- `single_stage_operation_rows.batch_id` ← this is the one in the screenshot
-- `fertility_analysis.batch_id`
-- `egg_pack_quality.batch_id`
-- `qa_monitoring.batch_id`
-- `residue_analysis.batch_id`
-
-All other batch-referencing tables already have `ON DELETE CASCADE` or `SET NULL`, so Default Company users rarely hit it; Wayne does because their houses have single‑stage operation rows + QA/residue/fertility data attached.
+## Goal
+Fix the 5 client complaints about the Data Sheet on Single-Stage Setter view, and the off-by-one date bug — without breaking the existing Data Entry workflow.
 
 ---
 
-## Fix
+## What will change (user-visible)
 
-### Migration A — add the two missing columns
-```sql
-ALTER TABLE public.fertility_analysis
-  ADD COLUMN IF NOT EXISTS early_dead integer,
-  ADD COLUMN IF NOT EXISTS late_dead  integer;
-```
-No code change needed afterwards — the dialog already reads/writes these fields and `chicks_hatched = fertile - early_dead - late_dead` already works once the columns exist.
+### 1. Data Sheet becomes flock-level by default
+Today: one row per machine/buggy/set for the same flock (TROY-15, TROY-20, TROY-18…) — cluttered.
+After: **one consolidated row per Flock + House + Set Date**, showing the full flock total (e.g. 87,480 eggs) — matching the House Management card.
 
-### Migration B — make house delete actually cascade
-Drop + recreate the five FKs with `ON DELETE CASCADE` so deleting a house cleans up its child rows (matches the behavior already in place for alerts, checklists, weight_tracking, machine_transfers, etc.):
+A new toggle at the top of the Data Sheet:
+- **"Flock View"** (default) — one row per flock/house/set-date, totals summed across machines.
+- **"Machine View"** — the current granular per-machine rows (kept for people who need it).
 
-```sql
-ALTER TABLE public.single_stage_operation_rows
-  DROP CONSTRAINT single_stage_operation_rows_batch_id_fkey,
-  ADD  CONSTRAINT single_stage_operation_rows_batch_id_fkey
-       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+### 2. Data Sheet total matches House Management
+The consolidated row will sum `total_eggs_set`, `eggs_cleared`, `eggs_injected`, sample counts, fertile/infertile/dead, chicks, etc. across all machine allocations for that house. Percent columns (Clears %, HOF %, HOI %, I/F %) recompute from the summed totals so they stay mathematically correct — not an average of averages.
 
-ALTER TABLE public.fertility_analysis
-  DROP CONSTRAINT fertility_analysis_batch_id_fkey,
-  ADD  CONSTRAINT fertility_analysis_batch_id_fkey
-       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+### 3. Removes the "enter data twice" pain
+Root cause: to make the Data Sheet show 87k eggs, users were re-entering flock-level data on top of the per-machine rows created by the allocation wizard. Once Flock View aggregates automatically, that duplication is unnecessary. We will also add a small info banner: *"Totals are summed from all machine allocations for this house — no need to re-enter."*
 
-ALTER TABLE public.egg_pack_quality
-  DROP CONSTRAINT egg_pack_quality_batch_id_fkey,
-  ADD  CONSTRAINT egg_pack_quality_batch_id_fkey
-       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+### 4. Inline edit from the Data Sheet (scoped)
+The Data Sheet stays a **read + edit** surface, not a create surface (create still happens in House Management / Data Entry, which handles multi-setter splits properly). We will:
+- Replace the "please use the X tab" toast on the Edit button with an actual inline edit dialog for the fields on that row (Hatch Results, Egg Quality, Residue, QA).
+- Embrex/HOI edit stays routed to the wizard because it touches machine allocations.
 
-ALTER TABLE public.qa_monitoring
-  DROP CONSTRAINT qa_monitoring_batch_id_fkey,
-  ADD  CONSTRAINT qa_monitoring_batch_id_fkey
-       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
+If they truly want full create-from-Data-Sheet, that's a separate larger project — noted, not in this plan.
 
-ALTER TABLE public.residue_analysis
-  DROP CONSTRAINT residue_analysis_batch_id_fkey,
-  ADD  CONSTRAINT residue_analysis_batch_id_fkey
-       FOREIGN KEY (batch_id) REFERENCES public.batches(id) ON DELETE CASCADE;
-```
+### 5. Date filter off-by-one (May 25 → May 24)
+Cause: `new Date("2026-05-25")` parses as UTC midnight, then renders in local time (CDT), showing May 24. Fix: parse `set_date` / filter dates as **local calendar dates** (no timezone shift) everywhere the Data Sheet reads/writes/filters/displays them. Same fix applied to `calculateWeek` and the `format(new Date(...))` display.
 
-Note: this means deleting a house permanently removes its fertility/QA/residue/egg-pack/operation-row history. The confirm dialog (`HouseManager.handleDeleteHouse`) already warns "removes the house and its data entirely and cannot be undone" and points users at Archive to retain history, so semantics match. No frontend changes required.
+---
 
-### Chained risks reviewed
-- No code paths assume those FKs are RESTRICT — nothing else breaks.
-- Other delete blockers (`flocks`, `machines`, etc.) are not in scope for these two reports.
-- After Migration A, the existing INSERT/UPDATE in `HatchPerformanceTab.tsx` will succeed; no client edits.
+## Technical details
 
-## Summary
-Run two migrations: add `early_dead`/`late_dead` to `fertility_analysis`, and switch the five remaining `batches` child FKs to `ON DELETE CASCADE` so house deletion works end-to-end.
+**Files touched (frontend only, no schema changes):**
+- `src/components/dashboard/AllDataTab.tsx` — add Flock/Machine view toggle, aggregation reducer, inline edit dialog wiring, local-date parsing.
+- `src/pages/EmbrexDataSheetPage.tsx` (and any parent that assembles `allData`) — pass raw rows through; aggregation done in the tab.
+- New helper `src/utils/dataSheetAggregation.ts` — groups rows by `flock_id + house_number + set_date`, sums numeric fields, recomputes % from summed totals.
+- New helper `src/utils/localDate.ts` — `parseLocalDate(str)` and `formatLocalDate(str)` to eliminate UTC shift.
+- New small dialogs (or reuse existing entry forms in "edit mode") for inline edit of Hatch Results / Egg Quality / Residue / QA rows.
+
+**No DB migrations, no RLS changes, no changes to Data Entry / QA Hub / wizards.**
+
+**Aggregation rules:**
+- Sum: `total_eggs_set`, `eggs_cleared`, `eggs_injected`, `sample_size`, `fertile_eggs`, `infertile_eggs`, `early_dead`, `mid_dead`, `late_dead`, `pipped_not_hatched`, `contaminated_eggs`, `malformed_chicks`, `chicks_hatched`.
+- Recompute from sums: `clear %`, `injected %`, `fertility %`, `HOF %`, `HOI %`, `I/F %`, per-category %.
+- Group key: `flock_id | house_number | set_date | data_type`.
+
+---
+
+## What stays the same
+- Data Entry / QA Hub / Machine Allocation Wizard — unchanged.
+- Database schema and RLS — unchanged.
+- Machine-level detail — still available via the toggle, and still the source of truth for QA linkage.
+
+---
+
+## Out of scope (flagging for later if they want it)
+- Making the Data Sheet a full create surface (would need to route new rows through machine-split logic).
+- Bulk edit across multiple flocks.
