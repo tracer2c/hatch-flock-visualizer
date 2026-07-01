@@ -219,7 +219,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
             variant={view === "rows" ? "secondary" : "ghost"}
             size="sm"
             className="h-7 gap-1.5"
-            onClick={() => setView("rows")}
+            onClick={() => updateView("rows")}
           >
             <Rows3 className="h-3.5 w-3.5" />
             By House
@@ -228,7 +228,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
             variant={view === "flock-summary" ? "secondary" : "ghost"}
             size="sm"
             className="h-7 gap-1.5"
-            onClick={() => setView("flock-summary")}
+            onClick={() => updateView("flock-summary")}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
             By Flock
