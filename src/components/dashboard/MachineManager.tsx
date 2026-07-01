@@ -797,7 +797,7 @@ const MachineManager = () => {
                 {machine.last_maintenance && (
                   <div className="flex items-center gap-2">
                     <Wrench className="h-4 w-4" />
-                    Last maintenance: {new Date(machine.last_maintenance).toLocaleDateString()}
+                    Last maintenance: {formatLocalDate(machine.last_maintenance)}
                   </div>
                 )}
               </div>

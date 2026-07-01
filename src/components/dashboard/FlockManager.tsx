@@ -907,7 +907,7 @@ const FlockManager = () => {
                       )}
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>{new Date(flock.arrival_date).toLocaleDateString()}</span>
+                        <span>{formatLocalDate(flock.arrival_date)}</span>
                         <Badge variant="outline" className="ml-auto">{flock.age_weeks} weeks</Badge>
                       </div>
                       {flock.total_birds && (

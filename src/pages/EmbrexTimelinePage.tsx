@@ -2126,7 +2126,7 @@ export default function EmbrexDashboard() {
                     <td className="py-2 pr-2 font-mono">{r.batch_number}</td>
                     <td className="py-2 pr-2">#{r.flock_number} — {r.flock_name}</td>
                     <td className="py-2 pr-2">{r.unit_name}</td>
-                    <td className="py-2 pr-2">{new Date(r.set_date).toLocaleDateString()}</td>
+                    <td className="py-2 pr-2">{formatLocalDate(r.set_date)}</td>
                     <td className="py-2 pr-2 text-right">{r.total_eggs_set?.toLocaleString()}</td>
                     <td className="py-2 pr-2 text-right">{r.eggs_cleared?.toLocaleString()}</td>
                     <td className="py-2 pr-2 text-right">{r.eggs_injected?.toLocaleString()}</td>

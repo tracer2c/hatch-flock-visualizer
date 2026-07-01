@@ -157,7 +157,7 @@ const MachineTransfersTab = ({ machineId, machineType, dateFrom, dateTo }: Machi
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(t.transfer_date).toLocaleDateString()}
+                          {formatLocalDate(t.transfer_date)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -251,7 +251,7 @@ const MachineTransfersTab = ({ machineId, machineType, dateFrom, dateTo }: Machi
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(t.transfer_date).toLocaleDateString()}
+                          {formatLocalDate(t.transfer_date)}
                         </div>
                       </TableCell>
                       <TableCell>

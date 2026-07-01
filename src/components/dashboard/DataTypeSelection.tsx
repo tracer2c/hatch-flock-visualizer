@@ -188,7 +188,7 @@ const DataTypeSelection = ({ houseId, onBack }: DataTypeSelectionProps) => {
               </div>
               <div>
                 <p className="text-gray-600">Set Date</p>
-                <p className="font-medium">{new Date(houseInfo.set_date).toLocaleDateString()}</p>
+                <p className="font-medium">{formatLocalDate(houseInfo.set_date)}</p>
               </div>
               <div>
                 <p className="text-gray-600">Total Eggs</p>

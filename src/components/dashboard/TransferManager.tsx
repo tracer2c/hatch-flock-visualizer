@@ -166,7 +166,7 @@ const TransferManager = ({
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>Set Date: {new Date(setDate).toLocaleDateString()}</span>
+              <span>Set Date: {formatLocalDate(setDate)}</span>
               <span className="text-muted-foreground">•</span>
               <Badge className={dayIndicator.color}>
                 Day {daysInSetter} ({dayIndicator.label})
@@ -247,7 +247,7 @@ const TransferManager = ({
                       {t.from_machine?.machine_number} → {t.to_machine?.machine_number}
                     </span>
                     <span className="text-muted-foreground">
-                      {new Date(t.transfer_date).toLocaleDateString()}
+                      {formatLocalDate(t.transfer_date)}
                       {t.days_in_previous_machine && ` (Day ${t.days_in_previous_machine})`}
                     </span>
                   </div>

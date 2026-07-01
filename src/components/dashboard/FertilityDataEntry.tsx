@@ -536,7 +536,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
                 {data.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">
-                      {new Date(record.analysis_date).toLocaleDateString()}
+                      {formatLocalDate(record.analysis_date)}
                     </TableCell>
                     <TableCell>{record.sample_size}</TableCell>
                     <TableCell>{record.infertile_eggs}</TableCell>

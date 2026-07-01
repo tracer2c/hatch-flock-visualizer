@@ -925,7 +925,7 @@ const HouseManager = ({ onHouseSelect, selectedHouse }: HouseManagerProps) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Set: {new Date(house.set_date).toLocaleDateString()}
+                      Set: {formatLocalDate(house.set_date)}
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />

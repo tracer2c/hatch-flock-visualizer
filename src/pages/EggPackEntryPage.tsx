@@ -211,7 +211,7 @@ const EggPackEntryPage = () => {
                 <span className="text-gray-600">Machine:</span> <span className="font-medium ml-1">{houseInfo.machine_number}</span>
               </div>
               <div>
-                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{new Date(houseInfo.set_date).toLocaleDateString()}</span>
+                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{formatLocalDate(houseInfo.set_date)}</span>
               </div>
               <div>
                 <span className="text-gray-600">Total Eggs:</span> <span className="font-medium ml-1">{houseInfo.total_eggs_set.toLocaleString()}</span>
