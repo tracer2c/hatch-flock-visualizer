@@ -325,32 +325,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
         )}
       </div>
 
-      <AlertDialog
-        open={blocker.state === "blocked"}
-        onOpenChange={(open) => {
-          if (!open) handleStay();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save your changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"} on
-              this Data Sheet. Do you want to save {dirtyCount === 1 ? "it" : "them"}{" "}
-              before leaving?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleStay}>Stay on page</AlertDialogCancel>
-            <Button variant="outline" onClick={handleDiscardAndProceed}>
-              Discard &amp; leave
-            </Button>
-            <AlertDialogAction onClick={handleSaveAndProceed} disabled={isSaving}>
-              {isSaving ? "Saving…" : "Save & leave"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <div className="overflow-x-auto">
         <Table>
