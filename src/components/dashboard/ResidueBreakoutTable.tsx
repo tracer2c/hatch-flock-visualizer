@@ -364,7 +364,12 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                   <TableRow key={item.batch_id}>
                     <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>{item.flock_name || "-"}</TableCell>
-                    <TableCell>{item.house_number || "-"}</TableCell>
+                    <TableCell>
+                      {item._flock_house_count > 1
+                        ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                        : (item.house_number || "-")}
+                    </TableCell>
+
                     <TableCell>{item.age_weeks || "-"}</TableCell>
                     <TableCell>
                       {item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}
