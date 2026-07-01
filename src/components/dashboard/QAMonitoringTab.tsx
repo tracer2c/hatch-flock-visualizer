@@ -274,6 +274,14 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
     }).length;
   }, [filteredData]);
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateQAByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
+
   return (
     <>
       {/* Temperature Alert Banner */}
