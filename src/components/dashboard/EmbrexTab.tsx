@@ -1,4 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatLocalDate } from "@/utils/localDate";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 
 interface EmbrexTabProps {

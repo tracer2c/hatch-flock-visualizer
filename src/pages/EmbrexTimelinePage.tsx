@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatLocalDate } from "@/utils/localDate";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateChicksHatched, calculateFertileEggs } from "@/utils/hatcheryFormulas";
