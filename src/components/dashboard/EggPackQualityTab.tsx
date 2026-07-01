@@ -253,10 +253,24 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
     }
   };
 
+  const displayData = useMemo(
+    () => (view === "flock-summary" ? aggregateEggPackByFlock(filteredData) : filteredData),
+    [view, filteredData]
+  );
+  const isAggregated = view === "flock-summary";
+  const showActions = !readOnly && !isAggregated;
+
   return (
     <>
+      <DataSheetViewModeToggle value={view} onChange={setView} />
+      {isAggregated && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <Table>
+
           <TableHeader>
             <TableRow>
               <TableHead>Flock Name</TableHead>
