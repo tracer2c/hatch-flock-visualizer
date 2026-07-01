@@ -405,7 +405,7 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
                 )}
                 {show("technician_name") && <TableCell>{item.technician_name || "-"}</TableCell>}
                 {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
-                {!readOnly && (
+                {showActions && (
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
