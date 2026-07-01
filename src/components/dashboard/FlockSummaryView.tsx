@@ -249,7 +249,9 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly, onDataUpdat
         return;
       }
     }
+    onDataUpdate?.();
   };
+
 
   const discardAll = () => setEdits({});
 
