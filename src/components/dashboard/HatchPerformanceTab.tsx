@@ -14,6 +14,9 @@ import { AlertCircle, Edit, Trash2, Filter, ChevronDown, X } from "lucide-react"
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
+import { aggregateHatchByFlock } from "@/utils/dataSheetAggregation";
+
 import {
   calculateHatchPercent,
   calculateHOFPercent,
