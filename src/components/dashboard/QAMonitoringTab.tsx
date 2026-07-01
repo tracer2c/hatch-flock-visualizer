@@ -296,9 +296,16 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
         </Button>
       </div>
 
+      <DataSheetViewModeToggle value={view} onChange={setView} />
+      {view === "flock-summary" && (
+        <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Aggregated view — latest reading per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+        </div>
+      )}
       <div className="overflow-x-auto">
       <Table>
         <TableHeader>
+
           <TableRow>
             {show("flock_number") && <TableHead>Flock #</TableHead>}
             {show("flock_name") && <TableHead>Flock Name</TableHead>}
