@@ -321,14 +321,73 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
         <span>
           Values entered here are saved to each house in the flock, split by egg
           count. They appear in <strong>By House</strong>, exports, and analytics —
-          no need to re-enter anywhere else.
+          no need to re-enter anywhere else. Changes are <strong>not saved automatically</strong>
+          {" "}— click <strong>Save changes</strong> when done.
         </span>
       </div>
-      <div className="text-sm text-muted-foreground">
-        Period: {formatLocalDate(periodStart, "—")} – {formatLocalDate(periodEnd, "—")}
-        {" · "}Set the date range filter above to control which week (or day)
-        this groups by.
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-sm text-muted-foreground">
+          Period: {formatLocalDate(periodStart, "—")} – {formatLocalDate(periodEnd, "—")}
+          {" · "}Set the date range filter above to control which week (or day)
+          this groups by.
+        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {dirtyCount > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"}
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={dirtyCount === 0 || isSaving}
+              onClick={discardAll}
+              className="gap-1.5"
+            >
+              <X className="h-3.5 w-3.5" />
+              Discard
+            </Button>
+            <Button
+              size="sm"
+              disabled={dirtyCount === 0 || isSaving}
+              onClick={saveAll}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {isSaving ? "Saving…" : `Save changes${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
+            </Button>
+          </div>
+        )}
       </div>
+
+      <AlertDialog
+        open={blocker.state === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) handleStay();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save your changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"} on
+              this Data Sheet. Do you want to save {dirtyCount === 1 ? "it" : "them"}{" "}
+              before leaving?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleStay}>Stay on page</AlertDialogCancel>
+            <Button variant="outline" onClick={handleDiscardAndProceed}>
+              Discard &amp; leave
+            </Button>
+            <AlertDialogAction onClick={handleSaveAndProceed} disabled={isSaving}>
+              {isSaving ? "Saving…" : "Save & leave"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
