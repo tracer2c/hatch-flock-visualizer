@@ -2,15 +2,17 @@ import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Archive, Rows3, LayoutGrid } from "lucide-react";
-import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useVisualPreferences } from "@/hooks/useVisualPreferences";
 import { useArchive } from "@/hooks/useArchive";
 import { FlockSummaryView } from "@/components/dashboard/FlockSummaryView";
+import { aggregateByHouse, proportionalSplit } from "@/utils/dataSheetAggregation";
+import { formatLocalDate } from "@/utils/localDate";
 
 const SECTION = "embrex_hoi";
 
