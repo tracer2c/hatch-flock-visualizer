@@ -41,6 +41,7 @@ const pct = (n: number | null | undefined, total: number): string => {
 };
 
 const normalizeName = (s: any) => String(s ?? "").trim().toLowerCase();
+const normalizeFlockNumber = (n: any) => String(n ?? "").trim();
 
 export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSummaryViewProps) => {
   // Anchor the period to the active filter range; fall back to the data's own
