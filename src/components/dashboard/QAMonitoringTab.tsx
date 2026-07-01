@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import Setter18PointDisplay from "./Setter18PointDisplay";
 import { ExportService } from "@/services/exportService";
 import { useVisualPreferences } from "@/hooks/useVisualPreferences";
+import { DataSheetViewModeToggle } from "./DataSheetViewModeToggle";
+import { aggregateQAByFlock } from "@/utils/dataSheetAggregation";
+
 
 const SECTION = "qa_monitoring";
 
