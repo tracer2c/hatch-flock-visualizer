@@ -34,7 +34,15 @@ interface EmbrexHOITabProps {
 
 export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [view, setView] = useState<"rows" | "flock-summary">("rows");
+  const [view, setView] = useState<"rows" | "flock-summary">(() => {
+    if (typeof window === "undefined") return "rows";
+    const saved = window.localStorage.getItem("embrex-hoi-view");
+    return saved === "flock-summary" || saved === "rows" ? saved : "rows";
+  });
+  const updateView = (next: "rows" | "flock-summary") => {
+    setView(next);
+    try { window.localStorage.setItem("embrex-hoi-view", next); } catch { /* ignore */ }
+  };
   const { archive: archiveHouse } = useArchive("batches");
 
   const handleArchive = async (id: string) => {
