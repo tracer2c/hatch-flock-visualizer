@@ -50,6 +50,8 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
   const show = (col: string) => !isColumnHidden(SECTION, col);
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [view, setView] = useState<DataSheetViewMode>("rows");
+
 
   // Apply filters to data
   const filteredData = useMemo(() => {
