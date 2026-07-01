@@ -17,7 +17,9 @@ interface FlockSummaryViewProps {
   dateFrom: string;
   dateTo: string;
   readOnly?: boolean;
+  onDataUpdate?: () => void;
 }
+
 
 type FlockGroup = {
   // Composite key = normalized flock_number + flock_name
@@ -47,7 +49,7 @@ const pct = (n: number | null | undefined, total: number): string => {
 const normalizeName = (s: any) => String(s ?? "").trim().toLowerCase();
 const normalizeFlockNumber = (n: any) => String(n ?? "").trim();
 
-export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSummaryViewProps) => {
+export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly, onDataUpdate }: FlockSummaryViewProps) => {
   // Anchor the period to the active filter range; fall back to the data's own
   // min/max set_date so a flock summary still makes sense with no filter set.
   const { periodStart, periodEnd } = useMemo(() => {
@@ -247,7 +249,9 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
         return;
       }
     }
+    onDataUpdate?.();
   };
+
 
   const discardAll = () => setEdits({});
 

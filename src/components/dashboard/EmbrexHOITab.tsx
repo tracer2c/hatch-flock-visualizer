@@ -234,7 +234,9 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}
           readOnly={readOnly}
+          onDataUpdate={onDataUpdate}
         />
+
       ) : (
       <div className="overflow-x-auto">
         <Table>
