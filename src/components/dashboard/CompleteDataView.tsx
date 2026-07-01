@@ -206,8 +206,14 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, 
         residue_notes: batch.residue_analysis?.notes,
         residue_sample_size: batch.residue_analysis?.sample_size,
         residue_id: batch.residue_analysis?.id,
-        // Calculate chicks_hatched using standardized formula
+        // Prefer the manually-entered chicks_hatched saved to batches
+        // (via the By-Flock Data Sheet input). Fall back to the residue-derived
+        // formula only when no value has been entered yet, so legacy rows
+        // without direct entry still display a sensible derived value.
         chicks_hatched: (() => {
+          if (batch.chicks_hatched != null && Number(batch.chicks_hatched) > 0) {
+            return Number(batch.chicks_hatched);
+          }
           const residueData = batch.residue_analysis;
           const residueSampleSize = residueData?.sample_size || 648;
           const residueInfertile = residueData?.infertile_eggs || 0;
@@ -217,7 +223,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, 
           const residueCulls = residueData?.cull_chicks || 0;
           const residueLivePips = residueData?.live_pip_number || 0;
           const residueDeadPips = residueData?.dead_pip_number || 0;
-          
+
           return calculateChicksHatched(
             residueSampleSize, residueInfertile, residueEarlyDead, residueMidDead,
             residueLateDead, residueCulls, residueLivePips, residueDeadPips
