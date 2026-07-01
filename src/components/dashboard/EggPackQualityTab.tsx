@@ -13,6 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
+import { aggregateEggPackByFlock } from "@/utils/dataSheetAggregation";
+
 
 interface EggPackQualityTabProps {
   data: any[];
