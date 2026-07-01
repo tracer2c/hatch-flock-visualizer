@@ -122,6 +122,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
       }
       const winner = Object.entries(byFlockShare).sort((a, b) => b[1] - a[1])[0];
       if (winner) g.primary_flock_id = winner[0];
+      g.name_variants = Array.from(nameVariants.get(g.key) ?? []);
     }
     return Array.from(byKey.values()).sort(
       (a, b) => Number(b.flock_number) - Number(a.flock_number)
