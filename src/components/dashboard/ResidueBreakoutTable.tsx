@@ -346,18 +346,19 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
               <TableHead>HOI %</TableHead>
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
-              {!readOnly && <TableHead>Actions</TableHead>}
+              {showActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {displayData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={27} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => {
+              displayData.map((item) => {
+
                 const sampleSize = item.residue_sample_size || item.sample_size || 648;
                 return (
                   <TableRow key={item.batch_id}>
