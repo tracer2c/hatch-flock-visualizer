@@ -184,39 +184,121 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
     setEdits((prev) => ({ ...prev, [g.key]: { ...prev[g.key], [field]: value } }));
   };
 
+  // Count rows that actually differ from what's stored — this drives the
+  // "N unsaved changes" bar and the navigation guard prompt.
+  const dirtyKeys = useMemo(() => {
+    const keys: string[] = [];
+    for (const g of groups) {
+      const rowEdits = edits[g.key];
+      if (!rowEdits) continue;
+      const changed = (["chicks_hatched", "eggs_culled", "eggs_cleared"] as const).some(
+        (field) => {
+          if (rowEdits[field] === undefined) return false;
+          const stored = storedFor(g, field);
+          const storedStr = stored != null ? String(stored) : "";
+          return (rowEdits[field] ?? "") !== storedStr;
+        }
+      );
+      if (changed) keys.push(g.key);
+    }
+    return keys;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, edits, clearsByFlock]);
+
+  const dirtyCount = dirtyKeys.length;
+  const isSaving = saveMutation.isPending;
+
   const commitRow = (g: FlockGroup) => {
-    if (readOnly || !periodStart || !periodEnd) return;
+    if (readOnly || !periodStart || !periodEnd) return Promise.resolve();
     const parsed = (field: "chicks_hatched" | "eggs_culled" | "eggs_cleared") => {
       const v = valueFor(g, field);
       return v === "" ? null : parseFloat(v);
     };
-    saveMutation.mutate(
-      {
-        flock_id: g.primary_flock_id,
-        period_start: periodStart,
-        period_end: periodEnd,
-        eggs_set_total: g.eggs_set_total,
-        chicks_hatched: parsed("chicks_hatched"),
-        eggs_culled: parsed("eggs_culled"),
-        eggs_cleared: parsed("eggs_cleared"),
-        batch_slices: g.batch_slices.map((s) => ({
-          id: s.id,
-          total_eggs_set: s.total_eggs_set,
-        })),
-      },
-      {
-        onSuccess: () => {
-          // Clear the edit buffer for this row so it reflects saved values
-          // on the next data refresh instead of sticking to typed text.
-          setEdits((prev) => {
-            const next = { ...prev };
-            delete next[g.key];
-            return next;
-          });
+    return new Promise<void>((resolve, reject) => {
+      saveMutation.mutate(
+        {
+          flock_id: g.primary_flock_id,
+          period_start: periodStart,
+          period_end: periodEnd,
+          eggs_set_total: g.eggs_set_total,
+          chicks_hatched: parsed("chicks_hatched"),
+          eggs_culled: parsed("eggs_culled"),
+          eggs_cleared: parsed("eggs_cleared"),
+          batch_slices: g.batch_slices.map((s) => ({
+            id: s.id,
+            total_eggs_set: s.total_eggs_set,
+          })),
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            setEdits((prev) => {
+              const next = { ...prev };
+              delete next[g.key];
+              return next;
+            });
+            resolve();
+          },
+          onError: (e) => reject(e),
+        }
+      );
+    });
   };
+
+  const saveAll = async () => {
+    if (readOnly || dirtyCount === 0) return;
+    const groupsByKey = new Map(groups.map((g) => [g.key, g] as const));
+    for (const key of dirtyKeys) {
+      const g = groupsByKey.get(key);
+      if (!g) continue;
+      try {
+        await commitRow(g);
+      } catch {
+        // toast handled inside the mutation; stop the batch on error
+        return;
+      }
+    }
+  };
+
+  const discardAll = () => setEdits({});
+
+  // Warn on full-page close/reload while edits are pending.
+  useEffect(() => {
+    if (dirtyCount === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirtyCount]);
+
+  // Block in-app navigation (route change) while edits are pending.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirtyCount > 0 && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  const handleSaveAndProceed = async () => {
+    await saveAll();
+    // If save succeeded (edits cleared) proceed; otherwise stay blocked so
+    // the user can see the toast and retry.
+    if (blocker.state === "blocked") {
+      // Recheck after state settles.
+      queueMicrotask(() => {
+        if (Object.keys(edits).length === 0 && blocker.proceed) blocker.proceed();
+      });
+    }
+  };
+
+  const handleDiscardAndProceed = () => {
+    discardAll();
+    if (blocker.state === "blocked" && blocker.proceed) blocker.proceed();
+  };
+
+  const handleStay = () => {
+    if (blocker.state === "blocked" && blocker.reset) blocker.reset();
+  };
+
 
   const totals = useMemo(() => {
     return groups.reduce(
