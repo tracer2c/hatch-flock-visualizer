@@ -147,7 +147,9 @@ export function useSaveFlockTotalsToBatches() {
         if (input.eggs_cleared != null) patch.eggs_cleared = clearsSplit[i].value;
         if (Object.keys(patch).length === 0) continue;
         updates.push(
-          supabase.from("batches").update(patch).eq("id", input.batch_slices[i].id)
+          Promise.resolve(
+            supabase.from("batches").update(patch).eq("id", input.batch_slices[i].id)
+          )
         );
       }
       const results = await Promise.all(updates);
