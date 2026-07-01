@@ -57,10 +57,21 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
 
   const groups = useMemo<FlockGroup[]>(() => {
     const byKey = new Map<string, FlockGroup>();
+    const nameVariants = new Map<string, Set<string>>();
     for (const item of data) {
       if (!item.flock_id) continue;
-      const key = `${normalizeFlockNumber(item.flock_number)}|${normalizeName(item.flock_name)}`;
+      // Group by flock_number ONLY. Per the multi-hatchery pattern, the same
+      // flock number placed in different hatcheries creates separate flocks
+      // rows but represents the same logical flock to the user.
+      const key = normalizeFlockNumber(item.flock_number);
+      if (!key) continue; // rows without a flock # can't be summarized
       let g = byKey.get(key);
+      const nameKey = String(item.flock_name ?? "").trim();
+      if (nameKey) {
+        const set = nameVariants.get(key) ?? new Set<string>();
+        set.add(nameKey);
+        nameVariants.set(key, set);
+      }
       if (!g) {
         g = {
           key,
