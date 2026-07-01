@@ -1,25 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useBlocker } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Info, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   useFlockWeeklyClearsMap,
   useSaveFlockTotalsToBatches,
 } from "@/hooks/useFlockWeeklyClears";
 import { formatLocalDate } from "@/utils/localDate";
+
 
 
 interface FlockSummaryViewProps {
