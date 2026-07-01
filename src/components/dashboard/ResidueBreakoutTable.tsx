@@ -415,7 +415,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                     </TableCell>
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    {!readOnly && (
+                    {showActions && (
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -436,6 +436,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                         </div>
                       </TableCell>
                     )}
+
                   </TableRow>
                 );
               })
