@@ -290,18 +290,18 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
               <TableHead>Set Week</TableHead>
               <TableHead>Inspector Name</TableHead>
               <TableHead>Notes</TableHead>
-              {!readOnly && <TableHead>Actions</TableHead>}
+              {showActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {displayData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={18} className="text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => {
+              displayData.map((item) => {
                 const sampleSize = item.epq_sample_size || 648;
                 const stained = extractFromNotes(item.notes, 'Stained');
                 const abnormal = extractFromNotes(item.notes, 'Abnormal');
@@ -313,7 +313,11 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                   <TableRow key={item.batch_id}>
                     <TableCell>{item.flock_name || "-"}</TableCell>
                     <TableCell>{item.flock_number || "-"}</TableCell>
-                    <TableCell>{item.house_number || "-"}</TableCell>
+                    <TableCell>
+                      {item._flock_house_count > 1
+                        ? <Badge variant="secondary">{item._flock_house_count} houses</Badge>
+                        : (item.house_number || "-")}
+                    </TableCell>
                     <TableCell>{item.age_weeks || "-"}</TableCell>
                     <TableCell>{item.set_date ? format(new Date(item.set_date), "M/d/yyyy") : "-"}</TableCell>
                     <TableCell>{sampleSize}</TableCell>
@@ -328,7 +332,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                     <TableCell>{setWeek || "-"}</TableCell>
                     <TableCell>{item.inspector_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
-                    {!readOnly && (
+                    {showActions && (
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -353,6 +357,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
               })
             )}
           </TableBody>
+
         </Table>
       </div>
 
