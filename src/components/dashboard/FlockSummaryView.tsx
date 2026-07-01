@@ -262,32 +262,6 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirtyCount]);
 
-  // Block in-app navigation (route change) while edits are pending.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      dirtyCount > 0 && currentLocation.pathname !== nextLocation.pathname
-  );
-
-  const handleSaveAndProceed = async () => {
-    await saveAll();
-    // If save succeeded (edits cleared) proceed; otherwise stay blocked so
-    // the user can see the toast and retry.
-    if (blocker.state === "blocked") {
-      // Recheck after state settles.
-      queueMicrotask(() => {
-        if (Object.keys(edits).length === 0 && blocker.proceed) blocker.proceed();
-      });
-    }
-  };
-
-  const handleDiscardAndProceed = () => {
-    discardAll();
-    if (blocker.state === "blocked" && blocker.proceed) blocker.proceed();
-  };
-
-  const handleStay = () => {
-    if (blocker.state === "blocked" && blocker.reset) blocker.reset();
-  };
 
 
   const totals = useMemo(() => {
