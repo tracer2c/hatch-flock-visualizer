@@ -87,6 +87,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly }: FlockSumm
           flock_ids: new Set<string>(),
           house_count: 0,
           machine_count: 0,
+          name_variants: [],
         };
         byKey.set(key, g);
       }
