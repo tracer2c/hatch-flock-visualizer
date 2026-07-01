@@ -127,6 +127,10 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
     return result;
   }, [data, searchTerm, filters]);
 
+  // Collapse per-machine batches into one row per house. Kept behind a
+  // "By House" toggle-esque default so a house appears once with its full
+  // 87k total instead of split across TROY-15/20/18.
+  const houseData = useMemo(() => aggregateByHouse(filteredData), [filteredData]);
 
   const handleEdit = (record: any) => {
     setEditingRecord(record);
@@ -140,21 +144,40 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
 
   const handleSave = async () => {
     try {
-      const { error } = await supabase
-        .from("batches")
-        .update({
-          eggs_cleared: parseInt(formData.eggs_cleared) || 0,
-          eggs_injected: parseInt(formData.eggs_injected) || 0,
-          hoi_technician_name: formData.technician_name,
-          hoi_notes: formData.notes,
-          clears_technician_name: formData.technician_name,
-          clears_notes: formData.notes,
-        })
-        .eq("id", editingRecord.id);
+      const cleared = parseInt(formData.eggs_cleared) || 0;
+      const injected = parseInt(formData.eggs_injected) || 0;
+      const slices: Array<{ id: string; total_eggs_set: number }> =
+        editingRecord?._batch_slices || [{ id: editingRecord.id, total_eggs_set: editingRecord.total_eggs_set || 0 }];
 
-      if (error) throw error;
+      const clearedSplit = proportionalSplit(cleared, slices);
+      const injectedSplit = proportionalSplit(injected, slices);
 
-      toast.success("Record updated successfully");
+      // Distribute clears/injected across the house's underlying batches
+      // proportionally by egg share. Technician/notes copy to every slice.
+      const results = await Promise.all(
+        slices.map((s, i) =>
+          Promise.resolve(
+            supabase
+              .from("batches")
+              .update({
+                eggs_cleared: clearedSplit[i].value,
+                eggs_injected: injectedSplit[i].value ?? 0,
+                hoi_technician_name: formData.technician_name,
+                hoi_notes: formData.notes,
+                clears_technician_name: formData.technician_name,
+                clears_notes: formData.notes,
+              })
+              .eq("id", s.id)
+          )
+        )
+      );
+      for (const r of results) if (r.error) throw r.error;
+
+      toast.success(
+        slices.length > 1
+          ? `Updated across ${slices.length} machine allocations`
+          : "Record updated successfully"
+      );
       setEditingRecord(null);
       onDataUpdate();
     } catch (error: any) {
