@@ -49,6 +49,14 @@ export function TopBar() {
   };
 
   const isOnDashboard = location.pathname === '/';
+  const { hasFeatureAccess } = usePermissions();
+  const analyticsItems = [
+    { path: '/live-tracking', label: 'Live Tracking', icon: Activity, feature: 'live_tracking' as const },
+    { path: '/house-flow', label: 'House Flow', icon: Building2, feature: 'house_flow' as const },
+    { path: '/process-flow', label: 'Process Flow', icon: GitBranch, feature: 'process_flow' as const },
+    { path: '/machine-utilization', label: 'Machine Utilization', icon: Factory, feature: 'machine_utilization' as const },
+  ].filter((i) => hasFeatureAccess(i.feature));
+  const isOnAnalytics = analyticsItems.some((i) => location.pathname.startsWith(i.path));
 
   return (
     <>
