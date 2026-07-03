@@ -350,6 +350,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
               {showActions && <TableHead>Actions</TableHead>}
+              {showFlockActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -437,6 +438,18 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                      </TableCell>
+                    )}
+                    {showFlockActions && (
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFlockEditRow(item)}
+                          disabled={!item.flock_id || !item.set_date_week_start}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit Flock
+                        </Button>
                       </TableCell>
                     )}
 
