@@ -61,7 +61,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
         supabase
           .from("batches")
           .select(
-            `id, set_date, status, total_eggs_set, eggs_injected, eggs_cleared, house_number,
+            `id, set_date, status, total_eggs_set, eggs_injected, eggs_cleared,
              flocks(house_number), machines(machine_number)`
           )
           .in("id", ids),
