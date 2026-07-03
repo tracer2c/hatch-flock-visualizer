@@ -17,29 +17,13 @@ interface HouseFlowSankeyProps {
 const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
   const [viewMode, setViewMode] = useState<'active' | 'completed' | 'all'>('active');
   const [breakdown, setBreakdown] = useState<'aggregate' | 'flock'>('aggregate');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const { toast } = useToast();
 
   const { data: completedBatches, isLoading: loadingCompleted } = useCompletedBatchMetrics();
   const { data: activeBatches, isLoading: loadingActive } = useActiveBatchFlowData();
 
   const isLoading = loadingCompleted || loadingActive;
-
-  if (isLoading) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            House Flow Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-pulse text-muted-foreground">Loading flow data...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   // Determine which data to use based on view mode
   const getBatchesToAnalyze = () => {
@@ -172,9 +156,6 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
     </div>
   );
 
-  const { toast } = useToast();
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-
   // Build a template-based, numbers-driven explanation for the PDF report.
   const buildSummary = (): string[] => {
     const fertilityPct = flowData.totalEggs ? (flowData.fertile / flowData.totalEggs) * 100 : 0;
@@ -219,6 +200,24 @@ const BatchFlowSankey = ({ className }: HouseFlowSankeyProps) => {
       setGeneratingPdf(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            House Flow Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-pulse text-muted-foreground">Loading flow data...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className}>
