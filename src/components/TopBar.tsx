@@ -34,7 +34,8 @@ export function TopBar() {
     if (role === 'operations_head') return 'secondary';
     return 'outline';
   };
-  const { open: sidebarOpen } = useSidebar();
+  const { open: sidebarOpen, toggleSidebar, isMobile, openMobile } = useSidebar();
+  const collapsed = isMobile ? !openMobile : !sidebarOpen;
   const navigate = useNavigate();
   const location = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -51,14 +52,23 @@ export function TopBar() {
   return (
     <>
       <header className={cn(
-        "fixed top-0 right-0 z-40 border-b border-border/30",
+        "fixed top-0 right-0 left-0 z-40 border-b border-border/30",
         "bg-background/95 backdrop-blur-md",
-        "shadow-sm transition-all duration-300",
-        sidebarOpen ? "left-[240px]" : "left-[56px]"
+        "shadow-sm transition-all duration-300"
       )}>
-        <div className="flex h-12 items-center justify-between px-6">
-          {/* Left Side - Back Button + Brand */}
-          <div className="flex items-center gap-3">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
+        <div className="flex h-12 items-center justify-between px-3 pt-1">
+          {/* Left Side - Sidebar Toggle + Back Button + Brand */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+              title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
+            >
+              {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </Button>
             {/* Back Button - hidden on dashboard */}
             {!isOnDashboard && (
               <Button 
