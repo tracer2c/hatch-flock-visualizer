@@ -95,11 +95,12 @@ function AppContent() {
         <Route path="/*" element={
           <ProtectedRoute>
             <SidebarProvider defaultOpen={!isMobile && !isTablet}>
-              <div className="flex min-h-screen w-full bg-background">
-                <ModernSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <TopBar />
-                  <main className="flex-1 overflow-auto pt-12">
+              <AnalyticsFilterProvider>
+                <div className="flex min-h-screen w-full bg-background">
+                  <ModernSidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <TopBar />
+                    <main className="flex-1 overflow-auto pt-12">
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/multi-stage" element={
