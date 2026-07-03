@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset, PanelLeft, PanelLeftClose } from "lucide-react";
+import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset, PanelLeft, PanelLeftClose, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
