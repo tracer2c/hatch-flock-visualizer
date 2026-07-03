@@ -1044,6 +1044,53 @@ export type Database = {
           },
         ]
       }
+      flock_worksheet_values: {
+        Row: {
+          company_id: string
+          created_at: string
+          flock_id: string
+          id: string
+          notes: string | null
+          set_date_week_start: string
+          updated_at: string
+          updated_by: string | null
+          values: Json
+          worksheet_type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          flock_id: string
+          id?: string
+          notes?: string | null
+          set_date_week_start: string
+          updated_at?: string
+          updated_by?: string | null
+          values?: Json
+          worksheet_type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          flock_id?: string
+          id?: string
+          notes?: string | null
+          set_date_week_start?: string
+          updated_at?: string
+          updated_by?: string | null
+          values?: Json
+          worksheet_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_worksheet_values_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flocks: {
         Row: {
           age_weeks: number

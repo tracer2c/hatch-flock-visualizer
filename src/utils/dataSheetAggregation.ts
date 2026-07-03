@@ -260,15 +260,35 @@ function commonFlockFields(bucket: any[]) {
   const houseCount = new Set(
     bucket.map((r) => String(r.house_number ?? "").trim().toLowerCase()).filter(Boolean)
   ).size;
+  const setDate = earliest(bucket.map((r) => r.set_date));
+  const flockId =
+    bucket.find((r) => r.flock_id)?.flock_id ?? null;
   return {
+    flock_id: flockId,
     flock_number: bucket[0].flock_number,
     flock_name: joinList(bucket.map((r) => r.flock_name)) || bucket[0].flock_name || null,
     house_number: houseCount > 1 ? null : bucket[0].house_number,
     age_weeks: maxNum(bucket.map((r) => r.age_weeks)),
-    set_date: earliest(bucket.map((r) => r.set_date)),
+    set_date: setDate,
+    set_date_week_start: setDate ? weekStartMondayISO(setDate) : null,
     _flock_house_count: houseCount || 1,
     _aggregated_count: bucket.length,
+    _house_rows: bucket,
   };
+}
+
+/** Return Monday of the ISO-week for a given date string, as YYYY-MM-DD. */
+export function weekStartMondayISO(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (!Number.isFinite(d.getTime())) return dateStr;
+  const day = d.getDay(); // 0=Sun..6=Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  const yyyy = monday.getFullYear();
+  const mm = String(monday.getMonth() + 1).padStart(2, "0");
+  const dd = String(monday.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /** Residue Analysis: sum sample & mortality; recompute HOF/HOI %. */
