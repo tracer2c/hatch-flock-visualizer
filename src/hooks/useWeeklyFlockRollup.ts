@@ -69,7 +69,7 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
         id: b.id,
         set_date: b.set_date,
         status: b.status,
-        house_number: b.house_number ?? b.flocks?.house_number ?? "",
+        house_number: b.flocks?.house_number ?? "",
         flock_id: b.flock_id,
         flock_number: b.flocks?.flock_number ?? null,
         flock_name: b.flocks?.flock_name ?? null,
