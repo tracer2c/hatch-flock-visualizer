@@ -56,7 +56,7 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
       const { data: batches, error: batchErr } = await supabase
         .from("batches")
         .select(
-          `id, batch_number, set_date, total_eggs_set, eggs_cleared, eggs_injected, chicks_hatched, status, house_number, flock_id,
+          `id, batch_number, set_date, total_eggs_set, eggs_cleared, eggs_injected, chicks_hatched, status, flock_id,
            flocks(flock_number, flock_name, house_number)`
         )
         .is("archived_at", null)
