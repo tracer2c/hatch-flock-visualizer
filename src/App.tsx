@@ -225,6 +225,7 @@ function AppContent() {
                   </main>
                 </div>
               </div>
+              </AnalyticsFilterProvider>
             </SidebarProvider>
           </ProtectedRoute>
         } />
