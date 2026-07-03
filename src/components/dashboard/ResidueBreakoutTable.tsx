@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
 import { aggregateResidueByFlock } from "@/utils/dataSheetAggregation";
+import { FlockDetailEditor } from "@/components/data-sheet/FlockDetailEditor";
 import {
   calculateHatchPercent,
   calculateHOFPercent,
@@ -50,6 +51,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   const [formData, setFormData] = useState<any>({});
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<DataSheetViewMode>("rows");
+  const [flockEditRow, setFlockEditRow] = useState<any>(null);
 
 
   // Apply filters to data
@@ -302,6 +304,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   );
   const isAggregated = view === "flock-summary";
   const showActions = !readOnly && !isAggregated;
+  const showFlockActions = !readOnly && isAggregated;
 
   return (
     <TooltipProvider>
@@ -309,7 +312,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
         <DataSheetViewModeToggle value={view} onChange={setView} />
         {isAggregated && (
           <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-            Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+            Aggregated view — one row per flock across all houses & hatcheries. Click <strong>Edit</strong> to maintain flock-level values, or switch to <strong>By House</strong> to edit per-house records.
           </div>
         )}
         <div className="overflow-x-auto">
@@ -347,6 +350,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
               <TableHead>Technician Name</TableHead>
               <TableHead>Notes</TableHead>
               {showActions && <TableHead>Actions</TableHead>}
+              {showFlockActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -434,6 +438,18 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                      </TableCell>
+                    )}
+                    {showFlockActions && (
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFlockEditRow(item)}
+                          disabled={!item.flock_id || !item.set_date_week_start}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit Flock
+                        </Button>
                       </TableCell>
                     )}
 
@@ -666,6 +682,26 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
             </div>
           </DialogContent>
         </Dialog>
+
+        <FlockDetailEditor
+          open={!!flockEditRow}
+          onOpenChange={(o) => !o && setFlockEditRow(null)}
+          worksheetType="residue"
+          flock={
+            flockEditRow
+              ? {
+                  flock_id: flockEditRow.flock_id ?? null,
+                  flock_number: flockEditRow.flock_number,
+                  flock_name: flockEditRow.flock_name,
+                  set_date_week_start: flockEditRow.set_date_week_start ?? null,
+                  set_date: flockEditRow.set_date,
+                }
+              : null
+          }
+          aggregatedRow={flockEditRow}
+          houseRows={flockEditRow?._house_rows ?? []}
+          onSaved={onDataUpdate}
+        />
       </>
     </TooltipProvider>
   );
