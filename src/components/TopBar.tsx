@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset, PanelLeft, PanelLeftClose } from "lucide-react";
+import { LogOut, User, ChevronRight, ArrowLeft, Home, Search, Headset, PanelLeft, PanelLeftClose, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,14 @@ export function TopBar() {
   };
 
   const isOnDashboard = location.pathname === '/';
+  const { hasFeatureAccess } = usePermissions();
+  const analyticsItems = [
+    { path: '/live-tracking', label: 'Live Tracking', icon: Activity, feature: 'live_tracking' as const },
+    { path: '/house-flow', label: 'House Flow', icon: Building2, feature: 'house_flow' as const },
+    { path: '/process-flow', label: 'Process Flow', icon: GitBranch, feature: 'process_flow' as const },
+    { path: '/machine-utilization', label: 'Machine Utilization', icon: Factory, feature: 'machine_utilization' as const },
+  ].filter((i) => hasFeatureAccess(i.feature));
+  const isOnAnalytics = analyticsItems.some((i) => location.pathname.startsWith(i.path));
 
   return (
     <>
@@ -101,6 +110,43 @@ export function TopBar() {
                 <span className="text-xs">⌘</span>K
               </kbd>
             </Button>
+
+            {/* Analytics Dropdown */}
+            {analyticsItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 px-3 gap-2 border-border/50",
+                      isOnAnalytics && "bg-primary/10 text-primary border-primary/30"
+                    )}
+                  >
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline text-xs">Analytics</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {analyticsItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = location.pathname.startsWith(item.path);
+                    return (
+                      <DropdownMenuItem
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
+                        className={cn("cursor-pointer gap-2", active && "bg-primary/10 text-primary")}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm">{item.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
 
             {/* Dashboard Home Icon */}
             <Button 

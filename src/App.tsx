@@ -61,6 +61,7 @@ import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
+import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,11 +95,12 @@ function AppContent() {
         <Route path="/*" element={
           <ProtectedRoute>
             <SidebarProvider defaultOpen={!isMobile && !isTablet}>
-              <div className="flex min-h-screen w-full bg-background">
-                <ModernSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <TopBar />
-                  <main className="flex-1 overflow-auto pt-12">
+              <AnalyticsFilterProvider>
+                <div className="flex min-h-screen w-full bg-background">
+                  <ModernSidebar />
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <TopBar />
+                    <main className="flex-1 overflow-auto pt-12">
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/multi-stage" element={
@@ -223,6 +225,7 @@ function AppContent() {
                   </main>
                 </div>
               </div>
+              </AnalyticsFilterProvider>
             </SidebarProvider>
           </ProtectedRoute>
         } />
