@@ -1,89 +1,79 @@
-# By-Flock Editing on Data Sheet — Residue, EPQ, Hatch/Fertility
 
-## Why the tabs behave differently today
+# Dashboard Redesign + Analytics Nav & Filters
 
-- **Embrex/HOI By House** is editable because HOI numbers live on `batches` and there is a clean, defined proportional split (`proportionalSplit` in `dataSheetAggregation.ts`).
-- **Residue / Egg Pack Quality / Hatch (Fertility) / QA** By-Flock rows are pure rollups from separate worksheet tables. They were left read-only because there is no "flock record" to write to, and splitting a flock total back to N house rows is ambiguous (different sample sizes, notes-encoded fields, time-series data).
+Rebuild the Dashboard as a lightweight triage/summary screen (matching the mockup) and restructure the sidebar so the four analytics-style pages live under an "Analytics" dropdown in the top nav. Add a shared filter bar (Date, Hatcheries, Flock/House) that actually drives the pages under Analytics.
 
-You've asked for something new: **flock-level values should be first-class and authoritative, not derived and not split**. The house rows stay for traceability and, where it makes sense, remain editable in place.
+## 1. Dashboard rebuild (`/`)
 
-## What we're building
+Replace `OverviewOperations` (currently a passthrough to `BatchOverviewDashboard`) with a new `DashboardHome` composed of small, focused sections. Nothing on this page becomes an editor — every action links to Data Entry / Data Sheet / QA Hub.
 
-A single **Flock Detail Editor** (modal) opened from the "Edit" button on a By-Flock row in Residue, EPQ, and Hatch/Fertility.
+Sections top → bottom, matching the reference screenshot:
 
-### Layout of the editor
+1. **Page header** — "Hatchery Dashboard" + subtitle + right-aligned filter row: Set-Date Week picker, Hatchery multi-select, Machine multi-select. "Last updated" stamp.
+2. **KPI cards (5)** — Total Eggs Set (week), Avg Fertility %, Avg Hatch %, Avg HOI %, Critical QA Alerts. Each shows current value, target (where applicable), and week-over-week delta.
+3. **Needs Attention** — compact exceptions table (max 5 rows) with columns Flock / Issue tag / Details / Set Date / Action button. Issue categories: Performance Variance, Missing Data, Below Target, QA Alert, Due Soon. "View all needs attention →" links to Data Sheet with the same filter applied.
+4. **Weekly Flock Status** — small summary card: Total Flocks / Complete / Missing Data / Critical Issues counts + buttons `Open Weekly Rollup` (→ `/data-entry` weekly rollup) and `Go to Data Entry`.
+5. **Active Houses Pipeline** — up to 3 rows: house code, flock/machine, status pill (In Setter / In Hatcher), "Due in N days". "View full pipeline →" opens Live Tracking.
+6. **QA Alerts** (right column on desktop, stacked on mobile) — top 3 critical alerts with temp/humidity + detected time. "Go to QA Hub" button.
 
-```text
-┌───────────────────────────────────────────────────────────────┐
-│  Flock 1234 · Set Date week Mon 22 Jun – Sun 28 Jun · Hatchery│
-├───────────────────────────────────────────────────────────────┤
-│  ▸ Flock-Level Values  (authoritative, editable)              │
-│    – tab-specific fields (see below)                          │
-│    – Save writes to flock-level record; does NOT touch houses │
-├───────────────────────────────────────────────────────────────┤
-│  ▾ House Breakdown  (traceability; some fields editable)      │
-│    House 1 · sample / % / notes …  [Edit]                     │
-│    House 2 · …                                                │
-│    House 3 · …                                                │
-│    (Totals row shown for reference; may differ from flock-    │
-│     level values by design — banner explains why.)            │
-└───────────────────────────────────────────────────────────────┘
-```
+No inline editing, no full flock table, no export controls, no worksheet columns. Data comes from existing hooks (`useWeeklyFlockRollup`, `useAlerts`, `useHousesData`, targets, etc.) — no new tables.
 
-### Per-tab behavior
+### New/changed files
+- `src/components/dashboard/DashboardHome.tsx` (new — orchestrates sections)
+- `src/components/dashboard/sections/KpiRow.tsx`
+- `src/components/dashboard/sections/NeedsAttention.tsx`
+- `src/components/dashboard/sections/WeeklyFlockStatusCard.tsx`
+- `src/components/dashboard/sections/ActiveHousesPipeline.tsx`
+- `src/components/dashboard/sections/DashboardQaAlerts.tsx`
+- `src/pages/Index.tsx` — render `DashboardHome` instead of `OverviewOperations`
+- Leave `BatchOverviewDashboard` and its tabs in place; the heavy tabbed analytics stays reachable through the Analytics menu and Data Sheet, not the dashboard.
 
-| Tab | Flock-level editable fields | House breakdown |
-|---|---|---|
-| **Hatch Results / Fertility** | Chicks Hatched, HOF %, HOI %, Fertility %, Hatch Date, Technician, Notes | Read-only summary + **Edit per house** for Fertility fields (sample size, infertile, early/mid/late dead) |
-| **Residue Analysis** | Total Sample, Contaminated, Pips, Cull Chicks, Malformed, Early/Mid/Late Dead, Residue Notes | Read-only summary + **Edit per house** for the same fields at house scope |
-| **Egg Pack Quality** | Sample Size, Grade A, Cracked, Dirty, Small, Large, Misshapen, Stained, Abnormal, Contaminated, USD, Notes | Read-only breakdown per house with a **Drill-down** link that opens the house's EPQ worksheet in Data Entry |
-| **HOI (Embrex)** | Already editable per house today | Stays as-is; add matching "Flock-Level Values" top card that reads/writes the same new flock override record so HOI can be maintained at the flock level too |
-| **QA Monitoring** | Not exposed — QA rows are timestamped readings | Stays read-only at flock level |
+## 2. Sidebar cleanup + Analytics top-nav dropdown
 
-### Important UX rules
+Currently the sidebar shows Dashboard, Multi-Stage, Single-Stage, Data Entry, QA Hub, Data Sheet, Timeline, Daily Tasks, Smart Analytics, Management. The four analytics-flavored screens (Live Tracking, House Flow, Process Flow, Machine Utilization) are only reachable via direct URLs today.
 
-- Saving flock-level values **never rewrites house rows**. A small info banner in the editor states: *"Flock-level values are maintained independently. House totals are shown for investigation and may differ."*
-- On the By-Flock table, when a flock-level record exists, its values take precedence over the computed rollup for display, and the row shows a subtle **"Flock-level"** pill so users know they're looking at maintained values, not a sum. A tooltip shows the computed-from-houses value alongside.
-- The house breakdown section reuses the existing per-house entry components (`FertilityDataEntry`, `ResidueDataEntry`, `EggPackEntry`) inside a compact accordion — no new house-editing UI to maintain.
+Changes:
+- **Sidebar** stays operational: Dashboard, Multi-Stage, Single-Stage, Data Entry, QA Hub, Data Sheet, Timeline, Daily Tasks, Smart Analytics, Management. (No new items.)
+- **TopBar** — add an "Analytics" dropdown button (icon `TrendingUp`, matches mockup style) between the Search box and the Home icon. Items:
+  - Live Tracking → `/live-tracking`
+  - House Flow → `/house-flow`
+  - Process Flow → `/process-flow`
+  - Machine Utilization → `/machine-utilization`
+- Gate each item through `usePermissions().hasFeatureAccess` using the existing feature keys so role-based hiding continues to work.
+- Highlight the current analytics route in the dropdown trigger (active pill styling) when the user is on one of those pages.
 
-## Data model
+### Files
+- `src/components/TopBar.tsx` — insert the dropdown (use existing `DropdownMenu` primitives).
+- `src/components/ModernSidebar.tsx` — no item changes; keep as-is.
 
-Add one new table to store authoritative flock-level worksheet values without touching the existing house-scoped tables:
+## 3. Shared Analytics filter bar
 
-- **`flock_worksheet_values`**
-  - `id` (uuid, pk)
-  - `company_id` (uuid, tenant scope for RLS)
-  - `flock_id` (uuid, fk → `flocks`)
-  - `set_date_week_start` (date, Monday of the Set Date week — matches the Weekly Rollup grouping)
-  - `worksheet_type` (enum: `hatch_fertility` | `residue` | `egg_pack` | `hoi`)
-  - `values` (jsonb — tab-specific fields, keeps schema flexible so we don't need a migration per field)
-  - `notes` (text)
-  - `updated_by` (uuid), `updated_at` (timestamptz), `created_at` (timestamptz)
-  - Unique constraint on `(flock_id, set_date_week_start, worksheet_type)`
-  - RLS: company-scoped read/write for `authenticated`, following the same pattern as `residue_analysis` / `egg_pack_quality`. `service_role` full access. No `anon` access.
-  - GRANTs written in the same migration.
+Add a shared `AnalyticsFilters` header used by the four Analytics pages (Live Tracking, House Flow, Process Flow, Machine Utilization) and the Dashboard header. Requirements:
 
-Existing tables (`residue_analysis`, `egg_pack_quality`, `fertility_analysis`, `qa_monitoring`, `batches`) are **not modified**.
+- **Date range** — presets (This week / Last week / MTD / Last 30 days / Custom) using the shadcn date-range picker (`pointer-events-auto`).
+- **Hatcheries** — multi-select of the user's hatcheries (from `units` via existing loader), "All hatcheries" default.
+- **Flocks / Houses** — dependent multi-select scoped to the selected hatcheries. A small toggle switches between filtering by Flock and by House so power users can pick the axis they care about.
 
-## Frontend changes
+Filters must actually drive queries — not just be decorative:
+- Introduce a lightweight `AnalyticsFilterContext` (`src/contexts/AnalyticsFilterContext.tsx`) that persists selection to `sessionStorage` and exposes `{ dateRange, hatcheryIds, flockIds, houseIds, mode }`.
+- Wrap the analytics routes with the provider in `App.tsx` (single `<Route element>` layout wrapper containing the four routes).
+- Update the page components to read the context and pass values into their existing hooks:
+  - `LiveHouseTracker` → filter by hatchery + house
+  - `HouseFlowPage` → filter by hatchery + flock/house + date
+  - `ProcessFlowDashboard` → date + hatchery + flock
+  - `MachineUtilizationPage` → date + hatchery
+- Where a hook doesn't accept filter args yet, extend its signature (params object) and apply the filter client-side after fetch if a server change would be out of scope; keep the change additive so other callers are unaffected.
+- Dashboard header re-uses the same filter component (same context provider mounted at the app shell) so Set-Date Week + Hatchery selection stays consistent when the user moves between Dashboard and Analytics pages.
 
-1. **New component** `src/components/data-sheet/FlockDetailEditor.tsx` — the modal above. Takes `flockId`, `weekStart`, `worksheetType`.
-2. **New hook** `src/hooks/useFlockWorksheetValues.ts` — read/upsert `flock_worksheet_values` for a given key; invalidates the Data Sheet queries on save.
-3. **Update aggregation display** in the four tab components (`ResidueBreakoutTab`, `EggPackQualityTab`, `HatchPerformanceTab`, `EmbrexHOITab`):
-   - Fetch any matching `flock_worksheet_values` for the visible flocks/weeks.
-   - When a flock override exists, render the stored values (with the "Flock-level" pill and tooltip) instead of the computed rollup.
-   - Add an **Edit** action on each By-Flock row that opens `FlockDetailEditor`.
-4. **House breakdown** inside the editor reuses existing per-house entry components (Fertility, Residue) or a deep-link to Data Entry (EPQ).
-5. **QA Monitoring tab** — no change, retains its read-only By-Flock rollup.
+### Files
+- `src/contexts/AnalyticsFilterContext.tsx` (new)
+- `src/components/analytics/AnalyticsFilters.tsx` (new — date range, hatchery multi-select, flock/house multi-select with mode toggle)
+- `src/components/analytics/AnalyticsPageShell.tsx` (new — page header + filter bar wrapper used by the four pages)
+- `src/pages/LiveTrackingPage.tsx`, `src/pages/HouseFlowPage.tsx`, `src/pages/ProcessFlowPage.tsx`, `src/pages/MachineUtilizationPage.tsx` — wrap in `AnalyticsPageShell`, read context
+- `src/App.tsx` — mount `AnalyticsFilterProvider` around the app shell so both TopBar dropdown targets and the Dashboard share the same filter state
+- Underlying hooks touched only enough to accept the new params (no schema changes, no new tables)
 
 ## Out of scope
-
-- No changes to the Weekly Flock Rollup on Data Entry, the four per-house worksheets, or existing HOI By-House splitting logic.
-- No auto-split, no reconciliation job, no history diffing between computed and stored flock values (beyond the tooltip).
-- QA-Monitoring editing at flock level.
-
-## Migration & rollout
-
-1. Migration creates `flock_worksheet_values` with GRANTs + RLS + policies (company-scoped, same pattern as sibling worksheet tables).
-2. Frontend ships the editor + hook + tab updates in one pass.
-3. No backfill — existing rollups continue to compute from houses until a user saves a flock-level value.
+- No changes to Data Sheet, Data Entry, or the Flock Detail Editor introduced earlier.
+- No new Supabase migrations.
+- Sidebar item list stays as-is; Analytics lives in the top nav per your instruction.
