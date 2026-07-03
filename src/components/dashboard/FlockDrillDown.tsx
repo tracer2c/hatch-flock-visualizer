@@ -74,7 +74,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
         (arr || []).filter((r) => r.batch_id === id).length;
       const tiles: HouseTile[] = (batchesR.data || []).map((b: any) => ({
         id: b.id,
-        house_number: b.house_number ?? b.flocks?.house_number ?? "",
+        house_number: b.flocks?.house_number ?? "",
         set_date: b.set_date,
         status: b.status,
         total_eggs_set: Number(b.total_eggs_set) || 0,
