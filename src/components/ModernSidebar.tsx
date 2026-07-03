@@ -119,30 +119,6 @@ export function ModernSidebar() {
         />
       )}
 
-      <Button
-        variant="outline"
-        size="touch-lg"
-        className={cn(
-          "fixed top-4 left-4 z-[100] rounded-lg bg-background/80",
-          "border-2 border-border/50 shadow-lg",
-          "transition-all duration-300",
-          "hover:bg-accent/50",
-          "cursor-pointer touch-manipulation"
-        )}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleSidebar();
-        }}
-        title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
-      >
-        {collapsed ? (
-          <PanelLeft className="h-6 w-6 pointer-events-none" />
-        ) : (
-          <PanelLeftClose className="h-6 w-6 pointer-events-none" />
-        )}
-      </Button>
-
       <Sidebar
         side="left"
         variant="sidebar" 
@@ -155,9 +131,7 @@ export function ModernSidebar() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
-        
-        <SidebarContent className="pt-16 px-3">
+        <SidebarContent className="pt-14 px-3">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
