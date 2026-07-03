@@ -61,7 +61,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
         supabase
           .from("batches")
           .select(
-            `id, set_date, status, total_eggs_set, eggs_injected, eggs_cleared, house_number,
+            `id, set_date, status, total_eggs_set, eggs_injected, eggs_cleared,
              flocks(house_number), machines(machine_number)`
           )
           .in("id", ids),
@@ -74,7 +74,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
         (arr || []).filter((r) => r.batch_id === id).length;
       const tiles: HouseTile[] = (batchesR.data || []).map((b: any) => ({
         id: b.id,
-        house_number: b.house_number ?? b.flocks?.house_number ?? "",
+        house_number: b.flocks?.house_number ?? "",
         set_date: b.set_date,
         status: b.status,
         total_eggs_set: Number(b.total_eggs_set) || 0,
