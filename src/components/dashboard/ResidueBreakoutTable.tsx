@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
 import { aggregateResidueByFlock } from "@/utils/dataSheetAggregation";
+import { FlockDetailEditor } from "@/components/data-sheet/FlockDetailEditor";
 import {
   calculateHatchPercent,
   calculateHOFPercent,
@@ -50,6 +51,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   const [formData, setFormData] = useState<any>({});
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<DataSheetViewMode>("rows");
+  const [flockEditRow, setFlockEditRow] = useState<any>(null);
 
 
   // Apply filters to data
@@ -302,6 +304,7 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
   );
   const isAggregated = view === "flock-summary";
   const showActions = !readOnly && !isAggregated;
+  const showFlockActions = !readOnly && isAggregated;
 
   return (
     <TooltipProvider>
