@@ -532,6 +532,26 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
           </DialogContent>
         </Dialog>
       </div>
+
+      <FlockDetailEditor
+        open={!!flockEditRow}
+        onOpenChange={(o) => !o && setFlockEditRow(null)}
+        worksheetType="hatch_fertility"
+        flock={
+          flockEditRow
+            ? {
+                flock_id: flockEditRow.flock_id ?? null,
+                flock_number: flockEditRow.flock_number,
+                flock_name: flockEditRow.flock_name,
+                set_date_week_start: flockEditRow.set_date_week_start ?? null,
+                set_date: flockEditRow.set_date,
+              }
+            : null
+        }
+        aggregatedRow={flockEditRow}
+        houseRows={flockEditRow?._house_rows ?? []}
+        onSaved={onDataUpdate}
+      />
     </>
     </TooltipProvider>
   );
