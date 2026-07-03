@@ -61,6 +61,7 @@ import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
+import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
