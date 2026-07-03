@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DataSheetViewModeToggle, type DataSheetViewMode } from "./DataSheetViewModeToggle";
 import { aggregateEggPackByFlock } from "@/utils/dataSheetAggregation";
+import { FlockDetailEditor } from "@/components/data-sheet/FlockDetailEditor";
 
 
 interface EggPackQualityTabProps {
@@ -38,6 +39,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [view, setView] = useState<DataSheetViewMode>("rows");
+  const [flockEditRow, setFlockEditRow] = useState<any>(null);
 
 
   // Apply filters to data
@@ -259,13 +261,14 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
   );
   const isAggregated = view === "flock-summary";
   const showActions = !readOnly && !isAggregated;
+  const showFlockActions = !readOnly && isAggregated;
 
   return (
     <>
       <DataSheetViewModeToggle value={view} onChange={setView} />
       {isAggregated && (
         <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-          Aggregated view — one row per flock across all houses & hatcheries. Edits are done on the <strong>By House</strong> view.
+          Aggregated view — one row per flock across all houses & hatcheries. Click <strong>Edit</strong> to maintain flock-level values, or switch to <strong>By House</strong> to edit per-house records.
         </div>
       )}
       <div className="overflow-x-auto">
@@ -291,6 +294,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
               <TableHead>Inspector Name</TableHead>
               <TableHead>Notes</TableHead>
               {showActions && <TableHead>Actions</TableHead>}
+              {showFlockActions && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -350,6 +354,18 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                      </TableCell>
+                    )}
+                    {showFlockActions && (
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFlockEditRow(item)}
+                          disabled={!item.flock_id || !item.set_date_week_start}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit Flock
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
