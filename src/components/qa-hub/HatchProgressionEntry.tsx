@@ -85,6 +85,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   }, [totalCount, hatchedCount]);
 
   const handleSubmit = async () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) {
       toast.error('Enter a technician name at the top of the page.');
       return;
