@@ -27,6 +27,8 @@ interface Props {
   flock: WeeklyFlockRollupRow;
   onBack: () => void;
   onOpenHouse: (houseId: string) => void;
+  /** Monday of the set week the user is viewing. Used to build flock-week entry links. */
+  weekStart?: Date;
 }
 
 const statusColor = (s: string) => {
