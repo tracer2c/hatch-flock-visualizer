@@ -84,6 +84,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
   const { isOnline } = useOnlineStatus();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
 
   const resolveCompanyId = async (): Promise<string> => {
     if (profile?.company_id) return profile.company_id;
