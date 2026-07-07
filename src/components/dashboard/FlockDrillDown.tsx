@@ -47,7 +47,7 @@ const statusColor = (s: string) => {
 const fmtInt = (n: number | null | undefined) =>
   n == null ? "—" : Math.round(n).toLocaleString();
 
-export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
+export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }: Props) {
   const navigate = useNavigate();
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
   const [loading, setLoading] = useState(false);
