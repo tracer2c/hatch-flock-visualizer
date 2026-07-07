@@ -187,10 +187,28 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
           </div>
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!technicianName.trim() || !humidity || !temperature}>
+        <Button onClick={handleSubmit} className="w-full" disabled={isPastDay || !technicianName.trim() || !humidity || !temperature}>
           <Plus className="h-4 w-4 mr-2" />
           Save Machine-Wide Humidity & Temperature
         </Button>
+
+        <TodaysEntriesList
+          machineId={machine.id}
+          checkDate={checkDate}
+          type="humidity"
+          isPastDay={isPastDay}
+          emptyLabel="No humidity readings yet today."
+          renderSummary={(e) => {
+            const h = e.humidity;
+            const t = e.temperature;
+            return (
+              <span>
+                {typeof h === 'number' && <>Humidity <span className="font-medium">{h.toFixed(1)}%</span></>}
+                {typeof t === 'number' && <> · Temp <span className="font-medium">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
