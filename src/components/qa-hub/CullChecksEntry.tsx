@@ -48,6 +48,8 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
   flockOptions = [],
   defaultFlockId,
   defaultBatchId,
+  machineId,
+  isPastDay = false,
   onSubmit 
 }) => {
   const [selectedFlockId, setSelectedFlockId] = useState(defaultFlockId || '');
@@ -61,6 +63,7 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
   const batchId = selectedFlock?.batch_id || defaultBatchId || '';
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) return;
     if (!selectedFlockId || !batchId) return;
 
