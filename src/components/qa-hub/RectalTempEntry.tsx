@@ -26,7 +26,7 @@ const locationOptions = [
   { value: 'separator_room', label: 'Separator Room (104-106°F)', min: 104, max: 106 },
 ];
 
-const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, onSubmit }) => {
+const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, isPastDay = false, onSubmit }) => {
   const [location, setLocation] = useState('hatcher');
   const [temperature, setTemperature] = useState('');
   const [checkTime, setCheckTime] = useState(new Date().toTimeString().slice(0, 5));
@@ -36,6 +36,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
   const isWithinRange = selectedLocation && temp >= selectedLocation.min && temp <= selectedLocation.max;
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) return;
     if (!temperature || isNaN(temp)) return;
 
