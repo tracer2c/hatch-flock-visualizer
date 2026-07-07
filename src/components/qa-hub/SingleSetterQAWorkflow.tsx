@@ -55,11 +55,13 @@ interface SelectedMachine {
 interface SingleSetterQAWorkflowProps {
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
+  focusSection?: string;
 }
 
 const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({ 
   preSelectedHouseId, 
-  preSelectedAction 
+  preSelectedAction,
+  focusSection,
 }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
@@ -68,7 +70,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [notes, setNotes] = useState('');
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeQATab, setActiveQATab] = useState('rectal-temps');
+  const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
   const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
     invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
