@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Ruler, Plus, AlertTriangle, Info } from "lucide-react";
+import { toast } from 'sonner';
 
 interface FlockDetail {
   flock_id: string;
@@ -42,40 +43,35 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
   uniqueFlocks,
   onSubmit
 }) => {
-  const [angles, setAngles] = useState({
-    angle_top_left: '',
-    angle_mid_left: '',
-    angle_bottom_left: '',
-    angle_top_right: '',
-    angle_mid_right: '',
-    angle_bottom_right: '',
-  });
-
-  const handleInputChange = (field: keyof typeof angles, value: string) => {
-    setAngles(prev => ({ ...prev, [field]: value }));
-  };
+  const [leftSide, setLeftSide] = useState('');
+  const [rightSide, setRightSide] = useState('');
 
   const getAngleColor = (angle: string): string => {
     if (!angle) return '';
     const num = parseFloat(angle);
     if (isNaN(num)) return '';
-    // Ideal angle is typically 45 degrees ± 5
     if (num >= 40 && num <= 50) return 'border-green-500 bg-green-50 text-green-700';
     if ((num >= 35 && num < 40) || (num > 50 && num <= 55)) return 'border-yellow-500 bg-yellow-50 text-yellow-700';
     return 'border-red-500 bg-red-50 text-red-700';
   };
 
   const handleSubmit = () => {
-    const hasEmpty = Object.values(angles).some(v => v === '');
-    if (hasEmpty) return;
+    const left = parseFloat(leftSide);
+    const right = parseFloat(rightSide);
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      toast.error('Enter both Left Side and Right Side angle values.');
+      return;
+    }
 
+    // Mirror the single left/right values across top/mid/bottom slots
+    // so the DB payload shape stays compatible with historical records and aggregations.
     const numericAngles = {
-      angle_top_left: parseFloat(angles.angle_top_left),
-      angle_mid_left: parseFloat(angles.angle_mid_left),
-      angle_bottom_left: parseFloat(angles.angle_bottom_left),
-      angle_top_right: parseFloat(angles.angle_top_right),
-      angle_mid_right: parseFloat(angles.angle_mid_right),
-      angle_bottom_right: parseFloat(angles.angle_bottom_right),
+      angle_top_left: left,
+      angle_mid_left: left,
+      angle_bottom_left: left,
+      angle_top_right: right,
+      angle_mid_right: right,
+      angle_bottom_right: right,
     };
 
     onSubmit({
@@ -84,18 +80,9 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
       uniqueFlocks
     });
 
-    // Reset form
-    setAngles({
-      angle_top_left: '',
-      angle_mid_left: '',
-      angle_bottom_left: '',
-      angle_top_right: '',
-      angle_mid_right: '',
-      angle_bottom_right: '',
-    });
+    setLeftSide('');
+    setRightSide('');
   };
-
-  const levels = ['Top', 'Mid', 'Bottom'] as const;
 
   return (
     <Card>
@@ -104,7 +91,7 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
           <Ruler className="h-5 w-5" />
           Setter Angles (Machine-Wide)
         </CardTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="bg-primary/10">
             Machine: {machine.machine_number}
           </Badge>
@@ -112,15 +99,14 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Info Alert */}
         <Alert className="bg-blue-50 border-blue-200">
           <Info className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
-            Angles are measured at the machine level and will be linked to all {uniqueFlocks.length} flock(s) currently in this machine.
+            Record one Left and one Right angle per check. Historical Top/Mid/Bottom entries remain
+            visible in previous records for reference.
           </AlertDescription>
         </Alert>
 
-        {/* Linked Flocks */}
         {uniqueFlocks.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-lg">
             <span className="text-xs font-medium text-muted-foreground">Will link to:</span>
@@ -139,60 +125,35 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
           </Alert>
         )}
 
-        {/* 6-Point Angle Grid */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b-2 border-border">
-                <th className="p-2 text-left font-semibold bg-muted/50">Level</th>
-                <th className="p-2 text-center font-semibold bg-blue-50 border-l">Left Side</th>
-                <th className="p-2 text-center font-semibold bg-green-50 border-l">Right Side</th>
-              </tr>
-            </thead>
-            <tbody>
-              {levels.map((level) => (
-                <tr key={level} className="border-b hover:bg-muted/20">
-                  <td className="p-2 font-medium bg-muted/30">{level}</td>
-                  <td className="p-3 text-center bg-blue-50/30 border-l">
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={angles[`angle_${level.toLowerCase()}_left` as keyof typeof angles]}
-                      onChange={(e) => handleInputChange(`angle_${level.toLowerCase()}_left` as keyof typeof angles, e.target.value)}
-                      placeholder="45.0"
-                      className={`text-center h-12 w-24 mx-auto text-lg font-medium ${getAngleColor(angles[`angle_${level.toLowerCase()}_left` as keyof typeof angles])}`}
-                    />
-                  </td>
-                  <td className="p-3 text-center bg-green-50/30 border-l">
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={angles[`angle_${level.toLowerCase()}_right` as keyof typeof angles]}
-                      onChange={(e) => handleInputChange(`angle_${level.toLowerCase()}_right` as keyof typeof angles, e.target.value)}
-                      placeholder="45.0"
-                      className={`text-center h-12 w-24 mx-auto text-lg font-medium ${getAngleColor(angles[`angle_${level.toLowerCase()}_right` as keyof typeof angles])}`}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2 p-3 rounded-lg bg-blue-50/40 border border-blue-100">
+            <Label className="font-semibold">Left Side (°)</Label>
+            <Input
+              type="number"
+              step="0.5"
+              value={leftSide}
+              onChange={(e) => setLeftSide(e.target.value)}
+              placeholder="45.0"
+              className={`text-center h-12 text-lg font-medium ${getAngleColor(leftSide)}`}
+            />
+          </div>
+          <div className="space-y-2 p-3 rounded-lg bg-green-50/40 border border-green-100">
+            <Label className="font-semibold">Right Side (°)</Label>
+            <Input
+              type="number"
+              step="0.5"
+              value={rightSide}
+              onChange={(e) => setRightSide(e.target.value)}
+              placeholder="45.0"
+              className={`text-center h-12 text-lg font-medium ${getAngleColor(rightSide)}`}
+            />
+          </div>
         </div>
 
-        {/* Legend */}
         <div className="text-xs text-muted-foreground space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-green-500"></span>
-            <span>Optimal: 40–50°</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-yellow-500"></span>
-            <span>Acceptable: 35–40° or 50–55°</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-red-500"></span>
-            <span>Outside Range: Below 35° or Above 55°</span>
-          </div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-green-500"></span><span>Optimal: 40–50°</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-yellow-500"></span><span>Acceptable: 35–40° or 50–55°</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-red-500"></span><span>Outside Range: Below 35° or Above 55°</span></div>
         </div>
 
         <Button onClick={handleSubmit} className="w-full" disabled={!technicianName.trim()}>

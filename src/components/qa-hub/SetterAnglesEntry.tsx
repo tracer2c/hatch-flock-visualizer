@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { RotateCcw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RotateCcw, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from 'sonner';
 
 interface SetterAnglesEntryProps {
   technicianName: string;
@@ -28,61 +30,53 @@ const OPTIMAL_MIN = 35;
 const OPTIMAL_MAX = 45;
 const BALANCE_TOLERANCE = 5;
 
-const SetterAnglesEntry: React.FC<SetterAnglesEntryProps> = ({ 
-  technicianName, 
-  checkDate, 
+const SetterAnglesEntry: React.FC<SetterAnglesEntryProps> = ({
+  technicianName,
+  checkDate,
   setterNumber: defaultSetterNumber,
-  onSubmit 
+  onSubmit,
 }) => {
   const [setterNumber, setSetterNumber] = useState(defaultSetterNumber || '');
-  const [topLeft, setTopLeft] = useState('');
-  const [midLeft, setMidLeft] = useState('');
-  const [bottomLeft, setBottomLeft] = useState('');
-  const [topRight, setTopRight] = useState('');
-  const [midRight, setMidRight] = useState('');
-  const [bottomRight, setBottomRight] = useState('');
+  const [leftSide, setLeftSide] = useState('');
+  const [rightSide, setRightSide] = useState('');
 
-  const leftAvg = (
-    (parseFloat(topLeft) || 0) + 
-    (parseFloat(midLeft) || 0) + 
-    (parseFloat(bottomLeft) || 0)
-  ) / 3;
+  const leftNum = parseFloat(leftSide);
+  const rightNum = parseFloat(rightSide);
+  const bothFilled = leftSide !== '' && rightSide !== '' && Number.isFinite(leftNum) && Number.isFinite(rightNum);
 
-  const rightAvg = (
-    (parseFloat(topRight) || 0) + 
-    (parseFloat(midRight) || 0) + 
-    (parseFloat(bottomRight) || 0)
-  ) / 3;
-
-  const isBalanced = Math.abs(leftAvg - rightAvg) <= BALANCE_TOLERANCE && 
-    leftAvg >= OPTIMAL_MIN && leftAvg <= OPTIMAL_MAX && 
-    rightAvg >= OPTIMAL_MIN && rightAvg <= OPTIMAL_MAX;
-
-  const allFilled = topLeft && midLeft && bottomLeft && topRight && midRight && bottomRight;
+  const isBalanced = bothFilled
+    && Math.abs(leftNum - rightNum) <= BALANCE_TOLERANCE
+    && leftNum >= OPTIMAL_MIN && leftNum <= OPTIMAL_MAX
+    && rightNum >= OPTIMAL_MIN && rightNum <= OPTIMAL_MAX;
 
   const handleSubmit = () => {
     if (!technicianName.trim()) return;
-    if (!setterNumber || !allFilled) return;
+    if (!setterNumber) {
+      toast.error('Enter a setter number.');
+      return;
+    }
+    if (!bothFilled) {
+      toast.error('Enter both Left and Right angle values.');
+      return;
+    }
 
+    // Mirror Left/Right values across top/mid/bottom so downstream storage/aggregations
+    // remain compatible with historical records.
     onSubmit({
       setterNumber,
       angles: {
-        topLeft: parseFloat(topLeft),
-        midLeft: parseFloat(midLeft),
-        bottomLeft: parseFloat(bottomLeft),
-        topRight: parseFloat(topRight),
-        midRight: parseFloat(midRight),
-        bottomRight: parseFloat(bottomRight)
+        topLeft: leftNum,
+        midLeft: leftNum,
+        bottomLeft: leftNum,
+        topRight: rightNum,
+        midRight: rightNum,
+        bottomRight: rightNum,
       },
-      checkDate
+      checkDate,
     });
 
-    setTopLeft('');
-    setMidLeft('');
-    setBottomLeft('');
-    setTopRight('');
-    setMidRight('');
-    setBottomRight('');
+    setLeftSide('');
+    setRightSide('');
   };
 
   const getAngleColor = (value: string) => {
@@ -104,6 +98,14 @@ const SetterAnglesEntry: React.FC<SetterAnglesEntryProps> = ({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert className="bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800 text-xs">
+            Record one Left and one Right angle per check. Older Top/Mid/Bottom entries remain
+            visible in history for reference.
+          </AlertDescription>
+        </Alert>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Setter Number</Label>
@@ -115,114 +117,55 @@ const SetterAnglesEntry: React.FC<SetterAnglesEntryProps> = ({
           </div>
         </div>
 
-        {/* Angle Grid */}
-        <div className="grid grid-cols-3 gap-4">
-          {/* Left Side Header */}
-          <div className="col-span-1 text-center font-medium text-sm bg-muted/50 py-2 rounded">
-            Left Side
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2 p-3 rounded-lg bg-blue-50/40 border border-blue-100">
+            <Label className="font-semibold">Left Side (°)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              value={leftSide}
+              onChange={(e) => setLeftSide(e.target.value)}
+              placeholder="e.g., 40.0"
+              className={`text-center h-12 text-lg font-medium ${getAngleColor(leftSide)}`}
+            />
           </div>
-          <div className="col-span-1 text-center font-medium text-sm bg-muted/50 py-2 rounded">
-            Position
-          </div>
-          <div className="col-span-1 text-center font-medium text-sm bg-muted/50 py-2 rounded">
-            Right Side
-          </div>
-
-          {/* Top Row */}
-          <Input
-            type="number"
-            step="0.1"
-            value={topLeft}
-            onChange={(e) => setTopLeft(e.target.value)}
-            placeholder="Top L"
-            className={getAngleColor(topLeft)}
-          />
-          <div className="flex items-center justify-center text-sm text-muted-foreground">Top</div>
-          <Input
-            type="number"
-            step="0.1"
-            value={topRight}
-            onChange={(e) => setTopRight(e.target.value)}
-            placeholder="Top R"
-            className={getAngleColor(topRight)}
-          />
-
-          {/* Middle Row */}
-          <Input
-            type="number"
-            step="0.1"
-            value={midLeft}
-            onChange={(e) => setMidLeft(e.target.value)}
-            placeholder="Mid L"
-            className={getAngleColor(midLeft)}
-          />
-          <div className="flex items-center justify-center text-sm text-muted-foreground">Middle</div>
-          <Input
-            type="number"
-            step="0.1"
-            value={midRight}
-            onChange={(e) => setMidRight(e.target.value)}
-            placeholder="Mid R"
-            className={getAngleColor(midRight)}
-          />
-
-          {/* Bottom Row */}
-          <Input
-            type="number"
-            step="0.1"
-            value={bottomLeft}
-            onChange={(e) => setBottomLeft(e.target.value)}
-            placeholder="Bot L"
-            className={getAngleColor(bottomLeft)}
-          />
-          <div className="flex items-center justify-center text-sm text-muted-foreground">Bottom</div>
-          <Input
-            type="number"
-            step="0.1"
-            value={bottomRight}
-            onChange={(e) => setBottomRight(e.target.value)}
-            placeholder="Bot R"
-            className={getAngleColor(bottomRight)}
-          />
-
-          {/* Averages Row */}
-          <div className="bg-amber-50 p-2 rounded text-center">
-            <span className="text-xs text-muted-foreground">Avg:</span>
-            <span className="ml-1 font-medium">{leftAvg.toFixed(1)}°</span>
-          </div>
-          <div className="flex items-center justify-center">
-            <Button 
-              onClick={handleSubmit}
-              disabled={!technicianName.trim() || !setterNumber || !allFilled}
-              size="sm"
-            >
-              Add Record
-            </Button>
-          </div>
-          <div className="bg-amber-50 p-2 rounded text-center">
-            <span className="text-xs text-muted-foreground">Avg:</span>
-            <span className="ml-1 font-medium">{rightAvg.toFixed(1)}°</span>
+          <div className="space-y-2 p-3 rounded-lg bg-green-50/40 border border-green-100">
+            <Label className="font-semibold">Right Side (°)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              value={rightSide}
+              onChange={(e) => setRightSide(e.target.value)}
+              placeholder="e.g., 40.0"
+              className={`text-center h-12 text-lg font-medium ${getAngleColor(rightSide)}`}
+            />
           </div>
         </div>
 
-        {/* Balance Status */}
-        {allFilled && (
+        <Button
+          onClick={handleSubmit}
+          disabled={!technicianName.trim() || !setterNumber || !bothFilled}
+          className="w-full"
+        >
+          Add Record
+        </Button>
+
+        {bothFilled && (
           <div className="flex items-center gap-2 pt-2 border-t">
             {isBalanced ? (
               <Badge className="bg-green-100 text-green-700 gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                Balanced - Both sides in range
+                Balanced — Both sides in range
               </Badge>
             ) : (
               <Badge className="bg-amber-100 text-amber-700 gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                Adjustment needed - Check angles
+                Adjustment needed — Check angles
               </Badge>
             )}
           </div>
         )}
 
-        {/* Legend */}
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <div className="w-3 h-3 bg-green-500 rounded" /> {OPTIMAL_MIN}-{OPTIMAL_MAX}° (Optimal)
