@@ -1,19 +1,13 @@
-import { useEffect, useState, useMemo } from "react";
-import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { format, startOfWeek } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Home, ChevronDown, ChevronRight, Package, Egg, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Home, ChevronDown, ChevronRight, Package, Egg, AlertTriangle, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
+import { formatSetWeekLabel } from "@/hooks/useFlockWeekHouses";
 
 interface HouseTile {
   id: string;
@@ -33,6 +27,8 @@ interface Props {
   flock: WeeklyFlockRollupRow;
   onBack: () => void;
   onOpenHouse: (houseId: string) => void;
+  /** Monday of the set week the user is viewing. Used to build flock-week entry links. */
+  weekStart?: Date;
 }
 
 const statusColor = (s: string) => {
@@ -51,12 +47,22 @@ const statusColor = (s: string) => {
 const fmtInt = (n: number | null | undefined) =>
   n == null ? "—" : Math.round(n).toLocaleString();
 
-export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
+export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }: Props) {
   const navigate = useNavigate();
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHouses, setShowHouses] = useState(false);
-  const [quickHouseId, setQuickHouseId] = useState<string>("");
+  const [firstHouseId, setFirstHouseId] = useState<string>("");
+
+  // Resolve the Monday of this set week. Prefer the prop passed by DataEntryPage,
+  // otherwise derive from the flock's earliest set_date.
+  const weekMonday = weekStart
+    ? startOfWeek(weekStart, { weekStartsOn: 1 })
+    : flock.earliest_set_date
+    ? startOfWeek(new Date(flock.earliest_set_date), { weekStartsOn: 1 })
+    : null;
+  const weekISO = weekMonday ? format(weekMonday, "yyyy-MM-dd") : "";
+  const flockKey = flock.key;
 
   // Always load houses on mount — needed for the flock-level "Quick Record" dropdown.
   useEffect(() => {
@@ -103,7 +109,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
           a.set_date.localeCompare(b.set_date)
       );
       setHouses(tiles);
-      if (tiles.length === 1) setQuickHouseId(tiles[0].id);
+      if (tiles.length > 0) setFirstHouseId(tiles[0].id);
       setLoading(false);
     })();
     return () => {
@@ -111,11 +117,14 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
     };
   }, [flock.house_ids]);
 
-  const houseOptions = useMemo(() => houses ?? [], [houses]);
-
-  const openEntry = (type: "egg-pack" | "fertility" | "residue") => {
-    if (!quickHouseId) return;
-    navigate(`/data-entry/house/${quickHouseId}/${type}`);
+  const openEntry = (
+    type: "egg-pack" | "fertility" | "residue" | "clears-injected"
+  ) => {
+    if (!firstHouseId) return;
+    const qs = weekISO
+      ? `?flockKey=${encodeURIComponent(flockKey)}&week=${encodeURIComponent(weekISO)}`
+      : "";
+    navigate(`/data-entry/house/${firstHouseId}/${type}${qs}`);
   };
 
 
@@ -165,11 +174,9 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
               <div>
                 <div className="text-sm font-semibold">Weekly Flock Totals</div>
                 <div className="text-xs text-muted-foreground">
+                  Set Week: {formatSetWeekLabel(weekMonday ?? flock.earliest_set_date)} ·{" "}
                   Consolidated across {flock.house_count}{" "}
-                  {flock.house_count === 1 ? "house" : "houses"} set this week
-                  {flock.earliest_set_date
-                    ? ` · from ${format(new Date(flock.earliest_set_date), "MMM d")}`
-                    : ""}
+                  {flock.house_count === 1 ? "house" : "houses"}
                 </div>
               </div>
               <Badge variant="outline" className={statusColor(flock.worst_status)}>
@@ -204,67 +211,63 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
             </div>
           </div>
 
-          {/* Phase 6 — Quick Record: pick a House then jump into the house-scoped entry form */}
+          {/* Record Data — jump straight into the entry form.
+              The House # dropdown lives inside each form (flock-week mode). */}
           <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="text-sm font-semibold">Record Data</div>
-                <div className="text-xs text-muted-foreground">
-                  Egg Pack Quality is house-level. Fertility and Residue are flock-level
-                  summaries with house-level detail — select the house you're recording.
-                </div>
+            <div className="mb-3">
+              <div className="text-sm font-semibold">Record Data</div>
+              <div className="text-xs text-muted-foreground">
+                Egg Pack Quality, Fertility, Residue, and Clears &amp; Injected are recorded
+                per house — you&apos;ll pick the house inside the form.
               </div>
             </div>
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="md:w-64">
-                <Select value={quickHouseId} onValueChange={setQuickHouseId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select house #" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {houseOptions.map((h) => (
-                      <SelectItem key={h.id} value={h.id}>
-                        House {h.house_number || "—"}
-                        {h.machine_number ? ` · ${h.machine_number}` : ""}
-                      </SelectItem>
-                    ))}
-                    {houseOptions.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">
-                        No houses in this flock/week.
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("egg-pack")}
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Egg Pack Quality
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("fertility")}
-                >
-                  <Egg className="h-4 w-4 mr-2" />
-                  Fertility
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("residue")}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Residue
-                </Button>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("egg-pack")}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Egg Pack Quality
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("fertility")}
+              >
+                <Egg className="h-4 w-4 mr-2" />
+                Fertility
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("residue")}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Residue
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("clears-injected")}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Clears &amp; Injected
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("fertility")}
+                title="Hatch / HOI fields live inside the Fertility form"
+              >
+                <Egg className="h-4 w-4 mr-2" />
+                Hatch / HOI
+              </Button>
             </div>
           </div>
 
@@ -282,7 +285,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
               ) : (
                 <ChevronRight className="h-4 w-4 mr-2" />
               )}
-              {showHouses ? "Hide house-level detail" : "View house-level detail"}
+              {showHouses ? "Hide individual houses" : "Investigate individual houses (optional)"}
               <span className="ml-2 text-muted-foreground">
                 ({flock.house_count})
               </span>
@@ -314,7 +317,6 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
                       </div>
                       <div className="text-xs text-muted-foreground mb-2">
                         Set {format(new Date(h.set_date), "MMM d, yyyy")}
-                        {h.machine_number ? ` · ${h.machine_number}` : ""}
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <div>

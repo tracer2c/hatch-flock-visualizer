@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { formatLocalDate } from "@/utils/localDate";
+import { formatSetWeekLabel } from "@/hooks/useFlockWeekHouses";
+import { FlockWeekHouseSwitcher } from "@/components/dashboard/FlockWeekHouseSwitcher";
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -323,18 +324,15 @@ const ResidueEntryPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <FlockWeekHouseSwitcher currentHouseId={houseInfo.id} entrySegment="residue" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Flock</p>
                   <p className="font-medium">{houseInfo.flock_number} - {houseInfo.flock_name}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Machine</p>
-                  <p className="font-medium">{houseInfo.machine_number}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Set Date</p>
-                  <p className="font-medium">{formatLocalDate(houseInfo.set_date)}</p>
+                  <p className="text-gray-600">Set Week</p>
+                  <p className="font-medium">{formatSetWeekLabel(houseInfo.set_date)}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Total Eggs</p>

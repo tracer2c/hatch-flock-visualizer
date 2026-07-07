@@ -7,6 +7,7 @@ import FlockDrillDown from "@/components/dashboard/FlockDrillDown";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { startOfWeek } from "date-fns";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 
 type ViewMode = "weekly" | "houses";
@@ -23,7 +24,9 @@ const DataEntryPage = () => {
       return "weekly";
     }
   });
-  const [drilldownFlock, setDrilldownFlock] = useState<WeeklyFlockRollupRow | null>(null);
+  const [drilldownFlock, setDrilldownFlock] = useState<
+    { row: WeeklyFlockRollupRow; weekStart: Date } | null
+  >(null);
   const { hasWriteAccess } = usePermissions();
   const readOnly = !hasWriteAccess('data_entry');
 
@@ -72,12 +75,17 @@ const DataEntryPage = () => {
       {view === "weekly" ? (
         drilldownFlock ? (
           <FlockDrillDown
-            flock={drilldownFlock}
+            flock={drilldownFlock.row}
+            weekStart={drilldownFlock.weekStart}
             onBack={() => setDrilldownFlock(null)}
             onOpenHouse={handleHouseSelect}
           />
         ) : (
-          <WeeklyRollupView onOpenFlock={(row) => setDrilldownFlock(row)} />
+          <WeeklyRollupView
+            onOpenFlock={(row, weekStart) =>
+              setDrilldownFlock({ row, weekStart: startOfWeek(weekStart, { weekStartsOn: 1 }) })
+            }
+          />
         )
       ) : (
         <HouseManager

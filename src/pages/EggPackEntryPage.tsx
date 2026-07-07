@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { formatLocalDate } from "@/utils/localDate";
+import { formatSetWeekLabel } from "@/hooks/useFlockWeekHouses";
+import { FlockWeekHouseSwitcher } from "@/components/dashboard/FlockWeekHouseSwitcher";
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -204,15 +205,13 @@ const EggPackEntryPage = () => {
                 {houseInfo.status}
               </Badge>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <FlockWeekHouseSwitcher currentHouseId={houseInfo.id} entrySegment="egg-pack" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Flock:</span> <span className="font-medium ml-1">{houseInfo.flock_number} - {houseInfo.flock_name}</span>
               </div>
               <div>
-                <span className="text-gray-600">Machine:</span> <span className="font-medium ml-1">{houseInfo.machine_number}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Set Date:</span> <span className="font-medium ml-1">{formatLocalDate(houseInfo.set_date)}</span>
+                <span className="text-gray-600">Set Week:</span> <span className="font-medium ml-1">{formatSetWeekLabel(houseInfo.set_date)}</span>
               </div>
               <div>
                 <span className="text-gray-600">Total Eggs:</span> <span className="font-medium ml-1">{houseInfo.total_eggs_set.toLocaleString()}</span>
