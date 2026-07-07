@@ -52,7 +52,17 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHouses, setShowHouses] = useState(false);
-  const [quickHouseId, setQuickHouseId] = useState<string>("");
+  const [firstHouseId, setFirstHouseId] = useState<string>("");
+
+  // Resolve the Monday of this set week. Prefer the prop passed by DataEntryPage,
+  // otherwise derive from the flock's earliest set_date.
+  const weekMonday = weekStart
+    ? startOfWeek(weekStart, { weekStartsOn: 1 })
+    : flock.earliest_set_date
+    ? startOfWeek(new Date(flock.earliest_set_date), { weekStartsOn: 1 })
+    : null;
+  const weekISO = weekMonday ? format(weekMonday, "yyyy-MM-dd") : "";
+  const flockKey = flock.key;
 
   // Always load houses on mount — needed for the flock-level "Quick Record" dropdown.
   useEffect(() => {
