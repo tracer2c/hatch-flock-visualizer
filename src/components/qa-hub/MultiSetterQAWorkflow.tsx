@@ -66,7 +66,11 @@ interface SelectedMachine {
   unit?: { name: string } | null;
 }
 
-const MultiSetterQAWorkflow: React.FC = () => {
+interface MultiSetterQAWorkflowProps {
+  focusSection?: string;
+}
+
+const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSection }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
