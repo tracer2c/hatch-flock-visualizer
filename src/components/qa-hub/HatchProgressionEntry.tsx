@@ -51,6 +51,8 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   flockOptions = [],
   defaultFlockId,
   defaultBatchId,
+  machineId,
+  isPastDay = false,
   machineLabel,
   houseLabel,
   onSubmit,
