@@ -1,27 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Droplets, CheckCircle2, XCircle, FlaskConical } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Droplets, CheckCircle2, XCircle, FlaskConical, Clock, Eye } from "lucide-react";
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export interface PpmCheck {
   ppm: number | null;
   time: string; // HH:MM, optional
 }
 
+export interface TrayWashSubmitData {
+  existingId?: string | null;
+  firstCheck: number | null;
+  secondCheck: number | null;
+  thirdCheck: number | null;
+  ppmChecks: PpmCheck[]; // exactly 5 entries
+  washDate: string;
+}
+
 interface TrayWashEntryProps {
   technicianName: string;
   checkDate: string;
-  onSubmit: (data: {
-    firstCheck: number;
-    secondCheck: number;
-    thirdCheck: number;
-    ppmChecks: PpmCheck[]; // exactly 5 entries
-    washDate: string;
-  }) => void;
+  /** Existing today's row (from useTodaysTrayWash). Used to pre-populate the form. */
+  existingRow?: {
+    id: string;
+    candling_results: any;
+    check_time?: string | null;
+  } | null;
+  /** True when checkDate is in the past — the whole card renders read-only. */
+  readOnly?: boolean;
+  loadingExisting?: boolean;
+  onSubmit: (data: TrayWashSubmitData) => void;
 }
 
 const MIN_TEMP = 140; // Minimum sanitization temperature (°F)
@@ -29,15 +43,55 @@ const PPM_MIN = 50;   // Acceptable chlorine PPM lower bound
 const PPM_MAX = 200;  // Acceptable chlorine PPM upper bound
 const PPM_SLOTS = 5;
 
-const emptyPpm = (): PpmCheck => ({ ppm: null, time: '' });
+// Current local time as HH:MM
+const nowHHMM = () => {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+};
 
-const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate, onSubmit }) => {
+const numToStr = (v: any) =>
+  v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? '' : String(v);
+
+const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
+  technicianName,
+  checkDate,
+  existingRow,
+  readOnly = false,
+  loadingExisting = false,
+  onSubmit,
+}) => {
   const [firstCheck, setFirstCheck] = useState('');
   const [secondCheck, setSecondCheck] = useState('');
   const [thirdCheck, setThirdCheck] = useState('');
   const [ppmRows, setPpmRows] = useState<{ ppm: string; time: string }[]>(
     Array.from({ length: PPM_SLOTS }, () => ({ ppm: '', time: '' }))
   );
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  // Load from an existing today's row (resume) — or reset when the row/date changes.
+  useEffect(() => {
+    const cr = existingRow?.candling_results;
+    if (cr && cr.type === 'tray_wash') {
+      setFirstCheck(numToStr(cr.firstCheck));
+      setSecondCheck(numToStr(cr.secondCheck));
+      setThirdCheck(numToStr(cr.thirdCheck));
+      setPpmRows(
+        Array.from({ length: PPM_SLOTS }, (_, i) => ({
+          ppm: numToStr(cr[`ppm_check_${i + 1}`]),
+          time: cr[`ppm_check_${i + 1}_time`] || '',
+        }))
+      );
+      setLastSavedAt(existingRow?.check_time || null);
+    } else {
+      setFirstCheck('');
+      setSecondCheck('');
+      setThirdCheck('');
+      setPpmRows(Array.from({ length: PPM_SLOTS }, () => ({ ppm: '', time: '' })));
+      setLastSavedAt(null);
+    }
+  }, [existingRow, checkDate]);
 
   const first = parseFloat(firstCheck);
   const second = parseFloat(secondCheck);
@@ -46,48 +100,63 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
   const tempsAllPassed = first >= MIN_TEMP && second >= MIN_TEMP && third >= MIN_TEMP;
   const tempsAllFilled = firstCheck !== '' && secondCheck !== '' && thirdCheck !== '';
 
-  const filledPpm = ppmRows.filter(r => r.ppm !== '');
+  const filledPpm = ppmRows.filter((r) => r.ppm !== '');
   const ppmAllFilled = filledPpm.length === PPM_SLOTS;
-  const ppmAllInRange = filledPpm.every(r => {
+  const ppmAllInRange = filledPpm.every((r) => {
     const v = parseFloat(r.ppm);
     return Number.isFinite(v) && v >= PPM_MIN && v <= PPM_MAX;
   });
 
+  const anyDataEntered = useMemo(
+    () => tempsAllFilled || firstCheck !== '' || secondCheck !== '' || thirdCheck !== '' || filledPpm.length > 0,
+    [firstCheck, secondCheck, thirdCheck, filledPpm.length, tempsAllFilled]
+  );
+
   const handlePpmChange = (idx: number, field: 'ppm' | 'time', value: string) => {
-    setPpmRows(prev => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+    setPpmRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
+  // Auto-fill time with current local time when the user starts entering a PPM value
+  // in a row that doesn't yet have a time. Never overwrites an existing time.
+  const handlePpmValueBlurAutofillTime = (idx: number) => {
+    setPpmRows((prev) =>
+      prev.map((r, i) => (i === idx && r.ppm !== '' && !r.time ? { ...r, time: nowHHMM() } : r))
+    );
+  };
+
+  // On focus into an empty time field, prefill with current local time.
+  const handleTimeFocus = (idx: number) => {
+    setPpmRows((prev) =>
+      prev.map((r, i) => (i === idx && !r.time ? { ...r, time: nowHHMM() } : r))
+    );
   };
 
   const handleSubmit = () => {
+    if (readOnly) return;
     if (!technicianName.trim()) {
       toast.error('Enter a technician name first.');
       return;
     }
-    if (!tempsAllFilled) {
-      toast.error('Fill in all 3 temperature checks.');
-      return;
-    }
-    if (!ppmAllFilled) {
-      toast.error('Fill in all 5 PPM checks for the day.');
+    if (!anyDataEntered) {
+      toast.error('Enter at least one temperature or PPM check before saving.');
       return;
     }
 
-    const ppmChecks: PpmCheck[] = ppmRows.map(r => ({
-      ppm: parseFloat(r.ppm),
+    const ppmChecks: PpmCheck[] = ppmRows.map((r) => ({
+      ppm: r.ppm === '' ? null : parseFloat(r.ppm),
       time: r.time || '',
     }));
 
     onSubmit({
-      firstCheck: first,
-      secondCheck: second,
-      thirdCheck: third,
+      existingId: existingRow?.id ?? null,
+      firstCheck: firstCheck === '' ? null : first,
+      secondCheck: secondCheck === '' ? null : second,
+      thirdCheck: thirdCheck === '' ? null : third,
       ppmChecks,
       washDate: checkDate,
     });
-
-    setFirstCheck('');
-    setSecondCheck('');
-    setThirdCheck('');
-    setPpmRows(Array.from({ length: PPM_SLOTS }, () => ({ ppm: '', time: '' })));
+    // NOTE: do NOT clear inputs — the record is a rolling daily log the user
+    // should continue to see and be able to edit until end-of-day.
   };
 
   const getTempColor = (value: string) => {
@@ -102,6 +171,24 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
     return v >= PPM_MIN && v <= PPM_MAX ? 'border-green-500 bg-green-50' : 'border-amber-500 bg-amber-50';
   };
 
+  const submitLabel = readOnly
+    ? 'Read-only (historical entry)'
+    : existingRow
+    ? 'Save Progress'
+    : ppmAllFilled && tempsAllFilled
+    ? 'Save Daily Tray Wash Record'
+    : 'Save Progress';
+
+  const inputDisabled = readOnly || loadingExisting;
+
+  const prettyDate = (() => {
+    try {
+      return format(new Date(checkDate + 'T00:00:00'), 'MMM d, yyyy');
+    } catch {
+      return checkDate;
+    }
+  })();
+
   return (
     <Card>
       <CardHeader>
@@ -111,9 +198,23 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           One entry per day. Temps ≥ {MIN_TEMP}°F, chlorine PPM {PPM_MIN}–{PPM_MAX} across 5 checks.
+          {existingRow && !readOnly && (
+            <> · <span className="text-green-700 font-medium">Resuming today's log</span>
+              {lastSavedAt ? ` — last saved ${lastSavedAt.slice(0, 5)}` : ''}
+            </>
+          )}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {readOnly && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <Eye className="h-4 w-4 text-amber-700" />
+            <AlertDescription className="text-amber-800">
+              Viewing {prettyDate} — read-only. Switch the date to today to edit.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Temperature checks */}
         <div>
           <Label className="text-sm font-semibold flex items-center gap-2 mb-3">
@@ -123,15 +224,15 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>1st Check (°F)</Label>
-              <Input type="number" step="0.1" value={firstCheck} onChange={(e) => setFirstCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(firstCheck)} />
+              <Input type="number" step="0.1" value={firstCheck} disabled={inputDisabled} onChange={(e) => setFirstCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(firstCheck)} />
             </div>
             <div className="space-y-2">
               <Label>2nd Check (°F)</Label>
-              <Input type="number" step="0.1" value={secondCheck} onChange={(e) => setSecondCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(secondCheck)} />
+              <Input type="number" step="0.1" value={secondCheck} disabled={inputDisabled} onChange={(e) => setSecondCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(secondCheck)} />
             </div>
             <div className="space-y-2">
               <Label>3rd Check (°F)</Label>
-              <Input type="number" step="0.1" value={thirdCheck} onChange={(e) => setThirdCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(thirdCheck)} />
+              <Input type="number" step="0.1" value={thirdCheck} disabled={inputDisabled} onChange={(e) => setThirdCheck(e.target.value)} placeholder={`≥ ${MIN_TEMP}`} className={getTempColor(thirdCheck)} />
             </div>
           </div>
           {tempsAllFilled && (
@@ -154,22 +255,34 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {ppmRows.map((row, idx) => (
               <div key={idx} className="space-y-2 p-3 rounded-lg border bg-muted/20">
-                <Label className="text-xs font-medium text-muted-foreground">Check #{idx + 1}</Label>
+                <Label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                  <span>Check #{idx + 1}</span>
+                  {row.ppm !== '' && row.time && (
+                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {row.time}
+                    </span>
+                  )}
+                </Label>
                 <Input
                   type="number"
                   step="1"
                   min="0"
                   value={row.ppm}
+                  disabled={inputDisabled}
                   onChange={(e) => handlePpmChange(idx, 'ppm', e.target.value)}
+                  onBlur={() => handlePpmValueBlurAutofillTime(idx)}
                   placeholder={`${PPM_MIN}–${PPM_MAX}`}
                   className={getPpmColor(row.ppm)}
                 />
                 <Input
                   type="time"
                   value={row.time}
+                  disabled={inputDisabled}
+                  onFocus={() => handleTimeFocus(idx)}
                   onChange={(e) => handlePpmChange(idx, 'time', e.target.value)}
                   className="text-xs"
-                  aria-label={`Check ${idx + 1} time (optional)`}
+                  aria-label={`Check ${idx + 1} time (defaults to now)`}
                 />
               </div>
             ))}
@@ -189,10 +302,10 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({ technicianName, checkDate
 
         <Button
           onClick={handleSubmit}
-          disabled={!technicianName.trim() || !tempsAllFilled || !ppmAllFilled}
+          disabled={readOnly || loadingExisting || !technicianName.trim() || !anyDataEntered}
           className="w-full"
         >
-          Add Daily Tray Wash Record
+          {submitLabel}
         </Button>
 
         {/* Legend */}

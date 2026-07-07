@@ -31,7 +31,10 @@ import { PendingSyncList } from '@/components/ui/pending-sync-list';
 import { getOfflineData } from '@/lib/offlineDataCache';
 import type { UserProfile } from '@/hooks/useAuth';
 import RectalTempEntry from './RectalTempEntry';
-import TrayWashEntry from './TrayWashEntry';
+import TrayWashEntry, { type TrayWashSubmitData } from './TrayWashEntry';
+import { useTodaysTrayWash } from '@/hooks/useTodaysTrayWash';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import CullChecksEntry from './CullChecksEntry';
 import SpecificGravityEntry from './SpecificGravityEntry';
 import HatchProgressionEntry from './HatchProgressionEntry';
@@ -72,6 +75,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
     invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
   });
@@ -93,6 +97,14 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
     selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
   );
+
+  // Today's tray-wash row for the selected machine + date (resume support).
+  const { data: existingTrayWash, isLoading: trayWashLoading } = useTodaysTrayWash(
+    selectedMachine?.id ?? null,
+    checkDate
+  );
+  const todayISO = new Date().toISOString().split('T')[0];
+  const isPastDay = checkDate < todayISO;
 
   // Auto-select machine if preSelectedHouseId is provided
   React.useEffect(() => {
@@ -143,24 +155,24 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     }
   };
 
-  const handleSubmitTrayWash = async (data: {
-    firstCheck: number;
-    secondCheck: number;
-    thirdCheck: number;
-    ppmChecks: { ppm: number | null; time: string }[];
-    washDate: string;
-  }) => {
+  const handleSubmitTrayWash = async (data: TrayWashSubmitData) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
       const companyId = await resolveCompanyId();
-      await submitQAMonitoring({
+      const filledTemps = [data.firstCheck, data.secondCheck, data.thirdCheck].filter(
+        (v): v is number => typeof v === 'number' && Number.isFinite(v)
+      );
+      const avgTemp = filledTemps.length
+        ? filledTemps.reduce((a, b) => a + b, 0) / filledTemps.length
+        : 0;
+      const payload = {
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.washDate,
         check_time: new Date().toTimeString().split(' ')[0],
         day_of_incubation: selectedMachine.daysInIncubation,
-        temperature: (data.firstCheck + data.secondCheck + data.thirdCheck) / 3,
+        temperature: avgTemp,
         humidity: 55,
         inspector_name: technicianName,
         notes: notes || null,
@@ -170,7 +182,6 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
           firstCheck: data.firstCheck,
           secondCheck: data.secondCheck,
           thirdCheck: data.thirdCheck,
-          // Corey requested 5 fixed PPM checks per daily row (with optional times).
           ppm_check_1: data.ppmChecks[0]?.ppm ?? null,
           ppm_check_2: data.ppmChecks[1]?.ppm ?? null,
           ppm_check_3: data.ppmChecks[2]?.ppm ?? null,
@@ -183,16 +194,29 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
           ppm_check_5_time: data.ppmChecks[4]?.time || null,
         }),
         company_id: companyId,
-      }, 'insert', {
-        batchId: selectedMachine.currentHouse.id,
-      });
-      toast.success('Tray wash daily log saved!');
+      };
+      if (data.existingId) {
+        // Update-in-place — this is the daily "continue where you left off" path.
+        const { error } = await supabase
+          .from('qa_monitoring')
+          .update(payload)
+          .eq('id', data.existingId);
+        if (error) throw error;
+        toast.success('Tray wash progress saved.');
+      } else {
+        await submitQAMonitoring(payload, 'insert', {
+          batchId: selectedMachine.currentHouse.id,
+        });
+        toast.success('Tray wash daily log started.');
+      }
+      queryClient.invalidateQueries({ queryKey: ['tray-wash-daily'] });
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleSubmitCullCheck = async (data: { flock_id: string; batch_id: string | null; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
@@ -565,7 +589,14 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         </TabsContent>
 
         <TabsContent value="tray-wash">
-          <TrayWashEntry technicianName={technicianName} checkDate={checkDate} onSubmit={handleSubmitTrayWash} />
+          <TrayWashEntry
+            technicianName={technicianName}
+            checkDate={checkDate}
+            existingRow={existingTrayWash ?? null}
+            readOnly={isPastDay}
+            loadingExisting={trayWashLoading}
+            onSubmit={handleSubmitTrayWash}
+          />
         </TabsContent>
 
         <TabsContent value="culls">

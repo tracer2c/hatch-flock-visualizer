@@ -92,6 +92,12 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
             <Input
               type="time"
               value={checkTime}
+              onFocus={() => {
+                if (!checkTime) {
+                  const d = new Date();
+                  setCheckTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                }
+              }}
               onChange={(e) => setCheckTime(e.target.value)}
             />
           </div>
