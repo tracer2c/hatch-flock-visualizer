@@ -174,11 +174,9 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               <div>
                 <div className="text-sm font-semibold">Weekly Flock Totals</div>
                 <div className="text-xs text-muted-foreground">
+                  Set Week: {formatSetWeekLabel(weekMonday ?? flock.earliest_set_date)} ·{" "}
                   Consolidated across {flock.house_count}{" "}
-                  {flock.house_count === 1 ? "house" : "houses"} set this week
-                  {flock.earliest_set_date
-                    ? ` · from ${format(new Date(flock.earliest_set_date), "MMM d")}`
-                    : ""}
+                  {flock.house_count === 1 ? "house" : "houses"}
                 </div>
               </div>
               <Badge variant="outline" className={statusColor(flock.worst_status)}>
@@ -213,67 +211,63 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
             </div>
           </div>
 
-          {/* Phase 6 — Quick Record: pick a House then jump into the house-scoped entry form */}
+          {/* Record Data — jump straight into the entry form.
+              The House # dropdown lives inside each form (flock-week mode). */}
           <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="text-sm font-semibold">Record Data</div>
-                <div className="text-xs text-muted-foreground">
-                  Egg Pack Quality is house-level. Fertility and Residue are flock-level
-                  summaries with house-level detail — select the house you're recording.
-                </div>
+            <div className="mb-3">
+              <div className="text-sm font-semibold">Record Data</div>
+              <div className="text-xs text-muted-foreground">
+                Egg Pack Quality, Fertility, Residue, and Clears &amp; Injected are recorded
+                per house — you&apos;ll pick the house inside the form.
               </div>
             </div>
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="md:w-64">
-                <Select value={quickHouseId} onValueChange={setQuickHouseId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select house #" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {houseOptions.map((h) => (
-                      <SelectItem key={h.id} value={h.id}>
-                        House {h.house_number || "—"}
-                        {h.machine_number ? ` · ${h.machine_number}` : ""}
-                      </SelectItem>
-                    ))}
-                    {houseOptions.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">
-                        No houses in this flock/week.
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("egg-pack")}
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Egg Pack Quality
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("fertility")}
-                >
-                  <Egg className="h-4 w-4 mr-2" />
-                  Fertility
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!quickHouseId}
-                  onClick={() => openEntry("residue")}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Residue
-                </Button>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("egg-pack")}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Egg Pack Quality
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("fertility")}
+              >
+                <Egg className="h-4 w-4 mr-2" />
+                Fertility
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("residue")}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Residue
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("clears-injected")}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Clears &amp; Injected
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!firstHouseId}
+                onClick={() => openEntry("fertility")}
+                title="Hatch / HOI fields live inside the Fertility form"
+              >
+                <Egg className="h-4 w-4 mr-2" />
+                Hatch / HOI
+              </Button>
             </div>
           </div>
 
