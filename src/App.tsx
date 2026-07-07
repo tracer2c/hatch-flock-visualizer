@@ -16,6 +16,7 @@ import FertilityEntryPage from "./pages/FertilityEntryPage";
 import QAEntryPage from "./pages/QAEntryPage";
 import ResidueEntryPage from "./pages/ResidueEntryPage";
 import ClearsInjectedEntryPage from "./pages/ClearsInjectedEntryPage";
+import HatchHOIEntryPage from "./pages/HatchHOIEntryPage";
 import ManagementPage from "./pages/ManagementPage";
 import SOPDashboardPage from "./pages/management/SOPDashboardPage";
 import HatcheriesPage from "./pages/management/HatcheriesPage";
@@ -159,6 +160,9 @@ function AppContent() {
                       } />
                       <Route path="/data-entry/house/:houseId/clears-injected" element={
                         <RoleProtectedRoute featureKey="data_entry"><ClearsInjectedEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/hoi" element={
+                        <RoleProtectedRoute featureKey="data_entry"><HatchHOIEntryPage /></RoleProtectedRoute>
                       } />
                       <Route path="/checklist" element={
                         <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
