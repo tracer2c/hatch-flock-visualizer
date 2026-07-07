@@ -52,13 +52,14 @@ const fmtInt = (n: number | null | undefined) =>
   n == null ? "—" : Math.round(n).toLocaleString();
 
 export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
+  const navigate = useNavigate();
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHouses, setShowHouses] = useState(false);
+  const [quickHouseId, setQuickHouseId] = useState<string>("");
 
+  // Always load houses on mount — needed for the flock-level "Quick Record" dropdown.
   useEffect(() => {
-    if (!showHouses) return;
-    if (houses !== null) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -102,12 +103,21 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
           a.set_date.localeCompare(b.set_date)
       );
       setHouses(tiles);
+      if (tiles.length === 1) setQuickHouseId(tiles[0].id);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [showHouses, houses, flock.house_ids]);
+  }, [flock.house_ids]);
+
+  const houseOptions = useMemo(() => houses ?? [], [houses]);
+
+  const openEntry = (type: "egg-pack" | "fertility" | "residue") => {
+    if (!quickHouseId) return;
+    navigate(`/data-entry/house/${quickHouseId}/${type}`);
+  };
+
 
   return (
     <div className="space-y-4">
