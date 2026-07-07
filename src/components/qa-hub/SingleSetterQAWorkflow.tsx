@@ -33,6 +33,7 @@ import type { UserProfile } from '@/hooks/useAuth';
 import RectalTempEntry from './RectalTempEntry';
 import TrayWashEntry, { type TrayWashSubmitData } from './TrayWashEntry';
 import { useTodaysTrayWash } from '@/hooks/useTodaysTrayWash';
+import { useDayScopedEntry } from '@/hooks/useDayScopedEntry';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import CullChecksEntry from './CullChecksEntry';
@@ -103,8 +104,10 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     selectedMachine?.id ?? null,
     checkDate
   );
-  const todayISO = new Date().toISOString().split('T')[0];
-  const isPastDay = checkDate < todayISO;
+  const { isPastDay, todayISO, mode: dayMode, lastSavedAt: trayWashLastSavedAt } = useDayScopedEntry({
+    checkDate,
+    existingRow: existingTrayWash ?? null,
+  });
 
   // Auto-select machine if preSelectedHouseId is provided
   React.useEffect(() => {
