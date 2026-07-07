@@ -765,6 +765,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             notes={notes}
             checkDate={checkDate}
             uniqueFlocks={uniqueFlockDetails}
+            isPastDay={isPastDay}
             onSubmit={handleSubmitAngles}
           />
         </TabsContent>
@@ -776,6 +777,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             notes={notes}
             checkDate={checkDate}
             uniqueFlocks={uniqueFlockDetails}
+            isPastDay={isPastDay}
             onSubmit={handleSubmitHumidity}
           />
         </TabsContent>
@@ -784,6 +786,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
           <RectalTempEntry 
             technicianName={technicianName} 
             checkDate={checkDate} 
+            machineId={selectedMachine.id}
+            isPastDay={isPastDay}
             onSubmit={handleSubmitRectalTemp} 
           />
         </TabsContent>
@@ -804,6 +808,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             technicianName={technicianName} 
             checkDate={checkDate} 
             flockOptions={getAvailableFlocks()}
+            machineId={selectedMachine.id}
+            isPastDay={isPastDay}
             onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
@@ -822,6 +828,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             technicianName={technicianName} 
             checkDate={checkDate} 
             flockOptions={getAvailableFlocks()}
+            machineId={selectedMachine.id}
+            isPastDay={isPastDay}
             machineLabel={`Machine ${selectedMachine.machine_number}`}
             onSubmit={handleSubmitHatchProgression} 
           />
