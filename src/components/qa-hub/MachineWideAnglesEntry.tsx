@@ -59,6 +59,7 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
   };
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     const left = parseFloat(leftSide);
     const right = parseFloat(rightSide);
     if (!Number.isFinite(left) || !Number.isFinite(right)) {
