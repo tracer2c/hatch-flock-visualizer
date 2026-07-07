@@ -22,6 +22,7 @@ interface MachineWideAnglesEntryProps {
   notes: string;
   checkDate: string;
   uniqueFlocks: FlockDetail[];
+  isPastDay?: boolean;
   onSubmit: (data: {
     angles: {
       angle_top_left: number;
@@ -42,6 +43,7 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
   notes,
   checkDate,
   uniqueFlocks,
+  isPastDay = false,
   onSubmit
 }) => {
   const [leftSide, setLeftSide] = useState('');
