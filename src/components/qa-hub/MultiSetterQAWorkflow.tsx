@@ -377,8 +377,12 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
   };
 
   const handleSubmitHatchProgression = async (data: { flock_id: string; batch_id: string | null; stage: string; percentageOut: number; totalCount: number; hatchedCount: number; checkHour: number; hatchDate: string }) => {
-    if (!selectedMachine || !technicianName.trim()) {
+    if (!technicianName.trim()) {
       toast.error('Please enter technician name');
+      return;
+    }
+    if (!selectedMachine) {
+      toast.error('Select a machine first.');
       return;
     }
 
@@ -389,7 +393,17 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
         technicianName,
         data.hatchDate,
         'hatch_progression',
-        { flock_id: data.flock_id, stage: data.stage, percentageOut: data.percentageOut, totalCount: data.totalCount, hatchedCount: data.hatchedCount, checkHour: data.checkHour, humidity: data.percentageOut },
+        {
+          flock_id: data.flock_id,
+          batch_id: data.batch_id,
+          machine_id: selectedMachine.id,
+          stage: data.stage,
+          percentageOut: data.percentageOut,
+          totalCount: data.totalCount,
+          hatchedCount: data.hatchedCount,
+          checkHour: data.checkHour,
+          humidity: data.percentageOut,
+        },
         [{ flock_id: data.flock_id, batch_id: data.batch_id }],
         isOnline,
         notes
@@ -400,6 +414,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
