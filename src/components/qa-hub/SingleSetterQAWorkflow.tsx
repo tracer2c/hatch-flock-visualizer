@@ -493,26 +493,28 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
       </Card>
 
       <Tabs value={activeQATab} onValueChange={setActiveQATab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-          <TabsTrigger value="rectal-temps" className="flex items-center gap-1 text-xs">
-            <Thermometer className="h-3 w-3" />Rectal
-          </TabsTrigger>
-          <TabsTrigger value="tray-wash" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Wash
-          </TabsTrigger>
-          <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
-            <AlertTriangle className="h-3 w-3" />Culls
-          </TabsTrigger>
-          <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
-            <Scale className="h-3 w-3" />Gravity
-          </TabsTrigger>
-          <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
-            <Timer className="h-3 w-3" />Hatch
-          </TabsTrigger>
-          <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Moisture
-          </TabsTrigger>
-        </TabsList>
+        {!focusSection && (
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+            <TabsTrigger value="rectal-temps" className="flex items-center gap-1 text-xs">
+              <Thermometer className="h-3 w-3" />Rectal
+            </TabsTrigger>
+            <TabsTrigger value="tray-wash" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Wash
+            </TabsTrigger>
+            <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="h-3 w-3" />Culls
+            </TabsTrigger>
+            <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
+              <Scale className="h-3 w-3" />Gravity
+            </TabsTrigger>
+            <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
+              <Timer className="h-3 w-3" />Hatch
+            </TabsTrigger>
+            <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Moisture
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="rectal-temps">
           <RectalTempEntry technicianName={technicianName} checkDate={checkDate} onSubmit={handleSubmitRectalTemp} />
