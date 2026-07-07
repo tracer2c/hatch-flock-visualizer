@@ -21,6 +21,7 @@ interface MachineWideHumidityEntryProps {
   notes: string;
   checkDate: string;
   uniqueFlocks: FlockDetail[];
+  isPastDay?: boolean;
   onSubmit: (data: {
     humidity: number;
     temperature: number;
@@ -35,6 +36,7 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
   notes,
   checkDate,
   uniqueFlocks,
+  isPastDay = false,
   onSubmit
 }) => {
   const [humidity, setHumidity] = useState('');
