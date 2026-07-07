@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Timer, Cpu, Home } from "lucide-react";
 import { toast } from 'sonner';
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockOption {
   flock_id: string;
@@ -21,6 +22,8 @@ interface HatchProgressionEntryProps {
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
   defaultBatchId?: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   /** Optional labels shown in the header so the user can confirm the machine/house being recorded against. */
   machineLabel?: string;
   houseLabel?: string;
@@ -48,6 +51,8 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   flockOptions = [],
   defaultFlockId,
   defaultBatchId,
+  machineId,
+  isPastDay = false,
   machineLabel,
   houseLabel,
   onSubmit,
@@ -80,6 +85,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   }, [totalCount, hatchedCount]);
 
   const handleSubmit = async () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) {
       toast.error('Enter a technician name at the top of the page.');
       return;
@@ -241,7 +247,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
           <div className="flex items-end">
             <Button
               onClick={handleSubmit}
-              disabled={!technicianName.trim()}
+              disabled={isPastDay || !technicianName.trim()}
               className="w-full"
             >
               Add Record
@@ -264,6 +270,31 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
             </div>
           </div>
         )}
+
+        <TodaysEntriesList
+          machineId={machineId}
+          checkDate={checkDate}
+          type="hatch_progression"
+          isPastDay={isPastDay}
+          emptyLabel="No hatch progression checks yet today."
+          renderSummary={(e) => {
+            const stg = e.candling_results?.stage ?? '—';
+            const hr = e.candling_results?.checkHour;
+            const pct = e.candling_results?.percentageOut;
+            const total = e.candling_results?.totalCount;
+            const hatched = e.candling_results?.hatchedCount;
+            return (
+              <span>
+                Stage <span className="font-medium">{stg}</span>
+                {typeof hr === 'number' && <> · hr {hr}</>}
+                {typeof pct === 'number' && <> · <span className="font-medium">{pct}%</span></>}
+                {typeof hatched === 'number' && typeof total === 'number' && (
+                  <span className="text-muted-foreground"> ({hatched}/{total})</span>
+                )}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );

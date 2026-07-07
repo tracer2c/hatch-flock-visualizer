@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Droplets, Plus, AlertTriangle, Info, Thermometer } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockDetail {
   flock_id: string;
@@ -20,6 +21,7 @@ interface MachineWideHumidityEntryProps {
   notes: string;
   checkDate: string;
   uniqueFlocks: FlockDetail[];
+  isPastDay?: boolean;
   onSubmit: (data: {
     humidity: number;
     temperature: number;
@@ -34,6 +36,7 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
   notes,
   checkDate,
   uniqueFlocks,
+  isPastDay = false,
   onSubmit
 }) => {
   const [humidity, setHumidity] = useState('');
@@ -59,6 +62,7 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
   };
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!humidity || !temperature) return;
 
     onSubmit({
@@ -183,10 +187,28 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
           </div>
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!technicianName.trim() || !humidity || !temperature}>
+        <Button onClick={handleSubmit} className="w-full" disabled={isPastDay || !technicianName.trim() || !humidity || !temperature}>
           <Plus className="h-4 w-4 mr-2" />
           Save Machine-Wide Humidity & Temperature
         </Button>
+
+        <TodaysEntriesList
+          machineId={machine.id}
+          checkDate={checkDate}
+          type="humidity"
+          isPastDay={isPastDay}
+          emptyLabel="No humidity readings yet today."
+          renderSummary={(e) => {
+            const h = e.humidity;
+            const t = e.temperature;
+            return (
+              <span>
+                {typeof h === 'number' && <>Humidity <span className="font-medium">{h.toFixed(1)}%</span></>}
+                {typeof t === 'number' && <> · Temp <span className="font-medium">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );

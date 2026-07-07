@@ -585,7 +585,13 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         )}
 
         <TabsContent value="rectal-temps">
-          <RectalTempEntry technicianName={technicianName} checkDate={checkDate} onSubmit={handleSubmitRectalTemp} />
+          <RectalTempEntry
+            technicianName={technicianName}
+            checkDate={checkDate}
+            machineId={selectedMachine?.id}
+            isPastDay={isPastDay}
+            onSubmit={handleSubmitRectalTemp}
+          />
         </TabsContent>
 
         <TabsContent value="tray-wash">
@@ -605,6 +611,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
             checkDate={checkDate} 
             defaultFlockId={selectedMachine.currentHouse?.flock?.id}
             defaultBatchId={selectedMachine.currentHouse?.id}
+            machineId={selectedMachine?.id}
+            isPastDay={isPastDay}
             onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
@@ -627,6 +635,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
             checkDate={checkDate} 
             defaultFlockId={selectedMachine.currentHouse?.flock?.id}
             defaultBatchId={selectedMachine.currentHouse?.id}
+            machineId={selectedMachine?.id}
+            isPastDay={isPastDay}
             machineLabel={`Machine ${selectedMachine.machine_number}`}
             houseLabel={selectedMachine.currentHouse ? `House ${selectedMachine.currentHouse.batch_number}` : undefined}
             onSubmit={handleSubmitHatchProgression} 

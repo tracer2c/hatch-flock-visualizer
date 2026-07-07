@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockOption {
   flock_id: string;
@@ -19,6 +20,8 @@ interface CullChecksEntryProps {
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
   defaultBatchId?: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   onSubmit: (data: {
     flock_id: string;
     batch_id: string;
@@ -45,6 +48,8 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
   flockOptions = [],
   defaultFlockId,
   defaultBatchId,
+  machineId,
+  isPastDay = false,
   onSubmit 
 }) => {
   const [selectedFlockId, setSelectedFlockId] = useState(defaultFlockId || '');
@@ -58,6 +63,7 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
   const batchId = selectedFlock?.batch_id || defaultBatchId || '';
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) return;
     if (!selectedFlockId || !batchId) return;
 
@@ -145,7 +151,7 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || (!selectedFlockId && !defaultFlockId)}
+              disabled={isPastDay || !technicianName.trim() || (!selectedFlockId && !defaultFlockId)}
               className="w-full"
             >
               Add Record
@@ -166,6 +172,26 @@ const CullChecksEntry: React.FC<CullChecksEntryProps> = ({
             </p>
           </div>
         )}
+
+        <TodaysEntriesList
+          machineId={machineId}
+          checkDate={checkDate}
+          type="cull_check"
+          isPastDay={isPastDay}
+          emptyLabel="No cull records yet today."
+          renderSummary={(e) => {
+            const m = e.candling_results?.maleCount ?? 0;
+            const f = e.candling_results?.femaleCount ?? 0;
+            const def = e.candling_results?.defectType ?? 'none';
+            return (
+              <span>
+                <span className="font-medium">{m + f}</span> culled
+                <span className="text-muted-foreground"> (♂{m} · ♀{f})</span>
+                {def !== 'none' && <> · <span className="capitalize">{String(def).replace(/_/g, ' ')}</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );

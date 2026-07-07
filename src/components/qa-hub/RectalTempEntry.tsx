@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Thermometer } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface RectalTempEntryProps {
   technicianName: string;
   checkDate: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   onSubmit: (data: {
     location: string;
     temperature: number;
@@ -23,7 +26,7 @@ const locationOptions = [
   { value: 'separator_room', label: 'Separator Room (104-106°F)', min: 104, max: 106 },
 ];
 
-const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, onSubmit }) => {
+const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, isPastDay = false, onSubmit }) => {
   const [location, setLocation] = useState('hatcher');
   const [temperature, setTemperature] = useState('');
   const [checkTime, setCheckTime] = useState(new Date().toTimeString().slice(0, 5));
@@ -33,6 +36,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
   const isWithinRange = selectedLocation && temp >= selectedLocation.min && temp <= selectedLocation.max;
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!technicianName.trim()) return;
     if (!temperature || isNaN(temp)) return;
 
@@ -104,7 +108,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || !temperature}
+              disabled={isPastDay || !technicianName.trim() || !temperature}
               className="w-full"
             >
               Add Reading
@@ -121,6 +125,24 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
             <div className="w-3 h-3 bg-red-500 rounded" /> Out of Range
           </span>
         </div>
+
+        <TodaysEntriesList
+          machineId={machineId}
+          checkDate={checkDate}
+          type="rectal_temperature"
+          isPastDay={isPastDay}
+          emptyLabel="No rectal temperature readings yet today."
+          renderSummary={(e) => {
+            const loc = e.candling_results?.location ?? '—';
+            const t = e.candling_results?.temperature;
+            return (
+              <span>
+                <span className="capitalize">{String(loc).replace(/_/g, ' ')}</span>
+                {typeof t === 'number' && <> · <span className="font-medium">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
