@@ -45,9 +45,12 @@ const fmtInt = (n: number | null | undefined) =>
 
 export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showHouses, setShowHouses] = useState(false);
 
   useEffect(() => {
+    if (!showHouses) return;
+    if (houses !== null) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -96,7 +99,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [flock.house_ids]);
+  }, [showHouses, houses, flock.house_ids]);
 
   return (
     <div className="space-y-4">
