@@ -62,6 +62,7 @@ const MachineWideHumidityEntry: React.FC<MachineWideHumidityEntryProps> = ({
   };
 
   const handleSubmit = () => {
+    if (isPastDay) return;
     if (!humidity || !temperature) return;
 
     onSubmit({
