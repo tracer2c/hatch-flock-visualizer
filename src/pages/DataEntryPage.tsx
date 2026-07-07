@@ -75,12 +75,17 @@ const DataEntryPage = () => {
       {view === "weekly" ? (
         drilldownFlock ? (
           <FlockDrillDown
-            flock={drilldownFlock}
+            flock={drilldownFlock.row}
+            weekStart={drilldownFlock.weekStart}
             onBack={() => setDrilldownFlock(null)}
             onOpenHouse={handleHouseSelect}
           />
         ) : (
-          <WeeklyRollupView onOpenFlock={(row) => setDrilldownFlock(row)} />
+          <WeeklyRollupView
+            onOpenFlock={(row, weekStart) =>
+              setDrilldownFlock({ row, weekStart: startOfWeek(weekStart, { weekStartsOn: 1 }) })
+            }
+          />
         )
       ) : (
         <HouseManager
