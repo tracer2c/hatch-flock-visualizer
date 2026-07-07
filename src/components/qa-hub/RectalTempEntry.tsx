@@ -108,7 +108,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || !temperature}
+              disabled={isPastDay || !technicianName.trim() || !temperature}
               className="w-full"
             >
               Add Reading
@@ -125,6 +125,24 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
             <div className="w-3 h-3 bg-red-500 rounded" /> Out of Range
           </span>
         </div>
+
+        <TodaysEntriesList
+          machineId={machineId}
+          checkDate={checkDate}
+          type="rectal_temperature"
+          isPastDay={isPastDay}
+          emptyLabel="No rectal temperature readings yet today."
+          renderSummary={(e) => {
+            const loc = e.candling_results?.location ?? '—';
+            const t = e.candling_results?.temperature;
+            return (
+              <span>
+                <span className="capitalize">{String(loc).replace(/_/g, ' ')}</span>
+                {typeof t === 'number' && <> · <span className="font-medium">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
