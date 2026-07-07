@@ -32,7 +32,30 @@ Everything below is what I found and what I'd change. No code yet — just the a
 
 ### 2. What I'd build (phased, one gate per phase like before)
 
-#### Phase A — Tray Wash: proper daily-log resume + current-time defaults *(the trigger case)*
+#### Phase A — Tray Wash: proper daily-log resume + current-time defaults *(the trigger case)* ✅ DONE
+
+Assumptions used (defaults from my questions): keyed on `(machine_id, check_date, candling_results->>type='tray_wash')`; past-day view is truly read-only for everyone; time defaults to browser local time.
+
+Implementation:
+- New hook **`useTodaysTrayWash(machineId, checkDate)`** — returns the most recent tray-wash `qa_monitoring` row for that machine+date (or null).
+- **`TrayWashEntry`** rewritten:
+  - Prefills 3 temps + 5 PPM values + 5 PPM times from `existingRow` on mount / when the row or date changes.
+  - Button label switches: `Save Progress` while daily log is partial, `Save Daily Tray Wash Record` once all filled, `Read-only (historical entry)` on past dates.
+  - Header shows *"Resuming today's log — last saved 2:14 PM"* when an existing row is loaded.
+  - PPM time inputs prefill **current local time** on focus (and on blur of the PPM value if the operator forgot); never overwrites an existing time.
+  - Read-only mode disables every input and hides the submit; shows an amber "Viewing {date} — read-only" banner.
+  - Partial saves allowed — any non-empty field is enough to save; empty slots persist as `null`.
+- **`SingleSetterQAWorkflow` + `MultiSetterQAWorkflow`**:
+  - Call `useTodaysTrayWash(selectedMachine.id, checkDate)`, pass through as `existingRow` + `readOnly` (when `checkDate < todayISO`) + `loadingExisting`.
+  - `handleSubmitTrayWash` now branches: if `existingId` → direct `supabase.from('qa_monitoring').update(...).eq('id', existingId)`; else the original INSERT (via `useOfflineSubmit` / `submitGenericQAOffline`, preserving offline + linkage behaviour).
+  - After save, invalidates `['tray-wash-daily']` so the form reflects the freshly-saved row.
+- **Bonus (Phase C sneak-in):** `RectalTempEntry`'s Check Time input now also prefills current local time on focus when empty.
+
+Typecheck: `tsgo --noEmit` clean.
+
+**Verify:** QA Hub → any single/multi setter machine → Tray Wash tab. Enter 1st PPM (60) + optional time, hit *Save Progress*. Refresh the page. The row should still be there and the button now shows the "Resuming today's log — last saved HH:MM" hint. Enter 2 more PPMs, save again. Switch the date to yesterday → whole card renders read-only with the amber banner.
+
+---
 
 - On mount, look up **today's tray_wash record** for the selected machine's house/company + `checkDate`. If it exists, load its `firstCheck / secondCheck / thirdCheck / ppm_check_1..5 / ppm_check_*_time` into the form.
 - Change the submit button from **"Add Daily Tray Wash Record"** (INSERT-only) to **"Save Progress"** — behavior: UPSERT on `(company_id, machine_id or batch_id, check_date, type='tray_wash')`. So user can save with 1 PPM filled, come back later, add 2 more, save again — always one row per day.
