@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Ruler, Plus, AlertTriangle, Info } from "lucide-react";
 import { toast } from 'sonner';
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockDetail {
   flock_id: string;
