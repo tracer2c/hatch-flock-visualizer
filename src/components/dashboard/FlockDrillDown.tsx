@@ -317,7 +317,6 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
                       </div>
                       <div className="text-xs text-muted-foreground mb-2">
                         Set {format(new Date(h.set_date), "MMM d, yyyy")}
-                        {h.machine_number ? ` · ${h.machine_number}` : ""}
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <div>
