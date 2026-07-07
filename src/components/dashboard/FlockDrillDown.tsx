@@ -261,9 +261,12 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!firstHouseId}
-                onClick={() => openEntry("fertility")}
-                title="Hatch / HOI fields live inside the Fertility form"
+                disabled={!weekISO}
+                onClick={() =>
+                  navigate(
+                    `/data-entry/flock/${encodeURIComponent(flockKey)}/hoi?week=${weekISO}`
+                  )
+                }
               >
                 <Egg className="h-4 w-4 mr-2" />
                 Hatch / HOI
