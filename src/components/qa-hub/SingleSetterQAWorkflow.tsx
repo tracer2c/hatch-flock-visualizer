@@ -55,11 +55,13 @@ interface SelectedMachine {
 interface SingleSetterQAWorkflowProps {
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
+  focusSection?: string;
 }
 
 const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({ 
   preSelectedHouseId, 
-  preSelectedAction 
+  preSelectedAction,
+  focusSection,
 }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
@@ -68,7 +70,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [notes, setNotes] = useState('');
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeQATab, setActiveQATab] = useState('rectal-temps');
+  const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
   const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
     invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
@@ -491,26 +493,28 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
       </Card>
 
       <Tabs value={activeQATab} onValueChange={setActiveQATab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-          <TabsTrigger value="rectal-temps" className="flex items-center gap-1 text-xs">
-            <Thermometer className="h-3 w-3" />Rectal
-          </TabsTrigger>
-          <TabsTrigger value="tray-wash" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Wash
-          </TabsTrigger>
-          <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
-            <AlertTriangle className="h-3 w-3" />Culls
-          </TabsTrigger>
-          <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
-            <Scale className="h-3 w-3" />Gravity
-          </TabsTrigger>
-          <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
-            <Timer className="h-3 w-3" />Hatch
-          </TabsTrigger>
-          <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Moisture
-          </TabsTrigger>
-        </TabsList>
+        {!focusSection && (
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+            <TabsTrigger value="rectal-temps" className="flex items-center gap-1 text-xs">
+              <Thermometer className="h-3 w-3" />Rectal
+            </TabsTrigger>
+            <TabsTrigger value="tray-wash" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Wash
+            </TabsTrigger>
+            <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="h-3 w-3" />Culls
+            </TabsTrigger>
+            <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
+              <Scale className="h-3 w-3" />Gravity
+            </TabsTrigger>
+            <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
+              <Timer className="h-3 w-3" />Hatch
+            </TabsTrigger>
+            <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Moisture
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="rectal-temps">
           <RectalTempEntry technicianName={technicianName} checkDate={checkDate} onSubmit={handleSubmitRectalTemp} />

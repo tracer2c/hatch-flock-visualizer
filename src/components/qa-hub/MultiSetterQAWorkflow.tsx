@@ -66,7 +66,11 @@ interface SelectedMachine {
   unit?: { name: string } | null;
 }
 
-const MultiSetterQAWorkflow: React.FC = () => {
+interface MultiSetterQAWorkflowProps {
+  focusSection?: string;
+}
+
+const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSection }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -630,39 +634,41 @@ const MultiSetterQAWorkflow: React.FC = () => {
         title="Moisture loss records waiting to sync"
       />
 
-      <Tabs defaultValue="temperatures" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
-          <TabsTrigger value="temperatures" className="flex items-center gap-1 text-xs">
-            <Thermometer className="h-3 w-3" />Temps
-          </TabsTrigger>
-          <TabsTrigger value="angles" className="flex items-center gap-1 text-xs">
-            <Ruler className="h-3 w-3" />Angles
-          </TabsTrigger>
-          <TabsTrigger value="humidity" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Humidity
-          </TabsTrigger>
-          <TabsTrigger value="rectal" className="flex items-center gap-1 text-xs">
-            <Thermometer className="h-3 w-3" />Rectal
-          </TabsTrigger>
-          <TabsTrigger value="wash" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Wash
-          </TabsTrigger>
-          <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
-            <AlertTriangle className="h-3 w-3" />Culls
-          </TabsTrigger>
-          <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
-            <Scale className="h-3 w-3" />Gravity
-          </TabsTrigger>
-          <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
-            <Timer className="h-3 w-3" />Hatch
-          </TabsTrigger>
-          <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
-            <Droplets className="h-3 w-3" />Moisture
-          </TabsTrigger>
-          <TabsTrigger value="candling" className="flex items-center gap-1 text-xs">
-            <Eye className="h-3 w-3" />Candling
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue={focusSection || "temperatures"} className="space-y-4">
+        {!focusSection && (
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
+            <TabsTrigger value="temperatures" className="flex items-center gap-1 text-xs">
+              <Thermometer className="h-3 w-3" />Temps
+            </TabsTrigger>
+            <TabsTrigger value="angles" className="flex items-center gap-1 text-xs">
+              <Ruler className="h-3 w-3" />Angles
+            </TabsTrigger>
+            <TabsTrigger value="humidity" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Humidity
+            </TabsTrigger>
+            <TabsTrigger value="rectal" className="flex items-center gap-1 text-xs">
+              <Thermometer className="h-3 w-3" />Rectal
+            </TabsTrigger>
+            <TabsTrigger value="wash" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Wash
+            </TabsTrigger>
+            <TabsTrigger value="culls" className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="h-3 w-3" />Culls
+            </TabsTrigger>
+            <TabsTrigger value="gravity" className="flex items-center gap-1 text-xs">
+              <Scale className="h-3 w-3" />Gravity
+            </TabsTrigger>
+            <TabsTrigger value="hatch" className="flex items-center gap-1 text-xs">
+              <Timer className="h-3 w-3" />Hatch
+            </TabsTrigger>
+            <TabsTrigger value="moisture" className="flex items-center gap-1 text-xs">
+              <Droplets className="h-3 w-3" />Moisture
+            </TabsTrigger>
+            <TabsTrigger value="candling" className="flex items-center gap-1 text-xs">
+              <Eye className="h-3 w-3" />Candling
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="temperatures">
           <MultiSetterQAEntry
