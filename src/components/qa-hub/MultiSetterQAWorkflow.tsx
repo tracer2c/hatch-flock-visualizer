@@ -285,7 +285,13 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
     }
   };
 
-  const handleSubmitTrayWash = async (data: { firstCheck: number; secondCheck: number; thirdCheck: number; washDate: string }) => {
+  const handleSubmitTrayWash = async (data: {
+    firstCheck: number;
+    secondCheck: number;
+    thirdCheck: number;
+    ppmChecks: { ppm: number | null; time: string }[];
+    washDate: string;
+  }) => {
     if (!selectedMachine || !technicianName.trim()) {
       toast.error('Please enter technician name');
       return;
@@ -299,14 +305,30 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
         technicianName,
         data.washDate,
         'tray_wash',
-        { firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck, temperature: avgTemp },
+        {
+          firstCheck: data.firstCheck,
+          secondCheck: data.secondCheck,
+          thirdCheck: data.thirdCheck,
+          temperature: avgTemp,
+          // 5 fixed PPM checks per daily row + optional times.
+          ppm_check_1: data.ppmChecks[0]?.ppm ?? null,
+          ppm_check_2: data.ppmChecks[1]?.ppm ?? null,
+          ppm_check_3: data.ppmChecks[2]?.ppm ?? null,
+          ppm_check_4: data.ppmChecks[3]?.ppm ?? null,
+          ppm_check_5: data.ppmChecks[4]?.ppm ?? null,
+          ppm_check_1_time: data.ppmChecks[0]?.time || null,
+          ppm_check_2_time: data.ppmChecks[1]?.time || null,
+          ppm_check_3_time: data.ppmChecks[2]?.time || null,
+          ppm_check_4_time: data.ppmChecks[3]?.time || null,
+          ppm_check_5_time: data.ppmChecks[4]?.time || null,
+        },
         getFlockLinkages(),
         isOnline,
         notes
       );
 
       if (!result.success) throw new Error(result.error);
-      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Tray wash saved!');
+      toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Tray wash daily log saved!');
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);

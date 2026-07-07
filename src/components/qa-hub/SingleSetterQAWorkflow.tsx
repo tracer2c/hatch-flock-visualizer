@@ -143,7 +143,13 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     }
   };
 
-  const handleSubmitTrayWash = async (data: { firstCheck: number; secondCheck: number; thirdCheck: number; washDate: string }) => {
+  const handleSubmitTrayWash = async (data: {
+    firstCheck: number;
+    secondCheck: number;
+    thirdCheck: number;
+    ppmChecks: { ppm: number | null; time: string }[];
+    washDate: string;
+  }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
@@ -159,12 +165,28 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         inspector_name: technicianName,
         notes: notes || null,
         entry_mode: 'house',
-        candling_results: JSON.stringify({ type: 'tray_wash', firstCheck: data.firstCheck, secondCheck: data.secondCheck, thirdCheck: data.thirdCheck }),
+        candling_results: JSON.stringify({
+          type: 'tray_wash',
+          firstCheck: data.firstCheck,
+          secondCheck: data.secondCheck,
+          thirdCheck: data.thirdCheck,
+          // Corey requested 5 fixed PPM checks per daily row (with optional times).
+          ppm_check_1: data.ppmChecks[0]?.ppm ?? null,
+          ppm_check_2: data.ppmChecks[1]?.ppm ?? null,
+          ppm_check_3: data.ppmChecks[2]?.ppm ?? null,
+          ppm_check_4: data.ppmChecks[3]?.ppm ?? null,
+          ppm_check_5: data.ppmChecks[4]?.ppm ?? null,
+          ppm_check_1_time: data.ppmChecks[0]?.time || null,
+          ppm_check_2_time: data.ppmChecks[1]?.time || null,
+          ppm_check_3_time: data.ppmChecks[2]?.time || null,
+          ppm_check_4_time: data.ppmChecks[3]?.time || null,
+          ppm_check_5_time: data.ppmChecks[4]?.time || null,
+        }),
         company_id: companyId,
       }, 'insert', {
         batchId: selectedMachine.currentHouse.id,
       });
-      toast.success('Tray wash temperatures saved!');
+      toast.success('Tray wash daily log saved!');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
