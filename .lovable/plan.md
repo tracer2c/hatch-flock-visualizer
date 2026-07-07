@@ -68,7 +68,7 @@ Tabs: `Temps | Angles | Humidity | Rectal Temps | Tray Wash | Culls | Specific G
 
 ---
 
-### Phase 6 — House-level dropdowns for Egg Pack Quality / Fertility / Residue
+### Phase 6 — House-level dropdowns for Egg Pack Quality / Fertility / Residue ✅ DONE
 Entry-level matrix:
 | Data | Entry level |
 |---|---|
@@ -78,10 +78,13 @@ Entry-level matrix:
 | Temps/Angles/Humidity/Hatch Progression | Machine |
 | Tray Wash | Process |
 
-- Add House # dropdown (scoped to the selected flock) to those three forms.
-- Persist `batch_id` (house) on each row; backfill not required.
+Implementation:
+- `FlockDrillDown` now preloads the flock's houses for the week and exposes a **"Record Data"** panel with a **House # dropdown** (scoped to that flock) plus three action buttons: **Egg Pack Quality**, **Fertility**, **Residue**.
+- Selecting a house + clicking a button routes to `/data-entry/house/{houseId}/{type}`, which opens the existing entry form already bound to that batch — so `batch_id` (house) is persisted automatically on save.
+- If the flock has only one house that week, it's auto-selected. Buttons are disabled until a house is chosen.
+- No schema change; existing forms already write `batch_id`.
 
-**Verify:** Create one record per form with house selected; confirm row + house association in DB.
+**Verify:** Data Sheet → Weekly Rollup → open a flock → in the Record Data panel, pick a house and click Egg Pack / Fertility / Residue. Confirm the form opens for that house and the saved row has `batch_id` matching the selected house.
 
 ---
 
