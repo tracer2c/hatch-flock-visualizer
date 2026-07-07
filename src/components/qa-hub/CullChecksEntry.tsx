@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockOption {
   flock_id: string;
@@ -19,6 +20,8 @@ interface CullChecksEntryProps {
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
   defaultBatchId?: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   onSubmit: (data: {
     flock_id: string;
     batch_id: string;
