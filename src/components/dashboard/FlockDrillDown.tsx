@@ -1,9 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Home, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Home, ChevronDown, ChevronRight, Package, Egg, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 
@@ -44,13 +52,14 @@ const fmtInt = (n: number | null | undefined) =>
   n == null ? "—" : Math.round(n).toLocaleString();
 
 export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
+  const navigate = useNavigate();
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHouses, setShowHouses] = useState(false);
+  const [quickHouseId, setQuickHouseId] = useState<string>("");
 
+  // Always load houses on mount — needed for the flock-level "Quick Record" dropdown.
   useEffect(() => {
-    if (!showHouses) return;
-    if (houses !== null) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -94,12 +103,21 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
           a.set_date.localeCompare(b.set_date)
       );
       setHouses(tiles);
+      if (tiles.length === 1) setQuickHouseId(tiles[0].id);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [showHouses, houses, flock.house_ids]);
+  }, [flock.house_ids]);
+
+  const houseOptions = useMemo(() => houses ?? [], [houses]);
+
+  const openEntry = (type: "egg-pack" | "fertility" | "residue") => {
+    if (!quickHouseId) return;
+    navigate(`/data-entry/house/${quickHouseId}/${type}`);
+  };
+
 
   return (
     <div className="space-y-4">
@@ -185,6 +203,71 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Phase 6 — Quick Record: pick a House then jump into the house-scoped entry form */}
+          <div className="rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold">Record Data</div>
+                <div className="text-xs text-muted-foreground">
+                  Egg Pack Quality is house-level. Fertility and Residue are flock-level
+                  summaries with house-level detail — select the house you're recording.
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="md:w-64">
+                <Select value={quickHouseId} onValueChange={setQuickHouseId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select house #" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {houseOptions.map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        House {h.house_number || "—"}
+                        {h.machine_number ? ` · ${h.machine_number}` : ""}
+                      </SelectItem>
+                    ))}
+                    {houseOptions.length === 0 && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        No houses in this flock/week.
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!quickHouseId}
+                  onClick={() => openEntry("egg-pack")}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Egg Pack Quality
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!quickHouseId}
+                  onClick={() => openEntry("fertility")}
+                >
+                  <Egg className="h-4 w-4 mr-2" />
+                  Fertility
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!quickHouseId}
+                  onClick={() => openEntry("residue")}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Residue
+                </Button>
+              </div>
+            </div>
+          </div>
+
 
           {/* Optional house-level drill-down */}
           <div>
