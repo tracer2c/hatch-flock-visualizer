@@ -894,6 +894,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
                         id="check-time"
                         type="time"
                         value={rectalTemps.checkTime}
+                        onFocus={() => {
+                          if (!rectalTemps.checkTime) {
+                            const d = new Date();
+                            setRectalTemps({
+                              ...rectalTemps,
+                              checkTime: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+                            });
+                          }
+                        }}
                         onChange={(e) => setRectalTemps({...rectalTemps, checkTime: e.target.value})}
                       />
                     </div>

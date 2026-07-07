@@ -58,8 +58,22 @@ export function TimePicker({
     setOpen(false)
   }
 
+  // Phase C — default to "now" (rounded to minuteStep) when the user opens
+  // the picker with no value yet. Matches how the native time inputs auto-fill.
+  const handleOpenChange = (next: boolean) => {
+    if (next && !time) {
+      const d = new Date()
+      const roundedMin = Math.round(d.getMinutes() / minuteStep) * minuteStep
+      const overflow = roundedMin >= 60
+      const h = ((d.getHours() + (overflow ? 1 : 0)) % 24).toString().padStart(2, "0")
+      const m = (overflow ? 0 : roundedMin).toString().padStart(2, "0")
+      onSelect?.(`${h}:${m}`)
+    }
+    setOpen(next)
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
