@@ -160,10 +160,29 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
           <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-red-500"></span><span>Outside Range: Below 35° or Above 55°</span></div>
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!technicianName.trim()}>
+        <Button onClick={handleSubmit} className="w-full" disabled={isPastDay || !technicianName.trim()}>
           <Plus className="h-4 w-4 mr-2" />
           Save Machine-Wide Angles
         </Button>
+
+        <TodaysEntriesList
+          machineId={machine.id}
+          checkDate={checkDate}
+          type="setter_angles"
+          isPastDay={isPastDay}
+          emptyLabel="No angle checks yet today."
+          renderSummary={(e) => {
+            const l = e.candling_results?.angle_top_left;
+            const r = e.candling_results?.angle_top_right;
+            return (
+              <span>
+                Left <span className="font-medium">{typeof l === 'number' ? `${l}°` : '—'}</span>
+                {' · '}
+                Right <span className="font-medium">{typeof r === 'number' ? `${r}°` : '—'}</span>
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
