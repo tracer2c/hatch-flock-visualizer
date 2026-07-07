@@ -146,24 +146,24 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     }
   };
 
-  const handleSubmitTrayWash = async (data: {
-    firstCheck: number;
-    secondCheck: number;
-    thirdCheck: number;
-    ppmChecks: { ppm: number | null; time: string }[];
-    washDate: string;
-  }) => {
+  const handleSubmitTrayWash = async (data: TrayWashSubmitData) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
     setIsSubmitting(true);
     try {
       const companyId = await resolveCompanyId();
-      await submitQAMonitoring({
+      const filledTemps = [data.firstCheck, data.secondCheck, data.thirdCheck].filter(
+        (v): v is number => typeof v === 'number' && Number.isFinite(v)
+      );
+      const avgTemp = filledTemps.length
+        ? filledTemps.reduce((a, b) => a + b, 0) / filledTemps.length
+        : 0;
+      const payload = {
         batch_id: selectedMachine.currentHouse.id,
         machine_id: selectedMachine.id,
         check_date: data.washDate,
         check_time: new Date().toTimeString().split(' ')[0],
         day_of_incubation: selectedMachine.daysInIncubation,
-        temperature: (data.firstCheck + data.secondCheck + data.thirdCheck) / 3,
+        temperature: avgTemp,
         humidity: 55,
         inspector_name: technicianName,
         notes: notes || null,
@@ -173,7 +173,6 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
           firstCheck: data.firstCheck,
           secondCheck: data.secondCheck,
           thirdCheck: data.thirdCheck,
-          // Corey requested 5 fixed PPM checks per daily row (with optional times).
           ppm_check_1: data.ppmChecks[0]?.ppm ?? null,
           ppm_check_2: data.ppmChecks[1]?.ppm ?? null,
           ppm_check_3: data.ppmChecks[2]?.ppm ?? null,
@@ -186,16 +185,29 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
           ppm_check_5_time: data.ppmChecks[4]?.time || null,
         }),
         company_id: companyId,
-      }, 'insert', {
-        batchId: selectedMachine.currentHouse.id,
-      });
-      toast.success('Tray wash daily log saved!');
+      };
+      if (data.existingId) {
+        // Update-in-place — this is the daily "continue where you left off" path.
+        const { error } = await supabase
+          .from('qa_monitoring')
+          .update(payload)
+          .eq('id', data.existingId);
+        if (error) throw error;
+        toast.success('Tray wash progress saved.');
+      } else {
+        await submitQAMonitoring(payload, 'insert', {
+          batchId: selectedMachine.currentHouse.id,
+        });
+        toast.success('Tray wash daily log started.');
+      }
+      queryClient.invalidateQueries({ queryKey: ['tray-wash-daily'] });
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleSubmitCullCheck = async (data: { flock_id: string; batch_id: string | null; maleCount: number; femaleCount: number; defectType: string; checkDate: string }) => {
     if (!selectedMachine?.currentHouse || !technicianName.trim()) return;
