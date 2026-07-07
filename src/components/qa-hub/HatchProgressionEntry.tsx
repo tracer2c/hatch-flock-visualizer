@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Timer, Cpu, Home } from "lucide-react";
+import { toast } from 'sonner';
 
 interface FlockOption {
   flock_id: string;
@@ -19,6 +21,9 @@ interface HatchProgressionEntryProps {
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
   defaultBatchId?: string;
+  /** Optional labels shown in the header so the user can confirm the machine/house being recorded against. */
+  machineLabel?: string;
+  houseLabel?: string;
   onSubmit: (data: {
     flock_id: string;
     batch_id: string;
@@ -28,7 +33,7 @@ interface HatchProgressionEntryProps {
     hatchedCount: number;
     checkHour: number;
     hatchDate: string;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 const stages = [
@@ -37,13 +42,15 @@ const stages = [
   { value: 'C', label: 'Stage C - Final Hatch' },
 ];
 
-const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({ 
-  technicianName, 
+const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
+  technicianName,
   checkDate,
   flockOptions = [],
   defaultFlockId,
   defaultBatchId,
-  onSubmit 
+  machineLabel,
+  houseLabel,
+  onSubmit,
 }) => {
   const [selectedFlockId, setSelectedFlockId] = useState(defaultFlockId || '');
   const [stage, setStage] = useState('A');
@@ -51,6 +58,13 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   const [hatchedCount, setHatchedCount] = useState('');
   const [checkHour, setCheckHour] = useState('');
   const [percentageOut, setPercentageOut] = useState('');
+
+  // React to async-loaded defaults (machine/house selected after mount).
+  useEffect(() => {
+    if (defaultFlockId && !selectedFlockId) {
+      setSelectedFlockId(defaultFlockId);
+    }
+  }, [defaultFlockId, selectedFlockId]);
 
   const selectedFlock = flockOptions.find(f => f.flock_id === selectedFlockId);
   const batchId = selectedFlock?.batch_id || defaultBatchId || '';
@@ -65,25 +79,57 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
     }
   }, [totalCount, hatchedCount]);
 
-  const handleSubmit = () => {
-    if (!technicianName.trim()) return;
-    if (!selectedFlockId || !batchId) return;
+  const handleSubmit = async () => {
+    if (!technicianName.trim()) {
+      toast.error('Enter a technician name at the top of the page.');
+      return;
+    }
+    if (!selectedFlockId) {
+      toast.error('Select a flock before adding the record.');
+      return;
+    }
+    if (!batchId) {
+      toast.error('No house is linked to this machine/flock — assign a house first.');
+      return;
+    }
+    const total = parseInt(totalCount);
+    const hatched = parseInt(hatchedCount);
+    const hour = parseInt(checkHour);
+    if (!Number.isFinite(total) || total <= 0) {
+      toast.error('Enter a total count greater than 0.');
+      return;
+    }
+    if (!Number.isFinite(hatched) || hatched < 0) {
+      toast.error('Enter a valid hatched count.');
+      return;
+    }
+    if (hatched > total) {
+      toast.error('Hatched count cannot exceed total count.');
+      return;
+    }
+    if (!Number.isFinite(hour) || hour < 0 || hour > 24) {
+      toast.error('Enter a check hour between 0 and 24.');
+      return;
+    }
 
-    onSubmit({
-      flock_id: selectedFlockId,
-      batch_id: batchId,
-      stage,
-      percentageOut: parseFloat(percentageOut) || 0,
-      totalCount: parseInt(totalCount) || 0,
-      hatchedCount: parseInt(hatchedCount) || 0,
-      checkHour: parseInt(checkHour) || 0,
-      hatchDate: checkDate
-    });
-
-    setTotalCount('');
-    setHatchedCount('');
-    setCheckHour('');
-    setPercentageOut('');
+    try {
+      await onSubmit({
+        flock_id: selectedFlockId,
+        batch_id: batchId,
+        stage,
+        percentageOut: parseFloat(percentageOut) || 0,
+        totalCount: total,
+        hatchedCount: hatched,
+        checkHour: hour,
+        hatchDate: checkDate,
+      });
+      setTotalCount('');
+      setHatchedCount('');
+      setCheckHour('');
+      setPercentageOut('');
+    } catch (err) {
+      // parent handler surfaces its own toast; swallow so form doesn't clear on failure
+    }
   };
 
   return (
@@ -94,6 +140,20 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
           Hatch Progression
         </CardTitle>
         <p className="text-sm text-muted-foreground">Track hatching progress at each stage</p>
+        {(machineLabel || houseLabel) && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {machineLabel && (
+              <Badge variant="outline" className="gap-1">
+                <Cpu className="h-3 w-3" /> {machineLabel}
+              </Badge>
+            )}
+            {houseLabel && (
+              <Badge variant="outline" className="gap-1">
+                <Home className="h-3 w-3" /> {houseLabel}
+              </Badge>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -114,7 +174,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
               </Select>
             ) : (
               <Input
-                value={selectedFlock?.flock_name || 'Auto-linked'}
+                value={selectedFlock?.flock_name || (selectedFlockId ? 'Auto-linked' : 'No flock linked')}
                 disabled
                 className="bg-muted/50"
               />
@@ -179,9 +239,9 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
             />
           </div>
           <div className="flex items-end">
-            <Button 
+            <Button
               onClick={handleSubmit}
-              disabled={!technicianName.trim() || (!selectedFlockId && !defaultFlockId)}
+              disabled={!technicianName.trim()}
               className="w-full"
             >
               Add Record
@@ -195,7 +255,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Progress:</span>
               <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                <div 
+                <div
                   className="bg-green-500 h-full transition-all"
                   style={{ width: `${Math.min(parseFloat(percentageOut), 100)}%` }}
                 />

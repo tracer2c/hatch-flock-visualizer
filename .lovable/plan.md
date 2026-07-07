@@ -24,12 +24,18 @@ Tabs: `Temps | Angles | Humidity | Rectal Temps | Tray Wash | Culls | Specific G
 
 ---
 
-### Phase 2 — Fix Hatch Progression bug + tie to machine
-- Debug "Add Record" for Hatch Progression: check handler, required fields, `machine_id / flock_id / stage / check_hour / total_count / hatched_count`, RLS, and any NOT NULL columns.
-- Ensure machine dropdown is required and persisted.
-- Migration only if a column is missing/nullable-mismatch.
+### Phase 2 — Fix Hatch Progression bug + tie to machine ✅ DONE
+- Root cause of the "Add Record does nothing" bug: `HatchProgressionEntry.handleSubmit` silently `return`ed when `selectedFlockId`/`batchId` was missing, gave no toast, and didn't react to async-loaded defaults (`defaultFlockId` arrived after mount but state was frozen at `''`).
+- Fixes applied:
+  - Explicit validation with toast feedback: technician name, flock, house, total > 0, hatched ≤ total, check hour 0-24.
+  - `useEffect` syncs `defaultFlockId` prop → `selectedFlockId` state when it loads asynchronously.
+  - Header now shows a `Machine …` and `House …` badge so the operator can confirm what the record ties to.
+  - Single-setter submit now hard-blocks when the selected machine has no house assigned (previously silent).
+  - `machine_id`, `batch_id`, `flock_id` are all now stored inside `candling_results` JSON alongside `stage/hour/counts` for downstream analytics.
+  - `day_of_incubation` falls back to 0 if `daysInIncubation` is undefined (no more NaN insert).
+  - Submit re-throws on failure so the form does not clear its values on error.
 
-**Verify:** Insert a record end-to-end, reload, confirm row via `supabase--read_query`.
+**Verify:** Open QA Hub → Hatch Progression → pick a hatcher with a house → fill fields → Add Record. Row should land in `qa_monitoring` with `machine_id` set and `candling_results.type = 'hatch_progression'`.
 
 ---
 
