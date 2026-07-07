@@ -1,107 +1,90 @@
-## Phased Implementation Plan — QA Hub + Data Sheet Restructure
+## Audit — "Resume today's partial entry" + "clock defaults to now" across the app
 
-Each phase ships independently. After each phase I will verify (build passes, form insert works, screenshot check) before starting the next. I will confirm with you at each phase gate.
+Corey's ask, in plain terms:
 
----
+- When a form is a **multi-check daily log** (Tray Wash = 5 PPM + 3 temp checks), the user often can't finish it in one sitting. If they enter 1–2 checks, leave, and come back the same day, the form should be **pre-populated with what they already saved** so they can continue.
+- **Time inputs** should default to the user's **current local time** when the picker is opened/focused (right now most time fields default to empty or `--:-- --`).
+- When they **navigate to a previous day**, they should be able to **see the saved values (read-only)** — never lose historical context, but also don't let them edit yesterday's numbers by accident.
 
-### Phase 1 — QA Hub Reorganization (navigation shell only)
-Restructure QA Hub primary tabs from *Single Stage / Multi Stage / Machine* to **QA-type-first**:
-
-Tabs: `Temps | Angles | Humidity | Rectal Temps | Tray Wash | Culls | Specific Gravity | Hatch Progression`
-
-- Move existing forms under the new tab structure (no logic change yet).
-- Inside each tab, add filters/dropdowns as needed (machine, house, flock).
-- Mark which tabs are machine-scoped vs flock/process-scoped (metadata used by later phases).
-
-**Scope matrix applied:**
-| QA type | Scope |
-|---|---|
-| Temps, Angles, Humidity, Hatch Progression | Machine |
-| Rectal Temps, Tray Wash | Process / room |
-| Culls, Gravity | Flock/house (confirm) |
-
-**Verify:** Every existing QA record still opens/edits from the new tab. No data loss.
+Everything below is what I found and what I'd change. No code yet — just the audit + fix map.
 
 ---
 
-### Phase 2 — Fix Hatch Progression bug + tie to machine ✅ DONE
-- Root cause of the "Add Record does nothing" bug: `HatchProgressionEntry.handleSubmit` silently `return`ed when `selectedFlockId`/`batchId` was missing, gave no toast, and didn't react to async-loaded defaults (`defaultFlockId` arrived after mount but state was frozen at `''`).
-- Fixes applied:
-  - Explicit validation with toast feedback: technician name, flock, house, total > 0, hatched ≤ total, check hour 0-24.
-  - `useEffect` syncs `defaultFlockId` prop → `selectedFlockId` state when it loads asynchronously.
-  - Header now shows a `Machine …` and `House …` badge so the operator can confirm what the record ties to.
-  - Single-setter submit now hard-blocks when the selected machine has no house assigned (previously silent).
-  - `machine_id`, `batch_id`, `flock_id` are all now stored inside `candling_results` JSON alongside `stage/hour/counts` for downstream analytics.
-  - `day_of_incubation` falls back to 0 if `daysInIncubation` is undefined (no more NaN insert).
-  - Submit re-throws on failure so the form does not clear its values on error.
+### 1. Audit results — which pages have this pattern
 
-**Verify:** Open QA Hub → Hatch Progression → pick a hatcher with a house → fill fields → Add Record. Row should land in `qa_monitoring` with `machine_id` set and `candling_results.type = 'hatch_progression'`.
+| Screen | Multi-part daily entry? | Currently resumes today's partial data? | Time field default = now? | Historical (past date) view? |
+|---|---|---|---|---|
+| **QA Hub → Tray Wash** | ✅ 3 temp + 5 PPM in one daily row | ❌ Blank on reload — user loses prior checks | ❌ PPM time fields blank | ❌ No past-day view |
+| **QA Hub → Rectal Temps** | ✅ many readings per day (hatcher / chick room / separator) | ❌ Form clears after each save; no list of today's readings | ⚠️ Time set once at mount, doesn't refresh between readings | ❌ Only global "Recent Entries" table |
+| **QA Hub → Culls** | ✅ multiple checks per flock/day | ❌ No today-list; no check time field at all | n/a | ❌ |
+| **QA Hub → Specific Gravity** | ⚠️ usually one per flock/week, but re-tests happen | ❌ | n/a | ❌ |
+| **QA Hub → Hatch Progression** | ✅ multiple hour checks per machine/day (Stage A/B/C) | ❌ | ❌ `checkHour` free text | ❌ |
+| **QA Hub → Moisture Loss** | ⚠️ per weigh event | ❌ | n/a | ❌ |
+| **QA Hub → Machine-wide Temps/Angles/Humidity** | ⚠️ one per shift, often 2–3/day | ❌ | ❌ no time field | ❌ |
+| **Data Sheet → Egg Pack Quality** | ✅ many rows per house | ✅ history table already shown & editable | n/a | ✅ shows all past rows |
+| **Data Sheet → Fertility Analysis** | ✅ many rows per house | ✅ history table already shown | n/a | ✅ |
+| **Data Sheet → Residue Analysis** | ✅ many rows per house | ✅ history table already shown | n/a | ✅ |
+| **Daily Checklist** | ✅ item-by-item all day | ✅ completions persist and re-render checked | n/a | ⚠️ date-scoped but limited |
 
----
-
-### Phase 3 — Setter Angles simplification
-- Remove Top / Mid / Bottom rows.
-- Keep only **Left Side** and **Right Side** inputs.
-- Update form, validation, and any chart/summary that reads those fields.
-- Existing rows with top/mid/bottom stay readable but new entry only writes left/right.
-
-**Verify:** New entry saves; historical records still render without crash.
+**Verdict:** the *Data Sheet* forms already do the right thing (they show a history table under the form). The **QA Hub entries do not** — they're one-shot forms that clear on save with no "today so far" view. Tray Wash is the worst offender because its whole design is "one row per day filled across 5 checks."
 
 ---
 
-### Phase 4 — Tray Wash PPM (5 checks/day) ✅ DONE
-- 3 temperature fields + 5 fixed PPM check fields (each with optional check-time input).
-- Persisted inside `qa_monitoring.candling_results` JSON blob to avoid a migration and preserve history.
+### 2. What I'd build (phased, one gate per phase like before)
 
-**Verify:** Round-trip save/read of all 5 PPM values in QA Hub → Tray Wash.
+#### Phase A — Tray Wash: proper daily-log resume + current-time defaults *(the trigger case)*
 
----
+- On mount, look up **today's tray_wash record** for the selected machine's house/company + `checkDate`. If it exists, load its `firstCheck / secondCheck / thirdCheck / ppm_check_1..5 / ppm_check_*_time` into the form.
+- Change the submit button from **"Add Daily Tray Wash Record"** (INSERT-only) to **"Save Progress"** — behavior: UPSERT on `(company_id, machine_id or batch_id, check_date, type='tray_wash')`. So user can save with 1 PPM filled, come back later, add 2 more, save again — always one row per day.
+- Show a small **"1 of 5 PPM checks entered · last saved 2:14 PM"** status line so they know where they are.
+- Each PPM time input: **on focus, if empty, prefill current local time** (`HH:MM`). User can still overwrite.
+- When user picks a **prior day** in the date picker: fetch that day's row and render the whole card **read-only** with a "Viewing Jun 12 — read-only" banner and no Save button.
 
-### Phase 5 — Data Sheet: weekly flock-level entry (not per-buggy) ✅ DONE
-- Weekly Flock Rollup row click now opens a **single consolidated flock block for the whole set week**:
-  - Total Eggs Set (week), Injected, Clears, Chicks Hatched, worst status.
-  - House count + earliest set date subtitle.
-- Per-house tiles are no longer the default view. They're an optional drill-down behind a "View house-level detail" toggle, lazy-loaded on expand.
-- No schema changes; hook `useWeeklyFlockRollup` already returns weekly aggregates.
+#### Phase B — Extend the same "today so far" pattern to other QA daily logs
 
-**Verify:** Data Sheet → Weekly Flock Rollup → click any flock row. You should see one consolidated flock block with weekly totals matching the row. Click "View house-level detail" to expand into house tiles (unchanged behaviour from there).
+For each of these, add a small "**Today's entries**" list *inside the form card* (not just the global Recent Entries table) so the operator sees what they've already logged for the selected machine + date:
 
----
+- **Rectal Temps** — list of today's readings by location + time, with delete.
+- **Culls** — today's cull checks for this flock (male/female/defect breakdown running total).
+- **Hatch Progression** — today's hour checks for this machine (A/B/C stages).
+- **Machine-wide Temps / Angles / Humidity** — today's shift readings for this machine.
 
-### Phase 6 — House-level dropdowns for Egg Pack Quality / Fertility / Residue ✅ DONE
-Entry-level matrix:
-| Data | Entry level |
-|---|---|
-| Hatch, HOI | Flock |
-| Fertility, Residue | Flock summary + **house-level detail (house dropdown)** |
-| Egg Pack Quality | **House-level (house dropdown required)** |
-| Temps/Angles/Humidity/Hatch Progression | Machine |
-| Tray Wash | Process |
+These stay as **append-only** (each Save = new row); the improvement is *visibility of what's already there today* so the user doesn't re-enter or forget a slot.
 
-Implementation:
-- `FlockDrillDown` now preloads the flock's houses for the week and exposes a **"Record Data"** panel with a **House # dropdown** (scoped to that flock) plus three action buttons: **Egg Pack Quality**, **Fertility**, **Residue**.
-- Selecting a house + clicking a button routes to `/data-entry/house/{houseId}/{type}`, which opens the existing entry form already bound to that batch — so `batch_id` (house) is persisted automatically on save.
-- If the flock has only one house that week, it's auto-selected. Buttons are disabled until a house is chosen.
-- No schema change; existing forms already write `batch_id`.
+#### Phase C — Time picker default = current local time (system-wide)
 
-**Verify:** Data Sheet → Weekly Rollup → open a flock → in the Record Data panel, pick a house and click Egg Pack / Fertility / Residue. Confirm the form opens for that house and the saved row has `batch_id` matching the selected house.
+Sweep every `<Input type="time">` and shadcn `<TimePicker>` used in data entry:
 
----
+- If value is empty **and** the picker gains focus (or the row is added), prefill `new Date().toTimeString().slice(0,5)` in the **user's local timezone**.
+- Files touched: `TrayWashEntry`, `RectalTempEntry`, `HatchProgressionEntry` (checkHour → could become a time picker), any other data-entry form that has a time field.
+- Never overwrite an existing value — only fill blanks.
 
-### Phase 7 — Cleanup + regression pass ✅ DONE
-- **Dead code removed:** `src/components/qa-hub/SetterAnglesEntry.tsx` was orphaned after Phase 3 (both single- and multi-setter workflows now use `MachineWideAnglesEntry` with Left/Right only). Deleted.
-- **Kept in place:** `SingleStagePage` / `MultiStagePage` and their routes/sidebar entries — these are **operation** pages (setter loading/unloading buggy operations), not QA scaffolding, and remain in active use.
-- **QA Hub components audited:** every remaining file in `src/components/qa-hub/` is referenced by either `QAHubPage`, `SingleSetterQAWorkflow`, or `MultiSetterQAWorkflow`.
-- **Typecheck:** `tsgo --noEmit` passes clean.
-- **Knowledge-base copy:** left for a follow-up content pass (no code impact).
+#### Phase D — Previous-day view = read-only, current-day = editable (shared rule)
 
-**Verify:** QA Hub, Data Sheet (Weekly Rollup → flock → Record Data + drill-down), Dashboard filters (hatchery/flock/house) all render without console errors.
+Add a single helper (e.g. `useDayScopedEntry`) that returns `{ mode: 'edit' | 'view', existingRow, lastSavedAt }` based on whether `checkDate === today`. Apply it to Tray Wash first, then the other QA daily-log forms in Phase B.
+
+- Yesterday's data → readable, disabled inputs, no Save button, "Viewing historical entry" banner.
+- Today → editable, resume-aware.
+- Future dates → blocked with a clear message ("Cannot log future dates").
 
 ---
 
-### Open questions before I start Phase 1
-1. **Culls** and **Specific Gravity** — house-level or flock-level? (Corey didn't confirm.)
-2. **Tray Wash PPM** — five fixed columns per day (one row per day) OR one row per check with a check-number field? I'll default to **five fixed columns per day-row** since he said "5 columns."
-3. Keep historical Top/Mid/Bottom angle data visible in read-only history, or hide entirely?
+### 3. Data model impact
 
-I'll wait for approval (and answers to the 3 questions if you have preferences) before touching code.
+- **No schema change needed for Tray Wash / QA logs** — everything is already inside `qa_monitoring.candling_results` JSON. I just need a fetch-by-`(machine_id, check_date, candling_results->>type)` query and an UPSERT path. If UPSERT via JSON key proves noisy, I'll add a small `qa_daily_log_key` generated column, but only if needed.
+- Nothing changes for Egg Pack / Fertility / Residue — they already work correctly.
+
+---
+
+### 4. Rollout order & verification gates
+
+1. **Phase A** — ship Tray Wash resume + time defaults + read-only past day. You verify by entering 2 PPMs, refreshing, confirming they're still there; then flipping the date back one day and confirming read-only.
+2. **Phase B** — Rectal Temps first (highest volume), then Culls, Hatch Progression, Machine-wide temps/angles/humidity. Each verified independently.
+3. **Phase C** — global time-default sweep (small, low-risk).
+4. **Phase D** — extract the shared helper once patterns settle; no user-visible change beyond consistency.
+
+Ask before I start Phase A:
+
+1. **Tray Wash "one row per day"** — confirm: **one row per (machine + house + date)**, right? Or per (house + date) regardless of machine? (Corey's PDF said process-level — I'll default to *house + date* if you don't say otherwise.)
+2. For the **read-only past-day view**, do you want an **"Edit"** button behind a permissions check (for admins to correct a bad reading), or truly read-only for everyone?
+3. Time default — **user's browser local time** is fine (that's what "current time of the users location" implies)? Or should it come from the hatchery's configured timezone?
