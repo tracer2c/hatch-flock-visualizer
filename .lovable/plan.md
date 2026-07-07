@@ -49,21 +49,22 @@ Tabs: `Temps | Angles | Humidity | Rectal Temps | Tray Wash | Culls | Specific G
 
 ---
 
-### Phase 4 — Tray Wash PPM (5 checks/day)
-- Add fields: `ppm_check_1 … ppm_check_5` (plus existing temperature).
-- Migration on `qa_monitoring` (or tray-wash-specific table) to add 5 numeric columns.
-- UI: five inputs in a row, each with optional time stamp label (1st–5th check).
+### Phase 4 — Tray Wash PPM (5 checks/day) ✅ DONE
+- 3 temperature fields + 5 fixed PPM check fields (each with optional check-time input).
+- Persisted inside `qa_monitoring.candling_results` JSON blob to avoid a migration and preserve history.
 
-**Verify:** Round-trip save/read of all 5 PPM values.
+**Verify:** Round-trip save/read of all 5 PPM values in QA Hub → Tray Wash.
 
 ---
 
-### Phase 5 — Data Sheet: weekly flock-level entry (not per-buggy)
-- Weekly Flock Rollup card click → opens a **single flock block for the whole set week** showing total eggs set for the week.
-- Remove per-buggy split on the entry view. Buggy-level detail becomes an optional drill-down, not the default.
-- Keep the rollup summary UI you already like.
+### Phase 5 — Data Sheet: weekly flock-level entry (not per-buggy) ✅ DONE
+- Weekly Flock Rollup row click now opens a **single consolidated flock block for the whole set week**:
+  - Total Eggs Set (week), Injected, Clears, Chicks Hatched, worst status.
+  - House count + earliest set date subtitle.
+- Per-house tiles are no longer the default view. They're an optional drill-down behind a "View house-level detail" toggle, lazy-loaded on expand.
+- No schema changes; hook `useWeeklyFlockRollup` already returns weekly aggregates.
 
-**Verify:** Open a week for one flock — one consolidated block, correct weekly totals matching sum of underlying batches.
+**Verify:** Data Sheet → Weekly Flock Rollup → click any flock row. You should see one consolidated flock block with weekly totals matching the row. Click "View house-level detail" to expand into house tiles (unchanged behaviour from there).
 
 ---
 
