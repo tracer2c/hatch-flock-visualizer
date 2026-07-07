@@ -75,6 +75,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
     invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
   });
