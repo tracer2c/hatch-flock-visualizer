@@ -1,19 +1,13 @@
-import { useEffect, useState, useMemo } from "react";
-import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { format, startOfWeek } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Home, ChevronDown, ChevronRight, Package, Egg, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Home, ChevronDown, ChevronRight, Package, Egg, AlertTriangle, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
+import { formatSetWeekLabel } from "@/hooks/useFlockWeekHouses";
 
 interface HouseTile {
   id: string;
