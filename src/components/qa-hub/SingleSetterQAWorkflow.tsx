@@ -98,6 +98,14 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
     selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
   );
 
+  // Today's tray-wash row for the selected machine + date (resume support).
+  const { data: existingTrayWash, isLoading: trayWashLoading } = useTodaysTrayWash(
+    selectedMachine?.id ?? null,
+    checkDate
+  );
+  const todayISO = new Date().toISOString().split('T')[0];
+  const isPastDay = checkDate < todayISO;
+
   // Auto-select machine if preSelectedHouseId is provided
   React.useEffect(() => {
     if (preSelectedHouseId && machines && machines.length > 0) {
