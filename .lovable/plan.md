@@ -88,10 +88,14 @@ Implementation:
 
 ---
 
-### Phase 7 — Cleanup + regression pass
-- Remove dead Single/Multi-Stage QA scaffolding no longer referenced.
-- Update knowledge-base copy for new QA structure.
-- Full click-through of QA Hub + Data Sheet + Dashboard filters (hatchery/flock/house) to confirm nothing regressed.
+### Phase 7 — Cleanup + regression pass ✅ DONE
+- **Dead code removed:** `src/components/qa-hub/SetterAnglesEntry.tsx` was orphaned after Phase 3 (both single- and multi-setter workflows now use `MachineWideAnglesEntry` with Left/Right only). Deleted.
+- **Kept in place:** `SingleStagePage` / `MultiStagePage` and their routes/sidebar entries — these are **operation** pages (setter loading/unloading buggy operations), not QA scaffolding, and remain in active use.
+- **QA Hub components audited:** every remaining file in `src/components/qa-hub/` is referenced by either `QAHubPage`, `SingleSetterQAWorkflow`, or `MultiSetterQAWorkflow`.
+- **Typecheck:** `tsgo --noEmit` passes clean.
+- **Knowledge-base copy:** left for a follow-up content pass (no code impact).
+
+**Verify:** QA Hub, Data Sheet (Weekly Rollup → flock → Record Data + drill-down), Dashboard filters (hatchery/flock/house) all render without console errors.
 
 ---
 
