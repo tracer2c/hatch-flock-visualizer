@@ -789,10 +789,13 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
         </TabsContent>
 
         <TabsContent value="wash">
-          <TrayWashEntry 
-            technicianName={technicianName} 
-            checkDate={checkDate} 
-            onSubmit={handleSubmitTrayWash} 
+          <TrayWashEntry
+            technicianName={technicianName}
+            checkDate={checkDate}
+            existingRow={existingTrayWash ?? null}
+            readOnly={isPastDay}
+            loadingExisting={trayWashLoading}
+            onSubmit={handleSubmitTrayWash}
           />
         </TabsContent>
 
