@@ -133,7 +133,9 @@ export default function HatchHOIEntryPage() {
 
   // Day scope: past week → view-only. Use last day of week as the "check date".
   const day = useDayScopedEntry({
-    checkDate: weekMonday ? addDays(weekMonday, 6) : new Date(),
+    checkDate: weekMonday
+      ? format(addDays(weekMonday, 6), "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
   });
   const isPastWeek = day.isPastDay;
   const canEdit = !readOnly && !isPastWeek;
