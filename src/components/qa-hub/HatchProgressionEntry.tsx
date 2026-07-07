@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Timer, Cpu, Home } from "lucide-react";
 import { toast } from 'sonner';
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockOption {
   flock_id: string;
@@ -21,6 +22,8 @@ interface HatchProgressionEntryProps {
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
   defaultBatchId?: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   /** Optional labels shown in the header so the user can confirm the machine/house being recorded against. */
   machineLabel?: string;
   houseLabel?: string;
