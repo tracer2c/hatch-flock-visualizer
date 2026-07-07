@@ -755,6 +755,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             technicianName={technicianName} 
             checkDate={checkDate} 
             flockOptions={getAvailableFlocks()}
+            machineLabel={`Machine ${selectedMachine.machine_number}`}
             onSubmit={handleSubmitHatchProgression} 
           />
         </TabsContent>
