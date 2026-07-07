@@ -589,7 +589,14 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         </TabsContent>
 
         <TabsContent value="tray-wash">
-          <TrayWashEntry technicianName={technicianName} checkDate={checkDate} onSubmit={handleSubmitTrayWash} />
+          <TrayWashEntry
+            technicianName={technicianName}
+            checkDate={checkDate}
+            existingRow={existingTrayWash ?? null}
+            readOnly={isPastDay}
+            loadingExisting={trayWashLoading}
+            onSubmit={handleSubmitTrayWash}
+          />
         </TabsContent>
 
         <TabsContent value="culls">
