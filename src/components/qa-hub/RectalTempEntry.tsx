@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Thermometer } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface RectalTempEntryProps {
   technicianName: string;
   checkDate: string;
+  machineId?: string | null;
+  isPastDay?: boolean;
   onSubmit: (data: {
     location: string;
     temperature: number;
