@@ -218,6 +218,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
       if (!result.success) throw new Error(result.error);
       toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Machine-wide angles saved!');
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       setNotes('');
       if (!result.offline) refetch();
     } catch (error: any) {
@@ -259,6 +260,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
       if (!result.success) throw new Error(result.error);
       toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Machine-wide humidity saved!');
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       setNotes('');
       if (!result.offline) refetch();
     } catch (error: any) {
@@ -289,6 +291,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
       if (!result.success) throw new Error(result.error);
       toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Rectal temperature saved!');
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -400,6 +403,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
       if (!result.success) throw new Error(result.error);
       toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Cull check saved!');
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
@@ -475,6 +479,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
       if (!result.success) throw new Error(result.error);
       toast.success(result.offline ? 'Saved offline — will sync when back online' : 'Hatch progression saved!');
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       setNotes('');
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message}`);
