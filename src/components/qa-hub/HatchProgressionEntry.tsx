@@ -247,7 +247,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
           <div className="flex items-end">
             <Button
               onClick={handleSubmit}
-              disabled={!technicianName.trim()}
+              disabled={isPastDay || !technicianName.trim()}
               className="w-full"
             >
               Add Record
@@ -270,6 +270,31 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
             </div>
           </div>
         )}
+
+        <TodaysEntriesList
+          machineId={machineId}
+          checkDate={checkDate}
+          type="hatch_progression"
+          isPastDay={isPastDay}
+          emptyLabel="No hatch progression checks yet today."
+          renderSummary={(e) => {
+            const stg = e.candling_results?.stage ?? '—';
+            const hr = e.candling_results?.checkHour;
+            const pct = e.candling_results?.percentageOut;
+            const total = e.candling_results?.totalCount;
+            const hatched = e.candling_results?.hatchedCount;
+            return (
+              <span>
+                Stage <span className="font-medium">{stg}</span>
+                {typeof hr === 'number' && <> · hr {hr}</>}
+                {typeof pct === 'number' && <> · <span className="font-medium">{pct}%</span></>}
+                {typeof hatched === 'number' && typeof total === 'number' && (
+                  <span className="text-muted-foreground"> ({hatched}/{total})</span>
+                )}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
