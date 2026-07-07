@@ -574,6 +574,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
             checkDate={checkDate} 
             defaultFlockId={selectedMachine.currentHouse?.flock?.id}
             defaultBatchId={selectedMachine.currentHouse?.id}
+            machineLabel={`Machine ${selectedMachine.machine_number}`}
+            houseLabel={selectedMachine.currentHouse ? `House ${selectedMachine.currentHouse.batch_number}` : undefined}
             onSubmit={handleSubmitHatchProgression} 
           />
         </TabsContent>
