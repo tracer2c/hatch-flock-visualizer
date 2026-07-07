@@ -211,18 +211,15 @@ const FertilityEntryPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+              <FlockWeekHouseSwitcher currentHouseId={houseInfo.id} entrySegment="fertility" />
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Flock & House</p>
                   <p className="font-medium">{houseInfo.flock_name} # {houseInfo.house_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Machine</p>
-                  <p className="font-medium">{houseInfo.machine_number}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Set Date</p>
-                  <p className="font-medium">{formatLocalDate(houseInfo.set_date)}</p>
+                  <p className="text-gray-600">Set Week</p>
+                  <p className="font-medium">{formatSetWeekLabel(houseInfo.set_date)}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Total Eggs</p>
@@ -236,9 +233,9 @@ const FertilityEntryPage = () => {
                   <p className="text-gray-600">Chicks Hatched</p>
                   <p className="font-medium">{houseInfo.chicks_hatched.toLocaleString()}</p>
                 </div>
-                <div className="col-span-2 md:col-span-6">
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div className="md:col-start-5">
+                <div className="col-span-2 md:col-span-5">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="md:col-start-4">
                       <p className="text-gray-600">HOI % (Hatched / Injected)</p>
                       <p className="font-medium">{houseInfo.eggs_injected > 0 ? `${((houseInfo.chicks_hatched / houseInfo.eggs_injected) * 100).toFixed(2)}%` : '-'}</p>
                     </div>
