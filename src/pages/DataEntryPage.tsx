@@ -24,7 +24,9 @@ const DataEntryPage = () => {
       return "weekly";
     }
   });
-  const [drilldownFlock, setDrilldownFlock] = useState<WeeklyFlockRollupRow | null>(null);
+  const [drilldownFlock, setDrilldownFlock] = useState<
+    { row: WeeklyFlockRollupRow; weekStart: Date } | null
+  >(null);
   const { hasWriteAccess } = usePermissions();
   const readOnly = !hasWriteAccess('data_entry');
 
