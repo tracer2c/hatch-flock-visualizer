@@ -1,79 +1,93 @@
+## Phased Implementation Plan — QA Hub + Data Sheet Restructure
 
-# Dashboard Redesign + Analytics Nav & Filters
+Each phase ships independently. After each phase I will verify (build passes, form insert works, screenshot check) before starting the next. I will confirm with you at each phase gate.
 
-Rebuild the Dashboard as a lightweight triage/summary screen (matching the mockup) and restructure the sidebar so the four analytics-style pages live under an "Analytics" dropdown in the top nav. Add a shared filter bar (Date, Hatcheries, Flock/House) that actually drives the pages under Analytics.
+---
 
-## 1. Dashboard rebuild (`/`)
+### Phase 1 — QA Hub Reorganization (navigation shell only)
+Restructure QA Hub primary tabs from *Single Stage / Multi Stage / Machine* to **QA-type-first**:
 
-Replace `OverviewOperations` (currently a passthrough to `BatchOverviewDashboard`) with a new `DashboardHome` composed of small, focused sections. Nothing on this page becomes an editor — every action links to Data Entry / Data Sheet / QA Hub.
+Tabs: `Temps | Angles | Humidity | Rectal Temps | Tray Wash | Culls | Specific Gravity | Hatch Progression`
 
-Sections top → bottom, matching the reference screenshot:
+- Move existing forms under the new tab structure (no logic change yet).
+- Inside each tab, add filters/dropdowns as needed (machine, house, flock).
+- Mark which tabs are machine-scoped vs flock/process-scoped (metadata used by later phases).
 
-1. **Page header** — "Hatchery Dashboard" + subtitle + right-aligned filter row: Set-Date Week picker, Hatchery multi-select, Machine multi-select. "Last updated" stamp.
-2. **KPI cards (5)** — Total Eggs Set (week), Avg Fertility %, Avg Hatch %, Avg HOI %, Critical QA Alerts. Each shows current value, target (where applicable), and week-over-week delta.
-3. **Needs Attention** — compact exceptions table (max 5 rows) with columns Flock / Issue tag / Details / Set Date / Action button. Issue categories: Performance Variance, Missing Data, Below Target, QA Alert, Due Soon. "View all needs attention →" links to Data Sheet with the same filter applied.
-4. **Weekly Flock Status** — small summary card: Total Flocks / Complete / Missing Data / Critical Issues counts + buttons `Open Weekly Rollup` (→ `/data-entry` weekly rollup) and `Go to Data Entry`.
-5. **Active Houses Pipeline** — up to 3 rows: house code, flock/machine, status pill (In Setter / In Hatcher), "Due in N days". "View full pipeline →" opens Live Tracking.
-6. **QA Alerts** (right column on desktop, stacked on mobile) — top 3 critical alerts with temp/humidity + detected time. "Go to QA Hub" button.
+**Scope matrix applied:**
+| QA type | Scope |
+|---|---|
+| Temps, Angles, Humidity, Hatch Progression | Machine |
+| Rectal Temps, Tray Wash | Process / room |
+| Culls, Gravity | Flock/house (confirm) |
 
-No inline editing, no full flock table, no export controls, no worksheet columns. Data comes from existing hooks (`useWeeklyFlockRollup`, `useAlerts`, `useHousesData`, targets, etc.) — no new tables.
+**Verify:** Every existing QA record still opens/edits from the new tab. No data loss.
 
-### New/changed files
-- `src/components/dashboard/DashboardHome.tsx` (new — orchestrates sections)
-- `src/components/dashboard/sections/KpiRow.tsx`
-- `src/components/dashboard/sections/NeedsAttention.tsx`
-- `src/components/dashboard/sections/WeeklyFlockStatusCard.tsx`
-- `src/components/dashboard/sections/ActiveHousesPipeline.tsx`
-- `src/components/dashboard/sections/DashboardQaAlerts.tsx`
-- `src/pages/Index.tsx` — render `DashboardHome` instead of `OverviewOperations`
-- Leave `BatchOverviewDashboard` and its tabs in place; the heavy tabbed analytics stays reachable through the Analytics menu and Data Sheet, not the dashboard.
+---
 
-## 2. Sidebar cleanup + Analytics top-nav dropdown
+### Phase 2 — Fix Hatch Progression bug + tie to machine
+- Debug "Add Record" for Hatch Progression: check handler, required fields, `machine_id / flock_id / stage / check_hour / total_count / hatched_count`, RLS, and any NOT NULL columns.
+- Ensure machine dropdown is required and persisted.
+- Migration only if a column is missing/nullable-mismatch.
 
-Currently the sidebar shows Dashboard, Multi-Stage, Single-Stage, Data Entry, QA Hub, Data Sheet, Timeline, Daily Tasks, Smart Analytics, Management. The four analytics-flavored screens (Live Tracking, House Flow, Process Flow, Machine Utilization) are only reachable via direct URLs today.
+**Verify:** Insert a record end-to-end, reload, confirm row via `supabase--read_query`.
 
-Changes:
-- **Sidebar** stays operational: Dashboard, Multi-Stage, Single-Stage, Data Entry, QA Hub, Data Sheet, Timeline, Daily Tasks, Smart Analytics, Management. (No new items.)
-- **TopBar** — add an "Analytics" dropdown button (icon `TrendingUp`, matches mockup style) between the Search box and the Home icon. Items:
-  - Live Tracking → `/live-tracking`
-  - House Flow → `/house-flow`
-  - Process Flow → `/process-flow`
-  - Machine Utilization → `/machine-utilization`
-- Gate each item through `usePermissions().hasFeatureAccess` using the existing feature keys so role-based hiding continues to work.
-- Highlight the current analytics route in the dropdown trigger (active pill styling) when the user is on one of those pages.
+---
 
-### Files
-- `src/components/TopBar.tsx` — insert the dropdown (use existing `DropdownMenu` primitives).
-- `src/components/ModernSidebar.tsx` — no item changes; keep as-is.
+### Phase 3 — Setter Angles simplification
+- Remove Top / Mid / Bottom rows.
+- Keep only **Left Side** and **Right Side** inputs.
+- Update form, validation, and any chart/summary that reads those fields.
+- Existing rows with top/mid/bottom stay readable but new entry only writes left/right.
 
-## 3. Shared Analytics filter bar
+**Verify:** New entry saves; historical records still render without crash.
 
-Add a shared `AnalyticsFilters` header used by the four Analytics pages (Live Tracking, House Flow, Process Flow, Machine Utilization) and the Dashboard header. Requirements:
+---
 
-- **Date range** — presets (This week / Last week / MTD / Last 30 days / Custom) using the shadcn date-range picker (`pointer-events-auto`).
-- **Hatcheries** — multi-select of the user's hatcheries (from `units` via existing loader), "All hatcheries" default.
-- **Flocks / Houses** — dependent multi-select scoped to the selected hatcheries. A small toggle switches between filtering by Flock and by House so power users can pick the axis they care about.
+### Phase 4 — Tray Wash PPM (5 checks/day)
+- Add fields: `ppm_check_1 … ppm_check_5` (plus existing temperature).
+- Migration on `qa_monitoring` (or tray-wash-specific table) to add 5 numeric columns.
+- UI: five inputs in a row, each with optional time stamp label (1st–5th check).
 
-Filters must actually drive queries — not just be decorative:
-- Introduce a lightweight `AnalyticsFilterContext` (`src/contexts/AnalyticsFilterContext.tsx`) that persists selection to `sessionStorage` and exposes `{ dateRange, hatcheryIds, flockIds, houseIds, mode }`.
-- Wrap the analytics routes with the provider in `App.tsx` (single `<Route element>` layout wrapper containing the four routes).
-- Update the page components to read the context and pass values into their existing hooks:
-  - `LiveHouseTracker` → filter by hatchery + house
-  - `HouseFlowPage` → filter by hatchery + flock/house + date
-  - `ProcessFlowDashboard` → date + hatchery + flock
-  - `MachineUtilizationPage` → date + hatchery
-- Where a hook doesn't accept filter args yet, extend its signature (params object) and apply the filter client-side after fetch if a server change would be out of scope; keep the change additive so other callers are unaffected.
-- Dashboard header re-uses the same filter component (same context provider mounted at the app shell) so Set-Date Week + Hatchery selection stays consistent when the user moves between Dashboard and Analytics pages.
+**Verify:** Round-trip save/read of all 5 PPM values.
 
-### Files
-- `src/contexts/AnalyticsFilterContext.tsx` (new)
-- `src/components/analytics/AnalyticsFilters.tsx` (new — date range, hatchery multi-select, flock/house multi-select with mode toggle)
-- `src/components/analytics/AnalyticsPageShell.tsx` (new — page header + filter bar wrapper used by the four pages)
-- `src/pages/LiveTrackingPage.tsx`, `src/pages/HouseFlowPage.tsx`, `src/pages/ProcessFlowPage.tsx`, `src/pages/MachineUtilizationPage.tsx` — wrap in `AnalyticsPageShell`, read context
-- `src/App.tsx` — mount `AnalyticsFilterProvider` around the app shell so both TopBar dropdown targets and the Dashboard share the same filter state
-- Underlying hooks touched only enough to accept the new params (no schema changes, no new tables)
+---
 
-## Out of scope
-- No changes to Data Sheet, Data Entry, or the Flock Detail Editor introduced earlier.
-- No new Supabase migrations.
-- Sidebar item list stays as-is; Analytics lives in the top nav per your instruction.
+### Phase 5 — Data Sheet: weekly flock-level entry (not per-buggy)
+- Weekly Flock Rollup card click → opens a **single flock block for the whole set week** showing total eggs set for the week.
+- Remove per-buggy split on the entry view. Buggy-level detail becomes an optional drill-down, not the default.
+- Keep the rollup summary UI you already like.
+
+**Verify:** Open a week for one flock — one consolidated block, correct weekly totals matching sum of underlying batches.
+
+---
+
+### Phase 6 — House-level dropdowns for Egg Pack Quality / Fertility / Residue
+Entry-level matrix:
+| Data | Entry level |
+|---|---|
+| Hatch, HOI | Flock |
+| Fertility, Residue | Flock summary + **house-level detail (house dropdown)** |
+| Egg Pack Quality | **House-level (house dropdown required)** |
+| Temps/Angles/Humidity/Hatch Progression | Machine |
+| Tray Wash | Process |
+
+- Add House # dropdown (scoped to the selected flock) to those three forms.
+- Persist `batch_id` (house) on each row; backfill not required.
+
+**Verify:** Create one record per form with house selected; confirm row + house association in DB.
+
+---
+
+### Phase 7 — Cleanup + regression pass
+- Remove dead Single/Multi-Stage QA scaffolding no longer referenced.
+- Update knowledge-base copy for new QA structure.
+- Full click-through of QA Hub + Data Sheet + Dashboard filters (hatchery/flock/house) to confirm nothing regressed.
+
+---
+
+### Open questions before I start Phase 1
+1. **Culls** and **Specific Gravity** — house-level or flock-level? (Corey didn't confirm.)
+2. **Tray Wash PPM** — five fixed columns per day (one row per day) OR one row per check with a check-number field? I'll default to **five fixed columns per day-row** since he said "5 columns."
+3. Keep historical Top/Mid/Bottom angle data visible in read-only history, or hide entirely?
+
+I'll wait for approval (and answers to the 3 questions if you have preferences) before touching code.
