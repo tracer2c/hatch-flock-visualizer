@@ -109,7 +109,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
           a.set_date.localeCompare(b.set_date)
       );
       setHouses(tiles);
-      if (tiles.length === 1) setQuickHouseId(tiles[0].id);
+      if (tiles.length > 0) setFirstHouseId(tiles[0].id);
       setLoading(false);
     })();
     return () => {
@@ -117,11 +117,14 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
     };
   }, [flock.house_ids]);
 
-  const houseOptions = useMemo(() => houses ?? [], [houses]);
-
-  const openEntry = (type: "egg-pack" | "fertility" | "residue") => {
-    if (!quickHouseId) return;
-    navigate(`/data-entry/house/${quickHouseId}/${type}`);
+  const openEntry = (
+    type: "egg-pack" | "fertility" | "residue" | "clears-injected"
+  ) => {
+    if (!firstHouseId) return;
+    const qs = weekISO
+      ? `?flockKey=${encodeURIComponent(flockKey)}&week=${encodeURIComponent(weekISO)}`
+      : "";
+    navigate(`/data-entry/house/${firstHouseId}/${type}${qs}`);
   };
 
 
