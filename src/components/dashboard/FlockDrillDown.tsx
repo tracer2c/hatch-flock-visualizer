@@ -285,7 +285,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               ) : (
                 <ChevronRight className="h-4 w-4 mr-2" />
               )}
-              {showHouses ? "Hide house-level detail" : "View house-level detail"}
+              {showHouses ? "Hide individual houses" : "Investigate individual houses (optional)"}
               <span className="ml-2 text-muted-foreground">
                 ({flock.house_count})
               </span>
