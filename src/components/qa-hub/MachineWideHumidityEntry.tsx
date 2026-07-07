@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Droplets, Plus, AlertTriangle, Info, Thermometer } from "lucide-react";
+import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockDetail {
   flock_id: string;
