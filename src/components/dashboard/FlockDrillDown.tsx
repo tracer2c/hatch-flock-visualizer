@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft, Home, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 
