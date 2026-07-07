@@ -7,6 +7,7 @@ import FlockDrillDown from "@/components/dashboard/FlockDrillDown";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { startOfWeek } from "date-fns";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 
 type ViewMode = "weekly" | "houses";
