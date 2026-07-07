@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft, Home, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 
@@ -45,9 +45,12 @@ const fmtInt = (n: number | null | undefined) =>
 
 export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
   const [houses, setHouses] = useState<HouseTile[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showHouses, setShowHouses] = useState(false);
 
   useEffect(() => {
+    if (!showHouses) return;
+    if (houses !== null) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -96,7 +99,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [flock.house_ids]);
+  }, [showHouses, houses, flock.house_ids]);
 
   return (
     <div className="space-y-4">
@@ -137,61 +140,129 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse }: Props) {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Loading…</div>
-          ) : !houses || houses.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No houses found.</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {houses.map((h) => (
-                <button
-                  key={h.id}
-                  onClick={() => onOpenHouse(h.id)}
-                  className="text-left rounded-lg border bg-card hover:bg-muted/50 transition p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <Home className="h-4 w-4 text-primary" />
-                      House {h.house_number || "—"}
-                    </div>
-                    <Badge variant="outline" className={statusColor(h.status)}>
-                      {h.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Set {format(new Date(h.set_date), "MMM d, yyyy")}
-                    {h.machine_number ? ` · ${h.machine_number}` : ""}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <div className="text-muted-foreground">Eggs</div>
-                      <div className="font-medium">{fmtInt(h.total_eggs_set)}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Injected</div>
-                      <div className="font-medium">{fmtInt(h.eggs_injected)}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Clears</div>
-                      <div className="font-medium">{fmtInt(h.eggs_cleared)}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 mt-3 flex-wrap">
-                    <Badge variant="secondary" className="text-[10px]">
-                      EPQ {h.epq_count}
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
-                      Fert {h.fertility_count}
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
-                      Residue {h.residue_count}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+        <CardContent className="space-y-4">
+          {/* Weekly flock-level summary — the default view for the set week */}
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold">Weekly Flock Totals</div>
+                <div className="text-xs text-muted-foreground">
+                  Consolidated across {flock.house_count}{" "}
+                  {flock.house_count === 1 ? "house" : "houses"} set this week
+                  {flock.earliest_set_date
+                    ? ` · from ${format(new Date(flock.earliest_set_date), "MMM d")}`
+                    : ""}
+                </div>
+              </div>
+              <Badge variant="outline" className={statusColor(flock.worst_status)}>
+                {flock.worst_status.replace("_", " ")}
+              </Badge>
             </div>
-          )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <div className="text-muted-foreground text-xs">Total Eggs Set (week)</div>
+                <div className="text-xl font-semibold">
+                  {fmtInt(flock.total_eggs_set)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Injected</div>
+                <div className="text-xl font-semibold">
+                  {fmtInt(flock.total_eggs_injected)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Clears</div>
+                <div className="text-xl font-semibold">
+                  {fmtInt(flock.total_eggs_cleared)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Chicks Hatched</div>
+                <div className="text-xl font-semibold">
+                  {fmtInt(flock.total_chicks_hatched)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Optional house-level drill-down */}
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHouses((v) => !v)}
+              className="mb-3"
+            >
+              {showHouses ? (
+                <ChevronDown className="h-4 w-4 mr-2" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-2" />
+              )}
+              {showHouses ? "Hide house-level detail" : "View house-level detail"}
+              <span className="ml-2 text-muted-foreground">
+                ({flock.house_count})
+              </span>
+            </Button>
+
+            {showHouses &&
+              (loading ? (
+                <div className="py-8 text-center text-muted-foreground">Loading…</div>
+              ) : !houses || houses.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  No houses found.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {houses.map((h) => (
+                    <button
+                      key={h.id}
+                      onClick={() => onOpenHouse(h.id)}
+                      className="text-left rounded-lg border bg-card hover:bg-muted/50 transition p-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <Home className="h-4 w-4 text-primary" />
+                          House {h.house_number || "—"}
+                        </div>
+                        <Badge variant="outline" className={statusColor(h.status)}>
+                          {h.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Set {format(new Date(h.set_date), "MMM d, yyyy")}
+                        {h.machine_number ? ` · ${h.machine_number}` : ""}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-muted-foreground">Eggs</div>
+                          <div className="font-medium">{fmtInt(h.total_eggs_set)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Injected</div>
+                          <div className="font-medium">{fmtInt(h.eggs_injected)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Clears</div>
+                          <div className="font-medium">{fmtInt(h.eggs_cleared)}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 mt-3 flex-wrap">
+                        <Badge variant="secondary" className="text-[10px]">
+                          EPQ {h.epq_count}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Fert {h.fertility_count}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Residue {h.residue_count}
+                        </Badge>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ))}
+          </div>
         </CardContent>
       </Card>
     </div>
