@@ -51,7 +51,7 @@ const SECTION_MAP: Record<QAType, { single?: string; multi?: string }> = {
 
 const TYPE_META: Record<Exclude<QAType, 'overview'>, {
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   hint: string;
 }> = {
   temps:    { label: 'Temps',           icon: Thermometer,     hint: 'Machine-specific — pick a setter or hatcher.' },
