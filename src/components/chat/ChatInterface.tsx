@@ -33,6 +33,7 @@ export const ChatInterface = () => {
   const [openaiConfigured, setOpenaiConfigured] = useState<boolean | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -42,6 +43,12 @@ export const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Keep composer focused on mount and after stream completion
+  useEffect(() => {
+    if (!isLoading) inputRef.current?.focus();
+  }, [isLoading]);
+
 
   // Check OpenAI configuration on mount
   useEffect(() => {
@@ -204,8 +211,6 @@ export const ChatInterface = () => {
     { text: "Show machine utilization analytics", icon: Sparkles, color: "text-amber-500" },
     { text: "Create a fertility vs hatch rate comparison", icon: TrendingUp, color: "text-rose-500" },
     { text: "Display house status breakdown", icon: BarChart3, color: "text-cyan-500" },
-    { text: "Analyze recent performance patterns", icon: Activity, color: "text-orange-500" },
-    { text: "Compare current vs historical data", icon: Sparkles, color: "text-indigo-500" }
   ];
 
   const handleSuggestedPrompt = (prompt: string) => {
@@ -217,28 +222,13 @@ export const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
-      {/* Compact Header */}
-      <div className="flex-shrink-0 border-b bg-gradient-to-r from-background via-background to-muted/20">
-        <div className="max-w-5xl mx-auto px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 animate-pulse-glow">
-                <MessageCircle className="h-5 w-5 text-primary" />
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold text-foreground">Smart Analytics</h1>
-              <p className="text-xs text-muted-foreground">AI-powered insights</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="relative flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
 
-      {/* Main Content Area */}
+
+      {/* Main Content Area (scrolls under floating composer) */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
+
           {/* OpenAI Configuration Warning */}
           {openaiConfigured === false && (
             <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20 animate-fade-in">
@@ -253,17 +243,18 @@ export const ChatInterface = () => {
           )}
           
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-14rem)]">
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)]">
               {/* Welcome Section */}
-              <div className="text-center mb-8 animate-fade-in">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-float">
-                  <Sparkles className="h-8 w-8 text-primary" />
+              <div className="text-center mb-6 animate-fade-in">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                  <Sparkles className="h-6 w-6 text-primary" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">What can I help you analyze?</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-1.5">What can I help you analyze?</h2>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Ask me about hatchery data, generate reports, or get insights about your operations
+                  Ask about hatchery data, generate reports, or explore insights on your operations.
                 </p>
               </div>
+
               
               {/* Prompt Grid */}
               <div className="w-full max-w-3xl">
@@ -302,7 +293,7 @@ export const ChatInterface = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {messages.map((message, msgIndex) => (
                 <div
                   key={message.id}
@@ -415,55 +406,66 @@ export const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Compact Input Bar */}
-      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 py-3">
-          <form onSubmit={handleSubmit}>
-            <div className={cn(
-              "flex gap-3 items-center p-1.5 rounded-xl border-2 bg-muted/30 transition-all duration-200",
-              isFocused ? "border-primary/50 shadow-lg shadow-primary/5 bg-background" : "border-transparent"
-            )}>
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Ask me anything about your hatchery data..."
-                className={cn(
-                  "flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-10",
-                  "placeholder:text-muted-foreground/60"
-                )}
-                disabled={isLoading}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={startListening}
-                disabled={isLoading}
-                className={cn(
-                  "h-9 w-9 rounded-lg transition-all duration-200",
-                  isListening ? 'text-destructive bg-destructive/10' : 'hover:bg-muted'
-                )}
-              >
-                <Mic className={cn("h-4 w-4", isListening && "animate-pulse")} />
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading || !input.trim()}
-                size="icon"
-                className={cn(
-                  "h-9 w-9 rounded-lg transition-all duration-200",
-                  "hover:scale-105 active:scale-95",
-                  !input.trim() && "opacity-50"
-                )}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
-        </div>
+      {/* Floating fade + composer */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background via-background/85 to-transparent" />
+      <div className="absolute inset-x-0 bottom-6 px-4 sm:px-6 flex justify-center">
+        <form onSubmit={handleSubmit} className="w-full max-w-3xl pointer-events-auto">
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-2xl border bg-background/95 backdrop-blur-md",
+              "pl-4 pr-2 py-2 transition-all duration-200",
+              "shadow-[0_10px_40px_-12px_hsl(var(--primary)/0.25)]",
+              isFocused
+                ? "border-primary/50 ring-4 ring-primary/10"
+                : "border-border/70 hover:border-border"
+            )}
+          >
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Ask me anything about your hatchery data…"
+              className={cn(
+                "flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-10",
+                "placeholder:text-muted-foreground/60"
+              )}
+              disabled={isLoading}
+              autoFocus
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={startListening}
+              disabled={isLoading}
+              className={cn(
+                "h-9 w-9 rounded-xl transition-all duration-200",
+                isListening ? "text-destructive bg-destructive/10" : "hover:bg-muted"
+              )}
+            >
+              <Mic className={cn("h-4 w-4", isListening && "animate-pulse")} />
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-xl transition-all duration-200",
+                "hover:scale-105 active:scale-95",
+                !input.trim() && "opacity-50"
+              )}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
+            Smart Analytics · AI-generated results may need verification.
+          </p>
+        </form>
       </div>
+
     </div>
   );
 };
