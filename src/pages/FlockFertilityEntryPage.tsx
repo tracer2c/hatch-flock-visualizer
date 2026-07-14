@@ -12,7 +12,10 @@ import {
   HouseSelectField,
   WHOLE_FLOCK_VALUE,
   resolveBatchId,
+  isWholeFlock,
 } from "@/components/dashboard/HouseSelectField";
+import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function FlockFertilityEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
@@ -20,9 +23,11 @@ export default function FlockFertilityEntryPage() {
   const weekParam = params.get("week");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const ctx = useFlockWeekBatches(flockKey, weekParam);
   const [houseSel, setHouseSel] = useState<string>(WHOLE_FLOCK_VALUE);
+  const wholeFlock = isWholeFlock(houseSel);
   const batchId = useMemo(
     () => resolveBatchId(houseSel, ctx.batches),
     [houseSel, ctx.batches]
@@ -31,7 +36,10 @@ export default function FlockFertilityEntryPage() {
 
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
-    if (!batchId) return;
+    if (!batchId) {
+      setRows([]);
+      return;
+    }
     (async () => {
       const { data, error } = await supabase
         .from("fertility_analysis")
@@ -47,10 +55,7 @@ export default function FlockFertilityEntryPage() {
     setRows(newData.map((r) => ({ ...r, batch_id: batchId })));
     toast({
       title: "Fertility saved",
-      description:
-        houseSel === WHOLE_FLOCK_VALUE
-          ? "Recorded for the flock (default house)"
-          : `Recorded for House ${activeBatch?.house_number || "—"}`,
+      description: `Recorded for House ${activeBatch?.house_number || "—"}`,
     });
   };
 
@@ -81,7 +86,26 @@ export default function FlockFertilityEntryPage() {
               value={houseSel}
               onChange={setHouseSel}
             />
-            {activeBatch && (
+            {wholeFlock ? (
+              <FlockWeeklyEntryCard
+                title="Fertility — Whole Flock Entry"
+                icon={<Egg className="h-5 w-5 text-primary" />}
+                table="flock_weekly_fertility"
+                companyId={profile?.company_id ?? null}
+                flockId={ctx.flockId}
+                flockName={ctx.flockName}
+                flockNumber={ctx.flockNumber}
+                periodStart={ctx.periodStart}
+                periodEnd={ctx.periodEnd}
+                fields={[
+                  { key: "sample_size", label: "Sample Size" },
+                  { key: "fertile_eggs", label: "Fertile Eggs" },
+                  { key: "infertile_eggs", label: "Infertile Eggs" },
+                  { key: "early_dead", label: "Early Dead" },
+                  { key: "late_dead", label: "Late Dead" },
+                ]}
+              />
+            ) : activeBatch ? (
               <FertilityDataEntry
                 data={rows}
                 onDataUpdate={handleUpdate}
@@ -93,7 +117,7 @@ export default function FlockFertilityEntryPage() {
                   set_date: activeBatch.set_date,
                 }}
               />
-            )}
+            ) : null}
           </>
         )}
       </div>
