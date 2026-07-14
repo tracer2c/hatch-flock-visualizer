@@ -107,6 +107,7 @@ export function useSaveFlockTotalsToBatches() {
       chicks_hatched: number | null;
       eggs_culled: number | null;
       eggs_cleared: number | null;
+      eggs_injected?: number | null;
       batch_slices: Array<{ id: string; total_eggs_set: number }>;
     }) => {
       if (!profile?.company_id) throw new Error("Missing company_id on profile");
@@ -137,14 +138,14 @@ export function useSaveFlockTotalsToBatches() {
 
       const chicksSplit = split(input.chicks_hatched);
       const clearsSplit = split(input.eggs_cleared);
+      const injectedSplit = split(input.eggs_injected ?? null);
 
-      // Batched updates. Volume is small (batches per flock), so parallel
-      // updates are fine; if this ever needs scaling switch to a DB fn.
       const updates: Promise<any>[] = [];
       for (let i = 0; i < input.batch_slices.length; i++) {
         const patch: Record<string, number | null> = {};
         if (input.chicks_hatched != null) patch.chicks_hatched = chicksSplit[i].value ?? 0;
         if (input.eggs_cleared != null) patch.eggs_cleared = clearsSplit[i].value;
+        if (input.eggs_injected != null) patch.eggs_injected = injectedSplit[i].value;
         if (Object.keys(patch).length === 0) continue;
         updates.push(
           Promise.resolve(
