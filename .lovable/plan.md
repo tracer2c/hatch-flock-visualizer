@@ -1,46 +1,55 @@
-## Smart Analytics — Cleaner, more spacious UI
+## Goal
+Make Smart Analytics replies look like ChatGPT: headings, bold, bullets, numbered lists, blockquotes, tables, dividers, inline code, and fenced code blocks — instead of a flat paragraph.
 
-Restyle `src/components/chat/ChatInterface.tsx` so the chat surface feels enterprise-grade and gives the conversation more room. No backend / model changes.
+## Root causes
+1. `@tailwindcss/typography` is installed but **not registered** in `tailwind.config.ts`, so every `prose` / `prose-*` class in `ChatInterface.tsx` is a no-op. Markdown *is* rendered by `react-markdown`, but with zero visual hierarchy.
+2. The `ai-chat` system prompt does not strictly force markdown structure, so short answers come back as plain sentences (matches the screenshot: "Suggested next step" is a line, not a heading).
+3. No sanitizer and no code-syntax highlighting, so code blocks look like grey text.
 
-### Changes
+## Changes
 
-1. **Remove the top header bar**
-   - Delete the fixed header block ("Smart Analytics · AI-powered insights" with the pulsing icon). The page already gets an in-body breadcrumb from the shared layout, so the extra title is redundant.
-   - Reclaims ~64px of vertical space at the top.
+### 1. `tailwind.config.ts`
+Register the typography plugin so `prose` classes actually style output:
+```ts
+plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+```
 
-2. **Empty state — tighter, more editorial**
-   - Keep the welcome mark + "What can I help you analyze?" **only** on the empty state (it's the entry point, not a page header).
-   - Reduce the icon size and move the "Popular questions" grid closer to the input so the eye lands on the composer.
-   - Cap the grid at 6 prompts (currently 8) for a less busy first impression.
+### 2. `src/components/chat/ChatInterface.tsx`
+- Add `rehype-sanitize` and `rehype-highlight` to the `ReactMarkdown` pipeline (with `remark-gfm` already present) for GFM tables, task lists, strikethrough, sanitized HTML, and syntax-highlighted code.
+- Expand the assistant `prose` wrapper with explicit styling for:
+  - `h2` / `h3` (semibold, tight tracking, top margin)
+  - `ul` / `ol` (proper markers + indentation)
+  - `blockquote` (left border in `border-primary/40`, italic muted foreground)
+  - `hr` (subtle divider)
+  - `table` (bordered, zebra rows, right-aligned numeric column via GFM `---:`)
+  - `code` inline vs `pre > code` block (rounded, `bg-muted`, mono)
+  - `a` (primary color, underline on hover)
+- Keep the existing `chart` fenced-block extraction untouched.
+- Add a lightweight highlight.js theme import (`highlight.js/styles/github.css` and dark variant swap via CSS variable) so code blocks are readable in light/dark.
 
-3. **Floating composer (the main ask)**
-   - Change the input bar from a full-width bottom-docked strip to a **floating pill** that sits `absolute bottom-6` centered, `max-w-3xl`, with:
-     - Rounded-2xl surface, subtle border, soft elevated shadow (`shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.25)]`), backdrop blur.
-     - Focus ring uses the Auburn Royal Blue primary token.
-     - Mic + Send as ghost/primary icon buttons inside the pill.
-   - Messages scroll **underneath** the floating composer; the scroll container gets `pb-32` so the last message never hides behind the pill.
-   - A soft top-to-bottom fade gradient sits behind the pill so scrolling text dissolves cleanly instead of hard-clipping.
+### 3. `supabase/functions/ai-chat/index.ts` — system prompt
+Add an explicit "Formatting contract" section that *requires* GFM structure on every answer, e.g.:
+- Start with a single `##` heading naming the analysis.
+- Use `**bold**` for key metrics inline.
+- Use bulleted lists for findings, numbered lists for steps.
+- Use `>` blockquote for cautions / notes.
+- Use GFM tables with right-aligned numeric columns (`|---:|`) whenever comparing ≥2 rows of numbers.
+- Use `---` dividers between distinct sections.
+- Use fenced code blocks with a language tag for any code or JSON.
+- For empty-data replies, keep the existing "No data recorded" rule but render it as a `##` heading + bulleted "Suggested next steps" + blockquote note (fixes the screenshot).
+- Keep the existing `chart` fenced-block instruction for visualizations.
 
-4. **Message column widens + breathes**
-   - Bump `max-w-5xl` → `max-w-4xl` for the message column but drop side padding on small screens; feels more focused.
-   - Assistant messages: no bubble background (per chat-ui-composition), use plain foreground text with `prose-sm` markdown.
-   - User messages: primary/primary-foreground pill, right-aligned, `max-w-[80%]`.
-   - Increase inter-message spacing from `space-y-4` → `space-y-6`.
+Redeploy the edge function after editing.
 
-5. **Small polish**
-   - Replace the 3-dot loader with a subtle shimmer line ("Thinking…") beside the assistant avatar.
-   - Timestamp becomes a small muted caption under the message, only on hover, so the transcript stays clean.
-   - Keep textarea focus on mount, after send, and after stream completion.
+### 4. Dependencies
+Add: `rehype-sanitize`, `rehype-highlight`, `highlight.js`. (`react-markdown`, `remark-gfm` already installed.)
 
-### Files touched
+## Out of scope
+- Custom interactive artifacts (writing blocks, citations, file cards, product carousels). Those require a structured tool-output protocol, not markdown — call out as a follow-up if the user wants them later.
+- Streaming token-by-token rendering (current backend returns full response). Can be a later phase.
 
-- `src/components/chat/ChatInterface.tsx` — layout restructure only (remove header, floating composer wrapper, message column tweaks, empty-state trim). All existing send/stream/summary/action logic preserved verbatim.
-
-### Verification
-
-- Load `/chat` empty → welcome + prompt grid centered; floating pill visible near bottom center.
-- Send a prompt → assistant streams; last message stays visible above the pill; scrolling reveals earlier messages fading under it.
-- Focus ring + hover states use primary token; no hardcoded colors.
-- Typecheck stays clean.
-
-No changes to the AI backend, tools, prompts, edge function, or message data model.
+## Verification
+- Reload `/chat`, ask "Show machine utilization analytics" → response renders with an `##` heading, bulleted "Suggested next steps", and a `>` note instead of a flat paragraph.
+- Ask "Create a fertility vs hatch rate comparison" → GFM table + inline `chart` block below.
+- Ask "Give me a SQL snippet" → fenced code block with syntax colors.
+- Check both light and dark themes.
