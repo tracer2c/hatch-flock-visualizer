@@ -12,6 +12,9 @@ import { SummaryCard } from './SummaryCard';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
 
 interface Message {
   id: string;
@@ -357,8 +360,26 @@ export const ChatInterface = () => {
                           return (
                             <>
                               {stripped && (
-                                <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:leading-relaxed prose-p:my-2 prose-li:my-0.5 prose-table:text-sm prose-th:font-semibold prose-th:text-left prose-td:py-1 prose-td:px-2 prose-th:py-1 prose-th:px-2 prose-table:border prose-th:border prose-td:border prose-hr:my-3 prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
-                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                <div className="prose prose-sm dark:prose-invert max-w-none
+                                  prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground
+                                  prose-h2:text-base prose-h2:mt-4 prose-h2:mb-2 prose-h2:pb-1 prose-h2:border-b prose-h2:border-border
+                                  prose-h3:text-sm prose-h3:mt-3 prose-h3:mb-1.5
+                                  prose-p:leading-relaxed prose-p:my-2 prose-p:text-foreground/90
+                                  prose-strong:text-foreground prose-strong:font-semibold
+                                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                                  prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:marker:text-muted-foreground
+                                  prose-blockquote:border-l-2 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/40 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r prose-blockquote:not-italic prose-blockquote:text-foreground/80 prose-blockquote:my-3
+                                  prose-hr:my-4 prose-hr:border-border
+                                  prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[0.85em] prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                                  prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-3 prose-pre:my-3 prose-pre:text-xs
+                                  prose-table:text-sm prose-table:my-3 prose-table:border prose-table:border-border prose-table:rounded-md prose-table:overflow-hidden
+                                  prose-thead:bg-muted/60
+                                  prose-th:font-semibold prose-th:text-left prose-th:py-1.5 prose-th:px-3 prose-th:border prose-th:border-border
+                                  prose-td:py-1.5 prose-td:px-3 prose-td:border prose-td:border-border prose-td:align-top">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                  >
                                     {stripped}
                                   </ReactMarkdown>
                                 </div>
