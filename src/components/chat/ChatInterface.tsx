@@ -229,18 +229,19 @@ export const ChatInterface = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
 
-          {/* OpenAI Configuration Warning */}
+          {/* Config warning: only when the health check explicitly reports the key is missing */}
           {openaiConfigured === false && (
             <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20 animate-fade-in">
-              <div className="flex items-center gap-2 text-warning-foreground">
+              <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-warning" />
-                <p className="text-sm font-medium">OpenAI Configuration Required</p>
+                <p className="text-sm font-medium text-foreground">AI assistant is not configured</p>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Please configure your API key in project settings.
+                Ask an administrator to add the AI provider key in project settings.
               </p>
             </div>
           )}
+          
           
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)]">
