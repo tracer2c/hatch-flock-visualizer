@@ -29,9 +29,11 @@ export default function FlockResidueEntryPage() {
   const { submit: offlineSubmit } = useOfflineSubmit("residue_analysis", {
     invalidateQueries: ["residue_analysis", "dataCounts", "houses"],
   });
+  const { profile } = useAuth();
 
   const ctx = useFlockWeekBatches(flockKey, weekParam);
   const [houseSel, setHouseSel] = useState<string>(WHOLE_FLOCK_VALUE);
+  const wholeFlock = isWholeFlock(houseSel);
   const batchId = useMemo(
     () => resolveBatchId(houseSel, ctx.batches),
     [houseSel, ctx.batches]
