@@ -1,196 +1,258 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  FileInput,
-  CheckSquare,
-  Settings,
-  MessageSquare,
-  PanelLeftClose,
-  PanelLeft,
   Home,
-  TrendingUp,
-  FileSpreadsheet,
-  ClipboardCheck,
   Layers,
-  Box
+  Box,
+  FileInput,
+  ClipboardCheck,
+  FileSpreadsheet,
+  TrendingUp,
+  CheckSquare,
+  MessageSquare,
+  Settings,
+  LifeBuoy,
+  ChevronRight,
+  Thermometer,
+  Compass,
+  Droplets,
+  Activity,
+  Sparkles,
+  Skull,
+  Scale,
+  Egg,
+  Building2,
+  Cpu,
+  Bird,
+  Users as UsersIcon,
+  BarChart3,
+  Target,
 } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useIsTablet } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { SIDEBAR_FEATURE_MAP } from "@/lib/featureKeys";
 import type { FeatureKey } from "@/lib/featureKeys";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const navigationItems: Array<{
-  path: string;
+type SubItem = { label: string; href: string; icon: ComponentType<{ className?: string }> };
+type NavItem = {
   label: string;
-  icon: any;
-  requiresAuth: boolean;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
   featureKey?: FeatureKey;
-}> = [
-  { path: '/', label: 'Dashboard', icon: Home, requiresAuth: true, featureKey: 'dashboard' },
-  { path: '/multi-stage', label: 'Multi-Stage', icon: Layers, requiresAuth: true, featureKey: 'multi_stage' },
-  { path: '/single-stage', label: 'Single-Stage', icon: Box, requiresAuth: true, featureKey: 'single_stage' },
-  { path: '/data-entry', label: 'Data Entry', icon: FileInput, requiresAuth: true, featureKey: 'data_entry' },
-  { path: '/qa-hub', label: 'QA Hub', icon: ClipboardCheck, requiresAuth: true, featureKey: 'qa_hub' },
-  { path: '/embrex-data-sheet', label: 'Data Sheet', icon: FileSpreadsheet, requiresAuth: true, featureKey: 'embrex_data_sheet' },
-  { path: '/embrex-timeline', label: 'Timeline', icon: TrendingUp, requiresAuth: true, featureKey: 'embrex_timeline' },
-  { path: '/checklist', label: 'Daily Tasks', icon: CheckSquare, requiresAuth: true, featureKey: 'checklist' },
-  { path: '/chat', label: 'Smart Analytics', icon: MessageSquare, requiresAuth: true, featureKey: 'chat' },
-  { path: '/management', label: 'Management', icon: Settings, requiresAuth: true, featureKey: 'management' },
+  items?: SubItem[];
+};
+
+const primaryNav: NavItem[] = [
+  { label: "Dashboard", href: "/", icon: Home, featureKey: "dashboard" },
+  { label: "Multi-Stage", href: "/multi-stage", icon: Layers, featureKey: "multi_stage" },
+  { label: "Single-Stage", href: "/single-stage", icon: Box, featureKey: "single_stage" },
+  {
+    label: "Data Entry",
+    href: "/data-entry",
+    icon: FileInput,
+    featureKey: "data_entry",
+    items: [
+      { label: "Weekly Flock Rollup", href: "/data-entry", icon: FileInput },
+      { label: "Egg Pack", href: "/data-entry/egg-pack", icon: Egg },
+      { label: "Fertility", href: "/data-entry/fertility", icon: Activity },
+      { label: "Residue", href: "/data-entry/residue", icon: Scale },
+      { label: "Clears & Injected", href: "/data-entry/clears-injected", icon: Sparkles },
+    ],
+  },
+  {
+    label: "QA Hub",
+    href: "/qa-hub",
+    icon: ClipboardCheck,
+    featureKey: "qa_hub",
+    items: [
+      { label: "Temps", href: "/qa-hub?tab=temps", icon: Thermometer },
+      { label: "Angles", href: "/qa-hub?tab=angles", icon: Compass },
+      { label: "Humidity", href: "/qa-hub?tab=humidity", icon: Droplets },
+      { label: "Rectal", href: "/qa-hub?tab=rectal", icon: Activity },
+      { label: "Wash", href: "/qa-hub?tab=wash", icon: Sparkles },
+      { label: "Culls", href: "/qa-hub?tab=culls", icon: Skull },
+      { label: "Gravity", href: "/qa-hub?tab=gravity", icon: Scale },
+      { label: "Hatch", href: "/qa-hub?tab=hatch", icon: Egg },
+    ],
+  },
+  { label: "Data Sheet", href: "/embrex-data-sheet", icon: FileSpreadsheet, featureKey: "embrex_data_sheet" },
+  { label: "Timeline", href: "/embrex-timeline", icon: TrendingUp, featureKey: "embrex_timeline" },
+  { label: "Daily Tasks", href: "/checklist", icon: CheckSquare, featureKey: "checklist" },
+  { label: "Smart Analytics", href: "/chat", icon: MessageSquare, featureKey: "chat" },
+  {
+    label: "Management",
+    href: "/management",
+    icon: Settings,
+    featureKey: "management",
+    items: [
+      { label: "Hatcheries", href: "/management/hatcheries", icon: Building2 },
+      { label: "Machines", href: "/management/machines", icon: Cpu },
+      { label: "Flocks", href: "/management/flocks", icon: Bird },
+      { label: "Users", href: "/management/users", icon: UsersIcon },
+      { label: "Reports", href: "/management/reports", icon: BarChart3 },
+      { label: "Targets", href: "/management/targets", icon: Target },
+    ],
+  },
 ];
 
+const footerNav: NavItem[] = [
+  { label: "Support", href: "/support", icon: LifeBuoy },
+  { label: "Settings", href: "/management", icon: Settings },
+];
+
+function RailButton({
+  item,
+  active,
+  onHover,
+}: {
+  item: NavItem;
+  active: boolean;
+  onHover?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <NavLink
+          to={item.href}
+          onMouseEnter={onHover}
+          onFocus={onHover}
+          className={cn(
+            "relative flex items-center justify-center w-11 h-11 rounded-xl transition-colors",
+            active
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
+        >
+          <Icon className="h-5 w-5" />
+          {item.items && (
+            <ChevronRight className="absolute -right-0.5 top-1/2 -translate-y-1/2 h-3 w-3 opacity-50" />
+          )}
+        </NavLink>
+      </TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ModernSidebar() {
-  const { open, setOpen, toggleSidebar, isMobile: isMobileContext, openMobile } = useSidebar();
-  const collapsed = isMobileContext ? !openMobile : !open;
+  const { isMobile, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const { user } = useAuth();
   const { hasFeatureAccess } = usePermissions();
-  const location = useLocation();
-  const currentPath = location.pathname;
-  const previousSidebarState = useRef<boolean>(open);
-  const isTablet = useIsTablet();
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const minSwipeDistance = 50;
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "b") {
         e.preventDefault();
         toggleSidebar();
       }
     };
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
   }, [toggleSidebar]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+  const visible = useMemo(
+    () =>
+      primaryNav.filter((i) => {
+        if (!user) return false;
+        return i.featureKey ? hasFeatureAccess(i.featureKey) : true;
+      }),
+    [user, hasFeatureAccess]
+  );
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-    const currentOpen = isMobileContext ? openMobile : open;
-    if (isLeftSwipe && currentOpen) toggleSidebar();
-    if (isRightSwipe && !currentOpen && touchStart < 50) toggleSidebar();
-  };
-
-  const visibleNavItems = navigationItems.filter(item => {
-    if (!item.requiresAuth) return true;
-    if (!user) return false;
-    // Use dynamic permissions to filter
-    if (item.featureKey) {
-      return hasFeatureAccess(item.featureKey);
-    }
-    return true;
-  });
-
-  const isActive = (path: string) => {
-    if (path === '/') return currentPath === '/';
-    return currentPath.startsWith(path);
-  };
+  const activeItem = visible.find((i) => isActive(i.href));
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
+  const panelItem =
+    (hoveredHref && visible.find((i) => i.href === hoveredHref)) || activeItem || null;
+  const showPanel = !!(panelItem && panelItem.items && panelItem.items.length > 0);
 
   return (
     <>
-      {(isMobileContext ? openMobile : open) && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        />
+      {isMobile && openMobile && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setOpenMobile(false)} />
       )}
 
       <Sidebar
         side="left"
-        variant="sidebar" 
+        variant="sidebar"
         collapsible="offcanvas"
-        className={cn(
-          "border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md",
-          "transition-all duration-300 shadow-xl"
-        )}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl p-0"
       >
-        <SidebarContent className="pt-14 px-3">
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
-                {visibleNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.path);
-                  
-                  return (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton 
-                        asChild 
-                        tooltip={collapsed ? item.label : undefined}
-                        className={cn(
-                          "group relative flex items-center rounded-xl transition-all duration-300 touch-manipulation",
-                          collapsed ? "justify-center p-3 w-11 h-11 min-h-[44px]" : "gap-3 px-4 py-3 min-h-[44px]",
-                          active
-                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:text-primary-foreground shadow-lg shadow-primary/20"
-                            : "hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80"
-                        )}
-                      >
+        <SidebarContent className="p-0">
+          <TooltipProvider>
+            <div
+              className="flex h-full pt-14"
+              onMouseLeave={() => setHoveredHref(null)}
+            >
+              {/* Slim icon rail */}
+              <div className="flex flex-col items-center gap-1 w-[68px] py-3 border-r border-sidebar-border/50 flex-shrink-0">
+                <div className="flex flex-col gap-1 flex-1">
+                  {visible.map((item) => (
+                    <RailButton
+                      key={item.href}
+                      item={item}
+                      active={isActive(item.href)}
+                      onHover={() => setHoveredHref(item.href)}
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-col gap-1 pt-2 border-t border-sidebar-border/50 w-full items-center">
+                  {footerNav.map((item) => (
+                    <RailButton
+                      key={item.label}
+                      item={item}
+                      active={false}
+                      onHover={() => setHoveredHref(null)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Secondary panel */}
+              {showPanel && panelItem && (
+                <div className="w-56 py-4 px-2 animate-in fade-in slide-in-from-left-2 duration-150">
+                  <div className="px-3 pb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {panelItem.label}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    {panelItem.items!.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const subActive =
+                        pathname + search === sub.href ||
+                        (sub.href.includes("?")
+                          ? pathname + search === sub.href
+                          : pathname === sub.href);
+                      return (
                         <NavLink
-                          to={item.path}
-                          className="flex items-center w-full h-full"
+                          key={sub.href}
+                          to={sub.href}
+                          className={cn(
+                            "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                            subActive
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          )}
                         >
-                          <Icon className={cn(
-                            "flex-shrink-0 transition-all duration-300",
-                            collapsed ? "h-5 w-5" : "h-4 w-4",
-                            active && "drop-shadow-sm"
-                          )} />
-                          
-                          {!collapsed && (
-                            <span className="ml-3 text-sm font-medium truncate">
-                              {item.label}
-                            </span>
-                          )}
-
-                          {active && collapsed && (
-                            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-gradient-to-b from-primary to-success rounded-full shadow-lg" />
-                          )}
+                          <SubIcon className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{sub.label}</span>
                         </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <div className="mt-auto pt-4 pb-2">
-            {!collapsed ? (
-              <div className="mx-3 px-3 py-2 rounded-lg bg-sidebar-accent/50 text-center">
-                <span className="text-xs font-medium text-sidebar-accent-foreground">v1.2</span>
-              </div>
-            ) : (
-              <div className="mx-2 px-2 py-2 rounded-lg bg-sidebar-accent/50 text-center">
-                <span className="text-xs font-medium text-sidebar-accent-foreground">1.2</span>
-              </div>
-            )}
-          </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TooltipProvider>
         </SidebarContent>
       </Sidebar>
     </>
