@@ -347,12 +347,38 @@ export const ChatInterface = () => {
                           chartId={`message-chart-${message.id}`}
                         />
                       ) : typeof message.content === 'string' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:leading-relaxed prose-p:my-2 prose-li:my-0.5 prose-table:text-sm prose-th:font-semibold prose-th:text-left prose-td:py-1 prose-td:px-2 prose-th:py-1 prose-th:px-2 prose-table:border prose-th:border prose-td:border prose-hr:my-3 prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {message.content}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
+                        (() => {
+                          const raw: string = message.content;
+                          const charts: any[] = [];
+                          const stripped = raw.replace(/```chart\s*([\s\S]*?)```/g, (_m, body) => {
+                            try { charts.push(JSON.parse(body.trim())); } catch { /* ignore malformed */ }
+                            return '';
+                          }).trim();
+                          return (
+                            <>
+                              {stripped && (
+                                <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:leading-relaxed prose-p:my-2 prose-li:my-0.5 prose-table:text-sm prose-th:font-semibold prose-th:text-left prose-td:py-1 prose-td:px-2 prose-th:py-1 prose-th:px-2 prose-table:border prose-th:border prose-td:border prose-hr:my-3 prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {stripped}
+                                  </ReactMarkdown>
+                                </div>
+                              )}
+                              {charts.map((c, i) => (
+                                <div key={i} className="mt-3">
+                                  <ChartMessage
+                                    type={c.type || 'bar'}
+                                    title={c.title || 'Chart'}
+                                    description={c.description || ''}
+                                    data={Array.isArray(c.data) ? c.data : []}
+                                    config={c.config || {}}
+                                    insights={c.insights}
+                                    chartId={`msg-chart-${message.id}-${i}`}
+                                  />
+                                </div>
+                              ))}
+                            </>
+                          );
+                        })()
                         <EnhancedMessageFormatter
                           content={message.content}
                           onQuestionClick={handleQuestionClick}
