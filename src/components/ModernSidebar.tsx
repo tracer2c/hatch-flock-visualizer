@@ -219,7 +219,7 @@ export function ModernSidebar() {
 
               {/* Secondary panel */}
               {showPanel && panelItem && (
-                <div className="w-56 py-4 px-2 animate-in fade-in slide-in-from-left-2 duration-150">
+                <div className="absolute left-[68px] top-14 bottom-0 w-56 py-4 px-2 bg-sidebar/98 backdrop-blur-md border-r border-sidebar-border/50 shadow-xl animate-in fade-in slide-in-from-left-2 duration-150 z-10">
                   <div className="px-3 pb-2">
                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {panelItem.label}
