@@ -11,12 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { WeekPickerCard } from "@/components/uui/WeekPickerCard";
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
   Egg,
   ChevronRight as OpenIcon,
 } from "lucide-react";
@@ -90,23 +88,7 @@ export default function WeeklyRollupView({ onOpenFlock }: Props) {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="min-w-[240px] justify-start">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={anchor}
-                    onSelect={(d) => d && setAnchor(d)}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <WeekPickerCard value={anchor} onChange={setAnchor} />
               <Button
                 variant="outline"
                 size="icon"
