@@ -120,11 +120,10 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
   const openEntry = (
     type: "egg-pack" | "fertility" | "residue" | "clears-injected"
   ) => {
-    if (!firstHouseId) return;
-    const qs = weekISO
-      ? `?flockKey=${encodeURIComponent(flockKey)}&week=${encodeURIComponent(weekISO)}`
-      : "";
-    navigate(`/data-entry/house/${firstHouseId}/${type}${qs}`);
+    if (!weekISO) return;
+    navigate(
+      `/data-entry/flock/${encodeURIComponent(flockKey)}/${type}?week=${weekISO}`
+    );
   };
 
 
