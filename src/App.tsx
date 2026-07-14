@@ -168,6 +168,18 @@ function AppContent() {
                       <Route path="/data-entry/flock/:flockKey/hoi" element={
                         <RoleProtectedRoute featureKey="data_entry"><HatchHOIEntryPage /></RoleProtectedRoute>
                       } />
+                      <Route path="/data-entry/flock/:flockKey/egg-pack" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockEggPackEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/fertility" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockFertilityEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/residue" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockResidueEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/clears-injected" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockClearsInjectedEntryPage /></RoleProtectedRoute>
+                      } />
                       <Route path="/checklist" element={
                         <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
                       } />
