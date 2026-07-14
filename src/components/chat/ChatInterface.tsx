@@ -10,6 +10,8 @@ import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
 import { SummaryCard } from './SummaryCard';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
