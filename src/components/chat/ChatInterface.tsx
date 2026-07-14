@@ -292,7 +292,7 @@ export const ChatInterface = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {messages.map((message, msgIndex) => (
                 <div
                   key={message.id}
