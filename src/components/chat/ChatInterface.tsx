@@ -211,8 +211,6 @@ export const ChatInterface = () => {
     { text: "Show machine utilization analytics", icon: Sparkles, color: "text-amber-500" },
     { text: "Create a fertility vs hatch rate comparison", icon: TrendingUp, color: "text-rose-500" },
     { text: "Display house status breakdown", icon: BarChart3, color: "text-cyan-500" },
-    { text: "Analyze recent performance patterns", icon: Activity, color: "text-orange-500" },
-    { text: "Compare current vs historical data", icon: Sparkles, color: "text-indigo-500" }
   ];
 
   const handleSuggestedPrompt = (prompt: string) => {
