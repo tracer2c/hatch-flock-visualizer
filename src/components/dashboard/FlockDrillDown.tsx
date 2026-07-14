@@ -210,21 +210,21 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
             </div>
           </div>
 
-          {/* Record Data — jump straight into the entry form.
-              The House # dropdown lives inside each form (flock-week mode). */}
+          {/* Record Data — flock-level entry. Optional House # lives inside each form. */}
           <div className="rounded-lg border p-4">
             <div className="mb-3">
               <div className="text-sm font-semibold">Record Data</div>
               <div className="text-xs text-muted-foreground">
-                Egg Pack Quality, Fertility, Residue, and Clears &amp; Injected are recorded
-                per house — you&apos;ll pick the house inside the form.
+                Entries are recorded at the flock/week level. Egg Pack, Fertility, and
+                Residue let you optionally tag a house number inside the form.
+                Clears &amp; Injected and Hatch / HOI are always flock-level.
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!firstHouseId}
+                disabled={!weekISO}
                 onClick={() => openEntry("egg-pack")}
               >
                 <Package className="h-4 w-4 mr-2" />
@@ -233,7 +233,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!firstHouseId}
+                disabled={!weekISO}
                 onClick={() => openEntry("fertility")}
               >
                 <Egg className="h-4 w-4 mr-2" />
@@ -242,7 +242,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!firstHouseId}
+                disabled={!weekISO}
                 onClick={() => openEntry("residue")}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
@@ -251,7 +251,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!firstHouseId}
+                disabled={!weekISO}
                 onClick={() => openEntry("clears-injected")}
               >
                 <ClipboardList className="h-4 w-4 mr-2" />
