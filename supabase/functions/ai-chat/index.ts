@@ -4199,7 +4199,7 @@ MARKDOWN FORMATTING CONTRACT (STRICT — the UI renders GitHub-Flavored Markdown
 - Use "> " blockquotes for cautions, caveats, or short notes.
 - Use "---" on its own line to divide distinct sections.
 - Use GFM tables (with a header row and "|---|" separator) whenever comparing ≥2 rows of numbers. Right-align numeric columns using "|---:|".
-- Use fenced code blocks with a language tag (```sql, ```json, ```ts) for any code, query, or JSON snippet.
+- Use fenced code blocks with a language tag (\`\`\`sql, \`\`\`json, \`\`\`ts) for any code, query, or JSON snippet.
 - Do NOT emit raw "##" or "###" inside prose — they must be on their own line so they render as headings.
 - Do NOT wrap the whole answer in a single paragraph. Structure is required, not optional.
 
