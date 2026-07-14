@@ -243,17 +243,18 @@ export const ChatInterface = () => {
           )}
           
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-14rem)]">
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)]">
               {/* Welcome Section */}
-              <div className="text-center mb-8 animate-fade-in">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-float">
-                  <Sparkles className="h-8 w-8 text-primary" />
+              <div className="text-center mb-6 animate-fade-in">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                  <Sparkles className="h-6 w-6 text-primary" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">What can I help you analyze?</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-1.5">What can I help you analyze?</h2>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Ask me about hatchery data, generate reports, or get insights about your operations
+                  Ask about hatchery data, generate reports, or explore insights on your operations.
                 </p>
               </div>
+
               
               {/* Prompt Grid */}
               <div className="w-full max-w-3xl">
