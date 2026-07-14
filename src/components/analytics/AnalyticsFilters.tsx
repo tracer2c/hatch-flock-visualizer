@@ -105,8 +105,6 @@ export function AnalyticsFilters({ showMode = true, compact = false }: Props) {
   const { data: units = [] } = useUnitsData();
   const { data: flocks = [] } = useFlocks();
   const { data: houses = [] } = useHousesData();
-  const presets = useMemo(buildPresets, []);
-  const [dateOpen, setDateOpen] = useState(false);
 
   const filteredHouses = useMemo(() => {
     if (filters.hatcheryIds.length === 0) return houses;
