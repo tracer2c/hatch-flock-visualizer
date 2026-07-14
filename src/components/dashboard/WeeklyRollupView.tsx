@@ -177,26 +177,26 @@ export default function WeeklyRollupView({ onOpenFlock }: Props) {
                       </TableCell>
                       <TableCell className="text-right">
                         {fmtPct(row.grade_a_pct)}
-                        {row.flock_level_source.egg_pack && (
-                          <span title={`House sum: ${fmtPct(row.house_sum_alt.grade_a_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
+                        {row.flock_level_source?.egg_pack && (
+                          <span title={`House sum: ${fmtPct(row.house_sum_alt?.grade_a_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         {fmtPct(row.fertility_pct)}
-                        {row.flock_level_source.fertility && (
-                          <span title={`House sum: ${fmtPct(row.house_sum_alt.fertility_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
+                        {row.flock_level_source?.fertility && (
+                          <span title={`House sum: ${fmtPct(row.house_sum_alt?.fertility_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         {fmtPct(row.hof_pct)}
-                        {(row.flock_level_source.residue || row.flock_level_source.fertility) && (
-                          <span title={`House sum: ${fmtPct(row.house_sum_alt.hof_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
+                        {(row.flock_level_source?.residue || row.flock_level_source?.fertility) && (
+                          <span title={`House sum: ${fmtPct(row.house_sum_alt?.hof_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         {fmtPct(row.hoi_pct)}
-                        {(row.flock_level_source.residue || row.flock_level_source.fertility) && (
-                          <span title={`House sum: ${fmtPct(row.house_sum_alt.hoi_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
+                        {(row.flock_level_source?.residue || row.flock_level_source?.fertility) && (
+                          <span title={`House sum: ${fmtPct(row.house_sum_alt?.hoi_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
                         )}
                       </TableCell>
                       <TableCell>
