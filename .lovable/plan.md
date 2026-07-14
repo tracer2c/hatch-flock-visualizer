@@ -1,36 +1,41 @@
-## Goal
-Replace the plain shadcn calendar popover on **Data Entry → Weekly Flock Rollup** with the Untitled UI-styled Range Calendar Card already used elsewhere, and add a small dot indicator under each day that has any batch data (set_date).
+## What's actually happening
 
-## Changes
+Nothing was removed from source. The current code still has the grouped sidebar (Monitor / Data / Quality / Intelligence / Admin), the Support/Settings footer + user card, and the `WeekPickerCard` with the preset rail. Your screenshot shows an older build ("v1.2" footer, flat sidebar list, plain calendar) — that's a stale **service worker** (`vite-plugin-pwa`) still serving cached HTML/JS in your browser, even after hard refresh.
 
-### 1. New hook — `src/hooks/useDatesWithBatches.ts`
-- Accepts `{ from: Date; to: Date }` (visible month range).
-- Queries `batches` for distinct `set_date` in that window (respecting the current company via RLS).
-- Returns a `Set<string>` of `yyyy-MM-dd` for O(1) day lookup.
-- Cached via react-query, keyed by the range.
+Root cause:
+- `vite.config.ts` registers `vite-plugin-pwa` with `registerType: 'autoUpdate'` and auto-injects registration.
+- It registers even in Lovable preview, so the preview iframe is pinned to the SW's cached bundle.
+- Once installed, hard-refresh doesn't help — only a replacement worker at the same `/sw.js` path can evict it.
 
-### 2. Extend `src/components/uui/RangeCalendarCard.tsx` (and underlying `Calendar`)
-- Add an optional `markedDates?: Set<string>` prop.
-- Pass through to the inner `Calendar` via `modifiers={{ hasData: (d) => markedDates.has(fmt(d)) }}` and `modifiersClassNames={{ hasData: "relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary" }}`.
-- Keep the ring for the selected day; dot stays visible on unselected days (hidden on selected via an override class).
+## Fix — kill-switch worker (per Lovable PWA skill)
 
-### 3. New week-picker wrapper — `src/components/uui/WeekPickerCard.tsx`
-- Same visual shell as `RangeCalendarCard` (preset rail + calendar + Apply/Cancel).
-- `mode="single"`, but on hover/select of a day, highlights the full ISO week (Mon–Sun) using `modifiers`.
-- Presets: **This week**, **Last week**, **2 weeks ago**, **Most recent with data** (uses `useLatestBatchDate`), **This month**.
-- Fetches `markedDates` via the new hook for the currently-displayed month(s) and renders dots on days with data.
-- Emits `onChange(anchorDate)`; parent computes `weekStart/weekEnd`.
+### 1. Remove `vite-plugin-pwa` from `vite.config.ts`
+- Delete the `VitePWA({...})` plugin block and its import.
+- No new SW will be generated; the old one remains registered in browsers until the kill-switch runs.
 
-### 4. Wire into `src/components/dashboard/WeeklyRollupView.tsx`
-- Remove the existing `Popover` + `CalendarComponent` block (lines ~93–109).
-- Replace with `<WeekPickerCard value={anchor} onChange={setAnchor} />`.
-- Keep the ChevronLeft/Right and "This week" buttons unchanged.
+### 2. Ship a kill-switch worker at `public/sw.js`
+Same path the old SW lived at, so returning browsers pick it up on next navigation. It:
+- `skipWaiting` + `clients.claim()` immediately.
+- Deletes only Workbox caches scoped to this registration (leaves any Firebase Messaging / OneSignal caches alone).
+- Reloads open clients so they get the fresh HTML/JS.
+- Calls `registration.unregister()` in `finally` so future loads have no SW at all.
 
-## Out of scope
-- No changes to the Analytics-page range picker (already UUI).
-- No schema changes; dot data is read-only from `batches.set_date`.
-- No changes to drill-down pages.
+Exact worker body from the PWA skill (no modifications).
+
+### 3. Also ship `public/service-worker.js` with the same kill-switch body
+Belt-and-braces in case an older build ever registered at that path.
+
+### 4. Note on push notifications
+`src/hooks/usePushNotifications.ts` uses `navigator.serviceWorker.ready`, which currently resolves against the Workbox SW. After the kill-switch runs there is no app SW, so push subscription calls will hang until a dedicated messaging worker is added. Out of scope for this fix — flag it, don't rebuild it now.
 
 ## Verification
+
 - Typecheck.
-- Manually confirm: open Data Entry → Weekly Flock Rollup, click the date button → UUI card opens with preset rail; days that have batches show a small primary-color dot; picking a day snaps the rollup to that ISO week.
+- In the preview: reload once → kill-switch installs → reload again → new bundle loads and the grouped sidebar, footer user card, and calendar preset rail all appear.
+- DevTools → Application → Service Workers should show "no service workers" after the second reload.
+- No further hard-refresh required for other users; their next visit auto-evicts.
+
+## Out of scope
+
+- Rebuilding offline support or push notifications.
+- Any UI/design change — the components are already correct in source.
