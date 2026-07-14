@@ -4137,6 +4137,14 @@ serve(async (req) => {
     const { message, history = [] } = await req.json();
     console.log('AI Chat request:', { message, historyLength: history?.length });
 
+    // Health check ping used by the UI to detect config
+    if (message === '__health_check__') {
+      return new Response(JSON.stringify({
+        openai_configured: !!openaiApiKey,
+        timestamp: new Date().toISOString(),
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!openaiApiKey) {
       return new Response(JSON.stringify({
         error: 'OpenAI API key not configured',
@@ -4146,6 +4154,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     const systemPrompt = `You are a hatchery management AI assistant with access to comprehensive database tools covering ALL hatchery data.
 
