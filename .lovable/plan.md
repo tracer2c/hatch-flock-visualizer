@@ -1,44 +1,85 @@
-## Diagnosis
+## Goal
 
-The Dashboard renders correctly — it isn't broken. It shows all zeros because the default date filter is **"this week" (Jul 13 – Jul 19, 2026)**, and the `batches` table has **no rows** in that range. The most recent data in the DB is:
+When a user enters a record page from **Weekly Flock Rollup**, the header must show **flock/week totals**, not one house. The **house number becomes an optional field inside the form** (1–6). **Clears & Injected** is flock-only (no house selector at all).
 
-- Jun 22, 2026 — 1 batch (0 eggs)
-- Jun 15, 2026 — 1 batch (0 eggs)
-- Jun 1, 2026 — 120 batches (603,936 eggs)
-- May 25–28, 2026 — heavy activity
+## Scope (Data Entry only — does not touch Data Sheet)
 
-So every KPI, Needs Attention, and Weekly Flock Status card correctly resolves to 0/empty. The 55,000 "Finch Hollow" number you saw earlier was for a different set-week (Mar 16, 2026), not this week.
+Affected pages:
+- `EggPackEntryPage.tsx`
+- `FertilityEntryPage.tsx`
+- `ResidueEntryPage.tsx`
+- `ClearsInjectedEntryPage.tsx`
+- `HatchHOIEntryPage.tsx` (already flock-level; only header polish)
+- `FlockDrillDown.tsx` (Record Data buttons)
 
-There's also a minor timezone bug in `useWeeklyFlockRollup.toDateStr` — it uses `.toISOString()` which shifts local Monday into Sunday UTC for negative-UTC users. Worth fixing while we're here.
+## Changes
 
-## What to change
+### 1. Route by flock+week, not by houseId
 
-### 1. Smarter default date range
-In `AnalyticsFilterContext.tsx`, when no saved filter exists in sessionStorage, don't hardcode "this week." Instead:
-- On first mount of the provider, run a lightweight query for `MAX(set_date)` from `batches` (via a tiny hook or an initial fetch) and default `dateFrom`/`dateTo` to the Monday–Sunday week containing that date.
-- Fallback to current week if the query fails or returns null.
-- Persist as usual, so once the user picks a range it sticks.
+Add flock-week entry routes and use them from `FlockDrillDown`'s Record Data buttons:
 
-### 2. Helpful empty state on Dashboard
-In `DashboardHome.tsx`, when `filtered.length === 0` and `criticalCount === 0`, replace the "Nothing needs attention 🎉" message under Needs Attention with something honest:
-- "No flocks set between {dateFrom} and {dateTo}."
-- Add a button **"Jump to most recent week with data"** that calls a helper (same MAX(set_date) query) and updates the filter.
+```
+/data-entry/flock/:flockKey/egg-pack
+/data-entry/flock/:flockKey/fertility
+/data-entry/flock/:flockKey/residue
+/data-entry/flock/:flockKey/clears-injected
+/data-entry/flock/:flockKey/hoi   (already exists)
+```
 
-### 3. Fix date-string bug in rollup hook
-In `src/hooks/useWeeklyFlockRollup.ts`, replace `toDateStr` with a local-date formatter (reuse `format(d, "yyyy-MM-dd")` from `date-fns`) so `weekStart`/`weekEnd` aren't shifted a day by UTC conversion.
+`flockKey` encodes flock_id + period_start + period_end (same helper as HOI page uses today).
 
-### 4. (Optional) Show the active range in KPI subtitles
-Small UX polish: KPI card subtitles currently say "This week." Change to the actual formatted range (e.g. "May 25 – May 31, 2026") so it's obvious what window the zeros/values apply to.
+The old `/data-entry/house/:houseId/...` routes stay for the "Investigate individual houses" drilldown, so nothing regresses.
 
-## Files touched
+### 2. Unified flock-week header (all 4 pages)
 
-- `src/contexts/AnalyticsFilterContext.tsx` — smarter default + helper to jump-to-latest
-- `src/components/dashboard/DashboardHome.tsx` — empty state CTA
-- `src/components/dashboard/sections/NeedsAttention.tsx` — empty-state copy
-- `src/components/dashboard/sections/KpiRow.tsx` — subtitle range (optional)
-- `src/hooks/useWeeklyFlockRollup.ts` — timezone-safe date strings
-- New tiny hook: `src/hooks/useLatestBatchDate.ts` (`SELECT max(set_date) FROM batches WHERE archived_at IS NULL`)
+Replace the current per-house blue header block with a shared flock summary card showing:
 
-## Out of scope
+- Flock #, Flock name
+- Set Week range
+- **Total Eggs Set (flock-week)** — sum across houses
+- Status badge (aggregated from batches in the week)
+- No machine field, no per-house eggs
 
-- Data entry flow, form headers, or the Set Week context in per-house forms (separate open thread from your previous message — I can pick that up in the next plan).
+Create `src/components/dashboard/FlockEntryHeader.tsx` reused by all four pages.
+
+### 3. Optional House # inside the form (Egg Pack, Fertility, Residue)
+
+Remove the top `FlockWeekHouseSwitcher` (which navigates between houses) from these three pages. Inside the entry form, add:
+
+- **"House # (optional)"** dropdown listing the flock's houses for that week (1–6) plus a "Whole flock / not specified" option.
+- The selected house drives `batch_id` on save (picks that house's batch row). "Not specified" saves against the flock's primary/first batch of the week so existing house-scoped tables (`egg_pack_quality`, `fertility_analysis`, `residue_analysis`) keep working without schema changes.
+
+Files:
+- `EggPackDataEntry.tsx` — add optional house select in the form
+- `FertilityAnalysisEntry` used by `FertilityEntryPage`
+- Residue entry component used by `ResidueEntryPage`
+
+### 4. Clears & Injected → flock-only
+
+`ClearsInjectedEntryPage.tsx`:
+- Remove house switcher and any house selector entirely.
+- Header shows only flock-week summary.
+- Save path uses `useSaveFlockTotalsToBatches` (already exists in `useFlockWeeklyClears.ts`) — proportionally splits `clear_number` / `injected_number` across the flock's batches by `total_eggs_set` and upserts a `flock_weekly_clears` row.
+- `ClearsInjectedDataEntry.tsx`: the header/summary line uses **flock-week Total Eggs Set**, not one house.
+
+### 5. FlockDrillDown Record Data buttons
+
+Point all 5 buttons to the new `/data-entry/flock/:flockKey/*` routes. Remove the House # dropdown from the Record Data card (it is no longer needed — house is chosen inside the form for the 3 pages that still support it, and Clears/HOI never take a house).
+
+### 6. Keep house-level entry reachable
+
+The "Investigate individual houses (optional)" section in `FlockDrillDown` continues to open the existing `/data-entry/house/:houseId` page, so per-house entry stays possible for anyone who needs it.
+
+## Non-goals
+
+- No schema migrations. `egg_pack_quality` / `fertility_analysis` / `residue_analysis` remain keyed by `batch_id`; we just default to the flock's primary batch when the user leaves the optional house blank.
+- No changes to Data Sheet or Analytics.
+- No changes to QA Hub.
+
+## Verification
+
+1. From Dashboard → Weekly Flock Rollup → click flock → Record Data → Residue: header shows flock total eggs (e.g., 212,000), not one house's 92,000.
+2. Inside Residue form, House # dropdown is present and optional; save with and without a house both succeed.
+3. Clears & Injected page shows only flock summary, no house field; save distributes across batches and appears in By House view.
+4. HOI page header matches the same flock summary style.
+5. `tsgo` typecheck passes.
