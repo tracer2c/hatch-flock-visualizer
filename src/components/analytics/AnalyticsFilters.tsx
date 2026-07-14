@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react";
-import { format, subDays, startOfMonth, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Building2, Egg, Home, Check, ChevronDown } from "lucide-react";
+import { Building2, Egg, Home, Check, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
 import { useUnitsData, useHousesData } from "@/hooks/useHousesData";
+import { RangeCalendarCard } from "@/components/uui/RangeCalendarCard";
 
 type Preset = { label: string; from: Date; to: Date };
 
