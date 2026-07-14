@@ -67,6 +67,7 @@ import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
+import { AppBreadcrumbs } from "./components/uui/AppBreadcrumbs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
