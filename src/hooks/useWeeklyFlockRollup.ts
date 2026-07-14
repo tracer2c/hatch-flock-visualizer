@@ -11,6 +11,7 @@ import {
 
 export interface WeeklyFlockRollupRow {
   key: string;
+  flock_id: string | null;
   flock_number: string | number | null;
   flock_name: string | null;
   house_count: number;
@@ -27,6 +28,19 @@ export interface WeeklyFlockRollupRow {
   hoi_pct: number | null;
   statuses: string[];
   worst_status: string;
+  /** Which metrics were sourced from a whole-flock entry (override) */
+  flock_level_source: {
+    egg_pack: boolean;
+    fertility: boolean;
+    residue: boolean;
+  };
+  /** House-aggregated values when a flock-level override is applied */
+  house_sum_alt: {
+    grade_a_pct: number | null;
+    fertility_pct: number | null;
+    hof_pct: number | null;
+    hoi_pct: number | null;
+  };
 }
 
 interface Params {
