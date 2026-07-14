@@ -12,7 +12,10 @@ import {
   HouseSelectField,
   WHOLE_FLOCK_VALUE,
   resolveBatchId,
+  isWholeFlock,
 } from "@/components/dashboard/HouseSelectField";
+import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
+import { useAuth } from "@/hooks/useAuth";
 import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
