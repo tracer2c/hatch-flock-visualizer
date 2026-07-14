@@ -17,6 +17,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
+import { AppBreadcrumbs } from "@/components/uui/AppBreadcrumbs";
 
 export function TopBar() {
   const { user, profile, roles, signOut } = useAuth();
