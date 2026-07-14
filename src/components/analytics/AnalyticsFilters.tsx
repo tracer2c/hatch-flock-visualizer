@@ -11,21 +11,6 @@ import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
 import { useUnitsData, useHousesData } from "@/hooks/useHousesData";
 import { RangeCalendarCard } from "@/components/uui/RangeCalendarCard";
 
-type Preset = { label: string; from: Date; to: Date };
-
-function buildPresets(): Preset[] {
-  const now = new Date();
-  return [
-    { label: "This week", from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) },
-    {
-      label: "Last week",
-      from: startOfWeek(subDays(now, 7), { weekStartsOn: 1 }),
-      to: endOfWeek(subDays(now, 7), { weekStartsOn: 1 }),
-    },
-    { label: "MTD", from: startOfMonth(now), to: now },
-    { label: "Last 30 days", from: subDays(now, 30), to: now },
-  ];
-}
 
 function useFlocks() {
   return useQuery({
