@@ -346,8 +346,14 @@ export const ChatInterface = () => {
                           insights={message.content.insights || []}
                           chartId={`message-chart-${message.id}`}
                         />
+                      ) : typeof message.content === 'string' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:leading-relaxed prose-p:my-2 prose-li:my-0.5 prose-table:text-sm prose-th:font-semibold prose-th:text-left prose-td:py-1 prose-td:px-2 prose-th:py-1 prose-th:px-2 prose-table:border prose-th:border prose-td:border prose-hr:my-3 prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
                       ) : (
-                        <EnhancedMessageFormatter 
+                        <EnhancedMessageFormatter
                           content={message.content}
                           onQuestionClick={handleQuestionClick}
                           className="text-sm"
