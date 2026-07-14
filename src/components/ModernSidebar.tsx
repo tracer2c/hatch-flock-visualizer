@@ -28,14 +28,33 @@ import {
   BarChart3,
   Target,
 } from "lucide-react";
-import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import type { FeatureKey } from "@/lib/featureKeys";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type SubItem = { label: string; href: string; icon: ComponentType<{ className?: string }> };
+type SubItem = {
+  label: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  featureKey?: FeatureKey;
+};
 type NavItem = {
   label: string;
   href: string;
@@ -43,105 +62,117 @@ type NavItem = {
   featureKey?: FeatureKey;
   items?: SubItem[];
 };
+type NavGroup = { heading: string; items: NavItem[] };
 
-const primaryNav: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: Home, featureKey: "dashboard" },
-  { label: "Multi-Stage", href: "/multi-stage", icon: Layers, featureKey: "multi_stage" },
-  { label: "Single-Stage", href: "/single-stage", icon: Box, featureKey: "single_stage" },
+const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Data Entry",
-    href: "/data-entry",
-    icon: FileInput,
-    featureKey: "data_entry",
+    heading: "Monitor",
     items: [
-      { label: "Weekly Flock Rollup", href: "/data-entry", icon: FileInput },
-      { label: "Egg Pack", href: "/data-entry/egg-pack", icon: Egg },
-      { label: "Fertility", href: "/data-entry/fertility", icon: Activity },
-      { label: "Residue", href: "/data-entry/residue", icon: Scale },
-      { label: "Clears & Injected", href: "/data-entry/clears-injected", icon: Sparkles },
+      { label: "Dashboard", href: "/", icon: Home, featureKey: "dashboard" },
+      { label: "Multi-Stage", href: "/multi-stage", icon: Layers, featureKey: "multi_stage" },
+      { label: "Single-Stage", href: "/single-stage", icon: Box, featureKey: "single_stage" },
+      { label: "Timeline", href: "/embrex-timeline", icon: TrendingUp, featureKey: "embrex_timeline" },
     ],
   },
   {
-    label: "QA Hub",
-    href: "/qa-hub",
-    icon: ClipboardCheck,
-    featureKey: "qa_hub",
+    heading: "Data",
     items: [
-      { label: "Temps", href: "/qa-hub?tab=temps", icon: Thermometer },
-      { label: "Angles", href: "/qa-hub?tab=angles", icon: Compass },
-      { label: "Humidity", href: "/qa-hub?tab=humidity", icon: Droplets },
-      { label: "Rectal", href: "/qa-hub?tab=rectal", icon: Activity },
-      { label: "Wash", href: "/qa-hub?tab=wash", icon: Sparkles },
-      { label: "Culls", href: "/qa-hub?tab=culls", icon: Skull },
-      { label: "Gravity", href: "/qa-hub?tab=gravity", icon: Scale },
-      { label: "Hatch", href: "/qa-hub?tab=hatch", icon: Egg },
+      {
+        label: "Data Entry",
+        href: "/data-entry",
+        icon: FileInput,
+        featureKey: "data_entry",
+        items: [
+          { label: "Weekly Rollup", href: "/data-entry", icon: FileInput },
+          { label: "Egg Pack", href: "/data-entry/egg-pack", icon: Egg },
+          { label: "Fertility", href: "/data-entry/fertility", icon: Activity },
+          { label: "Residue", href: "/data-entry/residue", icon: Scale },
+          { label: "Clears & Injected", href: "/data-entry/clears-injected", icon: Sparkles },
+        ],
+      },
+      { label: "Data Sheet", href: "/embrex-data-sheet", icon: FileSpreadsheet, featureKey: "embrex_data_sheet" },
     ],
   },
-  { label: "Data Sheet", href: "/embrex-data-sheet", icon: FileSpreadsheet, featureKey: "embrex_data_sheet" },
-  { label: "Timeline", href: "/embrex-timeline", icon: TrendingUp, featureKey: "embrex_timeline" },
-  { label: "Daily Tasks", href: "/checklist", icon: CheckSquare, featureKey: "checklist" },
-  { label: "Smart Analytics", href: "/chat", icon: MessageSquare, featureKey: "chat" },
   {
-    label: "Management",
-    href: "/management",
-    icon: Settings,
-    featureKey: "management",
+    heading: "Quality",
     items: [
-      { label: "Hatcheries", href: "/management/hatcheries", icon: Building2 },
-      { label: "Machines", href: "/management/machines", icon: Cpu },
-      { label: "Flocks", href: "/management/flocks", icon: Bird },
-      { label: "Users", href: "/management/users", icon: UsersIcon },
-      { label: "Reports", href: "/management/reports", icon: BarChart3 },
-      { label: "Targets", href: "/management/targets", icon: Target },
+      {
+        label: "QA Hub",
+        href: "/qa-hub",
+        icon: ClipboardCheck,
+        featureKey: "qa_hub",
+        items: [
+          { label: "Temps", href: "/qa-hub?tab=temps", icon: Thermometer },
+          { label: "Angles", href: "/qa-hub?tab=angles", icon: Compass },
+          { label: "Humidity", href: "/qa-hub?tab=humidity", icon: Droplets },
+          { label: "Rectal", href: "/qa-hub?tab=rectal", icon: Activity },
+          { label: "Wash", href: "/qa-hub?tab=wash", icon: Sparkles },
+          { label: "Culls", href: "/qa-hub?tab=culls", icon: Skull },
+          { label: "Gravity", href: "/qa-hub?tab=gravity", icon: Scale },
+          { label: "Hatch", href: "/qa-hub?tab=hatch", icon: Egg },
+        ],
+      },
+      { label: "Daily Tasks", href: "/checklist", icon: CheckSquare, featureKey: "checklist" },
+    ],
+  },
+  {
+    heading: "Intelligence",
+    items: [
+      { label: "Smart Analytics", href: "/chat", icon: MessageSquare, featureKey: "chat" },
+    ],
+  },
+  {
+    heading: "Admin",
+    items: [
+      {
+        label: "Management",
+        href: "/management",
+        icon: Settings,
+        featureKey: "management",
+        items: [
+          { label: "Hatcheries", href: "/management/hatcheries", icon: Building2 },
+          { label: "Machines", href: "/management/machines", icon: Cpu },
+          { label: "Flocks", href: "/management/flocks", icon: Bird },
+          { label: "Users", href: "/management/users", icon: UsersIcon },
+          { label: "Reports", href: "/management/reports", icon: BarChart3 },
+          { label: "Targets", href: "/management/targets", icon: Target },
+        ],
+      },
     ],
   },
 ];
 
-const footerNav: NavItem[] = [
-  { label: "Support", href: "/support", icon: LifeBuoy },
-  { label: "Settings", href: "/management", icon: Settings },
-];
+const EXPAND_STORAGE_KEY = "sidebar:expanded-groups:v1";
 
-function RailButton({
-  item,
-  active,
-  onHover,
-}: {
-  item: NavItem;
-  active: boolean;
-  onHover?: () => void;
-}) {
-  const Icon = item.icon;
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <NavLink
-          to={item.href}
-          onMouseEnter={onHover}
-          onFocus={onHover}
-          className={cn(
-            "relative flex items-center justify-center w-11 h-11 rounded-xl transition-colors",
-            active
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          )}
-        >
-          <Icon className="h-5 w-5" />
-          {item.items && (
-            <ChevronRight className="absolute -right-0.5 top-1/2 -translate-y-1/2 h-3 w-3 opacity-50" />
-          )}
-        </NavLink>
-      </TooltipTrigger>
-      <TooltipContent side="right">{item.label}</TooltipContent>
-    </Tooltip>
-  );
+function useExpanded(defaults: Record<string, boolean>) {
+  const [state, setState] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(EXPAND_STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      return { ...defaults, ...parsed };
+    } catch {
+      return defaults;
+    }
+  });
+  const toggle = (key: string) =>
+    setState((s) => {
+      const next = { ...s, [key]: !s[key] };
+      try {
+        localStorage.setItem(EXPAND_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  const setOpen = (key: string, value: boolean) =>
+    setState((s) => (s[key] === value ? s : { ...s, [key]: value }));
+  return { state, toggle, setOpen };
 }
 
 export function ModernSidebar() {
   const { isMobile, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
-  const { user } = useAuth();
+  const { user, profile } = useAuth() as any;
   const { hasFeatureAccess } = usePermissions();
   const { pathname, search } = useLocation();
+  const fullPath = pathname + (search || "");
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -154,107 +185,202 @@ export function ModernSidebar() {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [toggleSidebar]);
 
-  const visible = useMemo(
-    () =>
-      primaryNav.filter((i) => {
-        if (!user) return false;
-        return i.featureKey ? hasFeatureAccess(i.featureKey) : true;
-      }),
-    [user, hasFeatureAccess]
-  );
+  const visibleGroups = useMemo<NavGroup[]>(() => {
+    if (!user) return [];
+    return NAV_GROUPS.map((g) => ({
+      ...g,
+      items: g.items.filter((i) => (i.featureKey ? hasFeatureAccess(i.featureKey) : true)),
+    })).filter((g) => g.items.length > 0);
+  }, [user, hasFeatureAccess]);
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+  const isParentActive = (item: NavItem) => {
+    if (item.href === "/") return pathname === "/";
+    if (pathname.startsWith(item.href)) return true;
+    return !!item.items?.some((s) => fullPath === s.href || pathname === s.href.split("?")[0]);
   };
 
-  const activeItem = visible.find((i) => isActive(i.href));
-  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
-  const panelItem =
-    (hoveredHref && visible.find((i) => i.href === hoveredHref)) || activeItem || null;
-  const showPanel = !!(panelItem && panelItem.items && panelItem.items.length > 0);
+  const isSubActive = (sub: SubItem) => {
+    const [subPath, subQuery] = sub.href.split("?");
+    if (subQuery) return fullPath === sub.href;
+    return pathname === subPath;
+  };
+
+  const defaults = useMemo(() => {
+    const d: Record<string, boolean> = {};
+    for (const g of visibleGroups) {
+      for (const it of g.items) {
+        if (it.items?.length) d[it.href] = isParentActive(it);
+      }
+    }
+    return d;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleGroups, pathname]);
+
+  const { state: expanded, toggle, setOpen } = useExpanded(defaults);
+
+  // Auto-open the group of the currently active route
+  useEffect(() => {
+    for (const g of visibleGroups) {
+      for (const it of g.items) {
+        if (it.items?.length && isParentActive(it)) setOpen(it.href, true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const initials = (() => {
+    const first = profile?.first_name?.[0] ?? "";
+    const last = profile?.last_name?.[0] ?? "";
+    const combined = (first + last).toUpperCase();
+    if (combined) return combined;
+    return (user?.email?.[0] ?? "?").toUpperCase();
+  })();
+  const displayName =
+    profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : user?.email ?? "";
 
   return (
     <>
       {isMobile && openMobile && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setOpenMobile(false)} />
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setOpenMobile(false)}
+        />
       )}
 
       <Sidebar
         side="left"
         variant="sidebar"
         collapsible="offcanvas"
-        style={{ ["--sidebar-width" as any]: "68px" }}
-        className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl p-0"
+        style={{ ["--sidebar-width" as any]: "260px" }}
+        className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl"
       >
-        <SidebarContent className="p-0 overflow-visible">
-          <TooltipProvider>
-            <div
-              className="relative flex h-full pt-14"
-              onMouseLeave={() => setHoveredHref(null)}
-            >
-              {/* Slim icon rail */}
-              <div className="flex flex-col items-center gap-1 w-[68px] py-3 border-r border-sidebar-border/50 flex-shrink-0">
-                <div className="flex flex-col gap-1 flex-1">
-                  {visible.map((item) => (
-                    <RailButton
-                      key={item.href}
-                      item={item}
-                      active={isActive(item.href)}
-                      onHover={() => setHoveredHref(item.href)}
-                    />
-                  ))}
-                </div>
-                <div className="flex flex-col gap-1 pt-2 border-t border-sidebar-border/50 w-full items-center">
-                  {footerNav.map((item) => (
-                    <RailButton
-                      key={item.label}
-                      item={item}
-                      active={false}
-                      onHover={() => setHoveredHref(null)}
-                    />
-                  ))}
-                </div>
-              </div>
+        <SidebarContent className="pt-14 gap-0">
+          {visibleGroups.map((group) => (
+            <SidebarGroup key={group.heading} className="py-1">
+              <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-3 pb-1">
+                {group.heading}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isParentActive(item);
+                    const hasSubs = !!item.items?.length;
+                    const isOpen = hasSubs ? expanded[item.href] ?? false : false;
 
-              {/* Secondary panel */}
-              {showPanel && panelItem && (
-                <div className="absolute left-[68px] top-14 bottom-0 w-56 py-4 px-2 bg-sidebar/98 backdrop-blur-md border-r border-sidebar-border/50 shadow-xl animate-in fade-in slide-in-from-left-2 duration-150 z-10">
-                  <div className="px-3 pb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      {panelItem.label}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    {panelItem.items!.map((sub) => {
-                      const SubIcon = sub.icon;
-                      const subActive =
-                        pathname + search === sub.href ||
-                        (sub.href.includes("?")
-                          ? pathname + search === sub.href
-                          : pathname === sub.href);
-                      return (
-                        <NavLink
-                          key={sub.href}
-                          to={sub.href}
-                          className={cn(
-                            "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
-                            subActive
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <div className="flex items-stretch">
+                          <SidebarMenuButton
+                            asChild
+                            className={cn(
+                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1",
+                              active
+                                ? "bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary"
+                                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            )}
+                          >
+                            <NavLink to={item.href} end={item.href === "/"}>
+                              {active && (
+                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                              )}
+                              <Icon className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                          {hasSubs && (
+                            <button
+                              type="button"
+                              aria-label={isOpen ? "Collapse" : "Expand"}
+                              onClick={() => toggle(item.href)}
+                              className={cn(
+                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform",
+                                isOpen && "rotate-90"
+                              )}
+                            >
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
                           )}
-                        >
-                          <SubIcon className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">{sub.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </TooltipProvider>
+                        </div>
+                        {hasSubs && isOpen && (
+                          <SidebarMenuSub className="mt-0.5 ml-4 border-l border-sidebar-border/60 pl-2 gap-0.5">
+                            {item.items!.map((sub) => {
+                              const SubIcon = sub.icon;
+                              const subActive = isSubActive(sub);
+                              return (
+                                <SidebarMenuSubItem key={sub.href}>
+                                  <SidebarMenuSubButton asChild>
+                                    <NavLink
+                                      to={sub.href}
+                                      className={cn(
+                                        "h-8 px-2 rounded-md gap-2 text-sm",
+                                        subActive
+                                          ? "bg-primary/10 text-primary font-medium"
+                                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                      )}
+                                    >
+                                      <SubIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                      <span className="truncate">{sub.label}</span>
+                                    </NavLink>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
+
+        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1">
+          <SidebarMenu className="gap-0.5">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+                <NavLink to="/support">
+                  <LifeBuoy className="h-4 w-4" />
+                  <span>Support</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+                <NavLink to="/management">
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          {user && (
+            <NavLink
+              to="/profile"
+              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors"
+            >
+              <Avatar className="h-8 w-8 flex-shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-xs font-medium text-sidebar-foreground truncate">
+                  {displayName}
+                </span>
+                {user.email && displayName !== user.email && (
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {user.email}
+                  </span>
+                )}
+              </div>
+            </NavLink>
+          )}
+        </SidebarFooter>
       </Sidebar>
     </>
   );
