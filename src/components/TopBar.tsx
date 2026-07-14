@@ -242,6 +242,11 @@ export function TopBar() {
             )}
           </div>
         </div>
+        {!isOnDashboard && (
+          <div className="px-4 pb-1.5 border-t border-border/20 bg-muted/20">
+            <AppBreadcrumbs className="pt-1.5" />
+          </div>
+        )}
       </header>
 
       {/* Command Palette */}
