@@ -17,6 +17,10 @@ import QAEntryPage from "./pages/QAEntryPage";
 import ResidueEntryPage from "./pages/ResidueEntryPage";
 import ClearsInjectedEntryPage from "./pages/ClearsInjectedEntryPage";
 import HatchHOIEntryPage from "./pages/HatchHOIEntryPage";
+import FlockEggPackEntryPage from "./pages/FlockEggPackEntryPage";
+import FlockFertilityEntryPage from "./pages/FlockFertilityEntryPage";
+import FlockResidueEntryPage from "./pages/FlockResidueEntryPage";
+import FlockClearsInjectedEntryPage from "./pages/FlockClearsInjectedEntryPage";
 import ManagementPage from "./pages/ManagementPage";
 import SOPDashboardPage from "./pages/management/SOPDashboardPage";
 import HatcheriesPage from "./pages/management/HatcheriesPage";
@@ -163,6 +167,18 @@ function AppContent() {
                       } />
                       <Route path="/data-entry/flock/:flockKey/hoi" element={
                         <RoleProtectedRoute featureKey="data_entry"><HatchHOIEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/egg-pack" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockEggPackEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/fertility" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockFertilityEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/residue" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockResidueEntryPage /></RoleProtectedRoute>
+                      } />
+                      <Route path="/data-entry/flock/:flockKey/clears-injected" element={
+                        <RoleProtectedRoute featureKey="data_entry"><FlockClearsInjectedEntryPage /></RoleProtectedRoute>
                       } />
                       <Route path="/checklist" element={
                         <RoleProtectedRoute featureKey="checklist"><ChecklistPage /></RoleProtectedRoute>
