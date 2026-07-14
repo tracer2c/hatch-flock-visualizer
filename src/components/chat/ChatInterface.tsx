@@ -222,24 +222,8 @@ export const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
-      {/* Compact Header */}
-      <div className="flex-shrink-0 border-b bg-gradient-to-r from-background via-background to-muted/20">
-        <div className="max-w-5xl mx-auto px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 animate-pulse-glow">
-                <MessageCircle className="h-5 w-5 text-primary" />
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold text-foreground">Smart Analytics</h1>
-              <p className="text-xs text-muted-foreground">AI-powered insights</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="relative flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
+
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto">
