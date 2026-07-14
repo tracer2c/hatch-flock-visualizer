@@ -1,10 +1,12 @@
 import { useMemo } from "react";
-import { subDays } from "date-fns";
-import { Egg } from "lucide-react";
+import { subDays, format } from "date-fns";
+import { Egg, CalendarClock } from "lucide-react";
 import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { useWeeklyFlockRollup } from "@/hooks/useWeeklyFlockRollup";
 import { useCriticalAlerts } from "@/hooks/useAlerts";
+import { Button } from "@/components/ui/button";
+import { parseLocalDate } from "@/utils/localDate";
 import { KpiRow } from "./sections/KpiRow";
 import { NeedsAttention } from "./sections/NeedsAttention";
 import { WeeklyFlockStatusCard } from "./sections/WeeklyFlockStatusCard";
@@ -17,9 +19,16 @@ const avg = (nums: (number | null | undefined)[]) => {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 };
 
+const fmtRange = (from: Date, to: Date) => {
+  const sameYear = from.getFullYear() === to.getFullYear();
+  return sameYear
+    ? `${format(from, "MMM d")} – ${format(to, "MMM d, yyyy")}`
+    : `${format(from, "MMM d, yyyy")} – ${format(to, "MMM d, yyyy")}`;
+};
+
 export default function DashboardHome() {
   const filters = useAnalyticsFilters();
-  const { data: rows = [] } = useWeeklyFlockRollup({
+  const { data: rows = [], isLoading } = useWeeklyFlockRollup({
     weekStart: filters.dateFrom,
     weekEnd: filters.dateTo,
   });
@@ -33,7 +42,7 @@ export default function DashboardHome() {
     if (filters.flockIds.length === 0 && filters.hatcheryIds.length === 0) return rows;
     return rows.filter((r: any) => {
       if (filters.flockIds.length > 0) {
-        return r.house_ids.some(() => true); // flock filter already narrows list via flock_ids in row
+        return r.house_ids.some(() => true);
       }
       return true;
     });
@@ -48,6 +57,32 @@ export default function DashboardHome() {
   const avgHoi = avg(filtered.map((r) => r.hoi_pct));
   const criticalCount = criticalAlerts.length;
 
+  const rangeLabel = fmtRange(filters.dateFrom, filters.dateTo);
+  const noDataInRange = !isLoading && filtered.length === 0;
+  const latest = filters.latestDataDate ? parseLocalDate(filters.latestDataDate) : null;
+  const latestOutsideRange =
+    latest && (latest < filters.dateFrom || latest > filters.dateTo);
+
+  const emptyState = noDataInRange ? (
+    <div className="py-8 text-center space-y-3">
+      <div className="text-sm text-muted-foreground">
+        No flocks set between{" "}
+        <span className="font-medium text-foreground">{rangeLabel}</span>.
+      </div>
+      {latestOutsideRange && latest && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => filters.jumpToWeekContaining(latest)}
+          className="gap-2"
+        >
+          <CalendarClock className="h-4 w-4" />
+          Jump to most recent week with data ({format(latest, "MMM d, yyyy")})
+        </Button>
+      )}
+    </div>
+  ) : undefined;
+
   return (
     <div className="p-3 md:p-6 space-y-4 max-w-full">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -57,7 +92,9 @@ export default function DashboardHome() {
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Hatchery Dashboard</h1>
-            <p className="text-xs md:text-sm text-muted-foreground">Overview of today's hatchery operations</p>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Overview for {rangeLabel}
+            </p>
           </div>
         </div>
         <AnalyticsFilters showMode={false} />
@@ -70,9 +107,14 @@ export default function DashboardHome() {
         avgHoi={avgHoi}
         criticalAlerts={criticalCount}
         eggsDeltaPct={eggsDelta}
+        rangeLabel={rangeLabel}
       />
 
-      <NeedsAttention rows={filtered} criticalAlerts={criticalCount} />
+      <NeedsAttention
+        rows={filtered}
+        criticalAlerts={criticalCount}
+        emptyState={emptyState}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">

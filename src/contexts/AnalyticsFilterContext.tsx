@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { startOfWeek, endOfWeek } from "date-fns";
+import { parseLocalDate } from "@/utils/localDate";
+import { useLatestBatchDate } from "@/hooks/useLatestBatchDate";
 
 export type FilterMode = "flock" | "house";
 
@@ -18,16 +20,23 @@ interface AnalyticsFilterContextValue extends AnalyticsFilterState {
   setFlockIds: (ids: string[]) => void;
   setHouseIds: (ids: string[]) => void;
   setMode: (m: FilterMode) => void;
+  jumpToWeekContaining: (date: Date) => void;
   reset: () => void;
+  latestDataDate: string | null;
 }
 
 const STORAGE_KEY = "analytics-filters-v1";
 
+const weekRange = (d: Date) => ({
+  dateFrom: startOfWeek(d, { weekStartsOn: 1 }),
+  dateTo: endOfWeek(d, { weekStartsOn: 1 }),
+});
+
 const defaultState = (): AnalyticsFilterState => {
-  const now = new Date();
+  const { dateFrom, dateTo } = weekRange(new Date());
   return {
-    dateFrom: startOfWeek(now, { weekStartsOn: 1 }),
-    dateTo: endOfWeek(now, { weekStartsOn: 1 }),
+    dateFrom,
+    dateTo,
     hatcheryIds: [],
     flockIds: [],
     houseIds: [],
@@ -35,28 +44,51 @@ const defaultState = (): AnalyticsFilterState => {
   };
 };
 
-const loadState = (): AnalyticsFilterState => {
+const loadState = (): { state: AnalyticsFilterState; hadSaved: boolean } => {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
+    if (!raw) return { state: defaultState(), hadSaved: false };
     const parsed = JSON.parse(raw);
     return {
-      dateFrom: new Date(parsed.dateFrom),
-      dateTo: new Date(parsed.dateTo),
-      hatcheryIds: parsed.hatcheryIds || [],
-      flockIds: parsed.flockIds || [],
-      houseIds: parsed.houseIds || [],
-      mode: parsed.mode || "flock",
+      state: {
+        dateFrom: new Date(parsed.dateFrom),
+        dateTo: new Date(parsed.dateTo),
+        hatcheryIds: parsed.hatcheryIds || [],
+        flockIds: parsed.flockIds || [],
+        houseIds: parsed.houseIds || [],
+        mode: parsed.mode || "flock",
+      },
+      hadSaved: true,
     };
   } catch {
-    return defaultState();
+    return { state: defaultState(), hadSaved: false };
   }
 };
 
 const Ctx = createContext<AnalyticsFilterContextValue | null>(null);
 
 export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AnalyticsFilterState>(() => loadState());
+  const initial = useRef(loadState());
+  const [state, setState] = useState<AnalyticsFilterState>(initial.current.state);
+  const { data: latestDate } = useLatestBatchDate();
+  const autoAppliedRef = useRef(false);
+
+  // If the user had no saved filter and their default "this week" range
+  // contains no data, jump to the most recent week that does.
+  useEffect(() => {
+    if (autoAppliedRef.current) return;
+    if (initial.current.hadSaved) return;
+    if (!latestDate) return;
+    const latest = parseLocalDate(latestDate);
+    if (!latest) return;
+    if (latest >= state.dateFrom && latest <= state.dateTo) {
+      autoAppliedRef.current = true;
+      return;
+    }
+    const { dateFrom, dateTo } = weekRange(latest);
+    setState((s) => ({ ...s, dateFrom, dateTo }));
+    autoAppliedRef.current = true;
+  }, [latestDate, state.dateFrom, state.dateTo]);
 
   useEffect(() => {
     try {
@@ -81,9 +113,14 @@ export function AnalyticsFilterProvider({ children }: { children: ReactNode }) {
       setFlockIds: (ids) => setState((s) => ({ ...s, flockIds: ids })),
       setHouseIds: (ids) => setState((s) => ({ ...s, houseIds: ids })),
       setMode: (m) => setState((s) => ({ ...s, mode: m })),
+      jumpToWeekContaining: (date) => {
+        const { dateFrom, dateTo } = weekRange(date);
+        setState((s) => ({ ...s, dateFrom, dateTo }));
+      },
       reset: () => setState(defaultState()),
+      latestDataDate: latestDate ?? null,
     }),
-    [state]
+    [state, latestDate]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

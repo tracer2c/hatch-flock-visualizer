@@ -27,18 +27,19 @@ interface Props {
   avgHoi: number | null;
   criticalAlerts: number;
   eggsDeltaPct?: number | null;
+  rangeLabel?: string;
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
 const pct = (n: number | null) => (n == null || isNaN(n) ? "—" : `${n.toFixed(1)}%`);
 
-export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, eggsDeltaPct }: Props) {
+export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, eggsDeltaPct, rangeLabel }: Props) {
   const kpis: Kpi[] = [
     {
       label: "TOTAL EGGS SET",
       value: fmt(totalEggs),
-      sub: "This week",
-      delta: eggsDeltaPct != null ? `${eggsDeltaPct >= 0 ? "↑" : "↓"} ${Math.abs(eggsDeltaPct).toFixed(1)}% vs last week` : undefined,
+      sub: rangeLabel || "This week",
+      delta: eggsDeltaPct != null ? `${eggsDeltaPct >= 0 ? "↑" : "↓"} ${Math.abs(eggsDeltaPct).toFixed(1)}% vs prior period` : undefined,
       deltaPositive: (eggsDeltaPct ?? 0) >= 0,
       icon: Egg,
       tone: "primary",
