@@ -67,6 +67,7 @@ import { OfflineBanner } from "./components/OfflineBanner";
 import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
+import { AppBreadcrumbs } from "./components/uui/AppBreadcrumbs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +107,9 @@ function AppContent() {
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <TopBar />
                     <main className="flex-1 overflow-auto pt-12">
+                    <div className="px-4 sm:px-6 pt-3">
+                      <AppBreadcrumbs />
+                    </div>
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/multi-stage" element={
