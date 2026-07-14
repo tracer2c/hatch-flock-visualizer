@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import {
   aggregateByHouse,
@@ -41,8 +42,10 @@ const STATUS_RANK: Record<string, number> = {
   cancelled: 4,
 };
 
+// Use local-date formatter (avoid toISOString shifting Monday → Sunday in
+// negative-UTC timezones).
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return format(d, "yyyy-MM-dd");
 }
 
 export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {

@@ -29,9 +29,10 @@ const kindMeta: Record<IssueKind, { label: string; className: string; icon: any 
 interface Props {
   rows: WeeklyFlockRollupRow[];
   criticalAlerts: number;
+  emptyState?: React.ReactNode;
 }
 
-export function NeedsAttention({ rows, criticalAlerts }: Props) {
+export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
   const navigate = useNavigate();
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
@@ -102,7 +103,11 @@ export function NeedsAttention({ rows, criticalAlerts }: Props) {
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Nothing needs attention. Nicely done. 🎉</div>
+          emptyState ?? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nothing needs attention. Nicely done. 🎉
+            </div>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
