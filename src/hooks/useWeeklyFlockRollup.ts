@@ -156,6 +156,36 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
         groups.set(key, bucket);
       }
 
+      // 3b) Fetch flock-level overrides for this week (by flock_id, period_start)
+      const flockIds = Array.from(
+        new Set(rows.map((r) => r.flock_id).filter(Boolean) as string[])
+      );
+      let flockEpqOverride = new Map<string, any>();
+      let flockFertOverride = new Map<string, any>();
+      let flockResOverride = new Map<string, any>();
+      if (flockIds.length) {
+        const [epqO, fertO, resO] = await Promise.all([
+          supabase
+            .from("flock_weekly_egg_pack")
+            .select("*")
+            .in("flock_id", flockIds)
+            .eq("period_start", startStr),
+          supabase
+            .from("flock_weekly_fertility")
+            .select("*")
+            .in("flock_id", flockIds)
+            .eq("period_start", startStr),
+          supabase
+            .from("flock_weekly_residue")
+            .select("*")
+            .in("flock_id", flockIds)
+            .eq("period_start", startStr),
+        ]);
+        (epqO.data || []).forEach((r: any) => flockEpqOverride.set(r.flock_id, r));
+        (fertO.data || []).forEach((r: any) => flockFertOverride.set(r.flock_id, r));
+        (resO.data || []).forEach((r: any) => flockResOverride.set(r.flock_id, r));
+      }
+
       const out: WeeklyFlockRollupRow[] = [];
       for (const [key, bucket] of groups) {
         const totalEggs = bucket.reduce((a, r) => a + r.total_eggs_set, 0);
@@ -177,8 +207,31 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
         const fertRow = byFlockFert.get(key);
         const resRow = byFlockRes.get(key);
 
+        const flockId = bucket[0].flock_id ?? null;
+        const epqOv = flockId ? flockEpqOverride.get(flockId) : null;
+        const fertOv = flockId ? flockFertOverride.get(flockId) : null;
+        const resOv = flockId ? flockResOverride.get(flockId) : null;
+
+        const houseGradeAPct =
+          epqRow && epqRow.sample_size && epqRow.grade_a
+            ? (Number(epqRow.grade_a) / Number(epqRow.sample_size)) * 100
+            : null;
+        const overrideGradeAPct =
+          epqOv && Number(epqOv.sample_size) > 0
+            ? (Number(epqOv.grade_a || 0) / Number(epqOv.sample_size)) * 100
+            : null;
+
+        const houseFertPct = fertRow?.fertility_percent ?? null;
+        const overrideFertPct = fertOv?.fertility_percent ?? null;
+
+        const houseHofPct = resRow?.hof_percent ?? fertRow?.hof_percent ?? null;
+        const houseHoiPct = resRow?.hoi_percent ?? fertRow?.hoi_percent ?? null;
+        const overrideHofPct = resOv?.hof_percent ?? fertOv?.hof_percent ?? null;
+        const overrideHoiPct = resOv?.hoi_percent ?? fertOv?.hoi_percent ?? null;
+
         out.push({
           key,
+          flock_id: flockId,
           flock_number: bucket[0].flock_number,
           flock_name: bucket[0].flock_name,
           house_count: houseSet.size || bucket.length,
@@ -189,15 +242,23 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
           total_eggs_cleared: totalCleared,
           total_eggs_injected: totalInjected,
           total_chicks_hatched: totalChicks,
-          grade_a_pct:
-            epqRow && epqRow.sample_size && epqRow.grade_a
-              ? (Number(epqRow.grade_a) / Number(epqRow.sample_size)) * 100
-              : null,
-          fertility_pct: fertRow?.fertility_percent ?? null,
-          hof_pct: resRow?.hof_percent ?? fertRow?.hof_percent ?? null,
-          hoi_pct: resRow?.hoi_percent ?? fertRow?.hoi_percent ?? null,
+          grade_a_pct: overrideGradeAPct ?? houseGradeAPct,
+          fertility_pct: overrideFertPct ?? houseFertPct,
+          hof_pct: overrideHofPct ?? houseHofPct,
+          hoi_pct: overrideHoiPct ?? houseHoiPct,
           statuses,
           worst_status: worst,
+          flock_level_source: {
+            egg_pack: Boolean(epqOv),
+            fertility: Boolean(fertOv),
+            residue: Boolean(resOv),
+          },
+          house_sum_alt: {
+            grade_a_pct: overrideGradeAPct != null ? houseGradeAPct : null,
+            fertility_pct: overrideFertPct != null ? houseFertPct : null,
+            hof_pct: overrideHofPct != null ? houseHofPct : null,
+            hoi_pct: overrideHoiPct != null ? houseHoiPct : null,
+          },
         });
       }
 
