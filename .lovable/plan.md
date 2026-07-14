@@ -1,76 +1,84 @@
-# Plan: Adopt Untitled UI components (calendar, breadcrumbs, alerts, login)
+## Recommended variant: **Section subheadings** (full-width sidebar)
 
-## Scope
-Bring in selected [Untitled UI React](https://www.untitledui.com/react/docs/introduction) components, restyled with our existing design tokens (Auburn Royal Blue `#4169E1`, Burnt Orange `#DD550C`, semantic tokens from `index.css`). No business-logic changes.
+A ~260px sidebar grouped by category subheadings (uppercase, muted). Each row shows icon + label; groups with sub-pages expand inline. Footer pinned to bottom for Support + Settings + user card.
 
-## 1. Install Untitled UI
+Why not the others:
+- **Simple / Dual-tier** — flat lists don't scale to 10+ items cleanly.
+- **Slim** — what I built. Labels hidden behind hover; heavy for a data app.
+- **Section dividers** — same as subheadings but with hairlines only; subheadings read better with our count.
 
-Untitled UI React ships as source you copy in via their CLI (similar to shadcn). Install once:
+### Structure
 
+```text
+┌──────────────────────────┐
+│  Logo · Hatch Flock      │
+│  [Search]                │
+├──────────────────────────┤
+│ MONITOR                  │
+│   Dashboard              │
+│   Multi-Stage            │
+│   Single-Stage           │
+│   Timeline               │
+│                          │
+│ DATA                     │
+│   Data Entry        ▸    │
+│   Data Sheet             │
+│                          │
+│ QUALITY                  │
+│   QA Hub            ▸    │
+│   Daily Tasks            │
+│                          │
+│ INTELLIGENCE             │
+│   Smart Analytics        │
+│                          │
+│ ADMIN                    │
+│   Management        ▸    │
+├──────────────────────────┤
+│  Support                 │
+│  Settings                │
+│  ── user card ──         │
+└──────────────────────────┘
 ```
-npx untitledui@latest init
-```
 
-Then add only the components we need:
+Expanders (`▸`) reveal sub-items inline (indented, no fly-out panel):
+- **Data Entry**: Weekly Rollup, Egg Pack, Fertility, Residue, Clears & Injected
+- **QA Hub**: Temps, Angles, Humidity, Rectal, Wash, Culls, Gravity, Hatch
+- **Management**: Hatcheries, Machines, Flocks, Users, Reports, Targets
 
-```
-npx untitledui@latest add date-picker breadcrumb alert sign-in
-```
+Expander auto-opens when a child route is active; user toggle persists in `localStorage`.
 
-Files land under `src/components/uui/` (namespaced to avoid clashing with our existing shadcn components under `src/components/ui/`).
+### Styling (mapped to our tokens)
 
-## 2. Theme bridge (no color drift)
+- Bg: `bg-sidebar`, border `border-sidebar-border/50`
+- Subheadings: `text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-1`
+- Row: `h-9 px-3 rounded-lg gap-3 text-sm`, hover `bg-sidebar-accent`
+- Active: `bg-primary/10 text-primary font-medium` with 2px primary left indicator
+- Sub-row: indent `pl-9`, same active treatment
+- Icon size: `h-4 w-4`
+- Width: `260px` desktop; `collapsible="offcanvas"` on mobile (unchanged)
 
-- Map Untitled UI's Tailwind theme vars to our HSL tokens (`--primary`, `--background`, `--foreground`, `--border`, `--destructive`, `--warning`, etc.) in `tailwind.config.ts` + a small `uui-theme.css` imported from `src/index.css`.
-- Result: UUI components render in our Auburn Royal Blue / Burnt Orange palette in both light and dark mode. No hardcoded hex in components.
+### Files to change
 
-## 3. Range calendar card (the main pain point)
+1. **`src/components/ModernSidebar.tsx`** — rewrite. Replace slim rail with:
+   - Grouped `NAV_GROUPS` config: `{ heading, items: NavItem[] }[]`
+   - `NavItem` supports optional `items` for sub-pages; renders as `<Collapsible>` (shadcn) when present
+   - Uses shadcn `Sidebar` + `SidebarContent` + `SidebarGroup` + `SidebarGroupLabel` + `SidebarMenu` primitives (they already implement subheadings)
+   - Footer via `SidebarFooter` with Support, Settings, and a compact user card (avatar + name + email)
+   - Reset `--sidebar-width` to `260px`
+   - Permissions: hide items whose `featureKey` fails `hasFeatureAccess`; hide a group if all its items are hidden
 
-Replace the current calendar popover in `src/components/analytics/AnalyticsFilters.tsx` with UUI's **Range calendar card**:
+2. **`src/App.tsx`** — no route changes. Only remove the earlier `--sidebar-width: 68px` override if we set it (we did on the Sidebar element, so it's contained in the component).
 
-- Same popover trigger button (unchanged label: `Jul 13 – Jul 19, 2026`).
-- Inside the popover: UUI RangeCalendar + our preset chips (This week / Last week / MTD / Last 30 days) on the left, calendar on the right — matches UUI's "card" layout.
-- Wire `onChange` back to `filters.setDateRange(from, to)` — no context changes.
-- Same swap in `OverviewHeader.tsx` (single date-range popover) so both entry points look consistent.
+3. **`src/components/TopBar.tsx`** — no changes; breadcrumbs stay in page body as agreed last turn.
 
-## 4. Breadcrumbs
+### Out of scope
 
-- Add a shared `<AppBreadcrumbs />` built on UUI Breadcrumb, rendered inside `TopBar.tsx` under the title row.
-- Route → crumb map derived from `App.tsx` routes, e.g.:
-  - `/data-entry/flock/:flockKey/residue` → Data Entry › Weekly Flock Rollup › {Flock name} › Residue
-  - `/qa-hub` → QA Hub
-  - `/analytics/*` → Analytics › {subpage}
-- Flock/house names resolved from the existing `useFlockWeekBatches` / route params (no new queries where the data is already in cache).
+- No route or permission changes.
+- No featured card (upgrade CTA / progress card) — can add later if you want one of the UUI featured cards in the footer.
+- Mobile behavior unchanged (offcanvas drawer with the same grouped layout).
 
-## 5. Alerts
+### Verification
 
-- Add UUI Alert as `src/components/uui/Alert.tsx` with variants `info | success | warning | error`.
-- Replace ad-hoc alert boxes in:
-  - `DashboardHome` empty state ("No flocks set between …" → info Alert with the "Jump to most recent week" action).
-  - `NeedsAttention` critical row (error Alert).
-  - QA Hub past-date read-only banners (warning Alert).
-- `useToast` stays as-is — Alerts are for inline, persistent messages only.
-
-## 6. Sign-in page
-
-- Replace the current `src/pages/AuthPage.tsx` sign-in form with UUI's **Sign in** block (split layout: form left, brand panel right).
-- Keep every existing behavior: Supabase email/password, sign-up tab, forgot-password link, 2FA verify dialog, email-availability debounce, password strength meter, seamless signup→signin transition.
-- Brand panel: our logo + Auburn Royal Blue gradient, no stock imagery.
-- Reset password page (`ResetPasswordPage.tsx`) restyled to match.
-
-## 7. Verification
-
-- `tsgo` typecheck.
-- Playwright pass on `/`, `/auth`, `/data-entry`, `/qa-hub`, `/analytics/performance` — screenshot each to confirm the new calendar, breadcrumbs, alerts, and sign-in render in our theme.
-
-## What is NOT changing
-- No changes to hooks, queries, RLS, routing structure, or data flow.
-- Existing shadcn components under `src/components/ui/` stay; UUI lives alongside under `src/components/uui/`. We migrate call sites only for the 4 areas above.
-- No new colors, fonts, or logos introduced.
-
-## Open question
-Untitled UI React's free tier covers Breadcrumb, Alert, and Date picker. The **Sign in** block is in their PRO tier. Two options:
-- **A.** Use UUI free components for calendar/breadcrumb/alert now, and I'll rebuild the sign-in page in the same visual language using free primitives (Input, Button, etc.) — no license needed.
-- **B.** You have a UUI PRO license — share it (or confirm) and I'll pull the official Sign in block.
-
-I'll proceed with **A** unless you say otherwise.
+- Typecheck clean.
+- Click each group with sub-items; confirm expand/collapse and active highlight for both parent and child routes (`/qa-hub?tab=angles`, `/data-entry/residue`, `/management/users`).
+- Verify staff / restricted role sees only permitted groups; empty groups don't render their heading.
