@@ -1,85 +1,76 @@
-## Goal
+# Plan: Adopt Untitled UI components (calendar, breadcrumbs, alerts, login)
 
-When a user enters a record page from **Weekly Flock Rollup**, the header must show **flock/week totals**, not one house. The **house number becomes an optional field inside the form** (1–6). **Clears & Injected** is flock-only (no house selector at all).
+## Scope
+Bring in selected [Untitled UI React](https://www.untitledui.com/react/docs/introduction) components, restyled with our existing design tokens (Auburn Royal Blue `#4169E1`, Burnt Orange `#DD550C`, semantic tokens from `index.css`). No business-logic changes.
 
-## Scope (Data Entry only — does not touch Data Sheet)
+## 1. Install Untitled UI
 
-Affected pages:
-- `EggPackEntryPage.tsx`
-- `FertilityEntryPage.tsx`
-- `ResidueEntryPage.tsx`
-- `ClearsInjectedEntryPage.tsx`
-- `HatchHOIEntryPage.tsx` (already flock-level; only header polish)
-- `FlockDrillDown.tsx` (Record Data buttons)
-
-## Changes
-
-### 1. Route by flock+week, not by houseId
-
-Add flock-week entry routes and use them from `FlockDrillDown`'s Record Data buttons:
+Untitled UI React ships as source you copy in via their CLI (similar to shadcn). Install once:
 
 ```
-/data-entry/flock/:flockKey/egg-pack
-/data-entry/flock/:flockKey/fertility
-/data-entry/flock/:flockKey/residue
-/data-entry/flock/:flockKey/clears-injected
-/data-entry/flock/:flockKey/hoi   (already exists)
+npx untitledui@latest init
 ```
 
-`flockKey` encodes flock_id + period_start + period_end (same helper as HOI page uses today).
+Then add only the components we need:
 
-The old `/data-entry/house/:houseId/...` routes stay for the "Investigate individual houses" drilldown, so nothing regresses.
+```
+npx untitledui@latest add date-picker breadcrumb alert sign-in
+```
 
-### 2. Unified flock-week header (all 4 pages)
+Files land under `src/components/uui/` (namespaced to avoid clashing with our existing shadcn components under `src/components/ui/`).
 
-Replace the current per-house blue header block with a shared flock summary card showing:
+## 2. Theme bridge (no color drift)
 
-- Flock #, Flock name
-- Set Week range
-- **Total Eggs Set (flock-week)** — sum across houses
-- Status badge (aggregated from batches in the week)
-- No machine field, no per-house eggs
+- Map Untitled UI's Tailwind theme vars to our HSL tokens (`--primary`, `--background`, `--foreground`, `--border`, `--destructive`, `--warning`, etc.) in `tailwind.config.ts` + a small `uui-theme.css` imported from `src/index.css`.
+- Result: UUI components render in our Auburn Royal Blue / Burnt Orange palette in both light and dark mode. No hardcoded hex in components.
 
-Create `src/components/dashboard/FlockEntryHeader.tsx` reused by all four pages.
+## 3. Range calendar card (the main pain point)
 
-### 3. Optional House # inside the form (Egg Pack, Fertility, Residue)
+Replace the current calendar popover in `src/components/analytics/AnalyticsFilters.tsx` with UUI's **Range calendar card**:
 
-Remove the top `FlockWeekHouseSwitcher` (which navigates between houses) from these three pages. Inside the entry form, add:
+- Same popover trigger button (unchanged label: `Jul 13 – Jul 19, 2026`).
+- Inside the popover: UUI RangeCalendar + our preset chips (This week / Last week / MTD / Last 30 days) on the left, calendar on the right — matches UUI's "card" layout.
+- Wire `onChange` back to `filters.setDateRange(from, to)` — no context changes.
+- Same swap in `OverviewHeader.tsx` (single date-range popover) so both entry points look consistent.
 
-- **"House # (optional)"** dropdown listing the flock's houses for that week (1–6) plus a "Whole flock / not specified" option.
-- The selected house drives `batch_id` on save (picks that house's batch row). "Not specified" saves against the flock's primary/first batch of the week so existing house-scoped tables (`egg_pack_quality`, `fertility_analysis`, `residue_analysis`) keep working without schema changes.
+## 4. Breadcrumbs
 
-Files:
-- `EggPackDataEntry.tsx` — add optional house select in the form
-- `FertilityAnalysisEntry` used by `FertilityEntryPage`
-- Residue entry component used by `ResidueEntryPage`
+- Add a shared `<AppBreadcrumbs />` built on UUI Breadcrumb, rendered inside `TopBar.tsx` under the title row.
+- Route → crumb map derived from `App.tsx` routes, e.g.:
+  - `/data-entry/flock/:flockKey/residue` → Data Entry › Weekly Flock Rollup › {Flock name} › Residue
+  - `/qa-hub` → QA Hub
+  - `/analytics/*` → Analytics › {subpage}
+- Flock/house names resolved from the existing `useFlockWeekBatches` / route params (no new queries where the data is already in cache).
 
-### 4. Clears & Injected → flock-only
+## 5. Alerts
 
-`ClearsInjectedEntryPage.tsx`:
-- Remove house switcher and any house selector entirely.
-- Header shows only flock-week summary.
-- Save path uses `useSaveFlockTotalsToBatches` (already exists in `useFlockWeeklyClears.ts`) — proportionally splits `clear_number` / `injected_number` across the flock's batches by `total_eggs_set` and upserts a `flock_weekly_clears` row.
-- `ClearsInjectedDataEntry.tsx`: the header/summary line uses **flock-week Total Eggs Set**, not one house.
+- Add UUI Alert as `src/components/uui/Alert.tsx` with variants `info | success | warning | error`.
+- Replace ad-hoc alert boxes in:
+  - `DashboardHome` empty state ("No flocks set between …" → info Alert with the "Jump to most recent week" action).
+  - `NeedsAttention` critical row (error Alert).
+  - QA Hub past-date read-only banners (warning Alert).
+- `useToast` stays as-is — Alerts are for inline, persistent messages only.
 
-### 5. FlockDrillDown Record Data buttons
+## 6. Sign-in page
 
-Point all 5 buttons to the new `/data-entry/flock/:flockKey/*` routes. Remove the House # dropdown from the Record Data card (it is no longer needed — house is chosen inside the form for the 3 pages that still support it, and Clears/HOI never take a house).
+- Replace the current `src/pages/AuthPage.tsx` sign-in form with UUI's **Sign in** block (split layout: form left, brand panel right).
+- Keep every existing behavior: Supabase email/password, sign-up tab, forgot-password link, 2FA verify dialog, email-availability debounce, password strength meter, seamless signup→signin transition.
+- Brand panel: our logo + Auburn Royal Blue gradient, no stock imagery.
+- Reset password page (`ResetPasswordPage.tsx`) restyled to match.
 
-### 6. Keep house-level entry reachable
+## 7. Verification
 
-The "Investigate individual houses (optional)" section in `FlockDrillDown` continues to open the existing `/data-entry/house/:houseId` page, so per-house entry stays possible for anyone who needs it.
+- `tsgo` typecheck.
+- Playwright pass on `/`, `/auth`, `/data-entry`, `/qa-hub`, `/analytics/performance` — screenshot each to confirm the new calendar, breadcrumbs, alerts, and sign-in render in our theme.
 
-## Non-goals
+## What is NOT changing
+- No changes to hooks, queries, RLS, routing structure, or data flow.
+- Existing shadcn components under `src/components/ui/` stay; UUI lives alongside under `src/components/uui/`. We migrate call sites only for the 4 areas above.
+- No new colors, fonts, or logos introduced.
 
-- No schema migrations. `egg_pack_quality` / `fertility_analysis` / `residue_analysis` remain keyed by `batch_id`; we just default to the flock's primary batch when the user leaves the optional house blank.
-- No changes to Data Sheet or Analytics.
-- No changes to QA Hub.
+## Open question
+Untitled UI React's free tier covers Breadcrumb, Alert, and Date picker. The **Sign in** block is in their PRO tier. Two options:
+- **A.** Use UUI free components for calendar/breadcrumb/alert now, and I'll rebuild the sign-in page in the same visual language using free primitives (Input, Button, etc.) — no license needed.
+- **B.** You have a UUI PRO license — share it (or confirm) and I'll pull the official Sign in block.
 
-## Verification
-
-1. From Dashboard → Weekly Flock Rollup → click flock → Record Data → Residue: header shows flock total eggs (e.g., 212,000), not one house's 92,000.
-2. Inside Residue form, House # dropdown is present and optional; save with and without a house both succeed.
-3. Clears & Injected page shows only flock summary, no house field; save distributes across batches and appears in By House view.
-4. HOI page header matches the same flock summary style.
-5. `tsgo` typecheck passes.
+I'll proceed with **A** unless you say otherwise.
