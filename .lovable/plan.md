@@ -1,84 +1,36 @@
-## Recommended variant: **Section subheadings** (full-width sidebar)
+## Goal
+Replace the plain shadcn calendar popover on **Data Entry → Weekly Flock Rollup** with the Untitled UI-styled Range Calendar Card already used elsewhere, and add a small dot indicator under each day that has any batch data (set_date).
 
-A ~260px sidebar grouped by category subheadings (uppercase, muted). Each row shows icon + label; groups with sub-pages expand inline. Footer pinned to bottom for Support + Settings + user card.
+## Changes
 
-Why not the others:
-- **Simple / Dual-tier** — flat lists don't scale to 10+ items cleanly.
-- **Slim** — what I built. Labels hidden behind hover; heavy for a data app.
-- **Section dividers** — same as subheadings but with hairlines only; subheadings read better with our count.
+### 1. New hook — `src/hooks/useDatesWithBatches.ts`
+- Accepts `{ from: Date; to: Date }` (visible month range).
+- Queries `batches` for distinct `set_date` in that window (respecting the current company via RLS).
+- Returns a `Set<string>` of `yyyy-MM-dd` for O(1) day lookup.
+- Cached via react-query, keyed by the range.
 
-### Structure
+### 2. Extend `src/components/uui/RangeCalendarCard.tsx` (and underlying `Calendar`)
+- Add an optional `markedDates?: Set<string>` prop.
+- Pass through to the inner `Calendar` via `modifiers={{ hasData: (d) => markedDates.has(fmt(d)) }}` and `modifiersClassNames={{ hasData: "relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:rounded-full after:bg-primary" }}`.
+- Keep the ring for the selected day; dot stays visible on unselected days (hidden on selected via an override class).
 
-```text
-┌──────────────────────────┐
-│  Logo · Hatch Flock      │
-│  [Search]                │
-├──────────────────────────┤
-│ MONITOR                  │
-│   Dashboard              │
-│   Multi-Stage            │
-│   Single-Stage           │
-│   Timeline               │
-│                          │
-│ DATA                     │
-│   Data Entry        ▸    │
-│   Data Sheet             │
-│                          │
-│ QUALITY                  │
-│   QA Hub            ▸    │
-│   Daily Tasks            │
-│                          │
-│ INTELLIGENCE             │
-│   Smart Analytics        │
-│                          │
-│ ADMIN                    │
-│   Management        ▸    │
-├──────────────────────────┤
-│  Support                 │
-│  Settings                │
-│  ── user card ──         │
-└──────────────────────────┘
-```
+### 3. New week-picker wrapper — `src/components/uui/WeekPickerCard.tsx`
+- Same visual shell as `RangeCalendarCard` (preset rail + calendar + Apply/Cancel).
+- `mode="single"`, but on hover/select of a day, highlights the full ISO week (Mon–Sun) using `modifiers`.
+- Presets: **This week**, **Last week**, **2 weeks ago**, **Most recent with data** (uses `useLatestBatchDate`), **This month**.
+- Fetches `markedDates` via the new hook for the currently-displayed month(s) and renders dots on days with data.
+- Emits `onChange(anchorDate)`; parent computes `weekStart/weekEnd`.
 
-Expanders (`▸`) reveal sub-items inline (indented, no fly-out panel):
-- **Data Entry**: Weekly Rollup, Egg Pack, Fertility, Residue, Clears & Injected
-- **QA Hub**: Temps, Angles, Humidity, Rectal, Wash, Culls, Gravity, Hatch
-- **Management**: Hatcheries, Machines, Flocks, Users, Reports, Targets
+### 4. Wire into `src/components/dashboard/WeeklyRollupView.tsx`
+- Remove the existing `Popover` + `CalendarComponent` block (lines ~93–109).
+- Replace with `<WeekPickerCard value={anchor} onChange={setAnchor} />`.
+- Keep the ChevronLeft/Right and "This week" buttons unchanged.
 
-Expander auto-opens when a child route is active; user toggle persists in `localStorage`.
+## Out of scope
+- No changes to the Analytics-page range picker (already UUI).
+- No schema changes; dot data is read-only from `batches.set_date`.
+- No changes to drill-down pages.
 
-### Styling (mapped to our tokens)
-
-- Bg: `bg-sidebar`, border `border-sidebar-border/50`
-- Subheadings: `text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-1`
-- Row: `h-9 px-3 rounded-lg gap-3 text-sm`, hover `bg-sidebar-accent`
-- Active: `bg-primary/10 text-primary font-medium` with 2px primary left indicator
-- Sub-row: indent `pl-9`, same active treatment
-- Icon size: `h-4 w-4`
-- Width: `260px` desktop; `collapsible="offcanvas"` on mobile (unchanged)
-
-### Files to change
-
-1. **`src/components/ModernSidebar.tsx`** — rewrite. Replace slim rail with:
-   - Grouped `NAV_GROUPS` config: `{ heading, items: NavItem[] }[]`
-   - `NavItem` supports optional `items` for sub-pages; renders as `<Collapsible>` (shadcn) when present
-   - Uses shadcn `Sidebar` + `SidebarContent` + `SidebarGroup` + `SidebarGroupLabel` + `SidebarMenu` primitives (they already implement subheadings)
-   - Footer via `SidebarFooter` with Support, Settings, and a compact user card (avatar + name + email)
-   - Reset `--sidebar-width` to `260px`
-   - Permissions: hide items whose `featureKey` fails `hasFeatureAccess`; hide a group if all its items are hidden
-
-2. **`src/App.tsx`** — no route changes. Only remove the earlier `--sidebar-width: 68px` override if we set it (we did on the Sidebar element, so it's contained in the component).
-
-3. **`src/components/TopBar.tsx`** — no changes; breadcrumbs stay in page body as agreed last turn.
-
-### Out of scope
-
-- No route or permission changes.
-- No featured card (upgrade CTA / progress card) — can add later if you want one of the UUI featured cards in the footer.
-- Mobile behavior unchanged (offcanvas drawer with the same grouped layout).
-
-### Verification
-
-- Typecheck clean.
-- Click each group with sub-items; confirm expand/collapse and active highlight for both parent and child routes (`/qa-hub?tab=angles`, `/data-entry/residue`, `/management/users`).
-- Verify staff / restricted role sees only permitted groups; empty groups don't render their heading.
+## Verification
+- Typecheck.
+- Manually confirm: open Data Entry → Weekly Flock Rollup, click the date button → UUI card opens with preset rail; days that have batches show a small primary-color dot; picking a day snaps the rollup to that ISO week.
