@@ -44,6 +44,12 @@ export const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Keep composer focused on mount and after stream completion
+  useEffect(() => {
+    if (!isLoading) inputRef.current?.focus();
+  }, [isLoading]);
+
+
   // Check OpenAI configuration on mount
   useEffect(() => {
     const checkOpenAIConfig = async () => {
