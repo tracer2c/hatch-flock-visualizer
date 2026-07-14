@@ -12,7 +12,10 @@ import {
   HouseSelectField,
   WHOLE_FLOCK_VALUE,
   resolveBatchId,
+  isWholeFlock,
 } from "@/components/dashboard/HouseSelectField";
+import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function FlockEggPackEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
@@ -20,9 +23,11 @@ export default function FlockEggPackEntryPage() {
   const weekParam = params.get("week");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const ctx = useFlockWeekBatches(flockKey, weekParam);
   const [houseSel, setHouseSel] = useState<string>(WHOLE_FLOCK_VALUE);
+  const wholeFlock = isWholeFlock(houseSel);
   const batchId = useMemo(
     () => resolveBatchId(houseSel, ctx.batches),
     [houseSel, ctx.batches]
@@ -31,7 +36,10 @@ export default function FlockEggPackEntryPage() {
 
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
-    if (!batchId) return;
+    if (!batchId) {
+      setRows([]);
+      return;
+    }
     (async () => {
       const { data, error } = await supabase
         .from("egg_pack_quality")
@@ -47,10 +55,7 @@ export default function FlockEggPackEntryPage() {
     setRows(newData.map((r) => ({ ...r, batch_id: batchId })));
     toast({
       title: "Egg Pack saved",
-      description:
-        houseSel === WHOLE_FLOCK_VALUE
-          ? "Recorded for the flock (default house)"
-          : `Recorded for House ${activeBatch?.house_number || "—"}`,
+      description: `Recorded for House ${activeBatch?.house_number || "—"}`,
     });
   };
 
@@ -82,7 +87,29 @@ export default function FlockEggPackEntryPage() {
               value={houseSel}
               onChange={setHouseSel}
             />
-            {activeBatch && (
+            {wholeFlock ? (
+              <FlockWeeklyEntryCard
+                title="Egg Pack — Whole Flock Entry"
+                icon={<Package className="h-5 w-5 text-primary" />}
+                table="flock_weekly_egg_pack"
+                companyId={profile?.company_id ?? null}
+                flockId={ctx.flockId}
+                flockName={ctx.flockName}
+                flockNumber={ctx.flockNumber}
+                periodStart={ctx.periodStart}
+                periodEnd={ctx.periodEnd}
+                fields={[
+                  { key: "sample_size", label: "Sample Size" },
+                  { key: "cracked", label: "Cracked" },
+                  { key: "dirty", label: "Dirty" },
+                  { key: "small", label: "Small" },
+                  { key: "large", label: "Large" },
+                  { key: "grade_a", label: "Grade A" },
+                  { key: "grade_b", label: "Grade B" },
+                  { key: "grade_c", label: "Grade C" },
+                ]}
+              />
+            ) : activeBatch ? (
               <EggPackDataEntry
                 data={rows}
                 onDataUpdate={handleUpdate}
@@ -95,7 +122,7 @@ export default function FlockEggPackEntryPage() {
                   house_number: activeBatch.house_number,
                 }}
               />
-            )}
+            ) : null}
           </>
         )}
       </div>
