@@ -35,7 +35,7 @@ const iconMap = {
 } as const;
 
 export interface UUIAlertProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">,
     VariantProps<typeof alertVariants> {
   title?: React.ReactNode;
   action?: React.ReactNode;
