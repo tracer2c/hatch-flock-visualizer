@@ -379,6 +379,7 @@ export const ChatInterface = () => {
                             </>
                           );
                         })()
+                      ) : (
                         <EnhancedMessageFormatter
                           content={message.content}
                           onQuestionClick={handleQuestionClick}
