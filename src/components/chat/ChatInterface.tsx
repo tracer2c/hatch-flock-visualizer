@@ -33,6 +33,7 @@ export const ChatInterface = () => {
   const [openaiConfigured, setOpenaiConfigured] = useState<boolean | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
