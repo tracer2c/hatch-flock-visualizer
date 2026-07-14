@@ -406,55 +406,66 @@ export const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Compact Input Bar */}
-      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 py-3">
-          <form onSubmit={handleSubmit}>
-            <div className={cn(
-              "flex gap-3 items-center p-1.5 rounded-xl border-2 bg-muted/30 transition-all duration-200",
-              isFocused ? "border-primary/50 shadow-lg shadow-primary/5 bg-background" : "border-transparent"
-            )}>
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Ask me anything about your hatchery data..."
-                className={cn(
-                  "flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-10",
-                  "placeholder:text-muted-foreground/60"
-                )}
-                disabled={isLoading}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={startListening}
-                disabled={isLoading}
-                className={cn(
-                  "h-9 w-9 rounded-lg transition-all duration-200",
-                  isListening ? 'text-destructive bg-destructive/10' : 'hover:bg-muted'
-                )}
-              >
-                <Mic className={cn("h-4 w-4", isListening && "animate-pulse")} />
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading || !input.trim()}
-                size="icon"
-                className={cn(
-                  "h-9 w-9 rounded-lg transition-all duration-200",
-                  "hover:scale-105 active:scale-95",
-                  !input.trim() && "opacity-50"
-                )}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
-        </div>
+      {/* Floating fade + composer */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background via-background/85 to-transparent" />
+      <div className="absolute inset-x-0 bottom-6 px-4 sm:px-6 flex justify-center">
+        <form onSubmit={handleSubmit} className="w-full max-w-3xl pointer-events-auto">
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-2xl border bg-background/95 backdrop-blur-md",
+              "pl-4 pr-2 py-2 transition-all duration-200",
+              "shadow-[0_10px_40px_-12px_hsl(var(--primary)/0.25)]",
+              isFocused
+                ? "border-primary/50 ring-4 ring-primary/10"
+                : "border-border/70 hover:border-border"
+            )}
+          >
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Ask me anything about your hatchery data…"
+              className={cn(
+                "flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-10",
+                "placeholder:text-muted-foreground/60"
+              )}
+              disabled={isLoading}
+              autoFocus
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={startListening}
+              disabled={isLoading}
+              className={cn(
+                "h-9 w-9 rounded-xl transition-all duration-200",
+                isListening ? "text-destructive bg-destructive/10" : "hover:bg-muted"
+              )}
+            >
+              <Mic className={cn("h-4 w-4", isListening && "animate-pulse")} />
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-xl transition-all duration-200",
+                "hover:scale-105 active:scale-95",
+                !input.trim() && "opacity-50"
+              )}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
+            Smart Analytics · AI-generated results may need verification.
+          </p>
+        </form>
       </div>
+
     </div>
   );
 };
