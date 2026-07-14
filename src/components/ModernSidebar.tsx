@@ -84,10 +84,6 @@ const NAV_GROUPS: NavGroup[] = [
         featureKey: "data_entry",
         items: [
           { label: "Weekly Rollup", href: "/data-entry", icon: FileInput },
-          { label: "Egg Pack", href: "/data-entry/egg-pack", icon: Egg },
-          { label: "Fertility", href: "/data-entry/fertility", icon: Activity },
-          { label: "Residue", href: "/data-entry/residue", icon: Scale },
-          { label: "Clears & Injected", href: "/data-entry/clears-injected", icon: Sparkles },
         ],
       },
       { label: "Data Sheet", href: "/embrex-data-sheet", icon: FileSpreadsheet, featureKey: "embrex_data_sheet" },
