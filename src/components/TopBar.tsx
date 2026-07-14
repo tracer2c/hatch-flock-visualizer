@@ -17,6 +17,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
+import { AppBreadcrumbs } from "@/components/uui/AppBreadcrumbs";
 
 export function TopBar() {
   const { user, profile, roles, signOut } = useAuth();
@@ -241,6 +242,11 @@ export function TopBar() {
             )}
           </div>
         </div>
+        {!isOnDashboard && (
+          <div className="px-4 pb-1.5 border-t border-border/20 bg-muted/20">
+            <AppBreadcrumbs className="pt-1.5" />
+          </div>
+        )}
       </header>
 
       {/* Command Palette */}

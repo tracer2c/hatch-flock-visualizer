@@ -1,32 +1,16 @@
 import { useMemo, useState } from "react";
-import { format, subDays, startOfMonth, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Building2, Egg, Home, Check, ChevronDown } from "lucide-react";
+import { Building2, Egg, Home, Check, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
 import { useUnitsData, useHousesData } from "@/hooks/useHousesData";
+import { RangeCalendarCard } from "@/components/uui/RangeCalendarCard";
 
-type Preset = { label: string; from: Date; to: Date };
-
-function buildPresets(): Preset[] {
-  const now = new Date();
-  return [
-    { label: "This week", from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) },
-    {
-      label: "Last week",
-      from: startOfWeek(subDays(now, 7), { weekStartsOn: 1 }),
-      to: endOfWeek(subDays(now, 7), { weekStartsOn: 1 }),
-    },
-    { label: "MTD", from: startOfMonth(now), to: now },
-    { label: "Last 30 days", from: subDays(now, 30), to: now },
-  ];
-}
 
 function useFlocks() {
   return useQuery({
@@ -121,8 +105,6 @@ export function AnalyticsFilters({ showMode = true, compact = false }: Props) {
   const { data: units = [] } = useUnitsData();
   const { data: flocks = [] } = useFlocks();
   const { data: houses = [] } = useHousesData();
-  const presets = useMemo(buildPresets, []);
-  const [dateOpen, setDateOpen] = useState(false);
 
   const filteredHouses = useMemo(() => {
     if (filters.hatcheryIds.length === 0) return houses;
@@ -144,48 +126,12 @@ export function AnalyticsFilters({ showMode = true, compact = false }: Props) {
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", compact && "text-xs")}>
-      {/* Date range */}
-      <Popover open={dateOpen} onOpenChange={setDateOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="h-9 gap-2">
-            <CalendarIcon className="h-3.5 w-3.5" />
-            <span className="text-sm">
-              {format(filters.dateFrom, "MMM d")} – {format(filters.dateTo, "MMM d, yyyy")}
-            </span>
-            <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-3 pointer-events-auto" align="end">
-          <div className="flex flex-wrap gap-1 mb-3">
-            {presets.map((p) => (
-              <Button
-                key={p.label}
-                variant="secondary"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  filters.setDateRange(p.from, p.to);
-                  setDateOpen(false);
-                }}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          <Calendar
-            mode="range"
-            selected={{ from: filters.dateFrom, to: filters.dateTo }}
-            onSelect={(r) => {
-              if (r?.from && r?.to) {
-                filters.setDateRange(r.from, r.to);
-                setDateOpen(false);
-              }
-            }}
-            initialFocus
-            className={cn("p-0 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
+      <RangeCalendarCard
+        value={{ from: filters.dateFrom, to: filters.dateTo }}
+        onChange={(r) => filters.setDateRange(r.from, r.to)}
+        compact={compact}
+      />
+
 
       <MultiSelect
         label="Hatcheries"
