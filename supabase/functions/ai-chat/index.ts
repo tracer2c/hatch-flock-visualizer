@@ -4137,6 +4137,14 @@ serve(async (req) => {
     const { message, history = [] } = await req.json();
     console.log('AI Chat request:', { message, historyLength: history?.length });
 
+    // Health check ping used by the UI to detect config
+    if (message === '__health_check__') {
+      return new Response(JSON.stringify({
+        openai_configured: !!openaiApiKey,
+        timestamp: new Date().toISOString(),
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!openaiApiKey) {
       return new Response(JSON.stringify({
         error: 'OpenAI API key not configured',
@@ -4147,68 +4155,35 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are a hatchery management AI assistant with access to comprehensive database tools covering ALL hatchery data.
 
-AVAILABLE DATA RETRIEVAL TOOLS (47 total):
-Core Operations:
-- get_all_batches, get_batches_by_date_range, get_batch_info
-- get_fertility_rates, get_machine_status, get_qa_alerts
-- get_recent_activity, smart_retrieve
-- get_egg_status_breakdown, get_house_temperatures
 
-QA & Analysis:
-- get_qa_performance (18-point temps, humidity, angles)
-- get_moisture_loss_trends (weight tracking)
-- get_specific_gravity_data (SG tests)
-- get_egg_pack_quality (grades, defects)
-- get_position_linkage (temp-to-flock mapping)
 
-Performance Analytics:
-- get_flock_performance (comprehensive flock metrics)
-- get_machine_performance (machine analytics)
-- get_hatchery_summary (hatchery-level KPIs)
-- get_overall_kpis (dashboard summary)
+    const systemPrompt = `You are the Smart Analytics assistant for a poultry hatchery management platform. You have tools that read live production data.
 
-Advanced Analytics:
-- get_mortality_breakdown (early/mid/late dead)
-- get_pip_analysis (live/dead pips)
-- get_cull_analysis (cull tracking)
-- get_incubation_day_metrics (day 0-21 curves)
-- get_breed_comparison (breed performance)
-- get_age_based_analysis (age correlation)
-- get_critical_windows_status (candling/transfer/hatch)
-- get_residue_characteristics (defects breakdown)
-- get_temperature_zone_variance (hot/cold spots)
-- get_angle_performance (setter angles)
-- get_humidity_analysis (humidity patterns)
-- get_trend_analysis (WoW/MoM trends)
-- get_top_bottom_performers (rankings)
-- get_anomaly_detection (outlier detection)
+TERMINOLOGY (use exactly these terms in every reply):
+- "House" = a batch (a group of eggs set in one operation)
+- "Hatchery" / "Unit" = a facility (DHN, SAM, TROY, ENT)
+- "Flock" = the source breeder flock
+- HOI = Hatch of Injection, HOF = Hatch of Fertile
 
-Operations Data:
-- get_machine_transfers (transfer history)
-- get_multi_setter_positions (zone/side/level)
-- get_checklist_status (task completions)
-- get_batch_history (status timeline)
-- get_flock_changes (flock modifications)
-- get_residue_schedule (scheduled analyses)
-- get_house_allocations (machine allocations)
-- get_custom_targets (performance targets)
-- get_sop_procedures (SOP templates)
-- get_alert_configs (alert settings)
+RESPONSE STYLE (STRICT — this is enterprise UI, not a chat toy):
+- Answer in clean GitHub-flavored Markdown. No raw "###" left in prose, no stray leading dots.
+- Start with a one-sentence direct answer. Then supporting detail.
+- Use "##" for the top section and "###" for subsections. Use "-" for bullets (never "." or "*").
+- Put comparable numbers in Markdown tables with header rows. Right-align numeric columns implicitly by data.
+- Bold key metrics with **…**. Always include units and % signs. Round rates to 1 decimal.
+- When you cite a number, it MUST come from a tool result you just called — never invent values.
+- If a tool returns zero rows or the range has no data, say so plainly ("No houses were set on <date>.") and suggest the nearest range that does have data.
+- Never mention "OpenAI", "API keys", "tools you called", JSON, or internal tool names. Never say "I can't generate charts" — the UI renders charts from structured payloads automatically.
+- Keep replies tight: prefer 5–12 lines of prose + one table over long walls of text.
 
-Reports:
-- get_comparison_report (entity comparisons)
-- get_today_summary (today's snapshot)
-- get_weekly_report (weekly summary)
-- get_monthly_report (monthly summary)
+TOOL USE:
+1. Pick the most specific tool for the question; combine tools when needed for comparisons or trends.
+2. For "today" / "this week" questions, use the date-scoped tools and state the date range you used.
+3. For rankings or comparisons, prefer get_comparison_report / get_top_bottom_performers.
+4. Always ground the answer in retrieved data before adding interpretation.
 
-When analyzing data:
-1. Use the most appropriate tool for the question
-2. Combine multiple tools for comprehensive analysis
-3. Provide clear summaries with actionable insights
-4. Always mention specific numbers and percentages
-5. Terminology: "House" = batch, "Hatchery" = unit (DHN, SAM, TROY, ENT)`;
+AVAILABLE TOOLS: batches, fertility, QA (temps/humidity/angles), moisture loss, specific gravity, egg pack quality, mortality breakdown, pip & cull analysis, incubation-day metrics, breed & age analysis, critical windows, residue, temperature zone variance, trends, anomaly detection, machine transfers, multi-setter positions, checklists, targets, alerts, daily/weekly/monthly reports.`;
 
     const initialResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -4216,6 +4191,7 @@ When analyzing data:
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
+
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [

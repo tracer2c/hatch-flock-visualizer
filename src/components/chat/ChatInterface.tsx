@@ -10,6 +10,8 @@ import { AnalyticsMessage } from './AnalyticsMessage';
 import { ChartMessage } from './ChartMessage';
 import { SummaryCard } from './SummaryCard';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -229,18 +231,19 @@ export const ChatInterface = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
 
-          {/* OpenAI Configuration Warning */}
+          {/* Config warning: only when the health check explicitly reports the key is missing */}
           {openaiConfigured === false && (
             <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20 animate-fade-in">
-              <div className="flex items-center gap-2 text-warning-foreground">
+              <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-warning" />
-                <p className="text-sm font-medium">OpenAI Configuration Required</p>
+                <p className="text-sm font-medium text-foreground">AI assistant is not configured</p>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Please configure your API key in project settings.
+                Ask an administrator to add the AI provider key in project settings.
               </p>
             </div>
           )}
+          
           
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)]">
@@ -343,8 +346,14 @@ export const ChatInterface = () => {
                           insights={message.content.insights || []}
                           chartId={`message-chart-${message.id}`}
                         />
+                      ) : typeof message.content === 'string' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:text-base prose-h3:text-sm prose-p:leading-relaxed prose-p:my-2 prose-li:my-0.5 prose-table:text-sm prose-th:font-semibold prose-th:text-left prose-td:py-1 prose-td:px-2 prose-th:py-1 prose-th:px-2 prose-table:border prose-th:border prose-td:border prose-hr:my-3 prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
                       ) : (
-                        <EnhancedMessageFormatter 
+                        <EnhancedMessageFormatter
                           content={message.content}
                           onQuestionClick={handleQuestionClick}
                           className="text-sm"
