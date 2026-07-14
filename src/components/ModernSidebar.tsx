@@ -184,12 +184,13 @@ export function ModernSidebar() {
         side="left"
         variant="sidebar"
         collapsible="offcanvas"
+        style={{ ["--sidebar-width" as any]: "68px" }}
         className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl p-0"
       >
-        <SidebarContent className="p-0">
+        <SidebarContent className="p-0 overflow-visible">
           <TooltipProvider>
             <div
-              className="flex h-full pt-14"
+              className="relative flex h-full pt-14"
               onMouseLeave={() => setHoveredHref(null)}
             >
               {/* Slim icon rail */}
