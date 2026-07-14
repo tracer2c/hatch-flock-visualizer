@@ -12,7 +12,10 @@ import {
   HouseSelectField,
   WHOLE_FLOCK_VALUE,
   resolveBatchId,
+  isWholeFlock,
 } from "@/components/dashboard/HouseSelectField";
+import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
+import { useAuth } from "@/hooks/useAuth";
 import { useOfflineSubmit } from "@/hooks/useOfflineSubmit";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
@@ -26,9 +29,11 @@ export default function FlockResidueEntryPage() {
   const { submit: offlineSubmit } = useOfflineSubmit("residue_analysis", {
     invalidateQueries: ["residue_analysis", "dataCounts", "houses"],
   });
+  const { profile } = useAuth();
 
   const ctx = useFlockWeekBatches(flockKey, weekParam);
   const [houseSel, setHouseSel] = useState<string>(WHOLE_FLOCK_VALUE);
+  const wholeFlock = isWholeFlock(houseSel);
   const batchId = useMemo(
     () => resolveBatchId(houseSel, ctx.batches),
     [houseSel, ctx.batches]
@@ -178,7 +183,30 @@ export default function FlockResidueEntryPage() {
               value={houseSel}
               onChange={setHouseSel}
             />
-            {activeBatch && (
+            {wholeFlock ? (
+              <FlockWeeklyEntryCard
+                title="Residue — Whole Flock Entry"
+                icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+                table="flock_weekly_residue"
+                companyId={profile?.company_id ?? null}
+                flockId={ctx.flockId}
+                flockName={ctx.flockName}
+                flockNumber={ctx.flockNumber}
+                periodStart={ctx.periodStart}
+                periodEnd={ctx.periodEnd}
+                fields={[
+                  { key: "sample_size", label: "Sample Size" },
+                  { key: "infertile_eggs", label: "Infertile" },
+                  { key: "early_dead", label: "Early Dead" },
+                  { key: "mid_dead", label: "Mid Dead" },
+                  { key: "late_dead", label: "Late Dead" },
+                  { key: "live_pip_number", label: "Live Pip" },
+                  { key: "dead_pip_number", label: "Dead Pip" },
+                  { key: "malformed_chicks", label: "Culls" },
+                  { key: "contaminated_eggs", label: "Contaminated" },
+                ]}
+              />
+            ) : activeBatch ? (
               <ResidueDataEntry
                 data={rows}
                 onDataUpdate={handleUpdate}
@@ -191,7 +219,7 @@ export default function FlockResidueEntryPage() {
                   eggs_injected: activeBatch.eggs_injected ?? 0,
                 }}
               />
-            )}
+            ) : null}
           </>
         )}
       </div>

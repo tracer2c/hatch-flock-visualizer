@@ -1044,6 +1044,282 @@ export type Database = {
           },
         ]
       }
+      flock_weekly_egg_pack: {
+        Row: {
+          company_id: string
+          cracked: number
+          created_at: string
+          dirty: number
+          flock_id: string
+          grade_a: number
+          grade_b: number
+          grade_c: number
+          id: string
+          inspection_date: string
+          inspector_name: string | null
+          large: number
+          notes: string | null
+          period_end: string
+          period_start: string
+          sample_size: number
+          shell_thickness_avg: number | null
+          small: number
+          updated_at: string
+          weight_avg: number | null
+        }
+        Insert: {
+          company_id: string
+          cracked?: number
+          created_at?: string
+          dirty?: number
+          flock_id: string
+          grade_a?: number
+          grade_b?: number
+          grade_c?: number
+          id?: string
+          inspection_date?: string
+          inspector_name?: string | null
+          large?: number
+          notes?: string | null
+          period_end: string
+          period_start: string
+          sample_size?: number
+          shell_thickness_avg?: number | null
+          small?: number
+          updated_at?: string
+          weight_avg?: number | null
+        }
+        Update: {
+          company_id?: string
+          cracked?: number
+          created_at?: string
+          dirty?: number
+          flock_id?: string
+          grade_a?: number
+          grade_b?: number
+          grade_c?: number
+          id?: string
+          inspection_date?: string
+          inspector_name?: string | null
+          large?: number
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          sample_size?: number
+          shell_thickness_avg?: number | null
+          small?: number
+          updated_at?: string
+          weight_avg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_weekly_egg_pack_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flock_weekly_fertility: {
+        Row: {
+          analysis_date: string
+          company_id: string
+          created_at: string
+          early_dead: number | null
+          fertile_eggs: number
+          fertility_percent: number | null
+          flock_id: string
+          hatch_percent: number | null
+          hof_percent: number | null
+          hoi_percent: number | null
+          id: string
+          if_dev_percent: number | null
+          infertile_eggs: number
+          late_dead: number | null
+          notes: string | null
+          period_end: string
+          period_start: string
+          sample_size: number
+          technician_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_date?: string
+          company_id: string
+          created_at?: string
+          early_dead?: number | null
+          fertile_eggs?: number
+          fertility_percent?: number | null
+          flock_id: string
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
+          id?: string
+          if_dev_percent?: number | null
+          infertile_eggs?: number
+          late_dead?: number | null
+          notes?: string | null
+          period_end: string
+          period_start: string
+          sample_size?: number
+          technician_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_date?: string
+          company_id?: string
+          created_at?: string
+          early_dead?: number | null
+          fertile_eggs?: number
+          fertility_percent?: number | null
+          flock_id?: string
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
+          id?: string
+          if_dev_percent?: number | null
+          infertile_eggs?: number
+          late_dead?: number | null
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          sample_size?: number
+          technician_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_weekly_fertility_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flock_weekly_residue: {
+        Row: {
+          abnormal: number | null
+          analysis_date: string
+          brain_defects: number | null
+          company_id: string
+          contaminated_eggs: number
+          created_at: string
+          cull_chicks: number | null
+          dead_pip_number: number | null
+          dry_egg: number | null
+          early_dead: number | null
+          fertile_eggs: number | null
+          flock_id: string
+          handling_cracks: number | null
+          hatch_percent: number | null
+          hof_percent: number | null
+          hoi_percent: number | null
+          id: string
+          if_dev_percent: number | null
+          infertile_eggs: number | null
+          lab_technician: string | null
+          late_dead: number | null
+          live_pip_number: number | null
+          malformed_chicks: number
+          malpositioned: number | null
+          mid_dead: number
+          mold: number | null
+          notes: string | null
+          period_end: string
+          period_start: string
+          pip_number: number
+          sample_size: number | null
+          total_residue_count: number
+          transfer_crack: number | null
+          updated_at: string
+          upside_down: number | null
+        }
+        Insert: {
+          abnormal?: number | null
+          analysis_date?: string
+          brain_defects?: number | null
+          company_id: string
+          contaminated_eggs?: number
+          created_at?: string
+          cull_chicks?: number | null
+          dead_pip_number?: number | null
+          dry_egg?: number | null
+          early_dead?: number | null
+          fertile_eggs?: number | null
+          flock_id: string
+          handling_cracks?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
+          id?: string
+          if_dev_percent?: number | null
+          infertile_eggs?: number | null
+          lab_technician?: string | null
+          late_dead?: number | null
+          live_pip_number?: number | null
+          malformed_chicks?: number
+          malpositioned?: number | null
+          mid_dead?: number
+          mold?: number | null
+          notes?: string | null
+          period_end: string
+          period_start: string
+          pip_number?: number
+          sample_size?: number | null
+          total_residue_count?: number
+          transfer_crack?: number | null
+          updated_at?: string
+          upside_down?: number | null
+        }
+        Update: {
+          abnormal?: number | null
+          analysis_date?: string
+          brain_defects?: number | null
+          company_id?: string
+          contaminated_eggs?: number
+          created_at?: string
+          cull_chicks?: number | null
+          dead_pip_number?: number | null
+          dry_egg?: number | null
+          early_dead?: number | null
+          fertile_eggs?: number | null
+          flock_id?: string
+          handling_cracks?: number | null
+          hatch_percent?: number | null
+          hof_percent?: number | null
+          hoi_percent?: number | null
+          id?: string
+          if_dev_percent?: number | null
+          infertile_eggs?: number | null
+          lab_technician?: string | null
+          late_dead?: number | null
+          live_pip_number?: number | null
+          malformed_chicks?: number
+          malpositioned?: number | null
+          mid_dead?: number
+          mold?: number | null
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          pip_number?: number
+          sample_size?: number | null
+          total_residue_count?: number
+          transfer_crack?: number | null
+          updated_at?: string
+          upside_down?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_weekly_residue_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flock_worksheet_values: {
         Row: {
           company_id: string

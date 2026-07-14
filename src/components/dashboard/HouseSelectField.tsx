@@ -54,11 +54,18 @@ export function HouseSelectField({ batches, value, onChange, disabled }: Props) 
   );
 }
 
-/** Resolve the batch_id to save against given a selector value. */
+/** Resolve the batch_id to save against given a selector value.
+ * Whole-flock entries no longer silently fall back to House 1; they go to
+ * the dedicated `flock_weekly_*` tables instead. Callers must branch on
+ * `isWholeFlock(value)`. */
 export function resolveBatchId(
   value: string,
   batches: FlockWeekBatch[]
 ): string | null {
   if (value && value !== WHOLE_FLOCK_VALUE) return value;
-  return batches[0]?.id ?? null;
+  return null;
+}
+
+export function isWholeFlock(value: string): boolean {
+  return !value || value === WHOLE_FLOCK_VALUE;
 }
