@@ -225,9 +225,10 @@ export const ChatInterface = () => {
     <div className="relative flex flex-col h-[calc(100vh-3rem)] bg-background overflow-hidden">
 
 
-      {/* Main Content Area */}
+      {/* Main Content Area (scrolls under floating composer) */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
+
           {/* OpenAI Configuration Warning */}
           {openaiConfigured === false && (
             <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20 animate-fade-in">
