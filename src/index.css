@@ -86,6 +86,13 @@
     --sidebar-accent-foreground: 225 73% 57%;
     --sidebar-border: 225 30% 90%;
     --sidebar-ring: 225 73% 57%;
+
+    /* Bento Dashboard — editorial neo-brutalist palette */
+    --bento-ink: 240 6% 6%;         /* #0f0f10 */
+    --bento-cream: 45 25% 94%;      /* #f4f2ec */
+    --bento-lime: 76 79% 68%;       /* #c8f169 */
+    --bento-lavender: 253 100% 86%; /* #c9b8ff */
+    --bento-page: 45 25% 94%;
   }
 
   .dark {
@@ -357,4 +364,45 @@
     box-shadow: 0 0 0 4px hsl(38 92% 50% / 0);
     border-color: hsl(38 92% 50% / 0.8);
   }
+}
+
+/* ============ Bento Dashboard (neo-brutalist) ============ */
+.font-display {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-stretch: 90%;
+  font-feature-settings: "ss01", "tnum";
+}
+
+/* react-grid-layout tweaks */
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--bento-lavender)) !important;
+  border: 2px dashed hsl(var(--bento-ink)) !important;
+  border-radius: 22px !important;
+  opacity: 0.6 !important;
+}
+.react-grid-item > .react-resizable-handle {
+  width: 22px;
+  height: 22px;
+  right: 4px;
+  bottom: 4px;
+  background: none;
+}
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  border-right: 3px solid hsl(var(--bento-ink));
+  border-bottom: 3px solid hsl(var(--bento-ink));
+  border-bottom-right-radius: 3px;
+}
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  z-index: 30;
+  cursor: grabbing;
+}
+.bento-cell {
+  height: 100%;
 }

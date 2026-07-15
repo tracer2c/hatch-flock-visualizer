@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import DashboardHome from "@/components/dashboard/DashboardHome";
+import BentoDashboard from "@/components/dashboard/bento/BentoDashboard";
 
 const Index = () => {
   useEffect(() => {
@@ -8,12 +8,12 @@ const Index = () => {
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Live overview of hatchery operations with KPIs, alerts, and system status."
+        "Modular bento dashboard for hatchery operations — KPIs, alerts, pipeline and QA widgets."
       );
     }
   }, []);
 
-  return <DashboardHome />;
+  return <BentoDashboard />;
 };
 
 export default Index;
