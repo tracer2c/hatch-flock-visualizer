@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export default function AuthPage() {
-  const { user, signIn, signUp, resetPasswordForEmail, loading } = useAuth();
+  const { user, signIn, resetPasswordForEmail, loading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showMFADialog, setShowMFADialog] = useState(false);
