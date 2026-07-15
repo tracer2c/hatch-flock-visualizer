@@ -233,9 +233,6 @@ export default function AuthPage() {
               ))}
             </div>
           </div>
-          <div className="text-xs text-primary-foreground/60">
-            Trusted by leading hatcheries · SOC 2-ready infrastructure
-          </div>
         </div>
       </div>
 
