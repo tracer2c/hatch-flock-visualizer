@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Egg, Mail, ArrowLeft, RefreshCw, Loader2, Eye, EyeOff, Headset,
   ShieldCheck, TrendingUp, Activity,
