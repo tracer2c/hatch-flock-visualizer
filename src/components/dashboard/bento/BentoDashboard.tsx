@@ -63,13 +63,15 @@ export default function BentoDashboard() {
         </div>
       </div>
 
-      <BentoGrid
-        widgets={widgets}
-        layouts={layouts}
-        editing={editing}
-        onLayoutChange={updateLayouts}
-        onRemove={removeWidget}
-      />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <BentoGrid
+          widgets={widgets}
+          layouts={layouts}
+          editing={editing}
+          onLayoutChange={updateLayouts}
+          onRemove={removeWidget}
+        />
+      </div>
 
       <AddWidgetSheet
         open={libraryOpen}
