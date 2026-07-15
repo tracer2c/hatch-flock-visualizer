@@ -1,0 +1,82 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { Egg, Plus, Pencil, Check, RotateCcw } from "lucide-react";
+import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
+import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
+import { useDashboardLayout } from "@/hooks/useDashboardLayout";
+import { BentoGrid } from "./BentoGrid";
+import { AddWidgetSheet } from "./AddWidgetSheet";
+
+export default function BentoDashboard() {
+  const filters = useAnalyticsFilters();
+  const { widgets, layouts, updateLayouts, addWidget, removeWidget, reset } = useDashboardLayout();
+  const [editing, setEditing] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  const rangeLabel = `${format(filters.dateFrom, "MMM d")} — ${format(filters.dateTo, "MMM d, yyyy")}`;
+
+  return (
+    <div className="min-h-full bg-[hsl(var(--bento-page))] p-4 md:p-6">
+      <div className="mb-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl border-2 border-[hsl(var(--bento-ink))] bg-[hsl(var(--bento-lime))] p-2.5 shadow-[3px_3px_0_hsl(var(--bento-ink))]">
+            <Egg className="h-5 w-5 text-[hsl(var(--bento-ink))]" />
+          </div>
+          <div>
+            <h1 className="font-display font-black tracking-[-0.03em] text-3xl md:text-4xl text-[hsl(var(--bento-ink))]">
+              Hatchery Dashboard
+            </h1>
+            <p className="text-xs md:text-sm text-[hsl(var(--bento-ink))]/70">
+              {rangeLabel} · {widgets.length} widgets
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AnalyticsFilters showMode={false} />
+          {editing && (
+            <>
+              <button
+                onClick={() => setLibraryOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-[hsl(var(--bento-ink))] bg-[hsl(var(--bento-lime))] px-3 py-1.5 text-xs font-bold shadow-[3px_3px_0_hsl(var(--bento-ink))] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_hsl(var(--bento-ink))] transition-all text-[hsl(var(--bento-ink))]"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add widget
+              </button>
+              <button
+                onClick={reset}
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-[hsl(var(--bento-ink))] bg-white px-3 py-1.5 text-xs font-bold text-[hsl(var(--bento-ink))] hover:bg-[hsl(var(--bento-lavender))] transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setEditing((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full border-2 border-[hsl(var(--bento-ink))] px-3 py-1.5 text-xs font-bold shadow-[3px_3px_0_hsl(var(--bento-ink))] transition-all ${
+              editing
+                ? "bg-[hsl(var(--bento-ink))] text-[hsl(var(--bento-cream))]"
+                : "bg-[hsl(var(--bento-lavender))] text-[hsl(var(--bento-ink))]"
+            }`}
+          >
+            {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            {editing ? "Done" : "Customize"}
+          </button>
+        </div>
+      </div>
+
+      <BentoGrid
+        widgets={widgets}
+        layouts={layouts}
+        editing={editing}
+        onLayoutChange={updateLayouts}
+        onRemove={removeWidget}
+      />
+
+      <AddWidgetSheet
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        active={widgets}
+        onAdd={addWidget}
+      />
+    </div>
+  );
+}
