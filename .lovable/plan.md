@@ -1,17 +1,17 @@
-## Why you're seeing "You're offline / Sign in online first"
+## Why you're seeing the Lovable logo
 
-- `src/components/OfflineBanner.tsx` renders the orange banner whenever `navigator.onLine === false`.
-- `src/components/ProtectedRoute.tsx` (lines 29–42) shows the "Sign in online first" screen when there's no session AND `navigator.onLine === false`, instead of redirecting to `/auth`.
-- The browser is reporting `onLine: false` (leftover PWA/SW state, VPN, or a flaky signal). Because this app is **cloud-only — offline is not supported** (project memory), that entire code path should not exist.
+Your `index.html` points to `/uploads/dc09391b-...png` for `rel="icon"`, but browsers *also* auto-request `/favicon.ico` at the site root. The file `public/favicon.ico` is still the **default Lovable icon** that ships with every new project — that's what's showing in the tab (especially on published/custom domain builds and after browser cache).
 
-## Fix (frontend only, no logic change)
+`public/pwa-192x192.png` and `public/pwa-512x512.png` (used for the installed PWA icon and Apple touch icon) are likely also the Lovable defaults.
 
-1. **`src/components/ProtectedRoute.tsx`** — remove the `useOnlineStatus` import and the `if (!isOnline)` branch. When there is no user, always `Navigate to="/auth"`.
-2. **`src/App.tsx`** — remove the `<OfflineBanner />` render (and its import) so the orange top banner never appears.
-3. Leave `useOnlineStatus`, `OfflineBanner.tsx`, and the offline queue files on disk untouched (they're referenced by unrelated hooks/services); we just stop rendering the offline UI. No behavior change for online users.
+## Fix plan
 
-## Result
+1. **Replace the branded favicon source.** Use the existing Hatchery Pro logo at `/uploads/dc09391b-b8b4-4ebe-956c-6977f2d8e528.png` (already referenced in `index.html`) as the master.
+2. **Overwrite `public/favicon.ico`** with a copy of that logo (renamed) so the default browser request stops returning the Lovable mark.
+3. **Regenerate `public/pwa-192x192.png` and `public/pwa-512x512.png`** from the same logo so installed-app and Apple touch icons match the brand.
+4. **Bump the icon cache-buster** in `index.html` by appending `?v=2` to the `rel="icon"` and `apple-touch-icon` hrefs so browsers/service workers stop serving the old cached Lovable icon.
+5. Leave `index.html` metadata otherwise unchanged.
 
-- No more orange "You're offline" banner.
-- Unauthenticated visits go straight to the login page instead of the offline placeholder.
-- Everything else stays the same.
+## Confirm before I build
+
+Do you want me to reuse the existing Hatchery Pro logo (`/uploads/dc09391b-...png`) for the favicon, or do you have a different icon image you'd like uploaded?
