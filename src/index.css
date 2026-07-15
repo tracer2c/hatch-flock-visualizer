@@ -365,3 +365,44 @@
     border-color: hsl(38 92% 50% / 0.8);
   }
 }
+
+/* ============ Bento Dashboard (neo-brutalist) ============ */
+.font-display {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-stretch: 90%;
+  font-feature-settings: "ss01", "tnum";
+}
+
+/* react-grid-layout tweaks */
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--bento-lavender)) !important;
+  border: 2px dashed hsl(var(--bento-ink)) !important;
+  border-radius: 22px !important;
+  opacity: 0.6 !important;
+}
+.react-grid-item > .react-resizable-handle {
+  width: 22px;
+  height: 22px;
+  right: 4px;
+  bottom: 4px;
+  background: none;
+}
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  border-right: 3px solid hsl(var(--bento-ink));
+  border-bottom: 3px solid hsl(var(--bento-ink));
+  border-bottom-right-radius: 3px;
+}
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  z-index: 30;
+  cursor: grabbing;
+}
+.bento-cell {
+  height: 100%;
+}
