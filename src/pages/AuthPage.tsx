@@ -46,7 +46,6 @@ export default function AuthPage() {
     setIsLoading(false);
   };
 
-
   const handleMFASuccess = () => {
     setPendingMFAVerification(false);
     setShowMFADialog(false);
