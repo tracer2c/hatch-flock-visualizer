@@ -16,17 +16,17 @@ export default function BentoDashboard() {
   const rangeLabel = `${format(filters.dateFrom, "MMM d")} — ${format(filters.dateTo, "MMM d, yyyy")}`;
 
   return (
-    <div className="min-h-full bg-[hsl(var(--bento-page))] p-4 md:p-6">
-      <div className="mb-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl border-2 border-[hsl(var(--bento-ink))] bg-[hsl(var(--bento-lime))] p-2.5 shadow-[3px_3px_0_hsl(var(--bento-ink))]">
-            <Egg className="h-5 w-5 text-[hsl(var(--bento-ink))]" />
+    <div className="h-full bg-[hsl(var(--bento-page))] px-4 md:px-6 pt-3 pb-3 flex flex-col overflow-hidden">
+      <div className="mb-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg border-2 border-[hsl(var(--bento-ink))] bg-[hsl(var(--bento-lime))] p-1.5 shadow-[2px_2px_0_hsl(var(--bento-ink))]">
+            <Egg className="h-4 w-4 text-[hsl(var(--bento-ink))]" />
           </div>
           <div>
-            <h1 className="font-display font-black tracking-[-0.03em] text-3xl md:text-4xl text-[hsl(var(--bento-ink))]">
+            <h1 className="font-display font-black tracking-[-0.03em] text-xl md:text-2xl leading-tight text-[hsl(var(--bento-ink))]">
               Hatchery Dashboard
             </h1>
-            <p className="text-xs md:text-sm text-[hsl(var(--bento-ink))]/70">
+            <p className="text-[10px] md:text-xs text-[hsl(var(--bento-ink))]/70 leading-tight">
               {rangeLabel} · {widgets.length} widgets
             </p>
           </div>
