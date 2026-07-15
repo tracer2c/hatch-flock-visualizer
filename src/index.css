@@ -86,6 +86,13 @@
     --sidebar-accent-foreground: 225 73% 57%;
     --sidebar-border: 225 30% 90%;
     --sidebar-ring: 225 73% 57%;
+
+    /* Bento Dashboard — editorial neo-brutalist palette */
+    --bento-ink: 240 6% 6%;         /* #0f0f10 */
+    --bento-cream: 45 25% 94%;      /* #f4f2ec */
+    --bento-lime: 76 79% 68%;       /* #c8f169 */
+    --bento-lavender: 253 100% 86%; /* #c9b8ff */
+    --bento-page: 45 25% 94%;
   }
 
   .dark {
