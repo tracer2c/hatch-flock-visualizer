@@ -63,7 +63,7 @@ import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
 import { AuthProvider } from "./hooks/useAuth";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
-import { OfflineBanner } from "./components/OfflineBanner";
+
 import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
@@ -91,7 +91,7 @@ function AppContent() {
   
   return (
     <>
-      <OfflineBanner />
+      
       <SyncManager />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
