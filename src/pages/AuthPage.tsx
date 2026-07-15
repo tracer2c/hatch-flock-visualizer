@@ -26,42 +26,8 @@ export default function AuthPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
 
-  const [signupEmail, setSignupEmail] = useState('');
-  const [emailExists, setEmailExists] = useState(false);
   const [signInEmail, setSignInEmail] = useState('');
-  const [activeTab, setActiveTab] = useState('signin');
-  const [checkingEmail, setCheckingEmail] = useState(false);
-
-  const [signupPassword, setSignupPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSignInPassword, setShowSignInPassword] = useState(false);
-
-  const checkEmailExists = async (email: string) => {
-    if (!email || !email.includes('@')) {
-      setEmailExists(false);
-      return;
-    }
-    setCheckingEmail(true);
-    const { data } = await supabase.rpc('check_email_exists', { check_email: email.trim() });
-    setEmailExists(data === true);
-    setCheckingEmail(false);
-  };
-
-  useEffect(() => {
-    if (confirmPassword) setPasswordsMatch(signupPassword === confirmPassword);
-    else setPasswordsMatch(true);
-  }, [signupPassword, confirmPassword]);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (signupEmail) checkEmailExists(signupEmail);
-      else setEmailExists(false);
-    }, 500);
-    return () => clearTimeout(t);
-  }, [signupEmail]);
 
   if (user && !loading && !pendingMFAVerification && !showMFADialog) {
     return <Navigate to="/" replace />;
