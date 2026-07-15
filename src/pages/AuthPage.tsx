@@ -123,184 +123,60 @@ export default function AuthPage() {
         <div className="flex-1 flex items-center justify-center py-10">
           <div className="w-full max-w-sm space-y-6">
             <div className="space-y-1.5">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {activeTab === 'signin' ? 'Welcome back' : 'Create your account'}
-              </h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
               <p className="text-sm text-muted-foreground">
-                {activeTab === 'signin'
-                  ? "Enter your credentials to access your hatchery dashboard."
-                  : 'Start managing your hatchery operations in minutes.'}
+                Enter your credentials to access your hatchery dashboard.
               </p>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-10">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
-              </TabsList>
-
-              {/* Sign in */}
-              <TabsContent value="signin" className="mt-6">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      name="email"
-                      type="email"
-                      placeholder="you@company.com"
-                      value={signInEmail}
-                      onChange={(e) => setSignInEmail(e.target.value)}
-                      className="h-11"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="signin-password">Password</Label>
-                      <button
-                        type="button"
-                        onClick={() => setShowForgotPassword(true)}
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        id="signin-password"
-                        name="password"
-                        type={showSignInPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="h-11 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignInPassword(!showSignInPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showSignInPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full h-11 font-medium" disabled={isLoading}>
-                    {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Signing in…</> : 'Sign in'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* Sign up */}
-              <TabsContent value="signup" className="mt-6">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="firstName">First name</Label>
-                      <Input id="firstName" name="firstName" placeholder="John" className="h-11" required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="lastName">Last name</Label>
-                      <Input id="lastName" name="lastName" placeholder="Doe" className="h-11" required />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-email"
-                        name="email"
-                        type="email"
-                        placeholder="you@company.com"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        className={cn('h-11 pr-10', emailExists && 'border-warning focus-visible:ring-warning/40')}
-                        required
-                      />
-                      {checkingEmail && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                    {emailExists && (
-                      <UUIAlert
-                        variant="warning"
-                        className="py-2.5 px-3 text-xs"
-                        action={
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSignInEmail(signupEmail);
-                              setActiveTab('signin');
-                              setTimeout(() => document.getElementById('signin-password')?.focus(), 100);
-                            }}
-                            className="text-primary font-medium hover:underline text-xs"
-                          >
-                            Sign in instead →
-                          </button>
-                        }
-                      >
-                        An account with this email already exists.
-                      </UUIAlert>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="h-11 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="confirm-password">Confirm password</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={cn('h-11 pr-10', !passwordsMatch && confirmPassword && 'border-destructive focus-visible:ring-destructive/40')}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {!passwordsMatch && confirmPassword && (
-                      <p className="text-xs text-destructive">Passwords do not match</p>
-                    )}
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 font-medium"
-                    disabled={isLoading || emailExists || !passwordsMatch || !signupPassword || !confirmPassword}
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="signin-email">Email</Label>
+                <Input
+                  id="signin-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
+                  className="h-11"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs font-medium text-primary hover:underline"
                   >
-                    {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating account…</> : 'Create account'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="signin-password"
+                    name="password"
+                    type={showSignInPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    className="h-11 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignInPassword(!showSignInPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showSignInPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-11 font-medium" disabled={isLoading}>
+                {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Signing in…</> : 'Sign in'}
+              </Button>
+            </form>
 
             <p className="text-xs text-center text-muted-foreground">
               Need help?{' '}
