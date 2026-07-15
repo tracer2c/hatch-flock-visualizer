@@ -38,8 +38,8 @@ export function BentoGrid({ widgets, layouts, editing, onLayoutChange, onRemove 
       layouts={layouts}
       breakpoints={{ lg: 1200, md: 900, sm: 0 }}
       cols={{ lg: 12, md: 10, sm: 6 }}
-      rowHeight={72}
-      margin={[16, 16]}
+      rowHeight={56}
+      margin={[12, 12]}
       containerPadding={[0, 0]}
       isDraggable={editing}
       isResizable={editing}
