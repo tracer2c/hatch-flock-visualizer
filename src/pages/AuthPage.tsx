@@ -46,19 +46,6 @@ export default function AuthPage() {
     setIsLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!passwordsMatch || !signupPassword || !confirmPassword) return;
-    setIsLoading(true);
-    const fd = new FormData(e.currentTarget);
-    await signUp(
-      fd.get('email') as string,
-      signupPassword,
-      fd.get('firstName') as string,
-      fd.get('lastName') as string,
-    );
-    setIsLoading(false);
-  };
 
   const handleMFASuccess = () => {
     setPendingMFAVerification(false);
