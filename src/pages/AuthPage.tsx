@@ -1,19 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerifyDialog } from '@/components/TwoFactorAuth';
-import { supabase } from '@/integrations/supabase/client';
 import {
   Egg, Mail, ArrowLeft, RefreshCw, Loader2, Eye, EyeOff, Headset,
   ShieldCheck, TrendingUp, Activity,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { UUIAlert } from '@/components/uui/UUIAlert';
 
 export default function AuthPage() {
   const { user, signIn, signUp, resetPasswordForEmail, loading } = useAuth();
