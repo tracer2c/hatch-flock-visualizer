@@ -1,84 +1,46 @@
-## Problem
+## Goal
+Make `/embrex-data-sheet` a single, non-scrolling page — everything above the table fits in one compact row, and only the table body scrolls internally. Reclaim as much vertical space as possible for data rows without breaking any current functionality.
 
-Breadcrumbs at the top look right but many crumbs link to **routes that don't exist**, so clicking them lands on 404:
+## Changes
 
-- `/data-entry/flock` → 404 (no route)
-- `/data-entry/flock/1001` → 404 (no drill-down route)
-- Some `/data-entry/house/:id` segments also link to non-existent parents
+### 1. `src/pages/EmbrexDataSheetPage.tsx` — collapse the header
 
-The breadcrumb component blindly accumulates URL segments; it doesn't know which are real routes vs. sub-paths that only render as part of a deeper page. It also uses raw params (`1001`, house IDs) with no context, so the crumb text is unhelpful.
+Reduce the header from 2 rows (title + actions, then tabs + filter + search) to a single tight toolbar:
 
-Separately, the back button on entry pages (`Back to Weekly Flock Rollup`) navigates to a fixed URL, which drops any filter state the user had (selected week, hatchery filter, etc.). The user wants "back = the actual previous page".
-
-## Fix
-
-### 1. Route-aware breadcrumbs (replace segment-accumulator with a route map)
-
-Rewrite `src/components/uui/AppBreadcrumbs.tsx` to build crumbs from an explicit route table instead of splitting the URL. Each entry defines the crumb chain (label + real href) for that route.
-
-Example table:
-
-```ts
-// pattern → chain
-"/data-entry"                              → [Data Entry]
-"/data-entry/house/:houseId"               → [Data Entry, House {houseId}]
-"/data-entry/house/:houseId/residue"       → [Data Entry, House {houseId}, Residue]
-"/data-entry/flock/:flockKey/hoi"          → [Data Entry, Flock {flockKey}, Hatch / HOI]
-"/data-entry/flock/:flockKey/residue"      → [Data Entry, Flock {flockKey}, Residue]
-"/qa-hub"                                  → [QA Hub]
-"/management/rooms"                        → [Management, Rooms]
-...
+```
+[Data Sheet] [Tabs: Embrex/HOI · Residue · Egg Quality · Hatch · QA] ......... [By House | By Flock] [% toggle] [🔍] [⚙ Filters] [↻] [⬇] 
 ```
 
-Rules:
-- Every crumb href in the chain must point to a **route that actually exists** in `App.tsx`. If a logical parent has no route (e.g. `Flock 1001` has no standalone page), that crumb renders as **plain text**, not a link.
-- The final crumb is always plain text.
-- Use `matchPath` from `react-router-dom` to resolve the current pathname against patterns.
-- Dynamic labels: pull `houseId` / `flockKey` from `useParams` and render as `House #1` / `Flock 1001`.
-- Fallback: if no pattern matches, fall back to the current humanized-segment behavior (so unmapped routes still show something reasonable).
+Concrete edits:
+- Remove the `Timeline View` button entirely (also remove the `TrendingUp` import and the `handleTimelineView` handler).
+- Convert **Refresh** and **Export** buttons to `size="icon"` variant with a `Tooltip` (keeps the export dropdown; icon-only trigger).
+- Convert **Search** to an icon-only button that, when clicked, expands into an inline input (existing `searchTerm` state stays; add local `searchOpen` state). Escape/blur-with-empty collapses it back.
+- Drop the subtitle line "View and analyze all hatchery data in one place." (SEO description in the `<meta>` stays unchanged).
+- Move the H1 into the same row as the tabs (small `text-lg font-semibold`) so title, tabs, and actions live on one line.
+- Add the **By House / By Flock** toggle (see §3) into this same toolbar row.
+- Change the outer wrapper so the page never scrolls:
+  - Outer: `h-[calc(100vh-<header offsets>)] flex flex-col overflow-hidden` (already `h-screen overflow-hidden` — keep, just verify with app shell).
+  - Content wrapper (currently `flex-1 overflow-auto p-6`) becomes `flex-1 min-h-0 overflow-hidden p-4` so the child owns scrolling.
 
-### 2. Smarter "Back" navigation on flock/house entry pages
+### 2. Internal-only table scroll
+Ensure the currently rendered tab panel is the sole scroller:
+- In `CompleteDataView` (and each tab component: `EmbrexHOITab`, `ResidueBreakoutTable`, `EggPackQualityTab`, `HatchPerformanceTab`, `QAMonitoringTab`), wrap the returned content with `<div className="h-full flex flex-col min-h-0">`, put static bits (banner, helper text) at the top, and give the table container `flex-1 min-h-0 overflow-auto`.
+- Do not modify column definitions, data hooks, filters, aggregations, or export logic.
 
-Introduce a small hook `useSmartBack(fallback: string)` in `src/hooks/useSmartBack.ts`:
+### 3. Lift the By House / By Flock toggle to the page toolbar
+Currently `DataSheetViewModeToggle` lives inside each tab (Residue, Egg Pack, Hatch, QA — not Embrex/HOI). Lifting:
+- Add `const [viewMode, setViewMode] = useState<DataSheetViewMode>("rows")` in `EmbrexDataSheetPage`.
+- Render the toggle in the toolbar; hide it when `activeTab === "embrex"` (that tab has no By Flock mode today).
+- Pass `viewMode` / `setViewMode` down through `CompleteDataView` into `ResidueBreakoutTable`, `EggPackQualityTab`, `HatchPerformanceTab`, `QAMonitoringTab` as optional controlled props; if the prop is provided, use it instead of local `useState` and remove the inline `<DataSheetViewModeToggle …/>` render in that tab. If the prop is absent, existing behavior is preserved (safe fallback).
 
-- On mount, store `location.state.from` (if provided by the linker) or `document.referrer` derived path.
-- Returns a `goBack()` that:
-  1. Uses `navigate(-1)` **only if** the previous history entry is inside our app (checked via a session-storage stack we push on every route change).
-  2. Otherwise navigates to the `fallback` URL passed in (e.g. `/data-entry`).
-
-Add a tiny history tracker in `App.tsx` (a `<RouteHistoryTracker>` inside the `Routes`) that pushes each visited in-app path to `sessionStorage`. This lets the hook know whether `-1` is safe.
-
-Wire `useSmartBack("/data-entry")` into the back buttons of:
-- `HatchHOIEntryPage.tsx`
-- `FlockResidueEntryPage.tsx`
-- `FlockFertilityEntryPage.tsx`
-- `FlockEggPackEntryPage.tsx`
-- `FlockClearsInjectedEntryPage.tsx`
-- `FlockDrillDown.tsx` ("Back to Totals")
-
-When these pages are opened, also pass `state={{ from: location.pathname + location.search }}` from the caller (`WeeklyRollupView` links) so the entry page can restore filters (week, hatchery) on back.
-
-### 3. Preserve rollup filter state across back navigation
-
-In `WeeklyRollupView.tsx`, when navigating to a flock entry page, include `state={{ from: currentUrlWithQuery }}` on the `<Link>` / `navigate()` call. The entry pages' back button (via `useSmartBack`) will return the user to that exact URL, preserving the selected week and hatchery filter.
-
-## Files
-
-**Edit**
-- `src/components/uui/AppBreadcrumbs.tsx` — replace with route-table implementation.
-- `src/App.tsx` — mount `<RouteHistoryTracker />` inside the authenticated `<Routes>`.
-- `src/components/dashboard/WeeklyRollupView.tsx` — pass `state={{ from }}` when navigating to entry pages.
-- `src/pages/HatchHOIEntryPage.tsx`, `FlockResidueEntryPage.tsx`, `FlockFertilityEntryPage.tsx`, `FlockEggPackEntryPage.tsx`, `FlockClearsInjectedEntryPage.tsx`, `src/components/dashboard/FlockDrillDown.tsx` — swap fixed back-URL for `useSmartBack("/data-entry")`.
-
-**Create**
-- `src/hooks/useSmartBack.ts` — the smart back hook.
-- `src/components/RouteHistoryTracker.tsx` — pushes in-app paths to `sessionStorage`.
-- `src/lib/breadcrumbRoutes.ts` — the pattern → crumb-chain map.
+### 4. Nothing else changes
+- No route removal (leave `/embrex-timeline` reachable from any other entry point).
+- No changes to data queries, exports, permissions, filter dialog contents, or read-only banner.
+- Breadcrumbs, sidebar, and TopBar untouched.
 
 ## Verification
-
-1. Navigate `Data Entry → Weekly Flock Rollup → 1001 → Residue`. Click each breadcrumb; every click lands on a real page (no 404).
-2. Open Residue entry page from the rollup, hit Back — return to the rollup with the same week/hatchery filter.
-3. Open the entry page directly via a deep-link (fresh tab), hit Back — falls back to `/data-entry`.
-4. Same check for `/data-entry/house/:id/*` chain.
-5. Breadcrumbs for `/qa-hub`, `/management/rooms`, `/chat`, `/analytics/*` still render.
+1. Build passes.
+2. Visit `/embrex-data-sheet`: header is one row, no page scroll, only the table area scrolls; resizing the window keeps the table filling remaining space.
+3. Each tab: filters, search (expanded via icon), refresh, CSV/Excel export, percentage toggle all still work.
+4. Switching tabs preserves the chosen By House / By Flock view; toggle hidden on Embrex/HOI tab.
+5. No Timeline View button anywhere on this page.
