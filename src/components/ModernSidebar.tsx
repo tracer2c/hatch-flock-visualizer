@@ -27,11 +27,14 @@ import {
   Users as UsersIcon,
   BarChart3,
   Target,
+  PanelLeftClose,
 } from "lucide-react";
+
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -44,6 +47,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -249,11 +253,29 @@ export function ModernSidebar() {
       <Sidebar
         side="left"
         variant="sidebar"
-        collapsible="offcanvas"
-        style={{ ["--sidebar-width" as any]: "260px" }}
+        collapsible="icon"
+        style={{ ["--sidebar-width" as any]: "260px", ["--sidebar-width-icon" as any]: "3.5rem" }}
         className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl"
       >
-        <SidebarContent className="pt-14 gap-0">
+        <SidebarHeader className="pt-14 pb-1 px-2 group-data-[collapsible=icon]:px-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent px-2 group-data-[collapsible=icon]:hidden">
+              Hatchery Pro
+            </span>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+              className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto"
+            >
+              <PanelLeftClose className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
+              <PanelLeftClose className="hidden h-4 w-4 rotate-180 group-data-[collapsible=icon]:block" />
+            </button>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="gap-0">
+
           {visibleGroups.map((group) => (
             <SidebarGroup key={group.heading} className="py-1">
               <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-3 pb-1">
@@ -269,11 +291,12 @@ export function ModernSidebar() {
 
                     return (
                       <SidebarMenuItem key={item.href}>
-                        <div className="flex items-stretch">
+                        <div className="flex items-stretch group-data-[collapsible=icon]:block">
                           <SidebarMenuButton
                             asChild
+                            tooltip={item.label}
                             className={cn(
-                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1",
+                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1 group-data-[collapsible=icon]:justify-center",
                               active
                                 ? "bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary"
                                 : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -281,10 +304,10 @@ export function ModernSidebar() {
                           >
                             <NavLink to={item.href} end={item.href === "/"}>
                               {active && (
-                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary group-data-[collapsible=icon]:hidden" />
                               )}
                               <Icon className="h-4 w-4 flex-shrink-0" />
-                              <span className="truncate">{item.label}</span>
+                              <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
                             </NavLink>
                           </SidebarMenuButton>
                           {hasSubs && (
@@ -293,7 +316,7 @@ export function ModernSidebar() {
                               aria-label={isOpen ? "Collapse" : "Expand"}
                               onClick={() => toggle(item.href)}
                               className={cn(
-                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform",
+                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform group-data-[collapsible=icon]:hidden",
                                 isOpen && "rotate-90"
                               )}
                             >
@@ -301,6 +324,7 @@ export function ModernSidebar() {
                             </button>
                           )}
                         </div>
+
                         {hasSubs && isOpen && (
                           <SidebarMenuSub className="mt-0.5 ml-4 border-l border-sidebar-border/60 pl-2 gap-0.5">
                             {item.items!.map((sub) => {
@@ -336,21 +360,21 @@ export function ModernSidebar() {
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1">
+        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1 group-data-[collapsible=icon]:px-1.5">
           <SidebarMenu className="gap-0.5">
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+              <SidebarMenuButton asChild tooltip="Support" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
                 <NavLink to="/support">
                   <LifeBuoy className="h-4 w-4" />
-                  <span>Support</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Support</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+              <SidebarMenuButton asChild tooltip="Settings" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
                 <NavLink to="/management">
                   <Settings className="h-4 w-4" />
-                  <span>Settings</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -358,14 +382,15 @@ export function ModernSidebar() {
           {user && (
             <NavLink
               to="/profile"
-              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors"
+              title={displayName}
+              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             >
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <span className="text-xs font-medium text-sidebar-foreground truncate">
                   {displayName}
                 </span>
@@ -380,5 +405,6 @@ export function ModernSidebar() {
         </SidebarFooter>
       </Sidebar>
     </>
+
   );
 }
