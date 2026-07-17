@@ -35,15 +35,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -170,7 +164,8 @@ function useExpanded(defaults: Record<string, boolean>) {
 }
 
 export function ModernSidebar() {
-  const { isMobile, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
+  const { isMobile, openMobile, setOpenMobile, toggleSidebar, state } = useSidebar();
+  const collapsed = state === "collapsed";
   const { user, profile } = useAuth() as any;
   const { hasFeatureAccess } = usePermissions();
   const { pathname, search } = useLocation();
@@ -242,6 +237,76 @@ export function ModernSidebar() {
       ? `${profile.first_name} ${profile.last_name}`
       : user?.email ?? "";
 
+  const renderItem = (item: NavItem, groupIndex: number, itemIndex: number) => {
+    const Icon = item.icon;
+    const active = isParentActive(item);
+    const hasSubs = !!item.items?.length;
+    const isOpen = hasSubs ? expanded[item.href] ?? false : false;
+
+    return (
+      <li key={item.href} className="list-none">
+        <div className="relative flex items-stretch group-data-[collapsible=icon]:block">
+          <NavLink
+            to={item.href}
+            end={item.href === "/"}
+            title={collapsed ? item.label : undefined}
+            className={cn(
+              "group relative flex items-center gap-3 h-11 flex-1 rounded-xl px-3 text-[15px] transition-colors",
+              "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto",
+              active
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-sidebar-foreground/80 hover:bg-muted/60 hover:text-foreground"
+            )}
+          >
+            {active && (
+              <span className="absolute left-1 top-2 bottom-2 w-1 rounded-r-full bg-primary group-data-[collapsible=icon]:hidden" />
+            )}
+            <Icon className="h-5 w-5 flex-shrink-0" />
+            <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+          </NavLink>
+          {hasSubs && (
+            <button
+              type="button"
+              aria-label={isOpen ? "Collapse" : "Expand"}
+              onClick={() => toggle(item.href)}
+              className={cn(
+                "flex items-center justify-center w-8 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-transform group-data-[collapsible=icon]:hidden",
+                isOpen && "rotate-90"
+              )}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {hasSubs && isOpen && (
+          <ul className="mt-1 ml-6 border-l border-border pl-3 space-y-0.5 group-data-[collapsible=icon]:hidden">
+            {item.items!.map((sub) => {
+              const SubIcon = sub.icon;
+              const subActive = isSubActive(sub);
+              return (
+                <li key={sub.href} className="list-none">
+                  <NavLink
+                    to={sub.href}
+                    className={cn(
+                      "flex items-center gap-2 h-10 rounded-lg px-2 text-sm transition-colors",
+                      subActive
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    )}
+                  >
+                    <SubIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{sub.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
   return (
     <>
       {isMobile && openMobile && (
@@ -255,154 +320,92 @@ export function ModernSidebar() {
         side="left"
         variant="sidebar"
         collapsible="icon"
-        style={{ ["--sidebar-width" as any]: "260px", ["--sidebar-width-icon" as any]: "3.5rem" }}
-        className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl"
+        style={{ ["--sidebar-width" as any]: "264px", ["--sidebar-width-icon" as any]: "72px" }}
+        className="border-r border-sidebar-border/60 bg-sidebar"
       >
-        <SidebarHeader className="pt-14 pb-0 px-2 group-data-[collapsible=icon]:px-1.5">
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              title="Collapse sidebar"
-              aria-label="Collapse sidebar"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto"
-            >
-              <PanelLeftClose className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
-              <PanelLeftClose className="hidden h-4 w-4 rotate-180 group-data-[collapsible=icon]:block" />
-            </button>
-          </div>
+        {/* Header */}
+        <SidebarHeader className="h-20 shrink-0 flex-row items-center justify-between px-5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
+          <span className="text-[17px] font-semibold text-foreground truncate group-data-[collapsible=icon]:hidden">
+            Hatchery Pro
+          </span>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          >
+            <PanelLeftClose className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+          </button>
         </SidebarHeader>
-        <SidebarContent className="gap-0">
 
-          {visibleGroups.map((group) => (
-            <SidebarGroup key={group.heading} className="py-1">
-              <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-3 pb-1">
+        {/* Scrollable nav */}
+        <SidebarContent className="flex-1 overflow-y-auto px-3 py-4 gap-0 group-data-[collapsible=icon]:px-2">
+          {visibleGroups.map((group, gi) => (
+            <div key={group.heading} className={cn(gi === 0 ? "mt-0" : "mt-6")}>
+              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground group-data-[collapsible=icon]:hidden">
                 {group.heading}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isParentActive(item);
-                    const hasSubs = !!item.items?.length;
-                    const isOpen = hasSubs ? expanded[item.href] ?? false : false;
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <div className="flex items-stretch group-data-[collapsible=icon]:block">
-                          <SidebarMenuButton
-                            asChild
-                            tooltip={item.label}
-                            className={cn(
-                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1 group-data-[collapsible=icon]:justify-center",
-                              active
-                                ? "bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary"
-                                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                            )}
-                          >
-                            <NavLink to={item.href} end={item.href === "/"}>
-                              {active && (
-                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary group-data-[collapsible=icon]:hidden" />
-                              )}
-                              <Icon className="h-4 w-4 flex-shrink-0" />
-                              <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
-                            </NavLink>
-                          </SidebarMenuButton>
-                          {hasSubs && (
-                            <button
-                              type="button"
-                              aria-label={isOpen ? "Collapse" : "Expand"}
-                              onClick={() => toggle(item.href)}
-                              className={cn(
-                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform group-data-[collapsible=icon]:hidden",
-                                isOpen && "rotate-90"
-                              )}
-                            >
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        {hasSubs && isOpen && (
-                          <SidebarMenuSub className="mt-0.5 ml-4 border-l border-sidebar-border/60 pl-2 gap-0.5">
-                            {item.items!.map((sub) => {
-                              const SubIcon = sub.icon;
-                              const subActive = isSubActive(sub);
-                              return (
-                                <SidebarMenuSubItem key={sub.href}>
-                                  <SidebarMenuSubButton asChild>
-                                    <NavLink
-                                      to={sub.href}
-                                      className={cn(
-                                        "h-8 px-2 rounded-md gap-2 text-sm",
-                                        subActive
-                                          ? "bg-primary/10 text-primary font-medium"
-                                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                      )}
-                                    >
-                                      <SubIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                                      <span className="truncate">{sub.label}</span>
-                                    </NavLink>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                          </SidebarMenuSub>
-                        )}
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+              </div>
+              <ul className="space-y-1">
+                {group.items.map((item, ii) => renderItem(item, gi, ii))}
+              </ul>
+            </div>
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1 group-data-[collapsible=icon]:px-1.5">
-          <SidebarMenu className="gap-0.5">
+        {/* Fixed footer */}
+        <SidebarFooter className="shrink-0 border-t border-sidebar-border/60 p-3 gap-2 group-data-[collapsible=icon]:px-2">
+          <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Support" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton
+                asChild
+                tooltip="Support"
+                className="h-11 px-3 rounded-xl gap-3 text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:px-0"
+              >
                 <NavLink to="/support">
-                  <LifeBuoy className="h-4 w-4" />
+                  <LifeBuoy className="h-5 w-5" />
                   <span className="group-data-[collapsible=icon]:hidden">Support</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton
+                asChild
+                tooltip="Settings"
+                className="h-11 px-3 rounded-xl gap-3 text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:px-0"
+              >
                 <NavLink to="/management">
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-5 w-5" />
                   <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
+
           {user && (
-            <NavLink
-              to="/profile"
-              title={displayName}
-              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            >
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                <span className="text-xs font-medium text-sidebar-foreground truncate">
-                  {displayName}
-                </span>
-                {user.email && displayName !== user.email && (
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {user.email}
+            <>
+              <div className="border-t border-sidebar-border/60 -mx-3 group-data-[collapsible=icon]:-mx-2" />
+              <NavLink
+                to="/profile"
+                title={user.email || displayName}
+                className="flex items-center gap-3 px-2 h-14 rounded-xl hover:bg-muted/60 transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto"
+              >
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {displayName}
                   </span>
-                )}
-              </div>
-            </NavLink>
+                  <span className="text-[11px] text-muted-foreground">View profile</span>
+                </div>
+              </NavLink>
+            </>
           )}
         </SidebarFooter>
       </Sidebar>
     </>
-
   );
 }
