@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createIDBPersister } from "@/lib/idbPersister";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import PerformancePage from "./pages/PerformancePage";
 import ProcessFlowPage from "./pages/ProcessFlowPage";
@@ -90,6 +90,8 @@ const persister = createIDBPersister();
 function AppContent() {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
+  const location = useLocation();
+  const showBreadcrumbs = location.pathname !== "/";
   
   useOfflinePrefetch();
   
@@ -110,11 +112,13 @@ function AppContent() {
                   <ModernSidebar />
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <TopBar />
-                    <main className="flex-1 overflow-auto pt-12">
+                    <main className="flex-1 overflow-auto">
                     <RouteHistoryTracker />
-                    <div className="px-4 sm:px-6 pt-3">
-                      <AppBreadcrumbs />
-                    </div>
+                    {showBreadcrumbs && (
+                      <div className="px-4 sm:px-6 pt-3">
+                        <AppBreadcrumbs />
+                      </div>
+                    )}
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/multi-stage" element={

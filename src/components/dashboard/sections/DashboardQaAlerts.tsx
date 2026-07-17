@@ -1,54 +1,66 @@
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Activity, CheckCircle2, ChevronRight, HeartPulse } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useCriticalAlerts } from "@/hooks/useAlerts";
 
 export function DashboardQaAlerts() {
   const navigate = useNavigate();
   const { data: alerts = [] } = useCriticalAlerts();
-  const top = alerts.slice(0, 3);
+  const top = alerts.slice(0, 2);
 
   return (
-    <Card>
+    <Card className="border-border/70 shadow-sm">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-destructive" />
-            <h3 className="text-sm font-semibold">QA Alerts</h3>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <HeartPulse className="h-4 w-4 text-red-500" />
+            <h3 className="text-base font-medium">QA Alerts</h3>
           </div>
-          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate("/qa-hub")}>
+          <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate("/qa-hub")}>
             View all
           </Button>
         </div>
+
         {top.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">No critical alerts.</div>
+          <div className="flex min-h-[104px] flex-col items-center justify-center rounded-xl text-center">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div className="text-sm font-medium text-emerald-600">No critical alerts.</div>
+            <div className="mt-1.5 text-xs font-medium text-muted-foreground">All systems operating normally.</div>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {top.map((a: any) => (
-              <div key={a.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Activity className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                    <span className="text-sm font-semibold truncate">{a.title || a.alert_type || "Critical alert"}</span>
+          <div className="space-y-3">
+            {top.map((alert: any) => (
+              <button
+                key={alert.id}
+                type="button"
+                onClick={() => navigate("/qa-hub")}
+                className="w-full rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-left"
+              >
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Activity className="h-4 w-4 shrink-0 text-red-500" />
+                    <span className="truncate text-sm font-medium">{alert.title || alert.alert_type || "Critical alert"}</span>
                   </div>
-                  <Badge variant="destructive" className="h-5 text-[10px] flex-shrink-0">Critical</Badge>
+                  <Badge variant="destructive" className="h-5 text-[10px]">Critical</Badge>
                 </div>
-                {a.message && <div className="text-xs text-muted-foreground line-clamp-1 mb-1">{a.message}</div>}
-                <div className="text-[10px] text-muted-foreground">
-                  Detected: {a.triggered_at ? formatDistanceToNow(new Date(a.triggered_at), { addSuffix: true }) : "—"}
+                {alert.message && <div className="line-clamp-2 text-sm text-muted-foreground">{alert.message}</div>}
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {alert.triggered_at ? formatDistanceToNow(new Date(alert.triggered_at), { addSuffix: true }) : "Recently"}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
-        <div className="pt-3">
-          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => navigate("/qa-hub")}>
-            Go to QA Hub <ChevronRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
-        </div>
+
+        <Button variant="outline" size="sm" className="mt-3 h-8 w-full gap-1 text-xs" onClick={() => navigate("/qa-hub")}>
+          Go to QA Hub
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
       </CardContent>
     </Card>
   );

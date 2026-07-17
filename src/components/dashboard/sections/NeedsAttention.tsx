@@ -1,235 +1,180 @@
+import { format, formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, AlertOctagon, Activity, ChevronRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
-
-type IssueKind = "variance" | "missing" | "below" | "qa" | "due";
 
 interface Item {
   flock: string;
-  kind: IssueKind;
-  detail: string;
-  setDate: string | null;
-  action: string;
+  issue: string;
+  metricLabel: string;
+  metricValue: string;
   target: string;
+  variance: string;
+  updated: string;
+  meta: string;
+  targetRoute: string;
 }
-
-const kindMeta: Record<IssueKind, { label: string; className: string; icon: any }> = {
-  variance: { label: "Performance Variance", className: "bg-rose-100 text-rose-700 border-rose-200", icon: Activity },
-  missing: { label: "Missing Data", className: "bg-amber-100 text-amber-700 border-amber-200", icon: AlertTriangle },
-  below: { label: "Below Target", className: "bg-orange-100 text-orange-700 border-orange-200", icon: AlertTriangle },
-  qa: { label: "QA Alert", className: "bg-red-100 text-red-700 border-red-200", icon: AlertOctagon },
-  due: { label: "Due Soon", className: "bg-blue-100 text-blue-700 border-blue-200", icon: Activity },
-};
 
 interface Props {
   rows: WeeklyFlockRollupRow[];
   criticalAlerts: number;
   emptyState?: React.ReactNode;
-  compact?: boolean;
 }
 
-export function NeedsAttention({ rows, criticalAlerts, emptyState, compact }: Props) {
+const pct = (n: number | null | undefined) => (n == null || isNaN(n) ? "Pending" : `${n.toFixed(1)}%`);
+
+export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
   const navigate = useNavigate();
+
   const items = useMemo<Item[]>(() => {
-    const list: Item[] = [];
-    for (const r of rows) {
-      const flockLabel = `Flock ${r.flock_number ?? r.flock_name ?? "—"}`;
-      if (r.fertility_pct == null && r.total_eggs_set > 0) {
-        list.push({
-          flock: flockLabel,
-          kind: "missing",
-          detail: "Fertility / residue data not entered",
-          setDate: r.earliest_set_date,
-          action: "Enter Data",
-          target: "/data-entry",
+    const out: Item[] = [];
+    for (const row of rows) {
+      const flock = `Flock ${row.flock_number ?? row.flock_name ?? "—"}`;
+      const updated = row.earliest_set_date
+        ? formatDistanceToNow(new Date(row.earliest_set_date), { addSuffix: true })
+        : "Recently";
+      const setDate = row.earliest_set_date
+        ? `Set Date: ${format(new Date(row.earliest_set_date), "MMM d, yyyy")}`
+        : "Set date unavailable";
+
+      if (row.fertility_pct == null && row.total_eggs_set > 0) {
+        out.push({
+          flock,
+          issue: "Fertility data missing",
+          metricLabel: "Fertility",
+          metricValue: "Not entered",
+          target: "85%",
+          variance: "Missing",
+          updated,
+          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          targetRoute: "/data-entry",
         });
-      } else if (r.fertility_pct != null && r.fertility_pct < 80) {
-        list.push({
-          flock: flockLabel,
-          kind: "below",
-          detail: `Fertility ${r.fertility_pct.toFixed(1)}% (target 85%)`,
-          setDate: r.earliest_set_date,
-          action: "Review",
-          target: "/embrex-data-sheet",
+      } else if (row.fertility_pct != null && row.fertility_pct < 85) {
+        out.push({
+          flock,
+          issue: "Fertility below target",
+          metricLabel: "Fertility",
+          metricValue: pct(row.fertility_pct),
+          target: "85%",
+          variance: `-${(85 - row.fertility_pct).toFixed(1)}%`,
+          updated,
+          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          targetRoute: "/embrex-data-sheet",
         });
-      } else if (r.hoi_pct == null && r.worst_status === "completed") {
-        list.push({
-          flock: flockLabel,
-          kind: "missing",
-          detail: "HOI not recorded",
-          setDate: r.earliest_set_date,
-          action: "Enter Data",
-          target: "/data-entry",
-        });
-      } else if (r.hof_pct != null && r.hof_pct < 82) {
-        list.push({
-          flock: flockLabel,
-          kind: "below",
-          detail: `Hatch ${r.hof_pct.toFixed(1)}% below target`,
-          setDate: r.earliest_set_date,
-          action: "Review",
-          target: "/embrex-data-sheet",
+      } else if (row.hof_pct == null && row.worst_status === "completed") {
+        out.push({
+          flock,
+          issue: "Hatch data pending",
+          metricLabel: "Hatch",
+          metricValue: "Pending",
+          target: "88%",
+          variance: "Pending",
+          updated,
+          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          targetRoute: "/data-entry",
         });
       }
-      if (list.length >= 5) break;
+      if (out.length >= 3) break;
     }
-    if (criticalAlerts > 0 && list.length < 5) {
-      list.push({
-        flock: "Multiple",
-        kind: "qa",
-        detail: `${criticalAlerts} critical QA alert${criticalAlerts > 1 ? "s" : ""} detected`,
-        setDate: null,
-        action: "View Alert",
-        target: "/qa-hub",
+
+    if (criticalAlerts > 0 && out.length < 3) {
+      out.push({
+        flock: "QA System",
+        issue: `${criticalAlerts} critical QA alert${criticalAlerts === 1 ? "" : "s"}`,
+        metricLabel: "Alerts",
+        metricValue: String(criticalAlerts),
+        target: "0",
+        variance: `+${criticalAlerts}`,
+        updated: "Now",
+        meta: "Immediate review recommended",
+        targetRoute: "/qa-hub",
       });
     }
-    return list.slice(0, 5);
+
+    return out;
   }, [rows, criticalAlerts]);
 
-  if (compact) {
-    const critical = items.filter((i) => i.kind === "qa" || i.kind === "below").length;
-    const warning = items.length - critical;
-    return (
-      <Card className="h-full flex flex-col">
-        <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <h3 className="text-sm font-semibold">Needs Attention</h3>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {critical > 0 && (
-                <Badge variant="destructive" className="h-5 text-[10px]">{critical} critical</Badge>
-              )}
-              {warning > 0 && (
-                <Badge variant="outline" className="h-5 text-[10px] bg-amber-100 text-amber-700 border-amber-200">
-                  {warning} warning
-                </Badge>
-              )}
-              {items.length === 0 && (
-                <Badge variant="outline" className="h-5 text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
-                  All clear
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-            {items.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-2">Nothing needs attention right now.</div>
-            ) : (
-              items.slice(0, 4).map((it, i) => {
-                const meta = kindMeta[it.kind];
-                const Icon = meta.icon;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => navigate(it.target)}
-                    className="w-full text-left flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/60 transition-colors"
-                  >
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs font-medium truncate">{it.flock}</span>
-                    <span className="text-[11px] text-muted-foreground truncate flex-1">{it.detail}</span>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  </button>
-                );
-              })
+  return (
+    <Card className="border-border/70 shadow-sm">
+      <CardContent className="p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <h2 className="text-base font-medium">Needs Attention</h2>
+            {items.length > 0 && (
+              <Badge className="h-5 rounded-full bg-red-500 px-2 text-[11px] text-white hover:bg-red-500">
+                {items.length}
+              </Badge>
             )}
           </div>
-          {items.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full h-7 text-[11px] text-primary mt-1"
-              onClick={() => navigate("/embrex-data-sheet")}
-            >
-              View all <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            Needs Attention
-            {items.length > 0 && <Badge variant="destructive" className="h-5">{items.length}</Badge>}
-          </CardTitle>
+          <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate("/embrex-data-sheet")}>
+            View all
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground">Flocks that need your attention</p>
-      </CardHeader>
-      <CardContent>
+
         {items.length === 0 ? (
           emptyState ?? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              Nothing needs attention. Nicely done. 🎉
+            <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
+              <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+              <div className="text-sm font-semibold text-emerald-700">Nothing needs attention.</div>
+              <div className="text-xs text-muted-foreground">All selected flocks are operating within current targets.</div>
             </div>
           )
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b">
-                  <th className="text-left font-medium py-2 pr-3">Flock</th>
-                  <th className="text-left font-medium py-2 pr-3">Issue</th>
-                  <th className="text-left font-medium py-2 pr-3">Severity</th>
-                  <th className="text-left font-medium py-2 pr-3">Details</th>
-                  <th className="text-left font-medium py-2 pr-3">Updated</th>
-                  <th className="text-right font-medium py-2">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => {
-                  const meta = kindMeta[it.kind];
-                  const Icon = meta.icon;
-                  const severity = it.kind === "qa" || it.kind === "below" ? "Critical" : "Warning";
-                  const sevClass =
-                    severity === "Critical"
-                      ? "bg-destructive/10 text-destructive border-destructive/20"
-                      : "bg-amber-100 text-amber-700 border-amber-200";
-                  return (
-                    <tr key={i} className="border-b last:border-0 hover:bg-muted/40">
-                      <td className="py-2.5 pr-3 font-medium">
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                          {it.flock}
-                        </div>
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <Badge variant="outline" className={sevClass}>{severity}</Badge>
-                      </td>
-                      <td className="py-2.5 pr-3 text-muted-foreground">{it.detail}</td>
-                      <td className="py-2.5 pr-3 text-muted-foreground text-xs">
-                        {it.setDate ? formatDistanceToNow(new Date(it.setDate), { addSuffix: true }) : "—"}
-                      </td>
-                      <td className="py-2.5 text-right">
-                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(it.target)}>
-                          {it.action === "Review" ? "Review Flock" : it.action}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {items.map((item) => (
+              <div
+                key={`${item.flock}-${item.issue}`}
+                className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] px-3 py-2.5"
+              >
+                <div className="grid gap-3 xl:grid-cols-[minmax(180px,1.1fr)_minmax(420px,2fr)_auto] xl:items-center">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-500" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="text-sm font-medium text-foreground">{item.flock}</span>
+                        <span className="text-sm font-medium text-orange-500">{item.issue}</span>
+                      </div>
+                      <div className="mt-1 text-xs font-medium text-muted-foreground">{item.meta}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
+                      <div className="text-[11px] font-medium text-muted-foreground">{item.metricLabel}</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.metricValue}</div>
+                    </div>
+                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
+                      <div className="text-[11px] font-medium text-muted-foreground">Target</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.target}</div>
+                    </div>
+                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
+                      <div className="text-[11px] font-medium text-muted-foreground">Variance</div>
+                      <div className="mt-0.5 text-sm font-semibold text-red-500 tabular-nums">{item.variance}</div>
+                    </div>
+                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
+                      <div className="text-[11px] font-medium text-muted-foreground">Updated</div>
+                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.updated}</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 justify-self-start border-primary/30 px-3 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary xl:justify-self-end"
+                    onClick={() => navigate(item.targetRoute)}
+                  >
+                    Review Flock
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        <div className="pt-3 flex justify-end">
-          <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => navigate("/embrex-data-sheet")}>
-            View all needs attention <ChevronRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

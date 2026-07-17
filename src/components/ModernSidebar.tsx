@@ -21,27 +21,16 @@ import {
   Skull,
   Scale,
   Egg,
-  Building2,
-  Cpu,
-  Bird,
-  Users as UsersIcon,
-  BarChart3,
-  Target,
   PanelLeftClose,
+  Droplet,
 } from "lucide-react";
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -118,22 +107,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Admin",
     items: [
-      {
-        label: "Management",
-        href: "/management",
-        icon: Settings,
-        featureKey: "management",
-        items: [
-          { label: "Hatcheries", href: "/management/hatcheries", icon: Building2 },
-          { label: "Rooms", href: "/management/rooms", icon: Building2 },
-          { label: "Machines", href: "/management/machines", icon: Cpu },
-          { label: "Flocks", href: "/management/flocks", icon: Bird },
-          { label: "Users", href: "/management/users", icon: UsersIcon },
-          { label: "Reports", href: "/management/reports", icon: BarChart3 },
-          { label: "Targets", href: "/management/targets", icon: Target },
-        ],
-      },
-      { label: "What's New", href: "/changelogs", icon: Sparkles },
+      { label: "Support", href: "/support", icon: LifeBuoy },
+      { label: "Settings", href: "/management", icon: Settings, featureKey: "management" },
     ],
   },
 ];
@@ -166,7 +141,7 @@ function useExpanded(defaults: Record<string, boolean>) {
 export function ModernSidebar() {
   const { isMobile, openMobile, setOpenMobile, toggleSidebar, state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { user, profile } = useAuth() as any;
+  const { user } = useAuth() as any;
   const { hasFeatureAccess } = usePermissions();
   const { pathname, search } = useLocation();
   const fullPath = pathname + (search || "");
@@ -225,18 +200,6 @@ export function ModernSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const initials = (() => {
-    const first = profile?.first_name?.[0] ?? "";
-    const last = profile?.last_name?.[0] ?? "";
-    const combined = (first + last).toUpperCase();
-    if (combined) return combined;
-    return (user?.email?.[0] ?? "?").toUpperCase();
-  })();
-  const displayName =
-    profile?.first_name && profile?.last_name
-      ? `${profile.first_name} ${profile.last_name}`
-      : user?.email ?? "";
-
   const renderItem = (item: NavItem, groupIndex: number, itemIndex: number) => {
     const Icon = item.icon;
     const active = isParentActive(item);
@@ -251,15 +214,15 @@ export function ModernSidebar() {
             end={item.href === "/"}
             title={collapsed ? item.label : undefined}
             className={cn(
-              "group relative flex items-center gap-3 h-11 flex-1 rounded-xl px-3 text-[15px] transition-colors",
+              "group relative flex items-center gap-3 h-10 flex-1 rounded-lg px-3 text-sm transition-colors",
               "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto",
               active
-                ? "bg-primary/10 text-primary font-medium"
+                ? "bg-primary/10 text-primary font-semibold shadow-sm shadow-primary/5"
                 : "text-sidebar-foreground/80 hover:bg-muted/60 hover:text-foreground"
             )}
           >
             {active && (
-              <span className="absolute left-1 top-2 bottom-2 w-1 rounded-r-full bg-primary group-data-[collapsible=icon]:hidden" />
+              <span className="absolute -left-3 top-0 bottom-0 w-1 rounded-r-full bg-primary group-data-[collapsible=icon]:hidden" />
             )}
             <Icon className="h-5 w-5 flex-shrink-0" />
             <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
@@ -270,7 +233,7 @@ export function ModernSidebar() {
               aria-label={isOpen ? "Collapse" : "Expand"}
               onClick={() => toggle(item.href)}
               className={cn(
-                "flex items-center justify-center w-8 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-transform group-data-[collapsible=icon]:hidden",
+                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-transform group-data-[collapsible=icon]:hidden",
                 isOpen && "rotate-90"
               )}
             >
@@ -320,14 +283,22 @@ export function ModernSidebar() {
         side="left"
         variant="sidebar"
         collapsible="icon"
-        style={{ ["--sidebar-width" as any]: "264px", ["--sidebar-width-icon" as any]: "72px" }}
         className="border-r border-sidebar-border/60 bg-sidebar"
       >
         {/* Header */}
-        <SidebarHeader className="h-20 shrink-0 flex-row items-center justify-between px-5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
-          <span className="text-[17px] font-semibold text-foreground truncate group-data-[collapsible=icon]:hidden">
-            Hatchery Pro
-          </span>
+        <SidebarHeader className="h-16 shrink-0 flex-row items-center justify-between px-5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
+          <NavLink
+            to="/"
+            title="Go to dashboard"
+            className="flex items-center gap-3 min-w-0 rounded-lg transition-colors hover:text-primary group-data-[collapsible=icon]:hidden"
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Droplet className="h-4 w-4" />
+            </div>
+            <span className="text-[18px] font-semibold text-foreground truncate">
+              Hatchery Pro
+            </span>
+          </NavLink>
           <button
             type="button"
             onClick={toggleSidebar}
@@ -340,10 +311,10 @@ export function ModernSidebar() {
         </SidebarHeader>
 
         {/* Scrollable nav */}
-        <SidebarContent className="flex-1 overflow-y-auto px-3 py-4 gap-0 group-data-[collapsible=icon]:px-2">
+        <SidebarContent className="flex-1 overflow-y-auto px-5 py-4 gap-0 group-data-[collapsible=icon]:px-2">
           {visibleGroups.map((group, gi) => (
-            <div key={group.heading} className={cn(gi === 0 ? "mt-0" : "mt-6")}>
-              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground group-data-[collapsible=icon]:hidden">
+            <div key={group.heading} className={cn(gi === 0 ? "mt-0" : "mt-5")}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground group-data-[collapsible=icon]:hidden">
                 {group.heading}
               </div>
               <ul className="space-y-1">
@@ -352,59 +323,6 @@ export function ModernSidebar() {
             </div>
           ))}
         </SidebarContent>
-
-        {/* Fixed footer */}
-        <SidebarFooter className="shrink-0 border-t border-sidebar-border/60 p-3 gap-2 group-data-[collapsible=icon]:px-2">
-          <SidebarMenu className="gap-1">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Support"
-                className="h-11 px-3 rounded-xl gap-3 text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:px-0"
-              >
-                <NavLink to="/support">
-                  <LifeBuoy className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">Support</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Settings"
-                className="h-11 px-3 rounded-xl gap-3 text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:px-0"
-              >
-                <NavLink to="/management">
-                  <Settings className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-
-          {user && (
-            <>
-              <div className="border-t border-sidebar-border/60 -mx-3 group-data-[collapsible=icon]:-mx-2" />
-              <NavLink
-                to="/profile"
-                title={user.email || displayName}
-                className="flex items-center gap-3 px-2 h-14 rounded-xl hover:bg-muted/60 transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11 group-data-[collapsible=icon]:mx-auto"
-              >
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {displayName}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">View profile</span>
-                </div>
-              </NavLink>
-            </>
-          )}
-        </SidebarFooter>
       </Sidebar>
     </>
   );

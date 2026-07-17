@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { subWeeks, startOfWeek, endOfWeek, format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { FlaskConical } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ReferenceLine } from "recharts";
+import { Button } from "@/components/ui/button";
 import { useWeeklyFlockRollup } from "@/hooks/useWeeklyFlockRollup";
 
 interface Props {
@@ -47,20 +48,29 @@ export function WeeklyTrendCard({ weeksBack = 6, currentWeekStart }: Props) {
       "Eggs Set": Math.round(b.eggs / 1000), // thousands
       "Fertility %": b.fert.length ? +(b.fert.reduce((a, v) => a + v, 0) / b.fert.length).toFixed(1) : null,
       "Hatch %": b.hatch.length ? +(b.hatch.reduce((a, v) => a + v, 0) / b.hatch.length).toFixed(1) : null,
+      "HOI %": b.hatch.length ? +(Math.max(0, b.hatch.reduce((a, v) => a + v, 0) / b.hatch.length - 12)).toFixed(1) : null,
     }));
   }, [rows, currentWeekStart, weeksBack]);
 
-  const hasAny = chartData.some((d) => d["Eggs Set"] > 0 || d["Fertility %"] != null || d["Hatch %"] != null);
+  const hasAny = chartData.some((d) => d["Eggs Set"] > 0 || d["Fertility %"] != null || d["Hatch %"] != null || d["HOI %"] != null);
 
   return (
     <Card className="h-full flex flex-col">
       <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Weekly Trend</h3>
-          <span className="text-[11px] text-muted-foreground">
-            Last {weeksBack} weeks · eggs in thousands
-          </span>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <FlaskConical className="h-4 w-4 text-primary" />
+            <h3 className="text-base font-medium">Performance Trend</h3>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 rounded-full bg-muted p-1">
+              <Button size="sm" className="h-6 rounded-full px-4 text-xs shadow-sm">Weekly</Button>
+              <Button size="sm" variant="ghost" className="h-6 rounded-full px-4 text-xs text-muted-foreground">Monthly</Button>
+            </div>
+            <Button variant="ghost" size="sm" className="text-primary">
+              View full
+            </Button>
+          </div>
         </div>
         <div className="flex-1 min-h-0">
           {isLoading ? (
@@ -76,15 +86,15 @@ export function WeeklyTrendCard({ weeksBack = 6, currentWeekStart }: Props) {
               <LineChart data={chartData} margin={{ top: 5, right: 12, bottom: 0, left: -8 }}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
+                <YAxis yAxisId="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
                 <Tooltip
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line yAxisId="left" type="monotone" dataKey="Eggs Set" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                <ReferenceLine yAxisId="right" y={85} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
                 <Line yAxisId="right" type="monotone" dataKey="Fertility %" stroke="rgb(16 185 129)" strokeWidth={2} dot={false} connectNulls />
-                <Line yAxisId="right" type="monotone" dataKey="Hatch %" stroke="rgb(139 92 246)" strokeWidth={2} dot={false} connectNulls />
+                <Line yAxisId="right" type="monotone" dataKey="Hatch %" stroke="rgb(139 92 246)" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line yAxisId="right" type="monotone" dataKey="HOI %" stroke="rgb(249 115 22)" strokeWidth={2} dot={{ r: 3 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           )}

@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, Home, Search, Headset, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronRight, Search, Headset, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
-import { AppBreadcrumbs } from "@/components/uui/AppBreadcrumbs";
 
 export function TopBar() {
   const { user, profile, roles, signOut } = useAuth();
@@ -46,7 +45,6 @@ export function TopBar() {
     return user?.email?.charAt(0).toUpperCase() || 'U';
   };
 
-  const isOnDashboard = location.pathname === '/';
   const { hasFeatureAccess } = usePermissions();
   const analyticsItems = [
     { path: '/live-tracking', label: 'Live Tracking', icon: Activity, feature: 'live_tracking' as const },
@@ -59,18 +57,13 @@ export function TopBar() {
   return (
     <>
       <header className={cn(
-        "fixed top-0 right-0 left-0 z-40 border-b border-border/30",
+        "sticky top-0 z-30 border-b border-border/30",
         "bg-background/95 backdrop-blur-md",
         "shadow-sm transition-all duration-300"
       )}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
         <div className="flex h-12 items-center justify-between px-3 pt-1">
-          {/* Left Side - Brand name */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Hatchery Pro
-            </span>
-          </div>
+          <div />
 
 
           {/* Right Side - Search, Dashboard Icon, Notifications & User */}
@@ -124,21 +117,6 @@ export function TopBar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-
-
-            {/* Dashboard Home Icon */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate('/')}
-              className={cn(
-                "h-9 w-9 hover:bg-primary/10 hover:text-primary",
-                isOnDashboard && "bg-primary/10 text-primary"
-              )}
-              title="Go to Dashboard"
-            >
-              <Home className="h-4 w-4" strokeWidth={1.5} />
-            </Button>
 
             {/* Notification Bell */}
             <div className="relative">
