@@ -691,8 +691,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Technician Name *</Label>
-              <Input value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Enter your name" />
+              <Label>Technician (signed in)</Label>
+              <Input value={technicianName} disabled readOnly placeholder="Loading…" />
             </div>
             <div className="space-y-2">
               <Label>Check Date</Label>
