@@ -57,7 +57,7 @@ const TYPE_META: Record<Exclude<QAType, 'overview'>, {
 }> = {
   temps:    { label: 'Temps',           icon: Thermometer,     hint: 'Machine-specific — pick a setter or hatcher.' },
   angles:   { label: 'Angles',          icon: Ruler,           hint: 'Machine-specific — Left / Right side only.' },
-  humidity: { label: 'Humidity',        icon: Droplets,        hint: 'Machine-specific — pick a machine.' },
+  humidity: { label: 'Humidity',        icon: Droplets,        hint: 'Room-level — pick a room (setter / hatcher / chick).' },
   rectal:   { label: 'Rectal Temps',    icon: Thermometer,     hint: 'Process-level (hatcher / chick room / separator).' },
   wash:     { label: 'Tray Wash',       icon: Waves,           hint: 'Process-level — temperature + 5 PPM checks/day.' },
   culls:    { label: 'Culls',           icon: AlertTriangle,   hint: 'Flock / house level.' },
