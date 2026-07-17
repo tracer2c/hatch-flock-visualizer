@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   onOpenFlock: (row: WeeklyFlockRollupRow, weekStart: Date, weekEnd: Date) => void;
+  /** Controlled anchor (optional). When provided, parent owns week state. */
+  anchor?: Date;
+  onAnchorChange?: (d: Date) => void;
 }
 
 const fmtInt = (n: number | null | undefined) =>
@@ -54,8 +57,14 @@ const statusLabel = (s: string) =>
     cancelled: "Cancelled",
   }[s] || s);
 
-export default function WeeklyRollupView({ onOpenFlock }: Props) {
-  const [anchor, setAnchor] = useState<Date>(() => new Date());
+export default function WeeklyRollupView({ onOpenFlock, anchor: anchorProp, onAnchorChange }: Props) {
+  const [anchorLocal, setAnchorLocal] = useState<Date>(() => new Date());
+  const anchor = anchorProp ?? anchorLocal;
+  const setAnchor = (updater: Date | ((d: Date) => Date)) => {
+    const next = typeof updater === "function" ? (updater as (d: Date) => Date)(anchor) : updater;
+    if (onAnchorChange) onAnchorChange(next);
+    else setAnchorLocal(next);
+  };
   const weekStart = useMemo(() => startOfWeek(anchor, { weekStartsOn: 1 }), [anchor]);
   const weekEnd = useMemo(() => endOfWeek(anchor, { weekStartsOn: 1 }), [anchor]);
 
