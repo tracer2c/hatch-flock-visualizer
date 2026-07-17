@@ -33,21 +33,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
  *   • 🐣 Flock-Based         (Specific Gravity / Culls)
  */
 type Group = 'overview' | 'machine' | 'process' | 'flock';
-type MachineSub = 'temps' | 'angles' | 'hatch' | 'humidity';
+type MachineSub = 'temps' | 'angles' | 'hatch';
 type Scope = 'single' | 'multi';
 
 const MACHINE_SUB: Record<MachineSub, {
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   hint: string;
-  // section ids passed as focusSection to the inner Single/Multi workflows
   single?: string;
   multi?: string;
 }> = {
-  temps:    { label: 'Temperature',       icon: Thermometer, hint: 'Machine-wide temperatures.',            multi: 'temperatures' },
-  angles:   { label: 'Angles',            icon: Ruler,       hint: 'Left / Right side angles.',              multi: 'angles' },
-  hatch:    { label: 'Hatch Progression', icon: Timer,       hint: 'Hatcher progression counts.',            single: 'hatch', multi: 'hatch' },
-  humidity: { label: 'Humidity',          icon: Droplets,    hint: 'Machine-wide humidity + temp.',          multi: 'humidity' },
+  temps:    { label: 'Temperature',       icon: Thermometer, hint: 'Machine-wide temperatures.', multi: 'temperatures' },
+  angles:   { label: 'Angles',            icon: Ruler,       hint: 'Left / Right side angles.',   multi: 'angles' },
+  hatch:    { label: 'Hatch Progression', icon: Timer,       hint: 'Hatcher progression counts.', single: 'hatch', multi: 'hatch' },
 };
 
 const QAHubPage: React.FC = () => {
