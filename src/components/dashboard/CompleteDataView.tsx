@@ -24,9 +24,11 @@ interface CompleteDataViewProps {
   };
   onDataReady?: (data: any[]) => void;
   readOnly?: boolean;
+  viewMode?: "rows" | "flock-summary";
+  onViewModeChange?: (v: "rows" | "flock-summary") => void;
 }
 
-export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, readOnly }: CompleteDataViewProps) => {
+export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, readOnly, viewMode, onViewModeChange }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
