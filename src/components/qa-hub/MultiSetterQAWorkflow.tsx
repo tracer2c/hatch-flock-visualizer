@@ -87,6 +87,11 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
+  // Technician name is locked to the signed-in user — no manual input.
+  const technicianName = profile
+    ? [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.email
+    : '';
+
   const resolveCompanyId = async (): Promise<string> => {
     if (profile?.company_id) return profile.company_id;
     const cached = await getOfflineData<UserProfile>('current-user-profile');
