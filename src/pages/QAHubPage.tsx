@@ -151,10 +151,14 @@ const QAHubPage: React.FC = () => {
 const MachineGroup: React.FC<{
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
-}> = ({ preSelectedHouseId, preSelectedAction }) => {
+  sub?: MachineSub;
+  onSubChange?: (s: MachineSub) => void;
+}> = ({ preSelectedHouseId, preSelectedAction, sub: controlledSub, onSubChange }) => {
   // Default sub-tab: hatch (available for both single & multi).
   const initialSub: MachineSub = preSelectedAction === 'candling' || preSelectedHouseId ? 'hatch' : 'temps';
-  const [sub, setSub] = useState<MachineSub>(initialSub);
+  const [uncontrolledSub, setUncontrolledSub] = useState<MachineSub>(initialSub);
+  const sub = controlledSub ?? uncontrolledSub;
+  const setSub = (s: MachineSub) => { onSubChange ? onSubChange(s) : setUncontrolledSub(s); };
   const [scope, setScope] = useState<Scope>('multi'); // most machine-wide checks are multi
 
   const meta = MACHINE_SUB[sub];
