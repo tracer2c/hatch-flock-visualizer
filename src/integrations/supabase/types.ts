@@ -3091,6 +3091,27 @@ export type Database = {
           },
         ]
       }
+      user_dashboard_layouts: {
+        Row: {
+          layout: Json
+          updated_at: string
+          user_id: string
+          widgets: Json
+        }
+        Insert: {
+          layout?: Json
+          updated_at?: string
+          user_id: string
+          widgets?: Json
+        }
+        Update: {
+          layout?: Json
+          updated_at?: string
+          user_id?: string
+          widgets?: Json
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           allowed_data_types: string[] | null
