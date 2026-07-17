@@ -41,18 +41,31 @@ export function useAIBriefing(ctx: Context, enabled: boolean) {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
-    const prompt = `You are a hatchery operations analyst. Write a concise daily briefing for a hatchery manager based on this snapshot:
+    const fert = ctx.avgFertility;
+    const hof = ctx.avgHatch;
+    const hoi = ctx.avgHoi;
+    const fertGap = fert != null ? (85 - fert).toFixed(1) : null;
+    const hofGap = hof != null ? (88 - hof).toFixed(1) : null;
+    const hoiGap = hoi != null ? (75 - hoi).toFixed(1) : null;
 
-Week: ${ctx.rangeLabel}
-Total Eggs Set: ${ctx.totalEggs.toLocaleString()}
-Avg Fertility: ${ctx.avgFertility?.toFixed(1) ?? "n/a"}% (target 85%)
-Avg Hatch of Fertile: ${ctx.avgHatch?.toFixed(1) ?? "n/a"}% (target 88%)
-Avg Hatch of Injection: ${ctx.avgHoi?.toFixed(1) ?? "n/a"}% (target 75%)
-Critical QA Alerts: ${ctx.criticalAlerts}
-Flocks needing attention: ${ctx.attentionCount}
-Top attention flocks: ${ctx.topAttention.slice(0, 5).join(", ") || "none"}
+    const prompt = `You are a senior hatchery operations analyst writing the morning stand-up briefing for the hatchery manager. Do NOT restate the raw numbers back in sentences — the manager already sees KPI cards. Interpret them.
 
-Reply with EXACTLY 3 to 5 markdown bullets (- ). Each bullet MUST be a single line, under 80 characters. End with one final bullet starting "Next step:" that names one concrete action. Do NOT return tables, headings, prose paragraphs, or preamble. Do NOT return all zeros — if data is missing, say so plainly (e.g. "Fertility not entered yet").`;
+DATA (for your reasoning only — do NOT echo verbatim):
+- Week: ${ctx.rangeLabel}
+- Eggs Set: ${ctx.totalEggs.toLocaleString()}
+- Fertility ${fert?.toFixed(1) ?? "n/a"}% vs 85% target (gap ${fertGap ?? "n/a"} pp)
+- HOF ${hof?.toFixed(1) ?? "n/a"}% vs 88% target (gap ${hofGap ?? "n/a"} pp)
+- HOI ${hoi?.toFixed(1) ?? "n/a"}% vs 75% target (gap ${hoiGap ?? "n/a"} pp)
+- Critical QA alerts: ${ctx.criticalAlerts}
+- Flocks flagged: ${ctx.attentionCount} (${ctx.topAttention.slice(0, 5).join(", ") || "none"})
+
+WRITE exactly 4 markdown bullets, in this fixed order, each ≤ 90 chars, no restating of the raw numbers:
+- **Signal:** the one thing that most defines this week (trend, outlier, or "quiet week").
+- **Risk:** the biggest downside risk right now, tied to a metric gap or QA alert. If data is missing say so ("Residue not entered — HOF unreliable").
+- **Opportunity:** where a small change would move the needle most.
+- **Next step:** one concrete action, name a flock/hatchery/room if possible.
+
+Rules: no headings, no tables, no preamble, no "Total Eggs Set: 55,000" style lines, no percentages restated back. If everything is missing, say the data is not entered yet and recommend an entry action.`;
 
     setLoading(true);
     supabase.functions
