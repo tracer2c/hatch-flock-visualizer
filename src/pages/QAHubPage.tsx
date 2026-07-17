@@ -42,7 +42,7 @@ const SECTION_MAP: Record<QAType, { single?: string; multi?: string }> = {
   overview: {},
   temps:    { multi: 'temperatures' },
   angles:   { multi: 'angles' },
-  humidity: { multi: 'humidity' },
+  humidity: {}, // room-scoped, rendered directly
   rectal:   { single: 'rectal-temps', multi: 'rectal' },
   wash:     { single: 'tray-wash',    multi: 'wash' },
   culls:    { single: 'culls',        multi: 'culls' },
