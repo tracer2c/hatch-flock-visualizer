@@ -1,21 +1,16 @@
 import { Link, useLocation, matchPath } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ROUTE_CRUMBS, type CrumbSpec } from "@/lib/breadcrumbRoutes";
+import { ROUTE_CRUMBS, type CrumbSpec, type CrumbContext } from "@/lib/breadcrumbRoutes";
 
 interface ResolvedCrumb {
   label: string;
   href?: string;
 }
 
-function resolveSpec(
-  spec: CrumbSpec,
-  params: Record<string, string | undefined>
-): ResolvedCrumb {
-  const label =
-    typeof spec.label === "function" ? spec.label(params) : spec.label;
-  const href =
-    typeof spec.href === "function" ? spec.href(params) : spec.href;
+function resolveSpec(spec: CrumbSpec, ctx: CrumbContext): ResolvedCrumb {
+  const label = typeof spec.label === "function" ? spec.label(ctx) : spec.label;
+  const href = typeof spec.href === "function" ? spec.href(ctx) : spec.href;
   return { label, href };
 }
 
@@ -27,29 +22,41 @@ function humanize(seg: string) {
 
 /**
  * Untitled UI-style breadcrumbs derived from an explicit route → chain map.
- * Every href points to a route that actually exists; unknown parent
- * segments render as plain text instead of dead links.
+ * Every href points to a URL that actually exists; unknown parent segments
+ * render as plain text instead of dead links.
  */
 export function AppBreadcrumbs({ className }: { className?: string }) {
   const location = useLocation();
   const pathname = location.pathname;
+  const search = new URLSearchParams(location.search);
   if (pathname === "/" || pathname === "") return null;
 
-  // Find matching pattern (ordered — first match wins, so more specific patterns
-  // must appear before their prefixes in ROUTE_CRUMBS).
   let crumbs: ResolvedCrumb[] = [];
 
-  for (const entry of ROUTE_CRUMBS) {
-    const match = matchPath({ path: entry.pattern, end: true }, pathname);
-    if (match) {
-      crumbs = entry.chain.map((spec) =>
-        resolveSpec(spec, match.params as Record<string, string | undefined>)
-      );
-      break;
+  // Special case: /data-entry with ?flock=… is the flock drill-down view.
+  if (pathname === "/data-entry" && search.get("flock")) {
+    const week = search.get("week");
+    const flockKey = search.get("flock") ?? "";
+    const rollupQs = new URLSearchParams({ view: "weekly" });
+    if (week) rollupQs.set("week", week);
+    crumbs = [
+      { label: "Weekly Flock Rollup", href: `/data-entry?${rollupQs.toString()}` },
+      { label: `Flock ${flockKey}` },
+    ];
+  } else {
+    for (const entry of ROUTE_CRUMBS) {
+      const match = matchPath({ path: entry.pattern, end: true }, pathname);
+      if (match) {
+        const ctx: CrumbContext = {
+          params: match.params as Record<string, string | undefined>,
+          search,
+        };
+        crumbs = entry.chain.map((spec) => resolveSpec(spec, ctx));
+        break;
+      }
     }
   }
 
-  // Fallback: build from URL segments (labels only, no links) if unmapped.
   if (crumbs.length === 0) {
     const segments = pathname.split("/").filter(Boolean);
     crumbs = segments.map((seg) => ({ label: humanize(seg) }));

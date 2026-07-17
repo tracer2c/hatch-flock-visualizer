@@ -2,15 +2,19 @@
  * Route → breadcrumb chain map.
  *
  * Each chain segment declares a label (or a function that derives it from
- * URL params) and, if the segment corresponds to a real route in App.tsx,
- * an `href` (or href-builder). Segments without an href render as plain text.
- *
- * The last segment in a chain is always rendered as plain text regardless.
+ * URL params + search params) and, if the segment corresponds to a real
+ * URL, an `href` (or href-builder). Segments without an href render as
+ * plain text. The last segment always renders as plain text.
  */
 
+export interface CrumbContext {
+  params: Record<string, string | undefined>;
+  search: URLSearchParams;
+}
+
 export interface CrumbSpec {
-  label: string | ((params: Record<string, string | undefined>) => string);
-  href?: string | ((params: Record<string, string | undefined>) => string);
+  label: string | ((ctx: CrumbContext) => string);
+  href?: string | ((ctx: CrumbContext) => string);
 }
 
 export interface RouteCrumbEntry {
@@ -19,27 +23,46 @@ export interface RouteCrumbEntry {
   chain: CrumbSpec[];
 }
 
+const rollupHref = ({ search }: CrumbContext) => {
+  const week = search.get("week");
+  const qs = new URLSearchParams({ view: "weekly" });
+  if (week) qs.set("week", week);
+  return `/data-entry?${qs.toString()}`;
+};
+
+const flockDrilldownHref = (flockKey: string | undefined) => ({ search }: CrumbContext) => {
+  const week = search.get("week");
+  const qs = new URLSearchParams({ view: "weekly" });
+  if (flockKey) qs.set("flock", flockKey);
+  if (week) qs.set("week", week);
+  return `/data-entry?${qs.toString()}`;
+};
+
 // Order matters: more specific patterns first.
 export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
   // ── Data Entry ───────────────────────────────────────────────
   {
     pattern: "/data-entry/flock/:flockKey/hoi",
     chain: [
-      { label: "Data Entry", href: "/data-entry" },
-      { label: "Weekly Flock Rollup", href: "/data-entry" },
-      { label: (p) => `Flock ${p.flockKey ?? ""}` },
+      { label: "Weekly Flock Rollup", href: rollupHref },
+      {
+        label: ({ params }) => `Flock ${params.flockKey ?? ""}`,
+        href: ({ params, search }) => flockDrilldownHref(params.flockKey)({ params, search }),
+      },
       { label: "Hatch / HOI" },
     ],
   },
   {
     pattern: "/data-entry/flock/:flockKey/:section",
     chain: [
-      { label: "Data Entry", href: "/data-entry" },
-      { label: "Weekly Flock Rollup", href: "/data-entry" },
-      { label: (p) => `Flock ${p.flockKey ?? ""}` },
+      { label: "Weekly Flock Rollup", href: rollupHref },
       {
-        label: (p) => {
-          switch (p.section) {
+        label: ({ params }) => `Flock ${params.flockKey ?? ""}`,
+        href: ({ params, search }) => flockDrilldownHref(params.flockKey)({ params, search }),
+      },
+      {
+        label: ({ params }) => {
+          switch (params.section) {
             case "egg-pack":
               return "Egg Pack";
             case "fertility":
@@ -49,7 +72,7 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
             case "clears-injected":
               return "Clears & Injected";
             default:
-              return p.section ?? "";
+              return params.section ?? "";
           }
         },
       },
@@ -59,10 +82,10 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
     pattern: "/data-entry/house/:houseId/:section",
     chain: [
       { label: "Data Entry", href: "/data-entry" },
-      { label: (p) => `House #${p.houseId?.slice(0, 6) ?? ""}` },
+      { label: ({ params }) => `House #${params.houseId?.slice(0, 6) ?? ""}` },
       {
-        label: (p) => {
-          switch (p.section) {
+        label: ({ params }) => {
+          switch (params.section) {
             case "egg-pack":
               return "Egg Pack";
             case "fertility":
@@ -74,7 +97,7 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
             case "qa":
               return "QA Entry";
             default:
-              return p.section ?? "";
+              return params.section ?? "";
           }
         },
       },
@@ -84,10 +107,12 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
     pattern: "/data-entry/house/:houseId",
     chain: [
       { label: "Data Entry", href: "/data-entry" },
-      { label: (p) => `House #${p.houseId?.slice(0, 6) ?? ""}` },
+      { label: ({ params }) => `House #${params.houseId?.slice(0, 6) ?? ""}` },
     ],
   },
-  { pattern: "/data-entry", chain: [{ label: "Data Entry" }] },
+  // Base /data-entry — the AppBreadcrumbs branch handles the ?flock=… case
+  // (drill-down) separately; this covers the plain rollup list.
+  { pattern: "/data-entry", chain: [{ label: "Weekly Flock Rollup" }] },
 
   // ── QA Hub ───────────────────────────────────────────────────
   { pattern: "/qa-hub", chain: [{ label: "QA Hub" }] },
@@ -97,14 +122,14 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
     pattern: "/checklist/house/:houseId",
     chain: [
       { label: "Checklist", href: "/checklist" },
-      { label: (p) => `House #${p.houseId?.slice(0, 6) ?? ""}` },
+      { label: ({ params }) => `House #${params.houseId?.slice(0, 6) ?? ""}` },
     ],
   },
   {
     pattern: "/checklist/machine/:machineId",
     chain: [
       { label: "Checklist", href: "/checklist" },
-      { label: (p) => `Machine ${p.machineId?.slice(0, 6) ?? ""}` },
+      { label: ({ params }) => `Machine ${params.machineId?.slice(0, 6) ?? ""}` },
     ],
   },
   { pattern: "/checklist", chain: [{ label: "Checklist" }] },
