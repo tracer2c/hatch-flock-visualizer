@@ -149,8 +149,8 @@ export function AIBriefingCard({
   }, [avgFertility, avgHatch, avgHoi, briefPeriod, criticalAlerts, attentionCount, rangeLabel, topAttention, totalEggs]);
 
   return (
-    <Card className="border-border/70 shadow-sm">
-      <CardContent className="p-4">
+    <Card className="ai-brief-highlight border-border/70 shadow-sm">
+      <CardContent className="relative z-[1] p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Sparkles className="h-4 w-4 text-primary" />
