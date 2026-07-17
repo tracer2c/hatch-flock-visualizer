@@ -1,84 +1,58 @@
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, matchPath } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ROUTE_CRUMBS, type CrumbSpec } from "@/lib/breadcrumbRoutes";
 
-/**
- * Untitled UI-style breadcrumbs derived automatically from the current route.
- * Keeps labels human-readable and links each ancestor.
- */
+interface ResolvedCrumb {
+  label: string;
+  href?: string;
+}
 
-const STATIC_LABELS: Record<string, string> = {
-  "": "Home",
-  "data-entry": "Data Entry",
-  "data-sheet": "Data Sheet",
-  "embrex-data-sheet": "Embrex Data Sheet",
-  "embrex-timeline": "Embrex Timeline",
-  "qa-hub": "QA Hub",
-  "qa-entry": "QA Entry",
-  "residue-breakout": "Residue Breakout",
-  "analytics": "Analytics",
-  "live-tracking": "Live Tracking",
-  "house-flow": "House Flow",
-  "process-flow": "Process Flow",
-  "machine-utilization": "Machine Utilization",
-  "performance": "Performance",
-  "management": "Management",
-  "chat": "HatchAI Assistant",
-  "checklist": "Checklist",
-  "support": "Support",
-  "profile": "Profile",
-  "single-stage": "Single Stage",
-  "multi-stage": "Multi Stage",
-  "flock": "Weekly Flock Rollup",
-  "hoi": "Hatch / HOI",
-  "residue": "Residue",
-  "fertility": "Fertility",
-  "egg-pack": "Egg Pack",
-  "clears-injected": "Clears & Injected",
-  "hatcheries": "Hatcheries",
-  "machines": "Machines",
-  "flocks": "Flocks",
-  "users": "Users",
-  "reports": "Reports",
-  "targets": "Targets",
-  "sops": "SOPs",
-  "sop-dashboard": "SOP Dashboard",
-  "activity-log": "Activity Log",
-  "archive": "Archive",
-  "visual-options": "Visual Options",
-  "house-automation": "House Automation",
-  "residue-schedule": "Residue Schedule",
-  "bulk-import": "Bulk Import",
-  "documentation": "Documentation",
-  "install": "Install",
-};
+function resolveSpec(
+  spec: CrumbSpec,
+  params: Record<string, string | undefined>
+): ResolvedCrumb {
+  const label =
+    typeof spec.label === "function" ? spec.label(params) : spec.label;
+  const href =
+    typeof spec.href === "function" ? spec.href(params) : spec.href;
+  return { label, href };
+}
 
 function humanize(seg: string) {
-  if (STATIC_LABELS[seg]) return STATIC_LABELS[seg];
-  // ID-ish param — hide
-  if (/^[0-9a-f-]{20,}$/i.test(seg)) return null;
   return seg
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Untitled UI-style breadcrumbs derived from an explicit route → chain map.
+ * Every href points to a route that actually exists; unknown parent
+ * segments render as plain text instead of dead links.
+ */
 export function AppBreadcrumbs({ className }: { className?: string }) {
   const location = useLocation();
-  const params = useParams();
-  const paramValues = new Set(Object.values(params).filter(Boolean) as string[]);
+  const pathname = location.pathname;
+  if (pathname === "/" || pathname === "") return null;
 
-  const segments = location.pathname.split("/").filter(Boolean);
-  if (segments.length === 0) return null;
+  // Find matching pattern (ordered — first match wins, so more specific patterns
+  // must appear before their prefixes in ROUTE_CRUMBS).
+  let crumbs: ResolvedCrumb[] = [];
 
-  const crumbs: { label: string; href: string }[] = [];
-  let acc = "";
-  for (const seg of segments) {
-    acc += "/" + seg;
-    // skip raw URL param values that aren't in our label map
-    if (paramValues.has(seg) && !STATIC_LABELS[seg]) continue;
-    const label = humanize(seg);
-    if (!label) continue;
-    crumbs.push({ label, href: acc });
+  for (const entry of ROUTE_CRUMBS) {
+    const match = matchPath({ path: entry.pattern, end: true }, pathname);
+    if (match) {
+      crumbs = entry.chain.map((spec) =>
+        resolveSpec(spec, match.params as Record<string, string | undefined>)
+      );
+      break;
+    }
+  }
+
+  // Fallback: build from URL segments (labels only, no links) if unmapped.
+  if (crumbs.length === 0) {
+    const segments = pathname.split("/").filter(Boolean);
+    crumbs = segments.map((seg) => ({ label: humanize(seg) }));
   }
 
   if (crumbs.length === 0) return null;
@@ -101,10 +75,19 @@ export function AppBreadcrumbs({ className }: { className?: string }) {
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
         return (
-          <span key={c.href} className="flex items-center gap-1.5 flex-shrink-0">
+          <span
+            key={`${i}-${c.label}`}
+            className="flex items-center gap-1.5 flex-shrink-0"
+          >
             <ChevronRight className="h-3.5 w-3.5 opacity-50" />
-            {isLast ? (
-              <span className="text-foreground font-medium">{c.label}</span>
+            {isLast || !c.href ? (
+              <span
+                className={cn(
+                  isLast ? "text-foreground font-medium" : "text-muted-foreground"
+                )}
+              >
+                {c.label}
+              </span>
             ) : (
               <Link
                 to={c.href}
