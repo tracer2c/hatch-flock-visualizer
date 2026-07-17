@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Archive, Rows3, LayoutGrid } from "lucide-react";
+import { Edit, Trash2, Archive } from "lucide-react";
+import type { DataSheetViewMode } from "./DataSheetViewModeToggle";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,19 +32,24 @@ interface EmbrexHOITabProps {
   };
   onDataUpdate: () => void;
   readOnly?: boolean;
+  viewMode?: DataSheetViewMode;
+  onViewModeChange?: (v: DataSheetViewMode) => void;
 }
 
-export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EmbrexHOITabProps) => {
+export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly, viewMode, onViewModeChange }: EmbrexHOITabProps) => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [view, setView] = useState<"rows" | "flock-summary">(() => {
+  const [internalView, setInternalView] = useState<"rows" | "flock-summary">(() => {
     if (typeof window === "undefined") return "rows";
     const saved = window.localStorage.getItem("embrex-hoi-view");
     return saved === "flock-summary" || saved === "rows" ? saved : "rows";
   });
+  const view: "rows" | "flock-summary" = viewMode ?? internalView;
   const updateView = (next: "rows" | "flock-summary") => {
-    setView(next);
+    if (onViewModeChange) onViewModeChange(next);
+    else setInternalView(next);
     try { window.localStorage.setItem("embrex-hoi-view", next); } catch { /* ignore */ }
   };
+
   const { archive: archiveHouse } = useArchive("batches");
 
   const handleArchive = async (id: string) => {
@@ -213,30 +220,32 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
 
   return (
     <>
-      <div className="flex justify-end mb-3">
-        <div className="inline-flex rounded-md border p-0.5">
-          <Button
-            variant={view === "rows" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5"
-            onClick={() => updateView("rows")}
-          >
-            <Rows3 className="h-3.5 w-3.5" />
-            By House
-          </Button>
-          <Button
-            variant={view === "flock-summary" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5"
-            onClick={() => updateView("flock-summary")}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            By Flock
-          </Button>
+      {/* Internal toggle only shown when the parent isn't controlling viewMode */}
+      {!onViewModeChange && (
+        <div className="flex justify-end mb-3">
+          <div className="inline-flex rounded-md border p-0.5">
+            <Button
+              variant={view === "rows" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={() => updateView("rows")}
+            >
+              By House
+            </Button>
+            <Button
+              variant={view === "flock-summary" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={() => updateView("flock-summary")}
+            >
+              By Flock
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {view === "flock-summary" ? (
+
         <FlockSummaryView
           data={filteredData}
           dateFrom={filters.dateFrom}
