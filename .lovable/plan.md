@@ -1,54 +1,107 @@
-# QA Hub Update — Humidity by Room & Auto Technician Name
+# QA Hub — Reorganize by Scope (Machine / Process / Flock)
 
-Two focused changes to the Quality Assurance Hub. Both are UI/entry-flow changes only — no schema changes.
-
----
-
-## 1. Humidity: remove the machine layer, take by room
-
-Today, Humidity lives only under **Multi Stage Setter → pick machine** (`MachineWideHumidityEntry`). Client says humidity is not read per machine — it's a room reading (setter room / hatcher room / chick room), same idea we already use for **Rectal Temps**.
-
-Change:
-- Convert Humidity into a **room-scoped** check, mirroring the Rectal Temps flow.
-- Rooms available: `Setter Room`, `Hatcher Room`, `Chick Room` (same list style as rectal temps; we can drop chick room later if not wanted — flagging as a question).
-- Under QA Hub → **Humidity** tab: no machine selector, no single/multi scope. Just:
-  - Room dropdown
-  - Humidity % + Temperature °F (existing inputs, ideal 53–58% humidity)
-  - Save button
-- Persist to `qa_monitoring` with `candling_results.type = 'humidity'`, `room` field set, `machine_id = null` (room-level reading — not linked to a machine).
-- Remove Humidity from the Multi Stage Setter workflow tabs so it's not duplicated.
-- Keep the existing `MachineWideHumidityEntry.tsx` component code untouched for now but stop routing to it; delete only after verification.
-
-Impact on `QAHubPage.tsx`:
-- `humidity` entry in `SECTION_MAP` no longer needs `single`/`multi` — it becomes its own room-scoped section (rendered directly, bypassing the Single/Multi tabs).
-- `TYPE_META.humidity.hint` changes to "Room-level — pick a room."
-
-Historical humidity rows already saved against a machine remain readable; the "Today's entries" list will just show them without a room label.
+Client's new mental model: not every QA check is machine-based. Today the UI forces users through machine → tabs even for room-level or flock-level checks. We'll restructure QA Hub into three clean groups matching how inspections actually happen.
 
 ---
 
-## 2. Auto-fill Technician / Inspector name from the logged-in user
+## 1. New top-level structure
 
-Every QA entry page currently asks the user to type their name into a **Technician Name** input. Client wants it locked to whoever is signed in.
+Replace the current 9-tab type row with **3 scope groups**, each with its own sub-tabs:
 
-Change (applies to `SingleSetterQAWorkflow.tsx` and `MultiSetterQAWorkflow.tsx`, plus the new room-scoped humidity screen):
-- Pull the name from `useAuth()` profile: `` `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() ``, fallback to `profile.email`.
-- Replace the editable `<Input>` with a **read-only display** (badge or disabled input) showing the name — no edit affordance.
-- Remove `useState('')` + `setTechnicianName` and the `!technicianName.trim()` guards (auth guarantees a value; if profile hasn't loaded yet, disable Save with a "Loading user…" state).
-- All existing `inspector_name: technicianName` writes keep working — same value, just sourced from auth instead of an input.
+```text
+QA Hub
+├─ Overview  (recent entries — unchanged)
+├─ 🏭 Machine-Based        → pick hatchery → pick machine → tab
+│    • Temperature
+│    • Angles
+│    • Hatch Progression
+│    • Humidity            ← moved here (client wants machine dropdown back)
+├─ 🧪 Process / Room       → pick room → form (no machine)
+│    • Tray Wash           (throughout-the-day, resumable — already built)
+│    • Rectal Temperatures (Chick Room / Separator Room / Hatcher)
+├─ 🐣 Flock-Based          → pick flock/house → form (no machine)
+│    • Specific Gravity
+│    • Culls
+```
 
-No DB migration — `qa_monitoring.inspector_name` still holds the string, we just stop letting the user type it.
+Overview tab stays as-is.
+
+> ⚠️ Reversal note: last turn we removed the machine layer from Humidity per an earlier request. The current draft says *"Humidity — Include a Machine dropdown."* We will restore the machine-scoped humidity flow (`MachineWideHumidityEntry`) and delete `RoomHumidityEntry`. Flagging in case that's not what you want — see open question below.
 
 ---
 
-## Files touched
+## 2. Flow per group
 
-- `src/pages/QAHubPage.tsx` — route Humidity to its own room-scoped component; update `SECTION_MAP` + `TYPE_META`.
-- `src/components/qa-hub/RoomHumidityEntry.tsx` — **new**, room-scoped humidity/temperature entry, modeled on `RectalTempEntry.tsx`.
-- `src/components/qa-hub/SingleSetterQAWorkflow.tsx` — remove technician input, read from `useAuth`.
-- `src/components/qa-hub/MultiSetterQAWorkflow.tsx` — remove technician input; remove Humidity tab.
-- Save flow in `RoomHumidityEntry` inserts directly into `qa_monitoring` (same pattern used elsewhere).
+**Machine-Based (Temperature / Angles / Hatch Progression / Humidity)**
+Single header shared across all 4 tabs:
+1. Hatchery dropdown (defaults to "All")
+2. Machine picker (single-setter list or multi-setter list — auto-detected from machine type; no more "Single Stage / Multi Stage" scope toggle for the user)
+3. Date picker
+4. Tabs: Temperature · Angles · Hatch Progression · Humidity
 
-## Open question
+Reuses existing `SingleSetterQAWorkflow` / `MultiSetterQAWorkflow` internals, but the scope toggle is hidden — we branch on `machine.machine_type` after selection.
 
-Should Humidity rooms be exactly the three rectal-temp rooms (`Hatcher`, `Chick Room`, `Separator Room`) or the setter-side rooms (`Setter Room`, `Hatcher Room`)? I'll default to **Setter Room + Hatcher Room + Chick Room** unless you say otherwise.
+**Process / Room (Tray Wash, Rectal Temps)**
+No machine picker at all. Header:
+1. Date picker
+2. Tabs: Tray Wash · Rectal Temperatures
+
+Each form owns its own Room dropdown:
+- Tray Wash: current 5-PPM daily form, resumable (unchanged).
+- Rectal Temps: Room = Chick Room / Separator Room / Hatcher — existing `RectalTempEntry` room list.
+
+Persisted with `machine_id = null`, room stored in `candling_results.room`.
+
+**Flock-Based (Specific Gravity, Culls)**
+No machine picker. Header:
+1. Hatchery dropdown (optional filter)
+2. Flock / House picker (reuses the flock-week picker style from Data Entry)
+3. Date picker
+4. Tabs: Specific Gravity · Culls
+
+Persisted with `flock_id` + `house_id` (batch_id), `machine_id = null`.
+
+---
+
+## 3. Navigation UX polish
+
+- Sticky scope-group tab bar at top; sub-tabs (Temperature/Angles/etc.) appear below the selection header so users always see *what they picked* + *what they're entering*.
+- Deep-link `?houseId=…&action=candling` continues to open Machine-Based → Hatch Progression with the right house preselected.
+- Breadcrumb-style crumb inside the page body: `QA Hub / Machine / Hatchery 6 / Setter #3 / Temperature`.
+- Empty states with a one-line hint ("Pick a machine to start") so nothing feels broken before selection.
+- Read-only banner + past-day rules unchanged (edits allowed for past dates per prior turn).
+
+---
+
+## 4. Files touched
+
+- `src/pages/QAHubPage.tsx` — replace `SECTION_MAP` / `TYPE_META` with the 3-group model above; render one of three shells:
+  - `MachineScopedShell` (new small wrapper) — hatchery + machine picker + machine-type-aware inner workflow, tabs: temp / angles / hatch / humidity.
+  - `ProcessScopedShell` (new) — date + room-based forms (Tray Wash, Rectal Temps).
+  - `FlockScopedShell` (new) — flock/house + date, forms: Specific Gravity, Culls.
+- `src/components/qa-hub/SingleSetterQAWorkflow.tsx` / `MultiSetterQAWorkflow.tsx` — remove Rectal Temps, Tray Wash, Culls, Specific Gravity tabs (they graduate to Process/Flock shells). Add Humidity tab to single-setter workflow (currently multi only) so machine-scoped humidity works for both.
+- `src/components/qa-hub/RoomHumidityEntry.tsx` — **delete** (superseded by machine-scoped humidity per new spec).
+- New: `src/components/qa-hub/shells/MachineScopedShell.tsx`, `ProcessScopedShell.tsx`, `FlockScopedShell.tsx` — thin composition layers around existing entry components.
+- Keep `MachineWideHumidityEntry`, `MachineWideAnglesEntry`, `HatchProgressionEntry`, `RectalTempEntry`, `TrayWashEntry`, `SpecificGravityEntry`, `CullChecksEntry` — no rewrites, just re-parented.
+
+No DB migrations. No changes to `qa_monitoring` schema — we just stop requiring `machine_id` on room/flock scopes (already nullable in existing rows).
+
+---
+
+## 5. Delivery order
+
+1. **Phase 1** — Introduce the 3-group tab shell in `QAHubPage`, keep old workflows behind it for smoke test.
+2. **Phase 2** — Build `ProcessScopedShell` (Tray Wash + Rectal Temps room-only flow), remove those tabs from single/multi workflows.
+3. **Phase 3** — Build `FlockScopedShell` (Specific Gravity + Culls flock/house picker), remove from single/multi.
+4. **Phase 4** — Build `MachineScopedShell` unifying single/multi, add Humidity tab to single-setter, delete `RoomHumidityEntry`.
+5. **Phase 5** — Polish: crumbs, empty states, deep-link verification, cleanup.
+
+Each phase verified in preview before the next.
+
+---
+
+## Open questions
+
+1. **Humidity scope** — draft says "Include a Machine dropdown," but two turns ago we made it room-only. Confirm: machine-scoped (revert), room-scoped (keep current), or both?
+2. **Culls placement** — currently exists on both single & multi workflows. Client's draft doesn't list Culls explicitly. Assume flock-based (matches prior guidance "Culls/Gravity are flock/house scoped") — OK?
+3. **Hatchery dropdown on Process shell** — Tray Wash and Rectal Temps are room-level and today aren't hatchery-tagged. Add an optional Hatchery filter for multi-site companies, or omit?
