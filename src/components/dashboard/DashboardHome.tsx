@@ -14,6 +14,7 @@ import { WeatherLocationChip } from "./sections/WeatherLocationChip";
 import { AIBriefingCard } from "./sections/AIBriefingCard";
 import { UpcomingTasksCard } from "./sections/UpcomingTasksCard";
 import { WeeklyTrendCard } from "./sections/WeeklyTrendCard";
+import { FlockLeaderboardCard } from "./sections/FlockLeaderboardCard";
 
 const avg = (nums: (number | null | undefined)[]) => {
   const vals = nums.filter((n): n is number => n != null && !isNaN(n));
