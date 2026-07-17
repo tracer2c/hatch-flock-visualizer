@@ -225,10 +225,37 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
         const houseFertPct = fertRow?.fertility_percent ?? null;
         const overrideFertPct = fertOv?.fertility_percent ?? null;
 
-        const houseHofPct = resRow?.hof_percent ?? fertRow?.hof_percent ?? null;
-        const houseHoiPct = resRow?.hoi_percent ?? fertRow?.hoi_percent ?? null;
+        const rawHouseHof = resRow?.hof_percent ?? fertRow?.hof_percent ?? null;
+        const rawHouseHoi = resRow?.hoi_percent ?? fertRow?.hoi_percent ?? null;
+        const houseHofPct = rawHouseHof && Number(rawHouseHof) > 0 ? Number(rawHouseHof) : null;
+        const houseHoiPct = rawHouseHoi && Number(rawHouseHoi) > 0 ? Number(rawHouseHoi) : null;
         const overrideHofPct = resOv?.hof_percent ?? fertOv?.hof_percent ?? null;
         const overrideHoiPct = resOv?.hoi_percent ?? fertOv?.hoi_percent ?? null;
+
+        // Batch-derived fallback (chicks_hatched / eggs_injected on batches)
+        const effectiveFertPct = overrideFertPct ?? houseFertPct;
+        const fertileFromFertility =
+          effectiveFertPct != null && totalEggs > 0
+            ? (totalEggs * Number(effectiveFertPct)) / 100
+            : null;
+        const batchHoiPct = totalInjected > 0 ? (totalChicks / totalInjected) * 100 : null;
+        const batchHofPct =
+          fertileFromFertility && fertileFromFertility > 0
+            ? (totalChicks / fertileFromFertility) * 100
+            : null;
+
+        const finalHof = overrideHofPct ?? houseHofPct ?? batchHofPct;
+        const finalHoi = overrideHoiPct ?? houseHoiPct ?? batchHoiPct;
+        const hofHoiSource: WeeklyFlockRollupRow["hof_hoi_source"] =
+          overrideHofPct != null || overrideHoiPct != null
+            ? "override"
+            : resRow && (resRow.hof_percent > 0 || resRow.hoi_percent > 0)
+            ? "residue"
+            : fertRow && (fertRow.hof_percent > 0 || fertRow.hoi_percent > 0)
+            ? "fertility"
+            : batchHofPct != null || batchHoiPct != null
+            ? "batch"
+            : null;
 
         out.push({
           key,
@@ -245,8 +272,9 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
           total_chicks_hatched: totalChicks,
           grade_a_pct: overrideGradeAPct ?? houseGradeAPct,
           fertility_pct: overrideFertPct ?? houseFertPct,
-          hof_pct: overrideHofPct ?? houseHofPct,
-          hoi_pct: overrideHoiPct ?? houseHoiPct,
+          hof_pct: finalHof,
+          hoi_pct: finalHoi,
+          hof_hoi_source: hofHoiSource,
           statuses,
           worst_status: worst,
           flock_level_source: {
