@@ -18,9 +18,9 @@ import {
 import { useQAStats } from '@/hooks/useQAHubData';
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
-import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
 import ProcessScopedShell from '@/components/qa-hub/shells/ProcessScopedShell';
 import FlockScopedShell from '@/components/qa-hub/shells/FlockScopedShell';
+import QAOverviewDashboard from '@/components/qa-hub/overview/QAOverviewDashboard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -57,7 +57,17 @@ const QAHubPage: React.FC = () => {
   const actionFromUrl = searchParams.get('action');
 
   const [group, setGroup] = useState<Group>('overview');
+  const [machineSub, setMachineSub] = useState<MachineSub>('temps');
+  const [processTab, setProcessTab] = useState<'wash' | 'rectal'>('wash');
+  const [flockTab, setFlockTab] = useState<'gravity' | 'culls'>('gravity');
   const { data: stats } = useQAStats();
+
+  const handleJumpTo = ({ group: g, sub }: { group: 'machine' | 'process' | 'flock'; sub?: string }) => {
+    setGroup(g);
+    if (g === 'machine' && sub) setMachineSub(sub as MachineSub);
+    if (g === 'process' && sub) setProcessTab(sub as 'wash' | 'rectal');
+    if (g === 'flock' && sub) setFlockTab(sub as 'gravity' | 'culls');
+  };
 
   // Deep-link — auto-open Machine → Hatch Progression when a house is passed.
   useEffect(() => {
@@ -114,33 +124,24 @@ const QAHubPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5" strokeWidth={1.5} />
-                Recent QA Entries
-              </CardTitle>
-              <CardDescription>View and manage recent quality assurance records</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentQAEntries />
-            </CardContent>
-          </Card>
+          <QAOverviewDashboard onJumpTo={handleJumpTo} />
         </TabsContent>
 
         <TabsContent value="machine" className="space-y-4">
           <MachineGroup
             preSelectedHouseId={houseIdFromUrl}
             preSelectedAction={actionFromUrl}
+            sub={machineSub}
+            onSubChange={setMachineSub}
           />
         </TabsContent>
 
         <TabsContent value="process" className="space-y-4">
-          <ProcessScopedShell />
+          <ProcessScopedShell key={processTab} initialTab={processTab} />
         </TabsContent>
 
         <TabsContent value="flock" className="space-y-4">
-          <FlockScopedShell />
+          <FlockScopedShell key={flockTab} initialTab={flockTab} />
         </TabsContent>
       </Tabs>
     </div>
@@ -150,10 +151,14 @@ const QAHubPage: React.FC = () => {
 const MachineGroup: React.FC<{
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
-}> = ({ preSelectedHouseId, preSelectedAction }) => {
+  sub?: MachineSub;
+  onSubChange?: (s: MachineSub) => void;
+}> = ({ preSelectedHouseId, preSelectedAction, sub: controlledSub, onSubChange }) => {
   // Default sub-tab: hatch (available for both single & multi).
   const initialSub: MachineSub = preSelectedAction === 'candling' || preSelectedHouseId ? 'hatch' : 'temps';
-  const [sub, setSub] = useState<MachineSub>(initialSub);
+  const [uncontrolledSub, setUncontrolledSub] = useState<MachineSub>(initialSub);
+  const sub = controlledSub ?? uncontrolledSub;
+  const setSub = (s: MachineSub) => { onSubChange ? onSubChange(s) : setUncontrolledSub(s); };
   const [scope, setScope] = useState<Scope>('multi'); // most machine-wide checks are multi
 
   const meta = MACHINE_SUB[sub];
