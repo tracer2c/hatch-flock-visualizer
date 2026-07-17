@@ -24,7 +24,7 @@ export function useAIBriefing(ctx: Context, enabled: boolean) {
   const [loading, setLoading] = useState(false);
   const fetchedRef = useRef(false);
 
-  const cacheKey = `hp:ai-briefing:v1`;
+  const cacheKey = `hp:ai-briefing:v2`;
 
   useEffect(() => {
     if (!enabled) return;
