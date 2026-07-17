@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { DatePicker } from '@/components/ui/date-picker';
-import { Waves, Thermometer, Info } from 'lucide-react';
-import { format } from 'date-fns';
+import { Waves, Thermometer, Droplets, Info } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserCompanyId } from '@/services/qaSubmissionService';
@@ -15,20 +10,21 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import RectalTempEntry from '../RectalTempEntry';
 import TrayWashEntry, { type TrayWashSubmitData } from '../TrayWashEntry';
+import RoomHumidityEntry, { type RoomHumiditySubmitData } from '../RoomHumidityEntry';
 
-/**
- * ProcessScopedShell — room-scoped QA checks (no machine picker).
- * Covers Tray Wash and Rectal Temperatures.
- */
-const ProcessScopedShell: React.FC<{ initialTab?: 'wash' | 'rectal' }> = ({ initialTab = 'wash' }) => {
+type ProcessTab = 'wash' | 'rectal' | 'humidity';
+
+const ProcessScopedShell: React.FC<{
+  initialTab?: ProcessTab;
+  checkDate: string;
+}> = ({ initialTab = 'wash', checkDate }) => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const technicianName = profile
     ? [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.email
     : '';
 
-  const [tab, setTab] = useState<'wash' | 'rectal'>(initialTab);
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tab, setTab] = useState<ProcessTab>(initialTab);
   const [saving, setSaving] = useState(false);
 
   const resolveCompanyId = async () => profile?.company_id ?? (await getUserCompanyId());
@@ -120,54 +116,71 @@ const ProcessScopedShell: React.FC<{ initialTab?: 'wash' | 'rectal' }> = ({ init
     }
   };
 
+  const handleHumidity = async (data: RoomHumiditySubmitData) => {
+    if (!technicianName) return toast.error('User profile not loaded yet');
+    setSaving(true);
+    try {
+      const company_id = await resolveCompanyId();
+      const { error } = await supabase.from('qa_monitoring').insert({
+        company_id,
+        machine_id: null,
+        batch_id: null,
+        check_date: checkDate,
+        check_time: new Date().toTimeString().split(' ')[0],
+        day_of_incubation: 0,
+        temperature: data.temperature,
+        humidity: data.humidity,
+        inspector_name: technicianName,
+        entry_mode: 'room',
+        candling_results: JSON.stringify({
+          type: 'humidity',
+          room_id: data.roomId,
+          notes: data.notes ?? null,
+        }),
+      });
+      if (error) throw error;
+      toast.success('Humidity check saved.');
+      queryClient.invalidateQueries({ queryKey: ['qa_monitoring'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-qa-entries'] });
+    } catch (e: any) {
+      toast.error(`Failed to save: ${e.message ?? e}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[240px]">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Waves className="h-5 w-5 text-primary" />
-                Process / Room Checks
-              </CardTitle>
-              <CardDescription>
-                Room-level QA — no machine required. Pick a date and start logging.
-              </CardDescription>
-            </div>
-            <div className="space-y-1.5 min-w-[200px]">
-              <Label className="text-xs">Check Date</Label>
-              <DatePicker
-                date={checkDate}
-                onSelect={(d) =>
-                  setCheckDate(d ? format(d, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0])
-                }
-                placeholder="Select date"
-              />
-            </div>
-            <div className="space-y-1.5 min-w-[200px]">
-              <Label className="text-xs">Technician</Label>
-              <Input value={technicianName || 'Loading…'} disabled readOnly />
-            </div>
-          </div>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Waves className="h-5 w-5 text-primary" />
+            Process / Room Checks
+          </CardTitle>
+          <CardDescription>
+            Room-level QA — no machine required. Uses the date from the header above.
+          </CardDescription>
         </CardHeader>
       </Card>
 
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Tray Wash can be logged multiple times a day as inspections occur. Rectal temps are captured
-          for Hatcher / Chick Room / Separator Room.
+          Tray Wash can be logged multiple times a day. Rectal temps cover Hatcher / Chick / Separator rooms.
+          Humidity is measured per room.
         </AlertDescription>
       </Alert>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'wash' | 'rectal')}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as ProcessTab)}>
         <TabsList>
           <TabsTrigger value="wash" className="gap-1">
             <Waves className="h-3.5 w-3.5" /> Tray Wash
           </TabsTrigger>
           <TabsTrigger value="rectal" className="gap-1">
             <Thermometer className="h-3.5 w-3.5" /> Rectal Temperatures
+          </TabsTrigger>
+          <TabsTrigger value="humidity" className="gap-1">
+            <Droplets className="h-3.5 w-3.5" /> Humidity
           </TabsTrigger>
         </TabsList>
 
@@ -186,6 +199,15 @@ const ProcessScopedShell: React.FC<{ initialTab?: 'wash' | 'rectal' }> = ({ init
             checkDate={checkDate}
             machineId={null}
             onSubmit={handleRectalTemp}
+          />
+        </TabsContent>
+
+        <TabsContent value="humidity" className="space-y-4 pt-4">
+          <RoomHumidityEntry
+            technicianName={technicianName}
+            checkDate={checkDate}
+            returnParams={`?group=process&sub=humidity&date=${checkDate}`}
+            onSubmit={handleHumidity}
           />
         </TabsContent>
       </Tabs>
