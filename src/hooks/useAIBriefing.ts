@@ -52,7 +52,7 @@ Critical QA Alerts: ${ctx.criticalAlerts}
 Flocks needing attention: ${ctx.attentionCount}
 Top attention flocks: ${ctx.topAttention.slice(0, 5).join(", ") || "none"}
 
-Reply with 4–6 short bullets in plain user language. Highlight what's on track, what's off target, and one clear next step. Do NOT return tables. Do NOT return all zeros — if data is missing, say so plainly. Use markdown bullets (- ). No preamble.`;
+Reply with EXACTLY 3 to 5 markdown bullets (- ). Each bullet MUST be a single line, under 80 characters. End with one final bullet starting "Next step:" that names one concrete action. Do NOT return tables, headings, prose paragraphs, or preamble. Do NOT return all zeros — if data is missing, say so plainly (e.g. "Fertility not entered yet").`;
 
     setLoading(true);
     supabase.functions
