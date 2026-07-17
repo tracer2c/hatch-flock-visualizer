@@ -773,7 +773,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             notes={notes}
             checkDate={checkDate}
             uniqueFlocks={uniqueFlockDetails}
-            isPastDay={isPastDay}
+            isPastDay={false}
             onSubmit={handleSubmitAngles}
           />
         </TabsContent>
@@ -785,7 +785,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             notes={notes}
             checkDate={checkDate}
             uniqueFlocks={uniqueFlockDetails}
-            isPastDay={isPastDay}
+            isPastDay={false}
             onSubmit={handleSubmitHumidity}
           />
         </TabsContent>
@@ -795,7 +795,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             technicianName={technicianName} 
             checkDate={checkDate} 
             machineId={selectedMachine.id}
-            isPastDay={isPastDay}
+            isPastDay={false}
             onSubmit={handleSubmitRectalTemp} 
           />
         </TabsContent>
@@ -805,7 +805,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             technicianName={technicianName}
             checkDate={checkDate}
             existingRow={existingTrayWash ?? null}
-            readOnly={isPastDay}
+            readOnly={false}
             loadingExisting={trayWashLoading}
             onSubmit={handleSubmitTrayWash}
           />
@@ -817,7 +817,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             checkDate={checkDate} 
             flockOptions={getAvailableFlocks()}
             machineId={selectedMachine.id}
-            isPastDay={isPastDay}
+            isPastDay={false}
             onSubmit={handleSubmitCullCheck} 
           />
         </TabsContent>
@@ -837,7 +837,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             checkDate={checkDate} 
             flockOptions={getAvailableFlocks()}
             machineId={selectedMachine.id}
-            isPastDay={isPastDay}
+            isPastDay={false}
             machineLabel={`Machine ${selectedMachine.machine_number}`}
             onSubmit={handleSubmitHatchProgression} 
           />
