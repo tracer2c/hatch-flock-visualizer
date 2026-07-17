@@ -35,8 +35,6 @@ export function TopBar() {
     if (role === 'operations_head') return 'secondary';
     return 'outline';
   };
-  const { isMobile, openMobile } = useSidebar();
-  const collapsed = isMobile ? !openMobile : false;
   const navigate = useNavigate();
   const location = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
