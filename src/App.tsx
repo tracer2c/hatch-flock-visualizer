@@ -70,6 +70,8 @@ import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
 import { AppBreadcrumbs } from "./components/uui/AppBreadcrumbs";
 import { RouteHistoryTracker } from "./components/RouteHistoryTracker";
+import ChangelogsPage from "./pages/ChangelogsPage";
+import { WhatsNewDialog } from "./components/changelog/WhatsNewDialog";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -250,8 +252,10 @@ function AppContent() {
                       } />
                       <Route path="/documentation" element={<DocumentationWhitePaper />} />
                       <Route path="/profile" element={<UserProfilePage />} />
+                      <Route path="/changelogs" element={<ChangelogsPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    <WhatsNewDialog />
                   </main>
                 </div>
               </div>

@@ -139,6 +139,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Targets", href: "/management/targets", icon: Target },
         ],
       },
+      { label: "What's New", href: "/changelogs", icon: Sparkles },
     ],
   },
 ];

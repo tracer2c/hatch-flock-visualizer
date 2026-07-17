@@ -167,4 +167,5 @@ export const ROUTE_CRUMBS: RouteCrumbEntry[] = [
   { pattern: "/chat", chain: [{ label: "HatchAI Assistant" }] },
   { pattern: "/documentation", chain: [{ label: "Documentation" }] },
   { pattern: "/profile", chain: [{ label: "Profile" }] },
+  { pattern: "/changelogs", chain: [{ label: "What's New" }] },
 ];
