@@ -13,6 +13,8 @@ import {
   UserSearch,
   Building2,
   Cpu,
+  Search,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -116,6 +118,7 @@ export const DataSheetCenteredFilterDialog = ({
 }: DataSheetCenteredFilterDialogProps) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DataSheetFilters>(filters);
+  const [machineSearch, setMachineSearch] = useState("");
 
   useEffect(() => {
     if (open) setDraft(filters);
@@ -315,45 +318,154 @@ export const DataSheetCenteredFilterDialog = ({
             )}
 
             {/* Machines */}
-            {machines.length > 0 && (
-              <SectionCard
-                icon={Cpu}
-                title="Machines"
-                action={
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraft((prev) => ({ ...prev, selectedMachines: machines.map((m) => m.id) }))
-                      }
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Select all
-                    </button>
-                    <span className="text-border">·</span>
-                    <button
-                      type="button"
-                      onClick={() => setDraft((prev) => ({ ...prev, selectedMachines: [] }))}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Clear
-                    </button>
-                  </div>
+            {machines.length > 0 && (() => {
+              // Build hatchery-name lookup for prefix matching
+              const hatcheryNames = new Set(
+                hatcheries
+                  .filter((h) => draft.selectedHatcheries.includes(h.id))
+                  .map((h) => h.name.toUpperCase()),
+              );
+              const q = machineSearch.trim().toLowerCase();
+              const filtered = machines.filter((m) => {
+                if (hatcheryNames.size) {
+                  const prefix = m.name.split(/[-_ ]/)[0]?.toUpperCase();
+                  if (!prefix || !hatcheryNames.has(prefix)) return false;
                 }
-              >
-                <div className="flex flex-wrap gap-1.5">
-                  {machines.map((m) => (
-                    <Chip
-                      key={m.id}
-                      selected={draft.selectedMachines.includes(m.id)}
-                      onClick={() => toggleDraftMachine(m.id)}
-                    >
-                      {m.name}
-                    </Chip>
-                  ))}
-                </div>
-              </SectionCard>
-            )}
+                if (q && !m.name.toLowerCase().includes(q)) return false;
+                return true;
+              });
+              // Group by prefix (e.g. DHN, ENT)
+              const groups = new Map<string, FilterOption[]>();
+              for (const m of filtered) {
+                const prefix = m.name.split(/[-_ ]/)[0]?.toUpperCase() || "OTHER";
+                if (!groups.has(prefix)) groups.set(prefix, []);
+                groups.get(prefix)!.push(m);
+              }
+              const groupKeys = Array.from(groups.keys()).sort();
+              const selectedCount = draft.selectedMachines.length;
+
+              return (
+                <SectionCard
+                  icon={Cpu}
+                  title="Machines"
+                  action={
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="text-muted-foreground">
+                        {selectedCount} of {machines.length}
+                      </span>
+                      <span className="text-border">·</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            selectedMachines: Array.from(
+                              new Set([...prev.selectedMachines, ...filtered.map((m) => m.id)]),
+                            ),
+                          }))
+                        }
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        Select visible
+                      </button>
+                      <span className="text-border">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setDraft((prev) => ({ ...prev, selectedMachines: [] }))}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  }
+                >
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={machineSearch}
+                      onChange={(e) => setMachineSearch(e.target.value)}
+                      placeholder={`Search ${machines.length} machines…`}
+                      className="h-8 pl-8 pr-8 bg-background text-xs"
+                    />
+                    {machineSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setMachineSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {hatcheryNames.size > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Showing machines for selected hatcheries only.
+                    </p>
+                  )}
+
+                  {/* Grouped chip grid with inner scroll */}
+                  <ScrollArea className="max-h-[260px] pr-2">
+                    {filtered.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">
+                        No machines match your search.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {groupKeys.map((key) => {
+                          const items = groups.get(key)!;
+                          const allSelected = items.every((m) =>
+                            draft.selectedMachines.includes(m.id),
+                          );
+                          return (
+                            <div key={key}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {key} · {items.length}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDraft((prev) => ({
+                                      ...prev,
+                                      selectedMachines: allSelected
+                                        ? prev.selectedMachines.filter(
+                                            (id) => !items.some((m) => m.id === id),
+                                          )
+                                        : Array.from(
+                                            new Set([
+                                              ...prev.selectedMachines,
+                                              ...items.map((m) => m.id),
+                                            ]),
+                                          ),
+                                    }))
+                                  }
+                                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                                >
+                                  {allSelected ? "Deselect all" : "Select all"}
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {items.map((m) => (
+                                  <Chip
+                                    key={m.id}
+                                    selected={draft.selectedMachines.includes(m.id)}
+                                    onClick={() => toggleDraftMachine(m.id)}
+                                  >
+                                    {m.name}
+                                  </Chip>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </SectionCard>
+              );
+            })()}
           </div>
         </ScrollArea>
 
