@@ -23,7 +23,7 @@ const STATIC_LABELS: Record<string, string> = {
   "machine-utilization": "Machine Utilization",
   "performance": "Performance",
   "management": "Management",
-  "chat": "Smart Analytics",
+  "chat": "HatchAI Assistant",
   "checklist": "Checklist",
   "support": "Support",
   "profile": "Profile",

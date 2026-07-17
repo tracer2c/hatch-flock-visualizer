@@ -24,6 +24,8 @@ import QAOverviewDashboard from '@/components/qa-hub/overview/QAOverviewDashboar
 import { usePermissions } from '@/hooks/usePermissions';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DayPickerCard } from '@/components/uui/DayPickerCard';
+import { format, parseISO } from 'date-fns';
 
 /**
  * QA Hub — reorganized by scope:
@@ -107,16 +109,11 @@ const QAHubPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 rounded-md border px-2 py-1 bg-background">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="date"
-              value={checkDate}
-              max={todayStr}
-              onChange={(e) => setCheckDate(e.target.value || todayStr)}
-              className="text-sm bg-transparent outline-none cursor-pointer"
-            />
-          </div>
+          <DayPickerCard
+            value={checkDate ? parseISO(checkDate) : new Date()}
+            onChange={(d) => setCheckDate(format(d, 'yyyy-MM-dd'))}
+            maxDate={new Date()}
+          />
           {stats && (
             <Badge variant="secondary">
               Today: {stats.today} | Week: {stats.thisWeek}

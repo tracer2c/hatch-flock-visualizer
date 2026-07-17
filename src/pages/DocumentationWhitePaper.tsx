@@ -112,7 +112,7 @@ const DocumentationWhitePaper = () => {
                 ['Data Sheet', '📊', 'View all data in sortable table format', '/embrex-data-sheet'],
                 ['Timeline', '📈', 'Charts and trend analysis over time', '/embrex-timeline'],
                 ['Daily Tasks', '☑️', 'SOP checklists for houses and machines', '/checklist'],
-                ['Smart Analytics', '💬', 'AI-powered insights and natural language queries', '/chat'],
+                ['HatchAI Assistant', '💬', 'AI-powered insights and natural language queries', '/chat'],
                 ['Management', '⚙️', 'Admin settings (Company Admin only)', '/management'],
               ]}
             />
@@ -283,8 +283,8 @@ const DocumentationWhitePaper = () => {
           </DocSubSection>
         </DocSection>
 
-        {/* 11. Smart Analytics */}
-        <DocSection id="smart-analytics" number="11" title="Smart Analytics (AI Chat)">
+        {/* 11. HatchAI Assistant */}
+        <DocSection id="smart-analytics" number="11" title="HatchAI Assistant (AI Chat)">
           <DocSubSection title="Interface">
             <p>A chat-based interface with AI-aligned messages on the left and user messages on the right. A text input with send button is fixed at the bottom. Suggested question buttons appear when the chat is empty.</p>
           </DocSubSection>

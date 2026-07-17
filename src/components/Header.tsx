@@ -50,7 +50,7 @@ const Header = () => {
     },
     {
       path: '/chat',
-      label: 'Smart Analytics',
+      label: 'HatchAI Assistant',
       icon: MessageSquare,
       requiresAuth: true
     }

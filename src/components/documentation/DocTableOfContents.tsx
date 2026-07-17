@@ -9,7 +9,7 @@ const sections = [
   { id: 'live-tracking', num: '8', title: 'Live Tracking' },
   { id: 'machine-util', num: '9', title: 'Machine Utilization' },
   { id: 'daily-tasks', num: '10', title: 'Daily Tasks' },
-  { id: 'smart-analytics', num: '11', title: 'Smart Analytics (AI Chat)' },
+  { id: 'smart-analytics', num: '11', title: 'HatchAI Assistant (AI Chat)' },
   { id: 'management', num: '12', title: 'Management Console' },
   { id: 'advanced', num: '13', title: 'Advanced Features' },
   { id: 'rbac', num: '14', title: 'Role-Based Access Control' },
