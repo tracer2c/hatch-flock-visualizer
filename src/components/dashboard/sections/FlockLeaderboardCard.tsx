@@ -30,7 +30,7 @@ export function FlockLeaderboardCard({ rows }: Props) {
             </div>
             <ul className="space-y-1">
               {top.map((r) => (
-                <li key={`t-${r.flock_key}`} className="flex items-center justify-between text-xs">
+                <li key={`t-${(r.flock_number ?? r.flock_name ?? Math.random())}`} className="flex items-center justify-between text-xs">
                   <span className="truncate">{label(r)}</span>
                   <span className="font-mono font-medium text-emerald-600">
                     {r.hof_pct.toFixed(1)}%
@@ -45,7 +45,7 @@ export function FlockLeaderboardCard({ rows }: Props) {
             </div>
             <ul className="space-y-1">
               {bottom.map((r) => (
-                <li key={`b-${r.flock_key}`} className="flex items-center justify-between text-xs">
+                <li key={`b-${(r.flock_number ?? r.flock_name ?? Math.random())}`} className="flex items-center justify-between text-xs">
                   <span className="truncate">{label(r)}</span>
                   <span className="font-mono font-medium text-rose-600">
                     {r.hof_pct.toFixed(1)}%
