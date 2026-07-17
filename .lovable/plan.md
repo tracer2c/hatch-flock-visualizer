@@ -1,84 +1,52 @@
-## Problem
+## Problems
 
-The Weekly Flock Rollup drill-down lives entirely in React state inside `DataEntryPage.tsx` — it has no URL. Breadcrumbs can only reflect the URL, so:
+1. **Inconsistent toolbars across tabs.** The top toolbar hides the *By House / By Flock* toggle when the Embrex tab is active, and `EmbrexHOITab` still renders its own toggle inside the content. Other tabs already accept a controlled `viewMode` so they don't duplicate, but the Embrex tab makes the layout jump when switching.
+2. **Search feels crammed.** The expandable search sits mid-toolbar between the *Percentages* switch and the *Filters* button with no visual separation, so when it expands it squeezes the neighbours.
+3. **Icon toolbar looks generic.** Plain outlined square buttons for Refresh/Export/Search/Filters with no grouping, no separator, no hover polish.
+4. **Editing a row requires scrolling to the Actions column** and clicking a tiny pencil — painful on wide tables with a normal mouse.
 
-1. On the flock drill-down view (image 1), the breadcrumb only says **Data Entry** — it can't show `Weekly Flock Rollup > Flock 1001`.
-2. On the Residue / Fertility / etc. entry pages (image 2), the **Flock 1001** crumb is not clickable because there is no route that represents "the flock drill-down for flock 1001 in week X".
-3. Clicking **Weekly Flock Rollup** goes to `/data-entry` and drops the previously selected week, so the user has to page back through the calendar to find their flock again.
+## Fix
 
-## Fix — encode drill-down + week in the URL
+### 1. Single, consistent toolbar for every tab
+- Always render the *By House / By Flock* segmented control in the page toolbar (remove the `showViewToggle = activeTab !== "embrex"` gate).
+- Add `viewMode` / `onViewModeChange` props to `EmbrexHOITab` (mirror the pattern in `HatchPerformanceTab`), and hide the internal toggle when the parent controls the view. Delete the internal `updateView`-driven toolbar row from `EmbrexHOITab`.
 
-### 1. `DataEntryPage.tsx` — URL-driven drill-down
-- Read `?view=weekly|houses`, `?flock=<flockKey>`, `?week=<yyyy-MM-dd>` from `useSearchParams`.
-- Derive `view` and `drilldownFlock` from the URL instead of local state (keep local state as an optimistic mirror, but write through to the URL on every change).
-- When `?flock=` is present, resolve the row from the weekly rollup query for that `?week=` and render `<FlockDrillDown>`. If the row is still loading, show a skeleton; if it truly doesn't exist for that week, clear the param.
-- Clicking a flock row → `navigate({ search: "?view=weekly&flock=<key>&week=<yyyy-MM-dd>" })`.
-- Back button in `FlockDrillDown` → strip `flock` param but keep `week`.
-- View toggle (Weekly / By House) writes `view` to the URL and keeps `week`.
-
-### 2. Flock entry pages — carry the week
-Add `?week=<yyyy-MM-dd>` when navigating from `FlockDrillDown` to:
-- `/data-entry/flock/:flockKey/egg-pack`
-- `.../fertility`
-- `.../residue`
-- `.../clears-injected`
-- `.../hoi`
-
-The entry pages already receive `location.state.from`; keep that for the smart Back button. The `?week` param is what breadcrumbs consume.
-
-### 3. `breadcrumbRoutes.ts` — hrefs that preserve context
-Extend `CrumbSpec` so `href` (and label) receive **both** path params and search params:
-
-```ts
-href?: (ctx: { params: Record<string,string|undefined>; search: URLSearchParams }) => string;
+### 2. Reorganize the toolbar into three clean groups with dividers
 ```
-
-Update `AppBreadcrumbs.tsx` to pass `new URLSearchParams(location.search)` into the resolver.
-
-Then update the two flock chains:
-
+[ Data Sheet | Embrex/HOI | Residue | Egg | Hatch | QA ]        ← left
+                                                                    (spacer)
+[ By House | By Flock ]  │  [ ⌘K Search flock, house, tech… ]  │  [ % Percentages · Filters ]  │  [ ⟳  ⬇ ]
 ```
-/data-entry/flock/:flockKey/:section
-  Data Entry                → /data-entry?view=weekly&week={week}
-  Weekly Flock Rollup       → /data-entry?view=weekly&week={week}
-  Flock {flockKey}          → /data-entry?view=weekly&flock={flockKey}&week={week}
-  {Section label}           (plain text)
+- **Search becomes a persistent, pill-shaped input** with a leading icon and a right-side `⌘K` hint. No more expand/collapse — it always occupies ~260px on md+, collapses to icon-only under 640px. Global `⌘K` / `Ctrl+K` focuses it.
+- Insert light `Separator` bars (`h-5 w-px bg-border`) between groups so nothing looks crammed.
+- Icon buttons get a subtle hover/active treatment (`hover:bg-muted`, `active:bg-muted/70`) and consistent 36×36 target size.
+- Swap the current icons for the more modern set:
+  - Refresh → `RotateCw`
+  - Export → `Download` (kept; group with a `ChevronDown` when a dropdown is attached)
+  - Filters → `SlidersHorizontal` (replaces `Filter` funnel)
+  - Search → `Search` (kept, always visible now)
 
-/data-entry/flock/:flockKey/hoi   — same shape, last crumb = "Hatch / HOI"
-```
+### 3. Row-click opens the edit modal
+- In each editable tab (`EmbrexHOITab`, `EggPackQualityTab`, `HatchPerformanceTab`, `ResidueBreakoutTable`, `QAMonitoringTab`):
+  - Add `onClick={() => !readOnly && handleEdit(item)}` and `className="cursor-pointer hover:bg-muted/50"` to every data `TableRow`.
+  - Stop event propagation on the existing Edit / Delete action buttons so their explicit clicks still work without double-firing.
+  - Aggregated "By Flock" rows keep the same behaviour — click opens the flock-level edit dialog that's already wired to the Edit button.
+  - Read-only users: no cursor change, no click handler.
 
-And add a chain for the drill-down URL itself:
+### 4. Files touched
+- `src/pages/EmbrexDataSheetPage.tsx` — toolbar restructure, always-visible search, always-visible view toggle, updated icons, `⌘K` handler.
+- `src/components/dashboard/EmbrexHOITab.tsx` — accept `viewMode` / `onViewModeChange`, drop internal toggle bar, add row-click edit.
+- `src/components/dashboard/CompleteDataView.tsx` — pass `viewMode` / `onViewModeChange` through to `EmbrexHOITab` too.
+- `src/components/dashboard/EggPackQualityTab.tsx`, `HatchPerformanceTab.tsx`, `QAMonitoringTab.tsx`, `ResidueBreakoutTable.tsx` — add row-click → `handleEdit`, stop propagation on action-cell buttons.
 
-```
-/data-entry  (when ?flock=… is present, resolved in AppBreadcrumbs)
-  Data Entry                → /data-entry?view=weekly&week={week}
-  Weekly Flock Rollup       → /data-entry?view=weekly&week={week}
-  Flock {flock}             (plain text — current page)
-```
-
-Because the drill-down shares the `/data-entry` path, add a small branch in `AppBreadcrumbs.tsx` before the pattern loop: if `pathname === "/data-entry"` and `search.flock` exists, use the drill-down chain instead of the plain `Data Entry` chain.
-
-### 4. Collapse the duplicate "Data Entry" → "Weekly Flock Rollup" hop
-Both segments point at the same URL, so render just one crumb: **Weekly Flock Rollup** as the parent of the flock. Final chains:
-
-- Rollup list: `Weekly Flock Rollup`
-- Flock drill-down: `Weekly Flock Rollup > Flock 1001`
-- Section entry: `Weekly Flock Rollup > Flock 1001 > Residue`
-
-(Keeps the crumb bar shorter and matches the user's mental model.)
-
-## Files touched
-
-- `src/pages/DataEntryPage.tsx` — URL sync for view / flock / week
-- `src/components/dashboard/WeeklyRollupView.tsx` — receive `weekStart` from URL, notify parent on week change
-- `src/components/dashboard/FlockDrillDown.tsx` — append `?week=` when navigating to entry pages; use `onBack` that strips only `flock`
-- `src/lib/breadcrumbRoutes.ts` — new chain shape, week-aware hrefs
-- `src/components/uui/AppBreadcrumbs.tsx` — pass search params to resolver; drill-down branch for `/data-entry?flock=…`
+### 5. Out of scope (not touched)
+- No column, formula, or data-fetch changes.
+- No changes to the Filters dialog contents.
+- Aggregated flock rows keep the existing edit dialog — no new edit UI.
 
 ## Verification
-
-- From `/data-entry?view=weekly&week=2026-03-16`, click flock 1001 → URL becomes `…&flock=1001`; breadcrumb reads `Weekly Flock Rollup > Flock 1001`.
-- Click **Residue** → URL `/data-entry/flock/1001/residue?week=2026-03-16`; breadcrumb `Weekly Flock Rollup > Flock 1001 > Residue`, both parents clickable.
-- Click **Flock 1001** crumb → returns to drill-down for the same week.
-- Click **Weekly Flock Rollup** crumb → returns to the rollup list for the same week (no calendar reset).
-- Refreshing the page on any of those URLs restores the same view.
+- Switch between all five tabs → toolbar stays visually identical (same buttons, same spacing).
+- Search is always visible with a `⌘K` chip; pressing `⌘K` focuses it.
+- Clicking anywhere on a table row (outside the Actions cell) opens the edit modal for that record.
+- Clicking the pencil / trash in the Actions cell still works and doesn't double-fire.
+- Read-only mode still hides Edit/Delete and disables row-click.
