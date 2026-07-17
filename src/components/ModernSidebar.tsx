@@ -27,11 +27,14 @@ import {
   Users as UsersIcon,
   BarChart3,
   Target,
+  PanelLeftClose,
 } from "lucide-react";
+
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -44,6 +47,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -249,11 +253,29 @@ export function ModernSidebar() {
       <Sidebar
         side="left"
         variant="sidebar"
-        collapsible="offcanvas"
-        style={{ ["--sidebar-width" as any]: "260px" }}
+        collapsible="icon"
+        style={{ ["--sidebar-width" as any]: "260px", ["--sidebar-width-icon" as any]: "3.5rem" }}
         className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl"
       >
-        <SidebarContent className="pt-14 gap-0">
+        <SidebarHeader className="pt-14 pb-1 px-2 group-data-[collapsible=icon]:px-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent px-2 group-data-[collapsible=icon]:hidden">
+              Hatchery Pro
+            </span>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+              className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto"
+            >
+              <PanelLeftClose className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
+              <PanelLeftClose className="hidden h-4 w-4 rotate-180 group-data-[collapsible=icon]:block" />
+            </button>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="gap-0">
+
           {visibleGroups.map((group) => (
             <SidebarGroup key={group.heading} className="py-1">
               <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-3 pb-1">
