@@ -257,17 +257,14 @@ export function ModernSidebar() {
         style={{ ["--sidebar-width" as any]: "260px", ["--sidebar-width-icon" as any]: "3.5rem" }}
         className="border-r border-sidebar-border/50 bg-sidebar/95 backdrop-blur-md shadow-xl"
       >
-        <SidebarHeader className="pt-14 pb-1 px-2 group-data-[collapsible=icon]:px-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent px-2 group-data-[collapsible=icon]:hidden">
-              Hatchery Pro
-            </span>
+        <SidebarHeader className="pt-14 pb-0 px-2 group-data-[collapsible=icon]:px-1.5">
+          <div className="flex items-center justify-end">
             <button
               type="button"
               onClick={toggleSidebar}
               title="Collapse sidebar"
               aria-label="Collapse sidebar"
-              className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto"
             >
               <PanelLeftClose className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
               <PanelLeftClose className="hidden h-4 w-4 rotate-180 group-data-[collapsible=icon]:block" />
