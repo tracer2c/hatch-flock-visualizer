@@ -466,7 +466,6 @@ export const DataSheetCenteredFilterDialog = ({
                 </SectionCard>
               );
             })()}
-            )}
           </div>
         </ScrollArea>
 
