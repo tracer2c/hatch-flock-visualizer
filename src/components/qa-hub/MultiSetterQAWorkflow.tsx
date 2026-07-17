@@ -78,7 +78,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [technicianName, setTechnicianName] = useState('');
+  // technicianName is derived from the signed-in profile (non-editable).
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
