@@ -19,6 +19,7 @@ import { useQAStats } from '@/hooks/useQAHubData';
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
+import RoomHumidityEntry from '@/components/qa-hub/RoomHumidityEntry';
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -41,7 +42,7 @@ const SECTION_MAP: Record<QAType, { single?: string; multi?: string }> = {
   overview: {},
   temps:    { multi: 'temperatures' },
   angles:   { multi: 'angles' },
-  humidity: { multi: 'humidity' },
+  humidity: {}, // room-scoped, rendered directly
   rectal:   { single: 'rectal-temps', multi: 'rectal' },
   wash:     { single: 'tray-wash',    multi: 'wash' },
   culls:    { single: 'culls',        multi: 'culls' },
@@ -56,7 +57,7 @@ const TYPE_META: Record<Exclude<QAType, 'overview'>, {
 }> = {
   temps:    { label: 'Temps',           icon: Thermometer,     hint: 'Machine-specific — pick a setter or hatcher.' },
   angles:   { label: 'Angles',          icon: Ruler,           hint: 'Machine-specific — Left / Right side only.' },
-  humidity: { label: 'Humidity',        icon: Droplets,        hint: 'Machine-specific — pick a machine.' },
+  humidity: { label: 'Humidity',        icon: Droplets,        hint: 'Room-level — pick a room (setter / hatcher / chick).' },
   rectal:   { label: 'Rectal Temps',    icon: Thermometer,     hint: 'Process-level (hatcher / chick room / separator).' },
   wash:     { label: 'Tray Wash',       icon: Waves,           hint: 'Process-level — temperature + 5 PPM checks/day.' },
   culls:    { label: 'Culls',           icon: AlertTriangle,   hint: 'Flock / house level.' },
@@ -168,6 +169,29 @@ const QATypeSection: React.FC<{
 
   const meta = TYPE_META[type];
   const Icon = meta.icon;
+
+  // Humidity is room-scoped — no machine layer, no single/multi.
+  if (type === 'humidity') {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Icon className="h-5 w-5 text-primary" strokeWidth={1.5} />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{meta.label}</CardTitle>
+                <CardDescription>{meta.hint}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <RoomHumidityEntry />
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-4">

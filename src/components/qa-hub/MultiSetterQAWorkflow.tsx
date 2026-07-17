@@ -78,7 +78,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [technicianName, setTechnicianName] = useState('');
+  // technicianName is derived from the signed-in profile (non-editable) — see below.
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
@@ -86,6 +86,11 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
   const { isOnline } = useOnlineStatus();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+
+  // Technician name is locked to the signed-in user — no manual input.
+  const technicianName = profile
+    ? [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.email
+    : '';
 
   const resolveCompanyId = async (): Promise<string> => {
     if (profile?.company_id) return profile.company_id;
@@ -686,8 +691,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Technician Name *</Label>
-              <Input value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Enter your name" />
+              <Label>Technician (signed in)</Label>
+              <Input value={technicianName} disabled readOnly placeholder="Loading…" />
             </div>
             <div className="space-y-2">
               <Label>Check Date</Label>
@@ -729,9 +734,6 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             </TabsTrigger>
             <TabsTrigger value="angles" className="flex items-center gap-1 text-xs">
               <Ruler className="h-3 w-3" />Angles
-            </TabsTrigger>
-            <TabsTrigger value="humidity" className="flex items-center gap-1 text-xs">
-              <Droplets className="h-3 w-3" />Humidity
             </TabsTrigger>
             <TabsTrigger value="rectal" className="flex items-center gap-1 text-xs">
               <Thermometer className="h-3 w-3" />Rectal
@@ -778,17 +780,6 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
           />
         </TabsContent>
 
-        <TabsContent value="humidity">
-          <MachineWideHumidityEntry
-            machine={{ id: selectedMachine.id, machine_number: selectedMachine.machine_number }}
-            technicianName={technicianName}
-            notes={notes}
-            checkDate={checkDate}
-            uniqueFlocks={uniqueFlockDetails}
-            isPastDay={false}
-            onSubmit={handleSubmitHumidity}
-          />
-        </TabsContent>
 
         <TabsContent value="rectal">
           <RectalTempEntry 

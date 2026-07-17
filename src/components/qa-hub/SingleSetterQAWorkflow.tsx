@@ -70,12 +70,15 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [technicianName, setTechnicianName] = useState('');
+  // Technician name is locked to the signed-in user — see derived value below.
   const [notes, setNotes] = useState('');
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
+  const technicianName = profile
+    ? [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.email
+    : '';
   const queryClient = useQueryClient();
   const { submit: submitQAMonitoring } = useOfflineSubmit('qa_monitoring', {
     invalidateQueries: ['qa_monitoring', 'recent-qa-entries'],
@@ -541,8 +544,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Technician Name *</Label>
-              <Input value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Enter your name" />
+              <Label>Technician (signed in)</Label>
+              <Input value={technicianName} disabled readOnly placeholder="Loading…" />
             </div>
             <div className="space-y-2">
               <Label>Check Date</Label>
