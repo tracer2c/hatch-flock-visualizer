@@ -140,7 +140,6 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: "What's New", href: "/changelogs", icon: Sparkles },
-      },
     ],
   },
 ];
