@@ -1,68 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Thermometer,
   Clock,
   ClipboardCheck,
   Ruler,
   Droplets,
-  AlertTriangle,
-  Scale,
   Timer,
-  Waves,
+  Factory,
+  FlaskConical,
+  Bird,
   Info,
-} from "lucide-react";
+} from 'lucide-react';
 import { useQAStats } from '@/hooks/useQAHubData';
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
-import RoomHumidityEntry from '@/components/qa-hub/RoomHumidityEntry';
-import { usePermissions } from "@/hooks/usePermissions";
-import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import ProcessScopedShell from '@/components/qa-hub/shells/ProcessScopedShell';
+import FlockScopedShell from '@/components/qa-hub/shells/FlockScopedShell';
+import { usePermissions } from '@/hooks/usePermissions';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-type QAType =
-  | 'overview'
-  | 'temps'
-  | 'angles'
-  | 'humidity'
-  | 'rectal'
-  | 'wash'
-  | 'culls'
-  | 'gravity'
-  | 'hatch';
-
+/**
+ * QA Hub — reorganized by scope:
+ *   • Overview
+ *   • 🏭 Machine-Based       (Temperature / Angles / Hatch Progression / Humidity)
+ *   • 🧪 Process / Room      (Tray Wash / Rectal Temps)
+ *   • 🐣 Flock-Based         (Specific Gravity / Culls)
+ */
+type Group = 'overview' | 'machine' | 'process' | 'flock';
+type MachineSub = 'temps' | 'angles' | 'hatch' | 'humidity';
 type Scope = 'single' | 'multi';
 
-// Map (type, scope) → focusSection value each workflow understands.
-const SECTION_MAP: Record<QAType, { single?: string; multi?: string }> = {
-  overview: {},
-  temps:    { multi: 'temperatures' },
-  angles:   { multi: 'angles' },
-  humidity: {}, // room-scoped, rendered directly
-  rectal:   { single: 'rectal-temps', multi: 'rectal' },
-  wash:     { single: 'tray-wash',    multi: 'wash' },
-  culls:    { single: 'culls',        multi: 'culls' },
-  gravity:  { single: 'gravity',      multi: 'gravity' },
-  hatch:    { single: 'hatch',        multi: 'hatch' },
-};
-
-const TYPE_META: Record<Exclude<QAType, 'overview'>, {
+const MACHINE_SUB: Record<MachineSub, {
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   hint: string;
+  // section ids passed as focusSection to the inner Single/Multi workflows
+  single?: string;
+  multi?: string;
 }> = {
-  temps:    { label: 'Temps',           icon: Thermometer,     hint: 'Machine-specific — pick a setter or hatcher.' },
-  angles:   { label: 'Angles',          icon: Ruler,           hint: 'Machine-specific — Left / Right side only.' },
-  humidity: { label: 'Humidity',        icon: Droplets,        hint: 'Room-level — pick a room (setter / hatcher / chick).' },
-  rectal:   { label: 'Rectal Temps',    icon: Thermometer,     hint: 'Process-level (hatcher / chick room / separator).' },
-  wash:     { label: 'Tray Wash',       icon: Waves,           hint: 'Process-level — temperature + 5 PPM checks/day.' },
-  culls:    { label: 'Culls',           icon: AlertTriangle,   hint: 'Flock / house level.' },
-  gravity:  { label: 'Specific Gravity',icon: Scale,           hint: 'Flock / house level.' },
-  hatch:    { label: 'Hatch Progression', icon: Timer,         hint: 'Machine-specific — pick a hatcher.' },
+  temps:    { label: 'Temperature',       icon: Thermometer, hint: 'Machine-wide temperatures.',            multi: 'temperatures' },
+  angles:   { label: 'Angles',            icon: Ruler,       hint: 'Left / Right side angles.',              multi: 'angles' },
+  hatch:    { label: 'Hatch Progression', icon: Timer,       hint: 'Hatcher progression counts.',            single: 'hatch', multi: 'hatch' },
+  humidity: { label: 'Humidity',          icon: Droplets,    hint: 'Machine-wide humidity + temp.',          multi: 'humidity' },
 };
 
 const QAHubPage: React.FC = () => {
@@ -71,13 +56,13 @@ const QAHubPage: React.FC = () => {
   const houseIdFromUrl = searchParams.get('houseId');
   const actionFromUrl = searchParams.get('action');
 
-  const [activeType, setActiveType] = useState<QAType>('overview');
+  const [group, setGroup] = useState<Group>('overview');
   const { data: stats } = useQAStats();
 
-  // Deep-link support: /qa-hub?houseId=... auto-opens Hatch Progression on single setter.
+  // Deep-link — auto-open Machine → Hatch Progression when a house is passed.
   useEffect(() => {
     if (houseIdFromUrl || actionFromUrl === 'candling') {
-      setActiveType('hatch');
+      setGroup('machine');
     }
   }, [houseIdFromUrl, actionFromUrl]);
 
@@ -93,7 +78,9 @@ const QAHubPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Quality Assurance Hub</h1>
-            <p className="text-muted-foreground">Pick a QA check, then choose the machine / house / process.</p>
+            <p className="text-muted-foreground">
+              Pick a scope — Machine, Process, or Flock — then log your check.
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -109,21 +96,21 @@ const QAHubPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Type-first primary tabs */}
-      <Tabs value={activeType} onValueChange={(v) => setActiveType(v as QAType)} className="space-y-4">
-        <TabsList className="flex flex-wrap h-auto justify-start gap-1">
-          <TabsTrigger value="overview" className="gap-1 text-xs">
-            <ClipboardCheck className="h-3.5 w-3.5" />Overview
+      {/* Top-level scope tabs */}
+      <Tabs value={group} onValueChange={(v) => setGroup(v as Group)} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1">
+          <TabsTrigger value="overview" className="gap-1.5 py-2">
+            <ClipboardCheck className="h-4 w-4" /> Overview
           </TabsTrigger>
-          {(Object.keys(TYPE_META) as Array<Exclude<QAType, 'overview'>>).map((k) => {
-            const Icon = TYPE_META[k].icon;
-            return (
-              <TabsTrigger key={k} value={k} className="gap-1 text-xs">
-                <Icon className="h-3.5 w-3.5" />
-                {TYPE_META[k].label}
-              </TabsTrigger>
-            );
-          })}
+          <TabsTrigger value="machine" className="gap-1.5 py-2">
+            <Factory className="h-4 w-4" /> Machine-Based
+          </TabsTrigger>
+          <TabsTrigger value="process" className="gap-1.5 py-2">
+            <FlaskConical className="h-4 w-4" /> Process / Room
+          </TabsTrigger>
+          <TabsTrigger value="flock" className="gap-1.5 py-2">
+            <Bird className="h-4 w-4" /> Flock-Based
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -141,111 +128,113 @@ const QAHubPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {(Object.keys(TYPE_META) as Array<Exclude<QAType, 'overview'>>).map((type) => (
-          <TabsContent key={type} value={type} className="space-y-4">
-            <QATypeSection
-              type={type}
-              preSelectedHouseId={type === 'hatch' ? houseIdFromUrl : null}
-              preSelectedAction={type === 'hatch' ? actionFromUrl : null}
-            />
-          </TabsContent>
-        ))}
+        <TabsContent value="machine" className="space-y-4">
+          <MachineGroup
+            preSelectedHouseId={houseIdFromUrl}
+            preSelectedAction={actionFromUrl}
+          />
+        </TabsContent>
+
+        <TabsContent value="process" className="space-y-4">
+          <ProcessScopedShell />
+        </TabsContent>
+
+        <TabsContent value="flock" className="space-y-4">
+          <FlockScopedShell />
+        </TabsContent>
       </Tabs>
     </div>
   );
 };
 
-const QATypeSection: React.FC<{
-  type: Exclude<QAType, 'overview'>;
+const MachineGroup: React.FC<{
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
-}> = ({ type, preSelectedHouseId, preSelectedAction }) => {
-  const map = SECTION_MAP[type];
-  const hasSingle = !!map.single;
-  const hasMulti = !!map.multi;
+}> = ({ preSelectedHouseId, preSelectedAction }) => {
+  // Default sub-tab: hatch (available for both single & multi).
+  const initialSub: MachineSub = preSelectedAction === 'candling' || preSelectedHouseId ? 'hatch' : 'temps';
+  const [sub, setSub] = useState<MachineSub>(initialSub);
+  const [scope, setScope] = useState<Scope>('multi'); // most machine-wide checks are multi
 
-  // Default scope: prefer single if available, else multi.
-  const [scope, setScope] = useState<Scope>(hasSingle ? 'single' : 'multi');
-
-  const meta = TYPE_META[type];
+  const meta = MACHINE_SUB[sub];
   const Icon = meta.icon;
+  const scopeAvailable = scope === 'single' ? !!meta.single : !!meta.multi;
 
-  // Humidity is room-scoped — no machine layer, no single/multi.
-  if (type === 'humidity') {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Icon className="h-5 w-5 text-primary" strokeWidth={1.5} />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{meta.label}</CardTitle>
-                <CardDescription>{meta.hint}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-        <RoomHumidityEntry />
-      </div>
-    );
-  }
-
+  // When switching sub-tab, snap scope to whatever's available.
+  useEffect(() => {
+    if (!MACHINE_SUB[sub][scope]) {
+      if (MACHINE_SUB[sub].multi) setScope('multi');
+      else if (MACHINE_SUB[sub].single) setScope('single');
+    }
+  }, [sub]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
+      {/* Sub-tab bar */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Icon className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                <Factory className="h-5 w-5 text-primary" strokeWidth={1.5} />
               </div>
               <div>
-                <CardTitle className="text-lg">{meta.label}</CardTitle>
-                <CardDescription>{meta.hint}</CardDescription>
+                <CardTitle className="text-lg">Machine-Based QA</CardTitle>
+                <CardDescription>
+                  Choose a check, then pick a hatchery and machine below.
+                </CardDescription>
               </div>
             </div>
 
-            {hasSingle && hasMulti && (
+            {/* Scope toggle only when both single & multi exist */}
+            {MACHINE_SUB[sub].single && MACHINE_SUB[sub].multi && (
               <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
                 <TabsList>
-                  <TabsTrigger value="single" className="text-xs">Single Stage Setter</TabsTrigger>
-                  <TabsTrigger value="multi" className="text-xs">Multi Stage Setter</TabsTrigger>
+                  <TabsTrigger value="single" className="text-xs">Single Stage</TabsTrigger>
+                  <TabsTrigger value="multi" className="text-xs">Multi Stage</TabsTrigger>
                 </TabsList>
               </Tabs>
             )}
-            {hasSingle && !hasMulti && (
-              <Badge variant="outline">Single Stage Setter</Badge>
-            )}
-            {!hasSingle && hasMulti && (
-              <Badge variant="outline">Multi Stage Setter</Badge>
-            )}
           </div>
         </CardHeader>
+        <CardContent className="pt-0">
+          <Tabs value={sub} onValueChange={(v) => setSub(v as MachineSub)}>
+            <TabsList className="flex-wrap h-auto">
+              {(Object.keys(MACHINE_SUB) as MachineSub[]).map((k) => {
+                const I = MACHINE_SUB[k].icon;
+                return (
+                  <TabsTrigger key={k} value={k} className="gap-1 text-xs">
+                    <I className="h-3.5 w-3.5" />
+                    {MACHINE_SUB[k].label}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+            <Icon className="h-3 w-3" /> {meta.hint}
+          </p>
+        </CardContent>
       </Card>
 
-      {scope === 'single' && hasSingle && (
-        <SingleSetterQAWorkflow
-          preSelectedHouseId={preSelectedHouseId ?? null}
-          preSelectedAction={preSelectedAction ?? null}
-          focusSection={map.single}
-        />
-      )}
-      {scope === 'multi' && hasMulti && (
-        <MultiSetterQAWorkflow focusSection={map.multi} />
-      )}
-      {scope === 'single' && !hasSingle && (
+      {/* Inner workflow */}
+      {scopeAvailable ? (
+        scope === 'single' ? (
+          <SingleSetterQAWorkflow
+            preSelectedHouseId={preSelectedHouseId ?? null}
+            preSelectedAction={preSelectedAction ?? null}
+            focusSection={meta.single}
+          />
+        ) : (
+          <MultiSetterQAWorkflow focusSection={meta.multi} />
+        )
+      ) : (
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertDescription>This QA check is only recorded on multi-stage setters. Switch scope to Multi Stage Setter above.</AlertDescription>
-        </Alert>
-      )}
-      {scope === 'multi' && !hasMulti && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>This QA check is only recorded on single-stage setters. Switch scope to Single Stage Setter above.</AlertDescription>
+          <AlertDescription>
+            {meta.label} is only available on {meta.multi ? 'multi-stage' : 'single-stage'} setters.
+            Switch scope above.
+          </AlertDescription>
         </Alert>
       )}
     </div>
