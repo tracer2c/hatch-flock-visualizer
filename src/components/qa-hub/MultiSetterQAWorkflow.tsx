@@ -775,17 +775,6 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
           />
         </TabsContent>
 
-        <TabsContent value="humidity">
-          <MachineWideHumidityEntry
-            machine={{ id: selectedMachine.id, machine_number: selectedMachine.machine_number }}
-            technicianName={technicianName}
-            notes={notes}
-            checkDate={checkDate}
-            uniqueFlocks={uniqueFlockDetails}
-            isPastDay={false}
-            onSubmit={handleSubmitHumidity}
-          />
-        </TabsContent>
 
         <TabsContent value="rectal">
           <RectalTempEntry 
