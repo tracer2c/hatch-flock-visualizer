@@ -35,6 +35,7 @@ import ReportsPage from "./pages/management/ReportsPage";
 import ActivityLogPage from "./pages/management/ActivityLogPage";
 import VisualOptionsPage from "./pages/management/VisualOptionsPage";
 import ArchivePage from "./pages/management/ArchivePage";
+import RoomsPage from "./pages/management/RoomsPage";
 import MultiStagePage from "./pages/MultiStagePage";
 import SingleStagePage from "./pages/SingleStagePage";
 import ChecklistPage from "./pages/ChecklistPage";
