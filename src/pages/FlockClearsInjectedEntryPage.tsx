@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { ArrowLeft, Syringe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,7 +67,7 @@ export default function FlockClearsInjectedEntryPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         <ReadOnlyBanner show={readOnly} />
-        <Button variant="outline" size="sm" onClick={() => navigate("/data-entry")}>
+        <Button variant="outline" size="sm" onClick={goBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Weekly Flock Rollup
         </Button>

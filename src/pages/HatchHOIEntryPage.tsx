@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import { addDays, format, startOfWeek } from "date-fns";
 import { ArrowLeft, Egg, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,7 +174,7 @@ export default function HatchHOIEntryPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-4">
       <ReadOnlyBanner show={readOnly} />
 
-      <Button variant="ghost" size="sm" onClick={() => navigate("/data-entry")}>
+      <Button variant="ghost" size="sm" onClick={goBack}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Weekly Flock Rollup
       </Button>
