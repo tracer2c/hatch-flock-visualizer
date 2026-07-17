@@ -138,7 +138,7 @@ export default function HatchHOIEntryPage() {
       : format(new Date(), "yyyy-MM-dd"),
   });
   const isPastWeek = day.isPastDay;
-  const canEdit = !readOnly && !isPastWeek;
+  const canEdit = !readOnly;
 
   const [showDetail, setShowDetail] = useState(false);
   const save = useSaveFlockTotalsToBatches();
