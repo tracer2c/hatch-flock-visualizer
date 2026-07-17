@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, RefreshCw, FileSpreadsheet, FileText, Search, X, LayoutGrid, Rows3 } from "lucide-react";
+import { Download, RotateCw, FileSpreadsheet, FileText, Search, X, LayoutGrid, Rows3 } from "lucide-react";
 import { CompleteDataView } from "@/components/dashboard/CompleteDataView";
 import { DataSheetCenteredFilterDialog } from "@/components/dashboard/DataSheetCenteredFilterDialog";
 import type { DataSheetViewMode } from "@/components/dashboard/DataSheetViewModeToggle";
@@ -18,6 +19,7 @@ import { ExportService } from "@/services/exportService";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 import { cn } from "@/lib/utils";
+
 
 const EmbrexDataSheetPage = () => {
   const { hasWriteAccess } = usePermissions();
@@ -49,11 +51,19 @@ const EmbrexDataSheetPage = () => {
     loadFilterOptions();
   }, []);
 
+  // Global ⌘K / Ctrl+K focuses search
   useEffect(() => {
-    if (searchOpen) {
-      searchInputRef.current?.focus();
-    }
-  }, [searchOpen]);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
 
   const loadFilterOptions = async () => {
     const [hatcheriesRes, machinesRes] = await Promise.all([
@@ -238,8 +248,6 @@ const EmbrexDataSheetPage = () => {
     toast.success("Data refreshed");
   };
 
-  const showViewToggle = activeTab !== "embrex";
-
   return (
     <TooltipProvider delayDuration={200}>
       <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
@@ -259,74 +267,94 @@ const EmbrexDataSheetPage = () => {
             </Tabs>
 
             <div className="ml-auto flex items-center gap-2">
-              {showViewToggle && (
-                <div className="inline-flex rounded-md border p-0.5">
-                  <Button
-                    variant={viewMode === "rows" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 gap-1.5 px-2"
-                    onClick={() => setViewMode("rows")}
-                  >
-                    <Rows3 className="h-3.5 w-3.5" />
-                    By House
-                  </Button>
-                  <Button
-                    variant={viewMode === "flock-summary" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 gap-1.5 px-2"
-                    onClick={() => setViewMode("flock-summary")}
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    By Flock
-                  </Button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-1.5">
-                <Switch id="percentage-toggle" checked={showPercentages} onCheckedChange={setShowPercentages} />
-                <Label htmlFor="percentage-toggle" className="text-xs cursor-pointer whitespace-nowrap">
-                  Percentages
-                </Label>
+              {/* View toggle — always visible for a consistent per-tab layout */}
+              <div className="inline-flex rounded-lg border bg-muted/40 p-0.5">
+                <Button
+                  variant={viewMode === "rows" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-xs"
+                  onClick={() => setViewMode("rows")}
+                >
+                  <Rows3 className="h-3.5 w-3.5" />
+                  By House
+                </Button>
+                <Button
+                  variant={viewMode === "flock-summary" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-xs"
+                  onClick={() => setViewMode("flock-summary")}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  By Flock
+                </Button>
               </div>
 
-              {/* Expandable search */}
-              <div className={cn("flex items-center transition-all", searchOpen ? "w-56" : "w-9")}>
+              <Separator orientation="vertical" className="h-6" />
+
+              {/* Persistent pill search with ⌘K hint */}
+              <div className="relative hidden md:block w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search flock, house, technician…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setSearchTerm("");
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="h-9 pl-8 pr-16 text-sm rounded-full bg-muted/40 border-muted focus-visible:bg-background"
+                />
+                {searchTerm ? (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden lg:inline-flex h-5 items-center gap-0.5 rounded border bg-background px-1.5 text-[10px] font-medium text-muted-foreground">
+                    ⌘K
+                  </kbd>
+                )}
+              </div>
+
+              {/* Icon-only search on small screens */}
+              <div className="md:hidden">
                 {searchOpen ? (
-                  <div className="relative w-full">
+                  <div className="relative w-48">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      ref={searchInputRef}
-                      placeholder="Search..."
+                      autoFocus
+                      placeholder="Search…"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setSearchTerm("");
-                          setSearchOpen(false);
-                        }
-                      }}
                       onBlur={() => { if (!searchTerm) setSearchOpen(false); }}
-                      className="h-9 pl-7 pr-7 text-sm"
+                      className="h-9 pl-7 pr-2 text-sm"
                     />
-                    {searchTerm && (
-                      <button
-                        onClick={() => { setSearchTerm(""); setSearchOpen(false); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                   </div>
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSearchOpen(true)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted" onClick={() => setSearchOpen(true)}>
                         <Search className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Search</TooltipContent>
                   </Tooltip>
                 )}
+              </div>
+
+              <Separator orientation="vertical" className="h-6" />
+
+              <div className="flex items-center gap-1.5">
+                <Switch id="percentage-toggle" checked={showPercentages} onCheckedChange={setShowPercentages} />
+                <Label htmlFor="percentage-toggle" className="text-xs cursor-pointer whitespace-nowrap">
+                  %
+                </Label>
               </div>
 
               <DataSheetCenteredFilterDialog
@@ -341,10 +369,12 @@ const EmbrexDataSheetPage = () => {
                 onToggleMachine={toggleMachine}
               />
 
+              <Separator orientation="vertical" className="h-6" />
+
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleManualRefresh}>
-                    <RefreshCw className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted" onClick={handleManualRefresh}>
+                    <RotateCw className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Refresh</TooltipContent>
@@ -354,7 +384,7 @@ const EmbrexDataSheetPage = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted">
                         <Download className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -396,3 +426,4 @@ const EmbrexDataSheetPage = () => {
 };
 
 export default EmbrexDataSheetPage;
+

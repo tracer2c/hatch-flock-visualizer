@@ -337,7 +337,7 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, 
 
   switch (activeTab) {
     case "embrex":
-      return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
+      return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     case "residue":
       return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     case "egg-pack":

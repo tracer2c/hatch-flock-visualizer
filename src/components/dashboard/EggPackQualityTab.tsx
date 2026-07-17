@@ -318,7 +318,12 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                 const setWeek = extractStringFromNotes(item.notes, 'Set Week');
 
                 return (
-                  <TableRow key={item.batch_id}>
+                  <TableRow
+                    key={item.batch_id}
+                    className={showActions ? "cursor-pointer hover:bg-muted/50" : undefined}
+                    onClick={showActions ? () => handleEdit(item) : undefined}
+                  >
+
                     <TableCell>{item.flock_name || "-"}</TableCell>
                     <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>
@@ -341,7 +346,8 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
                     <TableCell>{item.inspector_name || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                     {showActions && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
