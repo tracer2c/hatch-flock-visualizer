@@ -192,11 +192,17 @@ export default function WeeklyRollupView({ onOpenFlock }: Props) {
                         {(row.flock_level_source?.residue || row.flock_level_source?.fertility) && (
                           <span title={`House sum: ${fmtPct(row.house_sum_alt?.hof_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
                         )}
+                        {row.hof_hoi_source === "batch" && row.hof_pct != null && (
+                          <span title="Derived from batch totals (chicks ÷ fertile via fertility %)" className="ml-1 text-[10px] text-muted-foreground">·b</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         {fmtPct(row.hoi_pct)}
                         {(row.flock_level_source?.residue || row.flock_level_source?.fertility) && (
                           <span title={`House sum: ${fmtPct(row.house_sum_alt?.hoi_pct)}`} className="ml-1 text-[10px] text-primary">●</span>
+                        )}
+                        {row.hof_hoi_source === "batch" && row.hoi_pct != null && (
+                          <span title="Derived from batch totals (chicks ÷ eggs injected)" className="ml-1 text-[10px] text-muted-foreground">·b</span>
                         )}
                       </TableCell>
                       <TableCell>
