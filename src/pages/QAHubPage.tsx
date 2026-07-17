@@ -19,6 +19,7 @@ import { useQAStats } from '@/hooks/useQAHubData';
 import SingleSetterQAWorkflow from '@/components/qa-hub/SingleSetterQAWorkflow';
 import MultiSetterQAWorkflow from '@/components/qa-hub/MultiSetterQAWorkflow';
 import RecentQAEntries from '@/components/qa-hub/RecentQAEntries';
+import RoomHumidityEntry from '@/components/qa-hub/RoomHumidityEntry';
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
