@@ -202,8 +202,8 @@ export default function HatchHOIEntryPage() {
               </p>
             </div>
             {isPastWeek && (
-              <Badge variant="outline" className="bg-slate-100 text-slate-700">
-                View only (past week)
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                Editing past week
               </Badge>
             )}
           </div>
