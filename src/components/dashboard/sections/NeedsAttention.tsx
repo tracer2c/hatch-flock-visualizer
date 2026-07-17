@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
