@@ -231,16 +231,7 @@ const FlockScopedShell: React.FC<{
               </Select>
             </div>
 
-            <div className="space-y-1.5 min-w-[180px]">
-              <Label className="text-xs">Check Date</Label>
-              <DatePicker
-                date={checkDate}
-                onSelect={(d) =>
-                  setCheckDate(d ? format(d, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0])
-                }
-                placeholder="Select date"
-              />
-            </div>
+            {/* Date now lives in the QA Hub header */}
 
             <div className="space-y-1.5 min-w-[180px]">
               <Label className="text-xs">Technician</Label>
