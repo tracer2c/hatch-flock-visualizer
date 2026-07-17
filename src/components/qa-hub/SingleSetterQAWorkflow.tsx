@@ -70,7 +70,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [technicianName, setTechnicianName] = useState('');
+  // Technician name is locked to the signed-in user — see derived value below.
   const [notes, setNotes] = useState('');
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
