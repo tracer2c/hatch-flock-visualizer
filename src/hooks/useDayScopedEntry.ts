@@ -43,7 +43,8 @@ export function useDayScopedEntry<T extends Record<string, any> = Record<string,
     const isToday = checkDate === todayISO;
     const isPastDay = checkDate < todayISO;
     const isFutureDay = checkDate > todayISO;
-    const mode: DayScopedMode = isToday ? 'edit' : 'view';
+    // Editing is allowed for today and any past day. Only future dates lock.
+    const mode: DayScopedMode = isFutureDay ? 'view' : 'edit';
     const lastSavedAt = existingRow
       ? ((existingRow as any)[savedAtField] ?? (existingRow as any).created_at ?? null)
       : null;
