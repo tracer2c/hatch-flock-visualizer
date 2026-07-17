@@ -24,9 +24,11 @@ interface CompleteDataViewProps {
   };
   onDataReady?: (data: any[]) => void;
   readOnly?: boolean;
+  viewMode?: "rows" | "flock-summary";
+  onViewModeChange?: (v: "rows" | "flock-summary") => void;
 }
 
-export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, readOnly }: CompleteDataViewProps) => {
+export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, readOnly, viewMode, onViewModeChange }: CompleteDataViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -337,13 +339,13 @@ export const CompleteDataView = ({ activeTab, searchTerm, filters, onDataReady, 
     case "embrex":
       return <EmbrexHOITab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
     case "residue":
-      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
+      return <ResidueBreakoutTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     case "egg-pack":
-      return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
+      return <EggPackQualityTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     case "hatch":
-      return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
+      return <HatchPerformanceTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     case "qa":
-      return <QAMonitoringTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} />;
+      return <QAMonitoringTab data={data} searchTerm={searchTerm} filters={filters} onDataUpdate={loadCompleteData} readOnly={readOnly} viewMode={viewMode} onViewModeChange={onViewModeChange} />;
     default:
       return <AllDataTab data={data} searchTerm={searchTerm} onDataUpdate={loadCompleteData} />;
   }
