@@ -26,6 +26,7 @@ export interface WeeklyFlockRollupRow {
   fertility_pct: number | null;
   hof_pct: number | null;
   hoi_pct: number | null;
+  hof_hoi_source: "override" | "residue" | "fertility" | "batch" | null;
   statuses: string[];
   worst_status: string;
   /** Which metrics were sourced from a whole-flock entry (override) */

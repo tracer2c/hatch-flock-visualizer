@@ -1,63 +1,67 @@
-# QA Hub — Unified Date + Room-Based Humidity
+# Fix: HOF % and HOI % showing 0.0% / — in Weekly Flock Rollup
 
-Three coordinated changes so the QA Hub has one date, humidity is treated as a room-level check (not per machine), and rooms are managed as first-class entities users can add from Settings — with a "+ Add room" shortcut from the Hub that returns the user back with context intact.
+## Root cause (verified against the database)
 
-## 1. Single date picker at the QA Hub header
+The Weekly Flock Rollup reads HOF % / HOI % **only** from `residue_analysis.hof_percent` / `hoi_percent` (falling back to the same columns on `fertility_analysis`). For every batch in Jun 15 – Jun 21, 2026 those columns are `NULL`, even though `batches.chicks_hatched` and `batches.eggs_injected` are populated with real values (e.g. `chicks=3218`, `injected=3385`).
 
-Today the date is chosen twice — once inside **Process / Room Checks** and once inside **Flock-Based Checks** — wasting vertical space and letting the two scopes disagree.
+So the client is right — the underlying data ("both are in there") lives on the batches, but the rollup never derives HOF/HOI from those numbers.
 
-- Lift a single `checkDate` state into `QAHubPage.tsx` and render it in the header row (next to the "Friday, Jul 17" badge / KPI chip), using the same UUI-styled date input already used elsewhere.
-- Pass `checkDate` down to `ProcessScopedShell`, `FlockScopedShell`, and the Machine-Based workflows; remove the local Check Date fields from those shells.
-- Technician stays where it is (auto-filled from the logged-in user).
-- Persist the selected date in the URL (`?date=YYYY-MM-DD`) so refresh / back-nav keeps context.
+Sample rows confirming this:
 
-## 2. Rooms as a real entity (managed in Settings)
+```
+batch                                    chicks   injected   fa_hof  fa_hoi  ra_hof  ra_hoi
+MS-2026-06-18-Lott-Line-3&4-64           3218     3385       NULL    NULL    NULL    NULL
+MS-2026-06-16-Rip-Farm-29                4287     4564       NULL    NULL    NULL    NULL
+MS-2026-06-16-Cedar-Hill-1&2-3           3792     4153       NULL    NULL    NULL    NULL
+```
 
-Humidity, Rectal Temps, and any future room-scoped QA all need a **Room** — not a machine.
+`fertility_analysis` sometimes stores a small `fertile_eggs` count (374, 624, 584) — that's a candling sample, not total fertile eggs, and neither `fertility_analysis` nor `residue_analysis` has a `chicks_hatched` column at all. So the aggregation in `dataSheetAggregation.ts` that does `pct(chicks, fertile)` for those tables always gets `chicks = 0` and produces `0.0%`.
 
-New table `public.rooms`:
+## Fix (frontend only, no schema change)
 
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| company_id | uuid | RLS scope |
-| unit_id | uuid FK → units | which hatchery |
-| name | text | e.g. "Chick Room A" |
-| room_type | enum | `chick`, `separator`, `hatcher`, `setter`, `wash`, `other` |
-| is_active | bool | default true |
-| created_at / updated_at | timestamptz | |
+Extend `src/hooks/useWeeklyFlockRollup.ts` to compute a **batch-derived HOF/HOI** per flock and use it whenever the residue/fertility-derived value is missing or zero.
 
-Migration includes GRANTs for `authenticated` + `service_role`, RLS by `company_id`, and a `has_role`-gated write policy (admin / ops head).
+Per flock bucket, compute:
 
-New Settings page `src/pages/management/RoomsPage.tsx` (linked from the Management hub next to Machines / Hatcheries): list + add / edit / archive rooms per hatchery.
+- `totalChicks   = Σ batches.chicks_hatched`
+- `totalInjected = Σ batches.eggs_injected`
+- `totalSet      = Σ batches.total_eggs_set`
+- `fertilityPct  = overrideFertPct ?? houseFertPct` (already computed)
+- `fertileFromFertility = totalSet × fertilityPct / 100` (only when `fertilityPct` is known)
 
-Seed once per company: if a company has zero rooms on first visit, auto-create "Chick Room", "Separator Room", "Hatcher Room 1" so nothing breaks for existing users.
+Then:
 
-## 3. Humidity becomes room-based, not machine-based
+- `batchHoiPct = totalInjected > 0 ? (totalChicks / totalInjected) × 100 : null`
+- `batchHofPct = fertileFromFertility > 0 ? (totalChicks / fertileFromFertility) × 100 : null`
 
-- Remove Humidity from the Machine-Based sub-tabs (`MACHINE_SUB` in `QAHubPage.tsx`).
-- Add Humidity to the Process / Room shell alongside Rectal Temps and Tray Wash.
-- New `RoomHumidityEntry.tsx` (fresh, not the old one): Room dropdown (from the new table, filtered by selected hatchery) + %RH + temperature + notes; stored in `qa_monitoring` with `check_type='humidity'` and a `room_id` reference in `candling_results` JSON.
-- Historical machine-scoped humidity rows keep rendering in the Overview dashboard's Recent Activity feed — read path is untouched.
+Precedence when picking what to display:
 
-## 4. "+ Add room" shortcut with return context
+```text
+hof_pct = overrideHofPct
+       ?? (houseHofPct && houseHofPct > 0 ? houseHofPct : null)
+       ?? batchHofPct
+hoi_pct = overrideHoiPct
+       ?? (houseHoiPct && houseHoiPct > 0 ? houseHoiPct : null)
+       ?? batchHoiPct
+```
 
-Inside the Process/Room Humidity form (and Rectal Temps room picker), when the Room dropdown is open, append a **"+ Add room"** action.
+The `> 0` guard prevents an all-zero residue row (which is what currently exists in the DB when residue was never actually captured) from beating the real batch-derived value.
 
-- Clicking it navigates to `/management/rooms?returnTo=/qa-hub&group=process&sub=humidity&date=YYYY-MM-DD`.
-- `RoomsPage` reads `returnTo` and shows a **"← Back to QA Hub"** button in its header.
-- After saving a new room, we toast success and stay on the page (so they can add more), but the Back button always returns to the exact tab / date they came from.
-- Back on the Hub, the new room appears in the dropdown (React Query invalidation on `rooms`).
+The `flock_level_source` flags stay as-is (they mark whether a *whole-flock override* was applied). Add a new tag `hof_hoi_source: 'override' | 'residue' | 'fertility' | 'batch' | null` on each row so the UI can show a small hint (e.g. subtle "· from batch totals" tooltip on the `●` marker) — no visual redesign, just a tooltip string change in `WeeklyRollupView.tsx`.
 
-## Technical notes
+## Files touched
 
-- Files touched: `src/pages/QAHubPage.tsx`, `src/components/qa-hub/shells/ProcessScopedShell.tsx`, `src/components/qa-hub/shells/FlockScopedShell.tsx`, `src/components/qa-hub/SingleSetterQAWorkflow.tsx` + `MultiSetterQAWorkflow.tsx` (drop humidity tab).
-- New: `RoomsPage.tsx`, `RoomHumidityEntry.tsx`, `useRooms.ts` hook, migration `create_rooms_table`.
-- Sidebar: add "Rooms" under the Admin / Management group.
-- No changes to Machine-Based Temperature / Angles / Hatch Progression flows.
-- Overview dashboard's Compliance heatmap: swap the "Humidity" column source from machine-scoped to room-scoped counts.
+- `src/hooks/useWeeklyFlockRollup.ts` — compute `batchHofPct`, `batchHoiPct`, apply the new precedence, expose `hof_hoi_source`.
+- `src/components/dashboard/WeeklyRollupView.tsx` — extend the existing `●` tooltip on HOF % / HOI % columns to note when the value is batch-derived. No layout change.
 
 ## Out of scope
 
-- Migrating old humidity rows from machine to room (they remain queryable as-is).
-- Multi-room bulk entry (single room per submission for now).
+- No changes to `residue_analysis` / `fertility_analysis` schema.
+- No changes to the "By House" tab (its rows already show batch-level chicks/injected directly).
+- No changes to the Dashboard KPI cards in this pass — call that out separately if needed.
+
+## Validation
+
+1. Reload Data Entry → Weekly Flock Rollup on Jun 15 – Jun 21, 2026 and confirm HOF % and HOI % are non-zero for flocks that have `chicks_hatched` + `eggs_injected` on their batches (A&M farm, Barron, Big Creek 1&2, etc.).
+2. Confirm a flock with a real whole-flock residue override still displays the override value (unchanged behavior).
+3. Confirm a flock with `fertility_pct = null` still shows `—` for HOF % (we don't invent fertility), but shows HOI % as long as `eggs_injected > 0`.
