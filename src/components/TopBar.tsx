@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, Home, Search, Headset, PanelLeft, PanelLeftClose, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronRight, Home, Search, Headset, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,8 +36,8 @@ export function TopBar() {
     if (role === 'operations_head') return 'secondary';
     return 'outline';
   };
-  const { open: sidebarOpen, toggleSidebar, isMobile, openMobile } = useSidebar();
-  const collapsed = isMobile ? !openMobile : !sidebarOpen;
+  const { isMobile, openMobile } = useSidebar();
+  const collapsed = isMobile ? !openMobile : false;
   const navigate = useNavigate();
   const location = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
