@@ -32,13 +32,17 @@ interface EggPackQualityTabProps {
   };
   onDataUpdate: () => void;
   readOnly?: boolean;
+  viewMode?: DataSheetViewMode;
+  onViewModeChange?: (v: DataSheetViewMode) => void;
 }
 
-export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, readOnly }: EggPackQualityTabProps) => {
+export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, readOnly, viewMode, onViewModeChange }: EggPackQualityTabProps) => {
   const { showPercentages, formatValue } = usePercentageToggle();
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
-  const [view, setView] = useState<DataSheetViewMode>("rows");
+  const [internalView, setInternalView] = useState<DataSheetViewMode>("rows");
+  const view = viewMode ?? internalView;
+  const setView = onViewModeChange ?? setInternalView;
   const [flockEditRow, setFlockEditRow] = useState<any>(null);
 
 
@@ -265,7 +269,7 @@ export const EggPackQualityTab = ({ data, searchTerm, filters, onDataUpdate, rea
 
   return (
     <>
-      <DataSheetViewModeToggle value={view} onChange={setView} />
+      {!onViewModeChange && <DataSheetViewModeToggle value={view} onChange={setView} />}
       {isAggregated && (
         <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
           Aggregated view — one row per flock across all houses & hatcheries. Click <strong>Edit</strong> to maintain flock-level values, or switch to <strong>By House</strong> to edit per-house records.
