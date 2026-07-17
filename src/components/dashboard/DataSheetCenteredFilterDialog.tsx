@@ -118,6 +118,7 @@ export const DataSheetCenteredFilterDialog = ({
 }: DataSheetCenteredFilterDialogProps) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DataSheetFilters>(filters);
+  const [machineSearch, setMachineSearch] = useState("");
 
   useEffect(() => {
     if (open) setDraft(filters);
