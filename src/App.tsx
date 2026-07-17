@@ -203,6 +203,9 @@ function AppContent() {
                       <Route path="/management/hatcheries" element={
                         <RoleProtectedRoute featureKey="hatcheries"><HatcheriesPage /></RoleProtectedRoute>
                       } />
+                      <Route path="/management/rooms" element={
+                        <RoleProtectedRoute featureKey="hatcheries"><RoomsPage /></RoleProtectedRoute>
+                      } />
                       <Route path="/management/house-automation" element={
                         <RoleProtectedRoute featureKey="house_automation"><HouseAutomationPage /></RoleProtectedRoute>
                       } />
