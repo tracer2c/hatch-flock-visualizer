@@ -170,6 +170,29 @@ const QATypeSection: React.FC<{
   const meta = TYPE_META[type];
   const Icon = meta.icon;
 
+  // Humidity is room-scoped — no machine layer, no single/multi.
+  if (type === 'humidity') {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Icon className="h-5 w-5 text-primary" strokeWidth={1.5} />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{meta.label}</CardTitle>
+                <CardDescription>{meta.hint}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <RoomHumidityEntry />
+      </div>
+    );
+  }
+
+
   return (
     <div className="space-y-4">
       <Card>
