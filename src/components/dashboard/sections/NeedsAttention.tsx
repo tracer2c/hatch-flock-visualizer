@@ -30,9 +30,10 @@ interface Props {
   rows: WeeklyFlockRollupRow[];
   criticalAlerts: number;
   emptyState?: React.ReactNode;
+  compact?: boolean;
 }
 
-export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
+export function NeedsAttention({ rows, criticalAlerts, emptyState, compact }: Props) {
   const navigate = useNavigate();
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
