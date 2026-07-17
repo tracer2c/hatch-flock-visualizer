@@ -80,17 +80,17 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
         const t = toneMap[k.tone];
         const Icon = k.icon;
         return (
-          <Card key={k.label} className={cn("p-4 border", t.border)}>
-            <div className="flex items-start justify-between mb-2">
+          <Card key={k.label} className={cn("p-3 border", t.border)}>
+            <div className="flex items-start justify-between mb-1">
               <div className={cn("text-[10px] font-semibold tracking-wide", t.text)}>{k.label}</div>
-              <div className={cn("p-1.5 rounded-lg", t.bg)}>
-                <Icon className={cn("h-3.5 w-3.5", t.text)} />
+              <div className={cn("p-1 rounded-md", t.bg)}>
+                <Icon className={cn("h-3 w-3", t.text)} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-foreground">{k.value}</div>
-            {k.sub && <div className="text-xs text-muted-foreground mt-0.5">{k.sub}</div>}
+            <div className="text-xl font-bold text-foreground leading-tight">{k.value}</div>
+            {k.sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{k.sub}</div>}
             {k.delta && (
-              <div className={cn("text-[11px] mt-1", k.deltaPositive ? "text-emerald-600" : "text-destructive")}>
+              <div className={cn("text-[10px] mt-0.5 truncate", k.deltaPositive ? "text-emerald-600" : "text-destructive")}>
                 {k.delta}
               </div>
             )}
