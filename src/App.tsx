@@ -69,6 +69,7 @@ import { SyncManager } from "./components/SyncManager";
 import { useOfflinePrefetch } from "./hooks/useOfflinePrefetch";
 import { AnalyticsFilterProvider } from "./contexts/AnalyticsFilterContext";
 import { AppBreadcrumbs } from "./components/uui/AppBreadcrumbs";
+import { RouteHistoryTracker } from "./components/RouteHistoryTracker";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,7 @@ function AppContent() {
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <TopBar />
                     <main className="flex-1 overflow-auto pt-12">
+                    <RouteHistoryTracker />
                     <div className="px-4 sm:px-6 pt-3">
                       <AppBreadcrumbs />
                     </div>
