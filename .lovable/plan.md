@@ -1,64 +1,64 @@
 ## Goal
-Turn the main dashboard into a **single-viewport, no-scroll** operational cockpit. Remove space-wasting chrome, add a subtle weather/location chip, and introduce an **AI summary card** that quietly refreshes every 2 hours.
+Refactor `src/components/ModernSidebar.tsx` so it feels like a deliberate enterprise sidebar: narrower, tighter spacing, independently scrolling nav, fixed footer, and a cleaner active state — following the spec the user pasted.
 
-## Layout (fits in one viewport, internal scroll only where needed)
+## Scope
+Frontend only. Single file: `src/components/ModernSidebar.tsx`. No route, permission, or nav-content changes.
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ [Weather chip: ☀ Auburn, AL · 78°F]     [Date range] [Filters ⚙]    │  ← 44px header row
-├──────────────────────────────────────────────────────────────────────┤
-│ KPI 1 │ KPI 2 │ KPI 3 │ KPI 4 │ KPI 5                                │  ← compact KPI row (~90px)
-├──────────────────────────────────────────────────────────────────────┤
-│ ┌── AI Daily Briefing ──────────────┐ ┌── Needs Attention (compact) ┐│
-│ │ • bullet 1                        │ │ 3 critical · 5 warning       ││
-│ │ • bullet 2                        │ │ chip list, not full row      ││
-│ │ • bullet 3                        │ └──────────────────────────────┘│  
-│ │ Last updated 2h ago               │ ┌── QA Alerts (compact) ───────┐│
-│ └───────────────────────────────────┘ │ …                            ││
-│ ┌── Weekly Flock Status ────────────┐ └──────────────────────────────┘│
-│ │ dense table, internal scroll only │                                 │
-│ └───────────────────────────────────┘                                 │
-└──────────────────────────────────────────────────────────────────────┘
-```
+## Layout & dimensions
+- Sidebar width: expanded **264 px**, collapsed rail **72 px** (currently 260 / 56).
+- Enforce three fixed regions using flex on the `Sidebar` root:
+  - `SidebarHeader` — `h-20`, shrink-0, brand left + collapse button right (single button, no floating tooltip below).
+  - `SidebarContent` — `flex-1 overflow-y-auto px-3 py-4` (independent scroll).
+  - `SidebarFooter` — `shrink-0 border-t`, target ~150–165 px.
+- Remove the current `pt-14` header padding hack; brand + collapse live inside the 80 px header.
 
-Root container becomes `h-[calc(100vh-topbar)] overflow-hidden` with a grid where only inner cards scroll.
+## Header
+- Left: `Hatchery Pro` wordmark, 20 px, `font-semibold`, hidden when collapsed.
+- Right: collapse button (`PanelLeftClose`, rotates 180° when collapsed), 28 px hit area, centered when collapsed.
+- No secondary/floating collapse trigger below the header.
 
-## Changes
+## Navigation spacing
+- Group label: `text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`, `mt-6 mb-2 px-3` (first group `mt-0`).
+- Item: `h-11`, `rounded-xl`, `px-3`, `gap-3`, icon `h-5 w-5`, text `text-[15px]`.
+- Gap between items: `gap-1` (4 px).
+- Active item:
+  - `bg-primary/10 text-primary font-medium` (slightly stronger than today).
+  - Left indicator: `absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary` — inset 4 px from the sidebar edge (achieved by removing the current outer border overlap; indicator sits inside the item).
+  - Pill no longer spans edge-to-edge — item has `mx-0` inside the `px-3` nav container so the rounded background is inset.
+- Hover (inactive): `hover:bg-muted/60 hover:text-foreground`.
 
-### 1. Remove header chrome (`DashboardHome.tsx`)
-- Delete the "Hatchery Dashboard" title, egg icon, and description paragraph.
-- Replace with a slim 44px header row: **weather/location chip (left)** + existing `AnalyticsFilters` (right).
+## Nested items (Data Entry, QA Hub, Management)
+- Parent is expandable; chevron on the right, rotates 90° when open.
+- Children only render when parent is open.
+- Children container: `ml-6 border-l border-border pl-3 mt-1 space-y-0.5`.
+- Child row: `h-10 rounded-lg px-2 gap-2 text-sm text-muted-foreground`.
+- Active child: `bg-primary/10 text-primary font-medium` (no left bar on children).
+- In collapsed rail, sub-items are hidden; hovering the parent icon shows the existing shadcn tooltip.
 
-### 2. Weather + location chip (new `WeatherLocationChip.tsx`)
-- On mount: fetch IP geolocation from `https://ipapi.co/json/` (no key, free tier) → `{city, region_code}`. Cache in `sessionStorage` for the session.
-- Fetch current weather from **Open-Meteo** (`https://api.open-meteo.com/v1/forecast?...&current=temperature_2m,weather_code&temperature_unit=fahrenheit`) — free, no API key.
-- Render: `<icon> Auburn, AL · 78°F`. Icon map: sun / cloud / cloud-rain / cloud-snow / cloud-lightning from lucide.
-- Silent fail (hide chip) if either request fails — never blocks dashboard.
+## Footer
+- Compact two-item nav row (Support, Settings), same `h-11` styling as main nav but no group label.
+- Divider (`border-t`) above the profile row.
+- Profile row: `h-14`, avatar 32 px + name only (no email inline). Email moves to `title` tooltip.
+  - `[SN] Sai Sruthi` on line 1, `View profile` in `text-[11px] text-muted-foreground` on line 2.
+- When collapsed: only avatar shown, centered; Support/Settings become icon-only with tooltips.
 
-### 3. Compact "Needs Attention" (`NeedsAttention.tsx`)
-- Collapse from full-width row to a **compact card** in the right column.
-- Show counts as chips (`3 critical`, `5 warning`) with a small horizontal list of the top 3 flock names; "View all" link opens existing detail.
+## Collapsed rail (72 px) behaviour
+- Set `--sidebar-width-icon: 72px`.
+- Header: only the collapse button, centered.
+- Items: icon centered, label hidden, tooltip via shadcn `SidebarMenuButton` `tooltip` prop (already wired).
+- Nested items and chevrons hidden.
+- Footer: Support/Settings icons + avatar only.
 
-### 4. AI Daily Briefing card (new `AIBriefingCard.tsx` + `useAIBriefing.ts`)
-- Calls existing `ai-chat` edge function with a fixed prompt: summarize today's KPIs, alerts, and top attention flocks into **4–6 short bullets** (plain user language).
-- Highlighted styling: soft primary gradient background, sparkle icon, bulleted list.
-- **Caching / refresh cadence**: store `{ text, generatedAt }` in `localStorage` under `hp:ai-briefing:<companyId>`. On mount, if `Date.now() - generatedAt > 2h` → refetch silently in background (no loading spinner over old content; swap in when ready).
-- Footer shows only `Last updated 2h ago` in muted 11px text — no reload UI, no manual refresh button.
-
-### 5. Compact KPI row
-- Reduce `KpiRow` card padding (`p-4` → `p-3`) and value size (`text-2xl` → `text-xl`) so the row fits ~90px tall.
-
-### 6. Right column stack
-- `DashboardQaAlerts` becomes compact (max-height with internal scroll).
-- Remove `ActiveHousesPipeline` from the default view (keep component, unmount here) — reclaims the vertical space needed for no-scroll.
-
-## Technical notes
-- No new dependencies. Open-Meteo + ipapi are keyless public APIs; called client-side.
-- AI briefing reuses `supabase.functions.invoke('ai-chat', ...)`; the prompt asks explicitly for bullet-only output and forbids all-zero tables (matches existing system prompt rules).
-- Everything is presentation-layer only — no schema, no RLS, no business logic changes.
-- Verify one-page fit at 1280×800 and 1440×900 desktop; on <lg screens fall back to normal scroll (mobile isn't a "no-scroll" target).
+## Active-state logic
+Keep existing `isParentActive` / `isSubActive`. No changes to route detection or `useExpanded` persistence.
 
 ## Out of scope
-- Editable briefing prompt / admin controls.
-- Multi-day weather forecast.
-- Persisting briefings to the DB (localStorage is enough for a 2h cache).
+- Nav content, groupings, and permissions unchanged.
+- No changes to `TopBar`, `AppBreadcrumbs`, or routes.
+- No new dependencies.
+
+## Verification
+- Build passes.
+- Visual pass at 967 px viewport (current preview): sidebar 264 px, brand + collapse in header, groups tightly spaced, active Dashboard shows inset bar + inset pill, footer sits at bottom with Support/Settings + compact profile.
+- Collapsed: 72 px rail, icons centered, tooltips work, footer avatar centered.
+- Nested Weekly Rollup only visible when Data Entry is expanded; guide line visible.
