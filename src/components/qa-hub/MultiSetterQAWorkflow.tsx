@@ -730,9 +730,6 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             <TabsTrigger value="angles" className="flex items-center gap-1 text-xs">
               <Ruler className="h-3 w-3" />Angles
             </TabsTrigger>
-            <TabsTrigger value="humidity" className="flex items-center gap-1 text-xs">
-              <Droplets className="h-3 w-3" />Humidity
-            </TabsTrigger>
             <TabsTrigger value="rectal" className="flex items-center gap-1 text-xs">
               <Thermometer className="h-3 w-3" />Rectal
             </TabsTrigger>
