@@ -1,107 +1,126 @@
-# QA Hub — Reorganize by Scope (Machine / Process / Flock)
+# QA Hub Overview — Manager-Grade Dashboard (Single Viewport)
 
-Client's new mental model: not every QA check is machine-based. Today the UI forces users through machine → tabs even for room-level or flock-level checks. We'll restructure QA Hub into three clean groups matching how inspections actually happen.
+Today's Overview tab is just a table of recent entries with a broken eye button. Replace it with a compact, single-viewport dashboard aimed at what a **hatchery manager** actually needs to know at a glance, plus a working detail drawer for the "view" action.
 
 ---
 
-## 1. New top-level structure
+## 1. Layout — one page, no outer scroll
 
-Replace the current 9-tab type row with **3 scope groups**, each with its own sub-tabs:
+Fixed viewport: Overview content sits inside `h-[calc(100vh-headers)] overflow-hidden` with each panel owning its own inner scroll.
 
 ```text
-QA Hub
-├─ Overview  (recent entries — unchanged)
-├─ 🏭 Machine-Based        → pick hatchery → pick machine → tab
-│    • Temperature
-│    • Angles
-│    • Hatch Progression
-│    • Humidity            ← moved here (client wants machine dropdown back)
-├─ 🧪 Process / Room       → pick room → form (no machine)
-│    • Tray Wash           (throughout-the-day, resumable — already built)
-│    • Rectal Temperatures (Chick Room / Separator Room / Hatcher)
-├─ 🐣 Flock-Based          → pick flock/house → form (no machine)
-│    • Specific Gravity
-│    • Culls
+┌──────────────────────────────────────────────────────────────────────────┐
+│  KPI STRIP  (5 cards, no scroll)                                         │
+│  Today | This Week | Out-of-Range 24h | Overdue Checks | Machines Active │
+├───────────────────────────┬──────────────────────────┬───────────────────┤
+│ TODAY'S COMPLIANCE        │ ATTENTION NEEDED         │ RECENT ACTIVITY   │
+│ (heatmap by check type)   │ (out-of-range + overdue) │ (compact feed)    │
+│                           │                          │                   │
+│ • Temp        ● ● ● ○ ○   │ 🔴 DHN-01 · Temp 102.4°F │ Sruthi · Hatch    │
+│ • Angles      ● ● ● ● ○   │ 🔴 Setter Rm · Hum 48%   │ Jack · Tray Wash  │
+│ • Humidity    ● ● ○ ─ ─   │ ⚠ Chick Rm rectal >24h  │ Sruthi · Culls    │
+│ • Hatch Prog. ● ● ● ● ●   │ ⚠ Angles overdue: DHN-3 │ …scrollable       │
+│ • Tray Wash   ● ○ ─ ─ ─   │                          │                   │
+│ • Rectal Temp ● ● ● ─ ─   │ [click row → detail]     │ [click → detail]  │
+│ • Gravity     ● ● ─ ─ ─   │                          │                   │
+│ • Culls       ● ─ ─ ─ ─   │                          │                   │
+│                           │                          │                   │
+│ scroll ↕ inside           │ scroll ↕ inside          │ scroll ↕ inside   │
+├───────────────────────────┴──────────────────────────┴───────────────────┤
+│  JUMP TO ENTRY  → chips: [Log Temp] [Log Angles] [Log Humidity] … [Wash]│
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-Overview tab stays as-is.
-
-> ⚠️ Reversal note: last turn we removed the machine layer from Humidity per an earlier request. The current draft says *"Humidity — Include a Machine dropdown."* We will restore the machine-scoped humidity flow (`MachineWideHumidityEntry`) and delete `RoomHumidityEntry`. Flagging in case that's not what you want — see open question below.
+Desktop = 3 columns; tablet/mobile stacks vertically with the KPI strip sticky at top and each panel a collapsible card.
 
 ---
 
-## 2. Flow per group
+## 2. Panels — what & why
 
-**Machine-Based (Temperature / Angles / Hatch Progression / Humidity)**
-Single header shared across all 4 tabs:
-1. Hatchery dropdown (defaults to "All")
-2. Machine picker (single-setter list or multi-setter list — auto-detected from machine type; no more "Single Stage / Multi Stage" scope toggle for the user)
-3. Date picker
-4. Tabs: Temperature · Angles · Hatch Progression · Humidity
+**KPI strip (5 cards)**
+- **Today's checks** — count of qa_monitoring rows where `check_date = today`.
+- **This week's checks** — 7-day count.
+- **Out-of-range (24h)** — count of readings that violated their ideal range (temp 99.5–100.5, humidity 53–58, PPM 50–200, tray-wash ≥140°F).
+- **Overdue checks** — machines / rooms with no reading in the last 24h for their required type (temp/humidity daily, tray wash daily, hatch progression during hatcher window).
+- **Active machines being monitored** — distinct `machine_id` seen in QA in last 24h vs total active machines.
 
-Reuses existing `SingleSetterQAWorkflow` / `MultiSetterQAWorkflow` internals, but the scope toggle is hidden — we branch on `machine.machine_type` after selection.
+Each KPI card has a subtle sparkline (7-day) and clicking it scrolls/filters the panels below.
 
-**Process / Room (Tray Wash, Rectal Temps)**
-No machine picker at all. Header:
-1. Date picker
-2. Tabs: Tray Wash · Rectal Temperatures
+**Today's Compliance (left column)**
+For each of the 8 check types, show a mini-grid: one dot per required target (machine or room), color-coded:
+- green = logged today, in range
+- amber = logged today, out of range
+- gray = not logged yet
+- hyphen = not applicable today
 
-Each form owns its own Room dropdown:
-- Tray Wash: current 5-PPM daily form, resumable (unchanged).
-- Rectal Temps: Room = Chick Room / Separator Room / Hatcher — existing `RectalTempEntry` room list.
+Hover a dot → tooltip with machine/room name + last value. Click → opens the entry drawer (or "Log now" if empty).
 
-Persisted with `machine_id = null`, room stored in `candling_results.room`.
+**Attention Needed (middle column)**
+Scrollable list of urgent items, sorted worst-first:
+- Out-of-range readings from last 24h (red row)
+- Overdue: last check > threshold (amber row)
+- Failed tray-wash / PPM outside 50–200 (red row)
+Each row: badge (type) + target (machine/room/flock) + short reason + timestamp + `View` button that opens the detail drawer.
 
-**Flock-Based (Specific Gravity, Culls)**
-No machine picker. Header:
-1. Hatchery dropdown (optional filter)
-2. Flock / House picker (reuses the flock-week picker style from Data Entry)
-3. Date picker
-4. Tabs: Specific Gravity · Culls
+**Recent Activity (right column)**
+Compact feed (last 15–20). Each row: check type icon · target · inspector · relative time. Click → detail drawer. This replaces the current giant table.
 
-Persisted with `flock_id` + `house_id` (batch_id), `machine_id = null`.
-
----
-
-## 3. Navigation UX polish
-
-- Sticky scope-group tab bar at top; sub-tabs (Temperature/Angles/etc.) appear below the selection header so users always see *what they picked* + *what they're entering*.
-- Deep-link `?houseId=…&action=candling` continues to open Machine-Based → Hatch Progression with the right house preselected.
-- Breadcrumb-style crumb inside the page body: `QA Hub / Machine / Hatchery 6 / Setter #3 / Temperature`.
-- Empty states with a one-line hint ("Pick a machine to start") so nothing feels broken before selection.
-- Read-only banner + past-day rules unchanged (edits allowed for past dates per prior turn).
+**Jump-to-entry chips (bottom bar)**
+Fixed row of chips: "Log Temperature", "Log Angles", "Log Humidity", "Log Hatch Progression", "Log Tray Wash", "Log Rectal Temp", "Log Gravity", "Log Culls". Each switches to the right scope tab + sub-tab.
 
 ---
 
-## 4. Files touched
+## 3. Working "View" button — detail drawer
 
-- `src/pages/QAHubPage.tsx` — replace `SECTION_MAP` / `TYPE_META` with the 3-group model above; render one of three shells:
-  - `MachineScopedShell` (new small wrapper) — hatchery + machine picker + machine-type-aware inner workflow, tabs: temp / angles / hatch / humidity.
-  - `ProcessScopedShell` (new) — date + room-based forms (Tray Wash, Rectal Temps).
-  - `FlockScopedShell` (new) — flock/house + date, forms: Specific Gravity, Culls.
-- `src/components/qa-hub/SingleSetterQAWorkflow.tsx` / `MultiSetterQAWorkflow.tsx` — remove Rectal Temps, Tray Wash, Culls, Specific Gravity tabs (they graduate to Process/Flock shells). Add Humidity tab to single-setter workflow (currently multi only) so machine-scoped humidity works for both.
-- `src/components/qa-hub/RoomHumidityEntry.tsx` — **delete** (superseded by machine-scoped humidity per new spec).
-- New: `src/components/qa-hub/shells/MachineScopedShell.tsx`, `ProcessScopedShell.tsx`, `FlockScopedShell.tsx` — thin composition layers around existing entry components.
-- Keep `MachineWideHumidityEntry`, `MachineWideAnglesEntry`, `HatchProgressionEntry`, `RectalTempEntry`, `TrayWashEntry`, `SpecificGravityEntry`, `CullChecksEntry` — no rewrites, just re-parented.
+Replace the placeholder eye button with a right-side `Sheet` (shadcn). Opens for any entry (Attention list, Activity feed, compliance dot, or the retained recent table if kept).
 
-No DB migrations. No changes to `qa_monitoring` schema — we just stop requiring `machine_id` on room/flock scopes (already nullable in existing rows).
-
----
-
-## 5. Delivery order
-
-1. **Phase 1** — Introduce the 3-group tab shell in `QAHubPage`, keep old workflows behind it for smoke test.
-2. **Phase 2** — Build `ProcessScopedShell` (Tray Wash + Rectal Temps room-only flow), remove those tabs from single/multi workflows.
-3. **Phase 3** — Build `FlockScopedShell` (Specific Gravity + Culls flock/house picker), remove from single/multi.
-4. **Phase 4** — Build `MachineScopedShell` unifying single/multi, add Humidity tab to single-setter, delete `RoomHumidityEntry`.
-5. **Phase 5** — Polish: crumbs, empty states, deep-link verification, cleanup.
-
-Each phase verified in preview before the next.
+Contents:
+- Header: check type icon + label, badge (in-range / out-of-range), timestamp.
+- Meta grid: Machine / Room / Flock / House · Inspector · Day of incubation · Notes.
+- Type-specific body — parsed from `candling_results` JSON:
+  - Temperature → positions grid with per-cell coloring, averages (front/mid/back).
+  - Angles → 6-position (top/mid/bottom × L/R) badge grid with tolerance check.
+  - Humidity → % + °F with range verdict.
+  - Hatch Progression → stage, %-out, hatched vs total, check hour.
+  - Tray Wash → 3 temps + 5 PPM checks with pass/fail per check.
+  - Rectal Temp → location + reading vs target range.
+  - Gravity → sample, float %, threshold, verdict.
+  - Culls → male/female/defect breakdown.
+- Footer: `Open in QA Hub` button → jumps to the correct scope+sub-tab pre-scoped to that machine/flock/date.
 
 ---
 
-## Open questions
+## 4. Data
 
-1. **Humidity scope** — draft says "Include a Machine dropdown," but two turns ago we made it room-only. Confirm: machine-scoped (revert), room-scoped (keep current), or both?
-2. **Culls placement** — currently exists on both single & multi workflows. Client's draft doesn't list Culls explicitly. Assume flock-based (matches prior guidance "Culls/Gravity are flock/house scoped") — OK?
-3. **Hatchery dropdown on Process shell** — Tray Wash and Rectal Temps are room-level and today aren't hatchery-tagged. Add an optional Hatchery filter for multi-site companies, or omit?
+Extend existing hooks; no schema changes.
+
+- Widen `useQAStats` to also compute: 24h-out-of-range count, overdue count, active-machines-24h count, and a 7-day per-day series for the sparklines.
+- New `useComplianceToday(companyId)` — one query pulling `qa_monitoring` for today + list of required targets (active machines from `machines`, rooms from a small const list) → returns per-type grid data with status + last value.
+- New `useAttentionItems(24)` — combines: (a) out-of-range readings pulled from `qa_monitoring` in last 24h (evaluated client-side by parsing `candling_results` + fixed ranges) and (b) overdue targets (target list minus last-check timestamps). Sorted worst-first.
+- `useRecentQAEntries` already exists — just render its output in the compact feed and keep the drawer wired to it.
+
+All queries scoped by RLS via `company_id`; no data leakage across tenants.
+
+---
+
+## 5. Files touched
+
+- `src/pages/QAHubPage.tsx` — replace `<RecentQAEntries />` inside the Overview tab with a new `<QAOverviewDashboard />`; remove the plain Card wrapper so the dashboard owns its own single-viewport layout.
+- **New** `src/components/qa-hub/overview/QAOverviewDashboard.tsx` — top-level fixed-height container with the 3-column layout + KPI strip + jump chips.
+- **New** `src/components/qa-hub/overview/KPIStrip.tsx` — 5 KPI cards with sparklines.
+- **New** `src/components/qa-hub/overview/ComplianceHeatmap.tsx` — per-type dot grid.
+- **New** `src/components/qa-hub/overview/AttentionList.tsx` — scrollable urgency list.
+- **New** `src/components/qa-hub/overview/RecentActivityFeed.tsx` — compact feed (replaces the big table on Overview; the detailed table stays available inside its own scope tabs).
+- **New** `src/components/qa-hub/overview/QAEntryDetailSheet.tsx` — the drawer with type-specific parsing.
+- **New** `src/hooks/useQAOverviewData.ts` — bundles the three new queries above.
+- `src/components/qa-hub/RecentQAEntries.tsx` — wire its eye button to open `QAEntryDetailSheet` (kept as-is elsewhere).
+
+No database migrations. No new tables.
+
+---
+
+## 6. Open questions
+
+1. **Overdue thresholds** — default proposal: Temp/Angles/Humidity every 24h per active machine; Hatch Progression every 4h during hatcher phase; Tray Wash once/day; Rectal Temp once/day per room. OK, or should any be tighter/looser?
+2. **Jump-to-entry chips** — include all 8 types, or hide the ones that are already up-to-date today?
+3. **Sparkline** on KPI cards — nice-to-have but skippable to keep the page lighter. Include or drop?
