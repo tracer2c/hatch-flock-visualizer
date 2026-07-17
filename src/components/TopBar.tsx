@@ -68,17 +68,11 @@ export function TopBar() {
       )}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
         <div className="flex h-12 items-center justify-between px-3 pt-1">
-          {/* Left Side - Sidebar Toggle only */}
+          {/* Left Side - Brand name */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-8 w-8 rounded-md border border-border/60 bg-background hover:bg-muted"
-              title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
-            >
-              {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </Button>
+            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Hatchery Pro
+            </span>
           </div>
 
 
