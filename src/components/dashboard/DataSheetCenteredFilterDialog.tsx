@@ -13,6 +13,8 @@ import {
   UserSearch,
   Building2,
   Cpu,
+  Search,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
