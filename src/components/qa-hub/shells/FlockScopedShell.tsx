@@ -33,7 +33,11 @@ interface FlockBatch {
  * FlockScopedShell — flock/house-scoped QA (no machine picker).
  * Covers Specific Gravity and Culls.
  */
-const FlockScopedShell: React.FC<{ initialTab?: 'gravity' | 'culls' }> = ({ initialTab = 'gravity' }) => {
+const FlockScopedShell: React.FC<{
+  initialTab?: 'gravity' | 'culls';
+  checkDate: string;
+  onCheckDateChange?: (d: string) => void;
+}> = ({ initialTab = 'gravity', checkDate, onCheckDateChange }) => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const technicianName = profile
@@ -43,7 +47,6 @@ const FlockScopedShell: React.FC<{ initialTab?: 'gravity' | 'culls' }> = ({ init
   const [tab, setTab] = useState<'gravity' | 'culls'>(initialTab);
   const [hatcheryId, setHatcheryId] = useState<string>('all');
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
 
   const { data: hatcheries } = useHatcheries();
