@@ -14,6 +14,7 @@ import { WeatherLocationChip } from "./sections/WeatherLocationChip";
 import { AIBriefingCard } from "./sections/AIBriefingCard";
 import { UpcomingTasksCard } from "./sections/UpcomingTasksCard";
 import { WeeklyTrendCard } from "./sections/WeeklyTrendCard";
+import { FlockLeaderboardCard } from "./sections/FlockLeaderboardCard";
 
 const avg = (nums: (number | null | undefined)[]) => {
   const vals = nums.filter((n): n is number => n != null && !isNaN(n));
@@ -139,29 +140,38 @@ export default function DashboardHome() {
             }
           />
         </div>
-        <div className="lg:col-span-4 grid grid-rows-2 gap-3 min-h-[320px]">
-          <DashboardQaAlerts />
-          <UpcomingTasksCard />
+        <div className="lg:col-span-4 flex flex-col gap-3 min-h-[520px]">
+          <div className="flex-1 min-h-0">
+            <DashboardQaAlerts />
+          </div>
+          <div className="flex-shrink-0">
+            <AIBriefingCard
+              variant="compact"
+              rangeLabel={rangeLabel}
+              totalEggs={totalEggs}
+              avgFertility={avgFertility}
+              avgHatch={avgHatch}
+              avgHoi={avgHoi}
+              criticalAlerts={criticalCount}
+              attentionCount={topAttention.length}
+              topAttention={topAttention}
+              enabled={!isLoading}
+            />
+          </div>
+          <div className="flex-1 min-h-0">
+            <UpcomingTasksCard />
+          </div>
         </div>
       </div>
 
-      {/* Row 3: Compact AI Briefing */}
-      <AIBriefingCard
-        variant="compact"
-        rangeLabel={rangeLabel}
-        totalEggs={totalEggs}
-        avgFertility={avgFertility}
-        avgHatch={avgHatch}
-        avgHoi={avgHoi}
-        criticalAlerts={criticalCount}
-        attentionCount={topAttention.length}
-        topAttention={topAttention}
-        enabled={!isLoading}
-      />
-
-      {/* Row 4: Weekly trend */}
-      <div className="h-[300px]">
-        <WeeklyTrendCard currentWeekStart={filters.dateFrom} />
+      {/* Row 3: Weekly trend + Flock leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div className="lg:col-span-8 h-[320px]">
+          <WeeklyTrendCard currentWeekStart={filters.dateFrom} />
+        </div>
+        <div className="lg:col-span-4 h-[320px]">
+          <FlockLeaderboardCard rows={filtered} />
+        </div>
       </div>
     </div>
   );
