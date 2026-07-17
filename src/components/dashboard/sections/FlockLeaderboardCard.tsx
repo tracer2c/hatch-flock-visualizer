@@ -29,8 +29,8 @@ export function FlockLeaderboardCard({ rows }: Props) {
               <TrendingUp className="h-3 w-3" /> Top performers
             </div>
             <ul className="space-y-1">
-              {top.map((r) => (
-                <li key={`t-${(r.flock_number ?? r.flock_name ?? Math.random())}`} className="flex items-center justify-between text-xs">
+              {top.map((r, i) => (
+                <li key={`t-${i}-${r.flock_number ?? r.flock_name ?? ""}`} className="flex items-center justify-between text-xs">
                   <span className="truncate">{label(r)}</span>
                   <span className="font-mono font-medium text-emerald-600">
                     {r.hof_pct.toFixed(1)}%
@@ -44,8 +44,8 @@ export function FlockLeaderboardCard({ rows }: Props) {
               <TrendingDown className="h-3 w-3" /> Needs review
             </div>
             <ul className="space-y-1">
-              {bottom.map((r) => (
-                <li key={`b-${(r.flock_number ?? r.flock_name ?? Math.random())}`} className="flex items-center justify-between text-xs">
+              {bottom.map((r, i) => (
+                <li key={`b-${i}-${r.flock_number ?? r.flock_name ?? ""}`} className="flex items-center justify-between text-xs">
                   <span className="truncate">{label(r)}</span>
                   <span className="font-mono font-medium text-rose-600">
                     {r.hof_pct.toFixed(1)}%
