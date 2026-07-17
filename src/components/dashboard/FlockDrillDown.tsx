@@ -122,7 +122,8 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
   ) => {
     if (!weekISO) return;
     navigate(
-      `/data-entry/flock/${encodeURIComponent(flockKey)}/${type}?week=${weekISO}`
+      `/data-entry/flock/${encodeURIComponent(flockKey)}/${type}?week=${weekISO}`,
+      { state: { from: window.location.pathname + window.location.search } }
     );
   };
 
@@ -263,7 +264,8 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
                 disabled={!weekISO}
                 onClick={() =>
                   navigate(
-                    `/data-entry/flock/${encodeURIComponent(flockKey)}/hoi?week=${weekISO}`
+                    `/data-entry/flock/${encodeURIComponent(flockKey)}/hoi?week=${weekISO}`,
+                    { state: { from: window.location.pathname + window.location.search } }
                   )
                 }
               >

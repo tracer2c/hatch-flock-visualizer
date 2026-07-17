@@ -1,67 +1,84 @@
-# Fix: HOF % and HOI % showing 0.0% / — in Weekly Flock Rollup
+## Problem
 
-## Root cause (verified against the database)
+Breadcrumbs at the top look right but many crumbs link to **routes that don't exist**, so clicking them lands on 404:
 
-The Weekly Flock Rollup reads HOF % / HOI % **only** from `residue_analysis.hof_percent` / `hoi_percent` (falling back to the same columns on `fertility_analysis`). For every batch in Jun 15 – Jun 21, 2026 those columns are `NULL`, even though `batches.chicks_hatched` and `batches.eggs_injected` are populated with real values (e.g. `chicks=3218`, `injected=3385`).
+- `/data-entry/flock` → 404 (no route)
+- `/data-entry/flock/1001` → 404 (no drill-down route)
+- Some `/data-entry/house/:id` segments also link to non-existent parents
 
-So the client is right — the underlying data ("both are in there") lives on the batches, but the rollup never derives HOF/HOI from those numbers.
+The breadcrumb component blindly accumulates URL segments; it doesn't know which are real routes vs. sub-paths that only render as part of a deeper page. It also uses raw params (`1001`, house IDs) with no context, so the crumb text is unhelpful.
 
-Sample rows confirming this:
+Separately, the back button on entry pages (`Back to Weekly Flock Rollup`) navigates to a fixed URL, which drops any filter state the user had (selected week, hatchery filter, etc.). The user wants "back = the actual previous page".
 
-```
-batch                                    chicks   injected   fa_hof  fa_hoi  ra_hof  ra_hoi
-MS-2026-06-18-Lott-Line-3&4-64           3218     3385       NULL    NULL    NULL    NULL
-MS-2026-06-16-Rip-Farm-29                4287     4564       NULL    NULL    NULL    NULL
-MS-2026-06-16-Cedar-Hill-1&2-3           3792     4153       NULL    NULL    NULL    NULL
-```
+## Fix
 
-`fertility_analysis` sometimes stores a small `fertile_eggs` count (374, 624, 584) — that's a candling sample, not total fertile eggs, and neither `fertility_analysis` nor `residue_analysis` has a `chicks_hatched` column at all. So the aggregation in `dataSheetAggregation.ts` that does `pct(chicks, fertile)` for those tables always gets `chicks = 0` and produces `0.0%`.
+### 1. Route-aware breadcrumbs (replace segment-accumulator with a route map)
 
-## Fix (frontend only, no schema change)
+Rewrite `src/components/uui/AppBreadcrumbs.tsx` to build crumbs from an explicit route table instead of splitting the URL. Each entry defines the crumb chain (label + real href) for that route.
 
-Extend `src/hooks/useWeeklyFlockRollup.ts` to compute a **batch-derived HOF/HOI** per flock and use it whenever the residue/fertility-derived value is missing or zero.
+Example table:
 
-Per flock bucket, compute:
-
-- `totalChicks   = Σ batches.chicks_hatched`
-- `totalInjected = Σ batches.eggs_injected`
-- `totalSet      = Σ batches.total_eggs_set`
-- `fertilityPct  = overrideFertPct ?? houseFertPct` (already computed)
-- `fertileFromFertility = totalSet × fertilityPct / 100` (only when `fertilityPct` is known)
-
-Then:
-
-- `batchHoiPct = totalInjected > 0 ? (totalChicks / totalInjected) × 100 : null`
-- `batchHofPct = fertileFromFertility > 0 ? (totalChicks / fertileFromFertility) × 100 : null`
-
-Precedence when picking what to display:
-
-```text
-hof_pct = overrideHofPct
-       ?? (houseHofPct && houseHofPct > 0 ? houseHofPct : null)
-       ?? batchHofPct
-hoi_pct = overrideHoiPct
-       ?? (houseHoiPct && houseHoiPct > 0 ? houseHoiPct : null)
-       ?? batchHoiPct
+```ts
+// pattern → chain
+"/data-entry"                              → [Data Entry]
+"/data-entry/house/:houseId"               → [Data Entry, House {houseId}]
+"/data-entry/house/:houseId/residue"       → [Data Entry, House {houseId}, Residue]
+"/data-entry/flock/:flockKey/hoi"          → [Data Entry, Flock {flockKey}, Hatch / HOI]
+"/data-entry/flock/:flockKey/residue"      → [Data Entry, Flock {flockKey}, Residue]
+"/qa-hub"                                  → [QA Hub]
+"/management/rooms"                        → [Management, Rooms]
+...
 ```
 
-The `> 0` guard prevents an all-zero residue row (which is what currently exists in the DB when residue was never actually captured) from beating the real batch-derived value.
+Rules:
+- Every crumb href in the chain must point to a **route that actually exists** in `App.tsx`. If a logical parent has no route (e.g. `Flock 1001` has no standalone page), that crumb renders as **plain text**, not a link.
+- The final crumb is always plain text.
+- Use `matchPath` from `react-router-dom` to resolve the current pathname against patterns.
+- Dynamic labels: pull `houseId` / `flockKey` from `useParams` and render as `House #1` / `Flock 1001`.
+- Fallback: if no pattern matches, fall back to the current humanized-segment behavior (so unmapped routes still show something reasonable).
 
-The `flock_level_source` flags stay as-is (they mark whether a *whole-flock override* was applied). Add a new tag `hof_hoi_source: 'override' | 'residue' | 'fertility' | 'batch' | null` on each row so the UI can show a small hint (e.g. subtle "· from batch totals" tooltip on the `●` marker) — no visual redesign, just a tooltip string change in `WeeklyRollupView.tsx`.
+### 2. Smarter "Back" navigation on flock/house entry pages
 
-## Files touched
+Introduce a small hook `useSmartBack(fallback: string)` in `src/hooks/useSmartBack.ts`:
 
-- `src/hooks/useWeeklyFlockRollup.ts` — compute `batchHofPct`, `batchHoiPct`, apply the new precedence, expose `hof_hoi_source`.
-- `src/components/dashboard/WeeklyRollupView.tsx` — extend the existing `●` tooltip on HOF % / HOI % columns to note when the value is batch-derived. No layout change.
+- On mount, store `location.state.from` (if provided by the linker) or `document.referrer` derived path.
+- Returns a `goBack()` that:
+  1. Uses `navigate(-1)` **only if** the previous history entry is inside our app (checked via a session-storage stack we push on every route change).
+  2. Otherwise navigates to the `fallback` URL passed in (e.g. `/data-entry`).
 
-## Out of scope
+Add a tiny history tracker in `App.tsx` (a `<RouteHistoryTracker>` inside the `Routes`) that pushes each visited in-app path to `sessionStorage`. This lets the hook know whether `-1` is safe.
 
-- No changes to `residue_analysis` / `fertility_analysis` schema.
-- No changes to the "By House" tab (its rows already show batch-level chicks/injected directly).
-- No changes to the Dashboard KPI cards in this pass — call that out separately if needed.
+Wire `useSmartBack("/data-entry")` into the back buttons of:
+- `HatchHOIEntryPage.tsx`
+- `FlockResidueEntryPage.tsx`
+- `FlockFertilityEntryPage.tsx`
+- `FlockEggPackEntryPage.tsx`
+- `FlockClearsInjectedEntryPage.tsx`
+- `FlockDrillDown.tsx` ("Back to Totals")
 
-## Validation
+When these pages are opened, also pass `state={{ from: location.pathname + location.search }}` from the caller (`WeeklyRollupView` links) so the entry page can restore filters (week, hatchery) on back.
 
-1. Reload Data Entry → Weekly Flock Rollup on Jun 15 – Jun 21, 2026 and confirm HOF % and HOI % are non-zero for flocks that have `chicks_hatched` + `eggs_injected` on their batches (A&M farm, Barron, Big Creek 1&2, etc.).
-2. Confirm a flock with a real whole-flock residue override still displays the override value (unchanged behavior).
-3. Confirm a flock with `fertility_pct = null` still shows `—` for HOF % (we don't invent fertility), but shows HOI % as long as `eggs_injected > 0`.
+### 3. Preserve rollup filter state across back navigation
+
+In `WeeklyRollupView.tsx`, when navigating to a flock entry page, include `state={{ from: currentUrlWithQuery }}` on the `<Link>` / `navigate()` call. The entry pages' back button (via `useSmartBack`) will return the user to that exact URL, preserving the selected week and hatchery filter.
+
+## Files
+
+**Edit**
+- `src/components/uui/AppBreadcrumbs.tsx` — replace with route-table implementation.
+- `src/App.tsx` — mount `<RouteHistoryTracker />` inside the authenticated `<Routes>`.
+- `src/components/dashboard/WeeklyRollupView.tsx` — pass `state={{ from }}` when navigating to entry pages.
+- `src/pages/HatchHOIEntryPage.tsx`, `FlockResidueEntryPage.tsx`, `FlockFertilityEntryPage.tsx`, `FlockEggPackEntryPage.tsx`, `FlockClearsInjectedEntryPage.tsx`, `src/components/dashboard/FlockDrillDown.tsx` — swap fixed back-URL for `useSmartBack("/data-entry")`.
+
+**Create**
+- `src/hooks/useSmartBack.ts` — the smart back hook.
+- `src/components/RouteHistoryTracker.tsx` — pushes in-app paths to `sessionStorage`.
+- `src/lib/breadcrumbRoutes.ts` — the pattern → crumb-chain map.
+
+## Verification
+
+1. Navigate `Data Entry → Weekly Flock Rollup → 1001 → Residue`. Click each breadcrumb; every click lands on a real page (no 404).
+2. Open Residue entry page from the rollup, hit Back — return to the rollup with the same week/hatchery filter.
+3. Open the entry page directly via a deep-link (fresh tab), hit Back — falls back to `/data-entry`.
+4. Same check for `/data-entry/house/:id/*` chain.
+5. Breadcrumbs for `/qa-hub`, `/management/rooms`, `/chat`, `/analytics/*` still render.
