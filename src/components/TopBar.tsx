@@ -8,12 +8,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronRight, Home, Search, Headset, PanelLeft, PanelLeftClose, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronRight, Home, Search, Headset, TrendingUp, Activity, Building2, GitBranch, Factory, ChevronDown } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import NotificationBell from "@/components/alerts/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
-import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
@@ -36,8 +35,6 @@ export function TopBar() {
     if (role === 'operations_head') return 'secondary';
     return 'outline';
   };
-  const { open: sidebarOpen, toggleSidebar, isMobile, openMobile } = useSidebar();
-  const collapsed = isMobile ? !openMobile : !sidebarOpen;
   const navigate = useNavigate();
   const location = useLocation();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -68,17 +65,11 @@ export function TopBar() {
       )}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
         <div className="flex h-12 items-center justify-between px-3 pt-1">
-          {/* Left Side - Sidebar Toggle only */}
+          {/* Left Side - Brand name */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-8 w-8 rounded-md border border-border/60 bg-background hover:bg-muted"
-              title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
-            >
-              {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </Button>
+            <span className="text-sm font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Hatchery Pro
+            </span>
           </div>
 
 
