@@ -291,11 +291,12 @@ export function ModernSidebar() {
 
                     return (
                       <SidebarMenuItem key={item.href}>
-                        <div className="flex items-stretch">
+                        <div className="flex items-stretch group-data-[collapsible=icon]:block">
                           <SidebarMenuButton
                             asChild
+                            tooltip={item.label}
                             className={cn(
-                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1",
+                              "group relative h-9 px-3 rounded-lg gap-3 text-sm flex-1 group-data-[collapsible=icon]:justify-center",
                               active
                                 ? "bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary"
                                 : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -303,10 +304,10 @@ export function ModernSidebar() {
                           >
                             <NavLink to={item.href} end={item.href === "/"}>
                               {active && (
-                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary group-data-[collapsible=icon]:hidden" />
                               )}
                               <Icon className="h-4 w-4 flex-shrink-0" />
-                              <span className="truncate">{item.label}</span>
+                              <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
                             </NavLink>
                           </SidebarMenuButton>
                           {hasSubs && (
@@ -315,7 +316,7 @@ export function ModernSidebar() {
                               aria-label={isOpen ? "Collapse" : "Expand"}
                               onClick={() => toggle(item.href)}
                               className={cn(
-                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform",
+                                "flex items-center justify-center w-7 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-transform group-data-[collapsible=icon]:hidden",
                                 isOpen && "rotate-90"
                               )}
                             >
@@ -323,6 +324,7 @@ export function ModernSidebar() {
                             </button>
                           )}
                         </div>
+
                         {hasSubs && isOpen && (
                           <SidebarMenuSub className="mt-0.5 ml-4 border-l border-sidebar-border/60 pl-2 gap-0.5">
                             {item.items!.map((sub) => {
