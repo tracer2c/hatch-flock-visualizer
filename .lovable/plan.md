@@ -1,64 +1,95 @@
 ## Goal
-Refactor `src/components/ModernSidebar.tsx` so it feels like a deliberate enterprise sidebar: narrower, tighter spacing, independently scrolling nav, fixed footer, and a cleaner active state — following the spec the user pasted.
+Rebalance the Dashboard so action blocks lead, KPIs feel alive with sparklines, and the AI Briefing shrinks into a compact summary — matching the priorities the user described. Frontend-only, no backend changes.
 
-## Scope
-Frontend only. Single file: `src/components/ModernSidebar.tsx`. No route, permission, or nav-content changes.
+## New layout (top → bottom)
 
-## Layout & dimensions
-- Sidebar width: expanded **264 px**, collapsed rail **72 px** (currently 260 / 56).
-- Enforce three fixed regions using flex on the `Sidebar` root:
-  - `SidebarHeader` — `h-20`, shrink-0, brand left + collapse button right (single button, no floating tooltip below).
-  - `SidebarContent` — `flex-1 overflow-y-auto px-3 py-4` (independent scroll).
-  - `SidebarFooter` — `shrink-0 border-t`, target ~150–165 px.
-- Remove the current `pt-14` header padding hack; brand + collapse live inside the 80 px header.
+```
+[ slim header: weather chip · range · filters ]
 
-## Header
-- Left: `Hatchery Pro` wordmark, 20 px, `font-semibold`, hidden when collapsed.
-- Right: collapse button (`PanelLeftClose`, rotates 180° when collapsed), 28 px hit area, centered when collapsed.
-- No secondary/floating collapse trigger below the header.
+[ KPI 1 ][ KPI 2 ][ KPI 3 ][ KPI 4 ][ KPI 5 ]      <- with sparklines & pending states
 
-## Navigation spacing
-- Group label: `text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground`, `mt-6 mb-2 px-3` (first group `mt-0`).
-- Item: `h-11`, `rounded-xl`, `px-3`, `gap-3`, icon `h-5 w-5`, text `text-[15px]`.
-- Gap between items: `gap-1` (4 px).
-- Active item:
-  - `bg-primary/10 text-primary font-medium` (slightly stronger than today).
-  - Left indicator: `absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary` — inset 4 px from the sidebar edge (achieved by removing the current outer border overlap; indicator sits inside the item).
-  - Pill no longer spans edge-to-edge — item has `mx-0` inside the `px-3` nav container so the rounded background is inset.
-- Hover (inactive): `hover:bg-muted/60 hover:text-foreground`.
+[ Needs Attention (large, 8 cols) ] [ QA Alerts (4 cols) ]
+                                    [ Upcoming Tasks    ]
 
-## Nested items (Data Entry, QA Hub, Management)
-- Parent is expandable; chevron on the right, rotates 90° when open.
-- Children only render when parent is open.
-- Children container: `ml-6 border-l border-border pl-3 mt-1 space-y-0.5`.
-- Child row: `h-10 rounded-lg px-2 gap-2 text-sm text-muted-foreground`.
-- Active child: `bg-primary/10 text-primary font-medium` (no left bar on children).
-- In collapsed rail, sub-items are hidden; hovering the parent icon shows the existing shadcn tooltip.
+[ AI Daily Briefing — compact (~150px, single row of bullets) ]
 
-## Footer
-- Compact two-item nav row (Support, Settings), same `h-11` styling as main nav but no group label.
-- Divider (`border-t`) above the profile row.
-- Profile row: `h-14`, avatar 32 px + name only (no email inline). Email moves to `title` tooltip.
-  - `[SN] Sai Sruthi` on line 1, `View profile` in `text-[11px] text-muted-foreground` on line 2.
-- When collapsed: only avatar shown, centered; Support/Settings become icon-only with tooltips.
+[ Weekly Trend / Production Pipeline (fills remaining vertical) ]
+```
 
-## Collapsed rail (72 px) behaviour
-- Set `--sidebar-width-icon: 72px`.
-- Header: only the collapse button, centered.
-- Items: icon centered, label hidden, tooltip via shadcn `SidebarMenuButton` `tooltip` prop (already wired).
-- Nested items and chevrons hidden.
-- Footer: Support/Settings icons + avatar only.
+No `h-[calc(100vh-3.5rem)]` no-scroll clamp — the page becomes normally scrollable so operational widgets can breathe. Header/KPI rows stay above the fold on 1080p; row 3+ scrolls in.
 
-## Active-state logic
-Keep existing `isParentActive` / `isSubActive`. No changes to route detection or `useExpanded` persistence.
+## Row 1 — Header
+- Keep weather chip but demote: smaller text, muted styling, `hidden lg:flex`. Range label to the right of it.
+- Filters on the right (unchanged).
+
+## Row 2 — KPI cards with sparklines and better states
+
+Refactor `KpiRow.tsx`:
+- Add a `spark?: number[]` prop per KPI. Render a tiny recharts `<AreaChart>` (or `<LineChart>`) 80×32 in the top-right corner of the card body, tone-tinted (matches the KPI accent). Uses `Total Eggs Set` daily series over the last 14 days; other KPIs use last-4-week averages when available, `undefined` otherwise (sparkline hidden).
+- New states — pass a `pending?: string` prop; when the metric is `null`/`NaN`, render the pending label (e.g. "Awaiting HOI data") in muted italic instead of `—`.
+- Deltas: keep the `↑/↓ X% vs last period` line; when `pending`, hide the delta.
+- Card height fixed (`h-[110px]`) so the row stays tight but readable. Two lines: value + sparkline (row) then sub/delta.
+
+Sparkline data source: derive from `useWeeklyFlockRollup` results grouped by day for Total Eggs Set; for Fertility/Hatch/HOI use `prevRows` + `rows` averages as a simple 2-point trend (upgrade later). Keep the addition non-breaking — sparkline is optional.
+
+Pending labels wired in `DashboardHome`:
+- Avg Hatch % → "Pending hatch data" when no completed rows have `hof_pct`.
+- Avg HOI % → "Awaiting HOI data" when all `hoi_pct` are null.
+- Avg Fertility → "Not entered yet" when all `fertility_pct` are null.
+- Total Eggs Set → normal value (0 is legitimate).
+- Critical QA Alerts → "All clear" when 0 (already handled).
+
+## Row 3 — Needs Attention (hero) + right rail
+
+Use `grid-cols-12`: `NeedsAttention` full mode occupies `col-span-8`; right column `col-span-4` stacks:
+1. `DashboardQaAlerts` (existing)
+2. New **Upcoming Tasks** card that reuses `useChecklistForecast` or `useCriticalEvents` if already present — otherwise a lightweight card that pulls the next 3 items from `daily_tasks` / checklist forecast. If no such data hook exists, render a placeholder card that links to `/checklist` with count of today's tasks from an existing hook (verify — will confirm during implementation and swap for a static "View today's tasks" CTA if no cheap source exists).
+
+Upgrade the full `NeedsAttention` variant:
+- Add a small **Severity** column (Warning/Critical) derived from `kind`.
+- Add an **Updated** column showing relative time ("1 hour ago") when `setDate` is present.
+- Keep table dense; primary CTA `Review Flock` navigates to the flock in `/embrex-data-sheet`.
+
+Compact variant is removed from the dashboard usage (still supported for other callers).
+
+## Row 4 — Compact AI Daily Briefing
+
+Refactor `AIBriefingCard.tsx`:
+- New `variant="compact"` prop. Compact mode:
+  - Fixed height ~150–170px.
+  - Header row: sparkle icon + "AI Daily Briefing" + "Updated X ago" · "Ask HatchAI" ghost button (routes to `/chat`) + "View full briefing" link that opens the existing full-card in a dialog (or navigates to `/chat` with the briefing prefilled — pick dialog for zero routing changes).
+  - Body: 3–5 short single-line bullets rendered from the model output. Prompt updated to force ≤5 bullets, ≤80 chars each, ending with a "Next step:" line.
+- Use compact variant on the dashboard; keep default for anywhere else.
+
+## Row 5 — Operational widget
+
+Add `WeeklyTrendCard.tsx`:
+- Simple `<LineChart>` from recharts (already used) showing the last 6 weeks of Total Eggs Set, Fertility %, Hatch %. Uses `useWeeklyFlockRollup` extended range (query 6 iso weeks back — reuse existing hook by calling it once per week if cheap; otherwise a single `useDatesWithBatches`-style aggregate). Falls back to `ActiveHousesPipeline` if the trend query is empty.
+- Card height ~280px, fills the row.
+
+## Files
+
+### Edit
+- `src/components/dashboard/DashboardHome.tsx` — new grid, no viewport clamp, wire pending states + sparkline data, mount compact briefing + trend card.
+- `src/components/dashboard/sections/KpiRow.tsx` — add `spark`, `pending`, render sparkline, apply pending state.
+- `src/components/dashboard/sections/NeedsAttention.tsx` — add Severity + Updated columns, tighten default variant, CTA copy.
+- `src/components/dashboard/sections/AIBriefingCard.tsx` — add `variant="compact"`, "Ask HatchAI" + "View full" affordances; tighten briefing prompt in `useAIBriefing.ts` for ≤5 bullets.
+
+### Create
+- `src/components/dashboard/sections/UpcomingTasksCard.tsx` — right-rail card.
+- `src/components/dashboard/sections/WeeklyTrendCard.tsx` — row 5 line chart.
+
+### No changes
+- Filters, weather chip, alerts hooks, routes, sidebar.
 
 ## Out of scope
-- Nav content, groupings, and permissions unchanged.
-- No changes to `TopBar`, `AppBreadcrumbs`, or routes.
-- No new dependencies.
+- Real AI-generated sparklines / new backend series.
+- New AI endpoints — the briefing keeps the existing `ai-chat` invocation and 2h cache.
+- Replacing recharts with another library.
 
 ## Verification
-- Build passes.
-- Visual pass at 967 px viewport (current preview): sidebar 264 px, brand + collapse in header, groups tightly spaced, active Dashboard shows inset bar + inset pill, footer sits at bottom with Support/Settings + compact profile.
-- Collapsed: 72 px rail, icons centered, tooltips work, footer avatar centered.
-- Nested Weekly Rollup only visible when Data Entry is expanded; guide line visible.
+1. Build passes.
+2. Preview at ~1280×800: header + KPI row + Needs Attention hero visible above the fold; page scrolls to reveal AI briefing (compact) and trend chart.
+3. KPI cards show a tiny inline sparkline and either a delta or a "Pending / Awaiting … " label instead of `0.0%` / `—` for metrics with no data.
+4. `NeedsAttention` shows Severity + Updated columns and a `Review Flock` CTA.
+5. AI Briefing card is ~150–170px tall, shows ≤5 bullets and an "Ask HatchAI" button.
