@@ -1,49 +1,54 @@
-## Goal
+# QA Hub Update — Humidity by Room & Auto Technician Name
 
-Unlock the "View only (past week/past day)" restriction so users can edit any previously entered data — for today and for prior days (at least 50 days back, effectively any past date). Future dates stay view-only.
+Two focused changes to the Quality Assurance Hub. Both are UI/entry-flow changes only — no schema changes.
 
-## Where the lock lives
+---
 
-The read-only behavior on past dates is centralized in one hook:
+## 1. Humidity: remove the machine layer, take by room
 
-- `src/hooks/useDayScopedEntry.ts` — returns `mode: 'view'` whenever `checkDate < today`, which every QA/entry page uses to disable inputs and the Save button.
+Today, Humidity lives only under **Multi Stage Setter → pick machine** (`MachineWideHumidityEntry`). Client says humidity is not read per machine — it's a room reading (setter room / hatcher room / chick room), same idea we already use for **Rectal Temps**.
 
-Pages/components consuming this rule:
+Change:
+- Convert Humidity into a **room-scoped** check, mirroring the Rectal Temps flow.
+- Rooms available: `Setter Room`, `Hatcher Room`, `Chick Room` (same list style as rectal temps; we can drop chick room later if not wanted — flagging as a question).
+- Under QA Hub → **Humidity** tab: no machine selector, no single/multi scope. Just:
+  - Room dropdown
+  - Humidity % + Temperature °F (existing inputs, ideal 53–58% humidity)
+  - Save button
+- Persist to `qa_monitoring` with `candling_results.type = 'humidity'`, `room` field set, `machine_id = null` (room-level reading — not linked to a machine).
+- Remove Humidity from the Multi Stage Setter workflow tabs so it's not duplicated.
+- Keep the existing `MachineWideHumidityEntry.tsx` component code untouched for now but stop routing to it; delete only after verification.
 
-- `src/pages/HatchHOIEntryPage.tsx` — `isPastWeek = day.isPastDay` → disables inputs + Save (the exact screen in the screenshot).
-- QA Hub entries that pair `useDayScopedEntry` with `useTodaysTrayWash` / `useTodaysQAEntries`:
-  - `src/components/qa-hub/TrayWashEntry.tsx`
-  - `src/components/qa-hub/RectalTempEntry.tsx`
-  - other QA entry components under `src/components/qa-hub/` that import `useDayScopedEntry`
-- Any other page using `day.isPastDay` / `day.mode === 'view'` to gate edits.
+Impact on `QAHubPage.tsx`:
+- `humidity` entry in `SECTION_MAP` no longer needs `single`/`multi` — it becomes its own room-scoped section (rendered directly, bypassing the Single/Multi tabs).
+- `TYPE_META.humidity.hint` changes to "Room-level — pick a room."
 
-## Change
+Historical humidity rows already saved against a machine remain readable; the "Today's entries" list will just show them without a room label.
 
-1. **Redefine the rule in `useDayScopedEntry`:**
-   - `mode = 'edit'` when `checkDate <= today` (today OR any past day).
-   - `mode = 'view'` only when `checkDate > today` (future).
-   - Keep `isToday`, `isPastDay`, `isFutureDay` flags so UI can still show a subtle "Editing past entry" hint if desired — but they no longer disable inputs.
-   - Optional guard: cap edit window at 50 days back via an opt-in `maxPastDays` option (default: unlimited). Not enforced globally so the client's "50 days" ask is satisfied without breaking older edits.
+---
 
-2. **Remove the "View only (past week)" badge + input disabling on `HatchHOIEntryPage.tsx`:**
-   - Drop `isPastWeek` gating; `canEdit` becomes `!readOnly` (permission-based only).
-   - Remove the `View only (past week)` Badge from the header.
+## 2. Auto-fill Technician / Inspector name from the logged-in user
 
-3. **Sweep QA entry components** that read `day.mode`/`day.isPastDay` and remove the past-date disabling, keeping only the `readOnly` (permissions) gate. Resume/prefill logic already loads the existing row, so Save will update it.
+Every QA entry page currently asks the user to type their name into a **Technician Name** input. Client wants it locked to whoever is signed in.
 
-4. **Preserve write permissions:** `hasWriteAccess('data_entry')` / `hasWriteAccess('qa')` still controls edit ability — staff (read-only role) remains read-only per core memory.
+Change (applies to `SingleSetterQAWorkflow.tsx` and `MultiSetterQAWorkflow.tsx`, plus the new room-scoped humidity screen):
+- Pull the name from `useAuth()` profile: `` `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() ``, fallback to `profile.email`.
+- Replace the editable `<Input>` with a **read-only display** (badge or disabled input) showing the name — no edit affordance.
+- Remove `useState('')` + `setTechnicianName` and the `!technicianName.trim()` guards (auth guarantees a value; if profile hasn't loaded yet, disable Save with a "Loading user…" state).
+- All existing `inspector_name: technicianName` writes keep working — same value, just sourced from auth instead of an input.
 
-5. **Save path stays the same:** existing mutations (`useSaveFlockTotalsToBatches`, QA upserts) already update the matched row by id/date, so no DB changes are needed. No migration required.
+No DB migration — `qa_monitoring.inspector_name` still holds the string, we just stop letting the user type it.
 
-## Out of scope
+---
 
-- No schema changes, no RLS changes.
-- No new audit-log entries beyond what `activityLogger` already captures.
-- Future-dated entries remain view-only (prevents accidental forward-dated data).
+## Files touched
 
-## Verification
+- `src/pages/QAHubPage.tsx` — route Humidity to its own room-scoped component; update `SECTION_MAP` + `TYPE_META`.
+- `src/components/qa-hub/RoomHumidityEntry.tsx` — **new**, room-scoped humidity/temperature entry, modeled on `RectalTempEntry.tsx`.
+- `src/components/qa-hub/SingleSetterQAWorkflow.tsx` — remove technician input, read from `useAuth`.
+- `src/components/qa-hub/MultiSetterQAWorkflow.tsx` — remove technician input; remove Humidity tab.
+- Save flow in `RoomHumidityEntry` inserts directly into `qa_monitoring` (same pattern used elsewhere).
 
-- Open a flock/week from 2+ weeks ago on Hatch/HOI → inputs enabled, Save works, value persists on refetch.
-- Open a QA entry (Tray Wash, Rectal Temp) with a past `checkDate` → fields editable, Save updates the existing row.
-- Staff role → still fully read-only.
-- Future date → still view-only.
+## Open question
+
+Should Humidity rooms be exactly the three rectal-temp rooms (`Hatcher`, `Chick Room`, `Separator Room`) or the setter-side rooms (`Setter Room`, `Hatcher Room`)? I'll default to **Setter Room + Hatcher Room + Chick Room** unless you say otherwise.
