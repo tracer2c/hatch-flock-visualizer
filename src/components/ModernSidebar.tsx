@@ -360,21 +360,21 @@ export function ModernSidebar() {
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1">
+        <SidebarFooter className="border-t border-sidebar-border/50 p-2 gap-1 group-data-[collapsible=icon]:px-1.5">
           <SidebarMenu className="gap-0.5">
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+              <SidebarMenuButton asChild tooltip="Support" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
                 <NavLink to="/support">
                   <LifeBuoy className="h-4 w-4" />
-                  <span>Support</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Support</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="h-9 px-3 rounded-lg gap-3 text-sm">
+              <SidebarMenuButton asChild tooltip="Settings" className="h-9 px-3 rounded-lg gap-3 text-sm group-data-[collapsible=icon]:justify-center">
                 <NavLink to="/management">
                   <Settings className="h-4 w-4" />
-                  <span>Settings</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -382,14 +382,15 @@ export function ModernSidebar() {
           {user && (
             <NavLink
               to="/profile"
-              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors"
+              title={displayName}
+              className="flex items-center gap-2.5 px-2 py-2 mt-1 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             >
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <span className="text-xs font-medium text-sidebar-foreground truncate">
                   {displayName}
                 </span>
@@ -404,5 +405,6 @@ export function ModernSidebar() {
         </SidebarFooter>
       </Sidebar>
     </>
+
   );
 }
