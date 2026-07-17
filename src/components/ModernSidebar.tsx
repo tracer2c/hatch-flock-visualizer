@@ -127,6 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
         featureKey: "management",
         items: [
           { label: "Hatcheries", href: "/management/hatcheries", icon: Building2 },
+          { label: "Rooms", href: "/management/rooms", icon: Building2 },
           { label: "Machines", href: "/management/machines", icon: Cpu },
           { label: "Flocks", href: "/management/flocks", icon: Bird },
           { label: "Users", href: "/management/users", icon: UsersIcon },

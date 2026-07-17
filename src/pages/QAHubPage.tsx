@@ -33,43 +33,56 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
  *   • 🐣 Flock-Based         (Specific Gravity / Culls)
  */
 type Group = 'overview' | 'machine' | 'process' | 'flock';
-type MachineSub = 'temps' | 'angles' | 'hatch' | 'humidity';
+type MachineSub = 'temps' | 'angles' | 'hatch';
 type Scope = 'single' | 'multi';
 
 const MACHINE_SUB: Record<MachineSub, {
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   hint: string;
-  // section ids passed as focusSection to the inner Single/Multi workflows
   single?: string;
   multi?: string;
 }> = {
-  temps:    { label: 'Temperature',       icon: Thermometer, hint: 'Machine-wide temperatures.',            multi: 'temperatures' },
-  angles:   { label: 'Angles',            icon: Ruler,       hint: 'Left / Right side angles.',              multi: 'angles' },
-  hatch:    { label: 'Hatch Progression', icon: Timer,       hint: 'Hatcher progression counts.',            single: 'hatch', multi: 'hatch' },
-  humidity: { label: 'Humidity',          icon: Droplets,    hint: 'Machine-wide humidity + temp.',          multi: 'humidity' },
+  temps:    { label: 'Temperature',       icon: Thermometer, hint: 'Machine-wide temperatures.', multi: 'temperatures' },
+  angles:   { label: 'Angles',            icon: Ruler,       hint: 'Left / Right side angles.',   multi: 'angles' },
+  hatch:    { label: 'Hatch Progression', icon: Timer,       hint: 'Hatcher progression counts.', single: 'hatch', multi: 'hatch' },
 };
 
 const QAHubPage: React.FC = () => {
   const { hasWriteAccess } = usePermissions();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const houseIdFromUrl = searchParams.get('houseId');
   const actionFromUrl = searchParams.get('action');
+  const dateFromUrl = searchParams.get('date');
+  const groupFromUrl = searchParams.get('group') as Group | null;
+  const subFromUrl = searchParams.get('sub');
 
-  const [group, setGroup] = useState<Group>('overview');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [group, setGroup] = useState<Group>(groupFromUrl || 'overview');
   const [machineSub, setMachineSub] = useState<MachineSub>('temps');
-  const [processTab, setProcessTab] = useState<'wash' | 'rectal'>('wash');
+  const [processTab, setProcessTab] = useState<'wash' | 'rectal' | 'humidity'>(
+    (subFromUrl === 'wash' || subFromUrl === 'rectal' || subFromUrl === 'humidity') ? subFromUrl : 'wash'
+  );
   const [flockTab, setFlockTab] = useState<'gravity' | 'culls'>('gravity');
+  const [checkDate, setCheckDate] = useState<string>(dateFromUrl || todayStr);
   const { data: stats } = useQAStats();
+
+  // Persist date in URL for return-context flows
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (checkDate && checkDate !== todayStr) next.set('date', checkDate);
+    else next.delete('date');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkDate]);
 
   const handleJumpTo = ({ group: g, sub }: { group: 'machine' | 'process' | 'flock'; sub?: string }) => {
     setGroup(g);
     if (g === 'machine' && sub) setMachineSub(sub as MachineSub);
-    if (g === 'process' && sub) setProcessTab(sub as 'wash' | 'rectal');
+    if (g === 'process' && sub) setProcessTab(sub as 'wash' | 'rectal' | 'humidity');
     if (g === 'flock' && sub) setFlockTab(sub as 'gravity' | 'culls');
   };
 
-  // Deep-link — auto-open Machine → Hatch Progression when a house is passed.
   useEffect(() => {
     if (houseIdFromUrl || actionFromUrl === 'candling') {
       setGroup('machine');
@@ -80,7 +93,7 @@ const QAHubPage: React.FC = () => {
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       <ReadOnlyBanner show={!hasWriteAccess('qa_hub')} />
 
-      {/* Header */}
+      {/* Header with unified date + technician */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
@@ -93,11 +106,17 @@ const QAHubPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-muted/50">
-            <Clock className="h-3 w-3 mr-1" />
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-          </Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 rounded-md border px-2 py-1 bg-background">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="date"
+              value={checkDate}
+              max={todayStr}
+              onChange={(e) => setCheckDate(e.target.value || todayStr)}
+              className="text-sm bg-transparent outline-none cursor-pointer"
+            />
+          </div>
           {stats && (
             <Badge variant="secondary">
               Today: {stats.today} | Week: {stats.thisWeek}
@@ -137,11 +156,11 @@ const QAHubPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="process" className="space-y-4">
-          <ProcessScopedShell key={processTab} initialTab={processTab} />
+          <ProcessScopedShell key={processTab} initialTab={processTab} checkDate={checkDate} />
         </TabsContent>
 
         <TabsContent value="flock" className="space-y-4">
-          <FlockScopedShell key={flockTab} initialTab={flockTab} />
+          <FlockScopedShell key={flockTab} initialTab={flockTab} checkDate={checkDate} onCheckDateChange={setCheckDate} />
         </TabsContent>
       </Tabs>
     </div>
