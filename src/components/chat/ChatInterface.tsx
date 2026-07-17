@@ -518,7 +518,7 @@ export const ChatInterface = () => {
             </Button>
           </div>
           <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
-            Smart Analytics · AI-generated results may need verification.
+            HatchAI Assistant · AI-generated results may need verification.
           </p>
         </form>
       </div>

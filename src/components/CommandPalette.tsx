@@ -41,7 +41,7 @@ const navigationPages = [
   { name: "Live Tracking", path: "/live-tracking", icon: Radio, keywords: ["live", "real-time", "tracking", "critical", "windows"] },
   { name: "Machine Utilization", path: "/machine-utilization", icon: Gauge, keywords: ["machine", "utilization", "capacity", "usage"] },
   { name: "Daily Tasks", path: "/checklist", icon: CheckSquare, keywords: ["checklist", "tasks", "daily", "sop", "maintenance"] },
-  { name: "Smart Analytics", path: "/chat", icon: MessageSquare, keywords: ["chat", "ai", "analytics", "insights", "ask"] },
+  { name: "HatchAI Assistant", path: "/chat", icon: MessageSquare, keywords: ["chat", "ai", "analytics", "insights", "ask"] },
   { name: "Management", path: "/management", icon: Settings, keywords: ["settings", "admin", "manage", "targets", "users"] },
   { name: "Bulk Import", path: "/bulk-import", icon: Upload, keywords: ["import", "upload", "excel", "csv", "data"] },
   { name: "Project Report", path: "/report", icon: FileText, keywords: ["report", "summary", "project", "export"] },

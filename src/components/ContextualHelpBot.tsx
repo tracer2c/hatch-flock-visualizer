@@ -22,7 +22,7 @@ interface Message {
 const ContextualHelpBot: React.FC = () => {
   const location = useLocation();
   
-  // Hide on Smart Analytics page (redundant since it has its own chat)
+  // Hide on HatchAI Assistant page (redundant since it has its own chat)
   if (location.pathname === '/chat') {
     return null;
   }

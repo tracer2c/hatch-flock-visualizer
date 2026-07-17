@@ -114,7 +114,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     heading: "Intelligence",
     items: [
-      { label: "Smart Analytics", href: "/chat", icon: MessageSquare, featureKey: "chat" },
+      { label: "HatchAI Assistant", href: "/chat", icon: MessageSquare, featureKey: "chat" },
     ],
   },
   {

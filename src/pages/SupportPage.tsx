@@ -156,8 +156,8 @@ const faqCategories: FAQCategory[] = [
     faqs: [
       {
         id: "an-1",
-        question: "How do I use Smart Analytics?",
-        answer: "Go to 'Smart Analytics' from the sidebar. Ask natural language questions like 'What was our hatch rate last week?' or 'Show fertility trends by flock age'. The AI analyzes your data and provides visualizations, insights, and recommendations.",
+        question: "How do I use HatchAI Assistant?",
+        answer: "Go to 'HatchAI Assistant' from the sidebar. Ask natural language questions like 'What was our hatch rate last week?' or 'Show fertility trends by flock age'. The AI analyzes your data and provides visualizations, insights, and recommendations.",
         keywords: ["smart", "analytics", "ai", "chat", "ask", "natural", "language", "insights"]
       },
       {
@@ -233,7 +233,7 @@ const faqCategories: FAQCategory[] = [
       {
         id: "ac-2",
         question: "What can Staff members access?",
-        answer: "Staff can: View dashboard and houses, enter data (houses, QA checks, fertility, residue), use QA Hub, view (not edit) reports, and access Smart Analytics. They cannot manage users, machines, flocks, or system settings.",
+        answer: "Staff can: View dashboard and houses, enter data (houses, QA checks, fertility, residue), use QA Hub, view (not edit) reports, and access HatchAI Assistant. They cannot manage users, machines, flocks, or system settings.",
         keywords: ["staff", "access", "permissions", "data entry", "view", "restrictions"]
       },
       {

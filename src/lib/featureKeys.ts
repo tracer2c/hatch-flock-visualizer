@@ -8,7 +8,7 @@ export const FEATURE_CONFIG = {
   embrex_data_sheet: { label: 'Data Sheet', routes: ['/embrex-data-sheet'] },
   embrex_timeline: { label: 'Timeline', routes: ['/embrex-timeline'] },
   checklist: { label: 'Daily Tasks', routes: ['/checklist'] },
-  chat: { label: 'Smart Analytics', routes: ['/chat'] },
+  chat: { label: 'HatchAI Assistant', routes: ['/chat'] },
   performance: { label: 'Performance', routes: ['/performance'] },
   process_flow: { label: 'Process Flow', routes: ['/process-flow'] },
   analytics: { label: 'Analytics', routes: ['/analytics'] },
