@@ -1,56 +1,38 @@
-# Top nav, sidebar, and Filter dialog cleanup
+## Goal
+Ship a lightweight changelog system so users see a "What's new" modal once per new release, and can browse full history anytime at `/changelogs`. Content stays in user-friendly language (no tech jargon).
 
-Three focused fixes, all UI-only. No business logic changes.
+## How it works
+1. Changelog entries are stored as a static, versioned list in code (`src/data/changelog.ts`) — no DB table needed. Each entry: `version`, `releaseDate`, `title`, `highlights` (4–6 short bullets), optional `category` tags (New, Improved, Fixed).
+2. The latest `version` string is the "current" release. On app load, we compare it to the version the user last acknowledged, stored in `localStorage` under `hp:lastSeenChangelogVersion` (scoped per user id when signed in: `hp:lastSeenChangelogVersion:<uid>`).
+3. If the stored version is missing or older than current → show `WhatsNewDialog` once. Clicking "Got it" (or closing) writes the current version to localStorage so it never reappears until the next release.
+4. First-ever visitors (no stored value) get the modal seeded to current version silently — they don't get spammed with old releases. Only actual version bumps trigger the modal.
+5. A "View full changelog" link in the modal, and a sidebar item under the "Admin" (or footer) group, routes to `/changelogs` — a clean timeline page listing every release with date, title, and bullets, newest first.
 
-## 1) Top nav (`src/components/TopBar.tsx`)
+## Files to add
+- `src/data/changelog.ts` — typed array of releases (source of truth).
+- `src/components/changelog/WhatsNewDialog.tsx` — shadcn Dialog with UUI styling, highlights list, category chips, "View full changelog" link.
+- `src/hooks/useWhatsNew.ts` — reads current version, compares with localStorage, exposes `{ open, setOpen, entry }`.
+- `src/pages/ChangelogsPage.tsx` — timeline view (uses existing card + typography tokens; internal scroll only, matches recent single-page layout preference).
 
-- Remove the **back arrow** button (the `!isOnDashboard && <ArrowLeft />` block). Breadcrumbs + per-page smart-back already cover this.
-- Remove the **"Hatchery Pro"** gradient title. The brand lives inside the sidebar now.
-- Keep the sidebar toggle button, but restyle it to match the reference: a small square icon button using the same `PanelLeft` / `PanelLeftClose` glyphs, subtle border, no primary-tint hover — matching the "panel" icon in image 1/2.
-- Net effect: the left edge of the top bar becomes just the panel-toggle icon, freeing horizontal space.
+## Files to edit
+- `src/App.tsx` — mount `<WhatsNewDialog />` inside the authenticated layout so it appears on first refresh after deploy; add route `/changelogs`.
+- `src/components/ModernSidebar.tsx` — add "What's new" link in the Admin group (with a small dot indicator when unseen).
+- `src/lib/breadcrumbRoutes.ts` — register `/changelogs` → "What's New".
 
-## 2) Sidebar collapse into an icon rail (`src/components/ModernSidebar.tsx` + `src/components/ui/sidebar.tsx`)
+## Seed content — v1.3 (today's release, user-language)
+Push platform to **v1.3.0** with these highlights covering today's work:
+- **Redesigned Data Sheet** — cleaner single-row toolbar, expandable search, click any row to edit instantly.
+- **Smarter filters** — Machines filter now groups by hatchery with search and quick select; only relevant machines appear.
+- **Refined navigation** — slim collapsible sidebar with modern icons, brand moved to top bar, no duplicate labels.
+- **Better breadcrumbs** — every step is clickable and remembers your selected week, so back never dumps you at the dashboard.
+- **HatchAI Assistant** — renamed from Smart Analytics, with richer formatted responses and charts.
+- **QA Hub polish** — unified date selector, room-based humidity with "+ Add Room" shortcut, technician auto-filled from your profile.
 
-Right now the sidebar uses `collapsible="offcanvas"`, so "collapse" hides it completely. The reference (image 3) wants a **thin icon-only rail** when collapsed.
+Also include a couple of prior releases in the history for context:
+- **v1.2** — Weekly Flock Rollup, flock-scoped entries (Egg Pack, Fertility, Residue), HOF/HOI fallback calculations.
+- **v1.1** — QA Hub reorganization (Machine / Room / Flock scopes), Tray Wash PPM columns, resumable day-scoped entries.
 
-- Switch the desktop sidebar to `collapsible="icon"` (keep offcanvas behavior on mobile as-is).
-- Set `--sidebar-width-icon` to about **56px** so it matches the reference rail width.
-- In collapsed state:
-  - Hide group headings ("Monitor", "Data", …), the expand chevron on parent items, and the sub-menu tree.
-  - Render each top-level item as a **centered icon-only button** with a tooltip showing the label (shadcn `SidebarMenuButton` already supports `tooltip` prop).
-  - Active item gets the same `bg-primary/10 text-primary` treatment as today, rendered as a rounded square, matching image 3's highlighted Home icon.
-  - Footer collapses to just the avatar circle (image 3 shows a single "P" avatar pinned at the bottom).
-- In expanded state: keep the current 260px layout exactly as it is (image 2 style — sections with subheadings, search-like feel already present via CommandPalette in the top bar).
-- Add an in-sidebar collapse button at the top-right of the sidebar header (small `PanelLeftClose` icon) so users can collapse from inside the sidebar too — mirrors the icon in image 2's top-right corner. Clicking it calls `toggleSidebar()`.
-
-Detection of collapsed state uses `useSidebar().state === "collapsed"`.
-
-## 3) Data Sheet Filter dialog (`src/components/dashboard/DataSheetCenteredFilterDialog.tsx`)
-
-Fix the "double close" and give it a finished look.
-
-**Double-close fix**
-- shadcn's `DialogContent` already renders its own top-right `×` close button. Remove the redundant custom `<Button>X Clear</Button>` from the header. Move the **Clear** action to the footer (left side) as a text button — a common pattern that pairs naturally with Cancel/Apply on the right.
-
-**Modern layout**
-- Widen slightly (`max-w-[720px]`), increase padding, add a short helper subtitle under the title ("Refine what's shown in the data sheet").
-- Group each section into a **soft card** (`rounded-xl border bg-muted/30 p-4`) with a small colored icon next to the section title:
-  - Sorting → `ArrowUpDown`
-  - Date Range → `CalendarRange`
-  - Technician → `UserSearch`
-  - Hatcheries → `Building2`
-  - Machines → `Cpu`
-- Replace the plain checkbox lists for Hatcheries and Machines with a **chip/toggle grid** (`flex flex-wrap gap-2` of pill buttons that toggle `selected`/`unselected`) — same data, denser and more modern than a scrolling checkbox column. Add a small "Select all / Clear" mini-link above each grid.
-- Show a live **active-filter count pill** next to the title (e.g. "Filter Options · 3 active").
-- Footer: `Clear all` on the left (ghost, disabled when nothing is set), `Cancel` + `Apply Filters` on the right. Apply button keeps the check icon.
-- Respect existing draft-then-apply behavior — no logic changes to `handleApply` / `setFilters`.
-
-## Out of scope
-- No routing, permissions, data, or breadcrumb changes.
-- Command palette (`⌘K`) stays in the top bar unchanged.
-- Mobile sidebar keeps its current offcanvas + overlay behavior.
-
-## Verification
-- Toggle sidebar on desktop: rail appears at ~56px, icons centered, tooltips on hover, active item highlighted.
-- Top bar shows only: sidebar toggle · (spacer) · search · analytics · home · bell · avatar.
-- Open Filters in Data Sheet: single close (top-right ×), sections in cards, hatchery/machine chips toggle, footer has Clear/Cancel/Apply.
+## Out of scope (can be added later)
+- Admin UI to edit changelog entries from the app (currently code-managed — fastest and versioned with the deploy).
+- Email / push notifications for new releases.
+- Per-entry "read more" detail pages.
