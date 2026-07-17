@@ -1,17 +1,49 @@
-## Why you're seeing the Lovable logo
+## Goal
 
-Your `index.html` points to `/uploads/dc09391b-...png` for `rel="icon"`, but browsers *also* auto-request `/favicon.ico` at the site root. The file `public/favicon.ico` is still the **default Lovable icon** that ships with every new project — that's what's showing in the tab (especially on published/custom domain builds and after browser cache).
+Unlock the "View only (past week/past day)" restriction so users can edit any previously entered data — for today and for prior days (at least 50 days back, effectively any past date). Future dates stay view-only.
 
-`public/pwa-192x192.png` and `public/pwa-512x512.png` (used for the installed PWA icon and Apple touch icon) are likely also the Lovable defaults.
+## Where the lock lives
 
-## Fix plan
+The read-only behavior on past dates is centralized in one hook:
 
-1. **Replace the branded favicon source.** Use the existing Hatchery Pro logo at `/uploads/dc09391b-b8b4-4ebe-956c-6977f2d8e528.png` (already referenced in `index.html`) as the master.
-2. **Overwrite `public/favicon.ico`** with a copy of that logo (renamed) so the default browser request stops returning the Lovable mark.
-3. **Regenerate `public/pwa-192x192.png` and `public/pwa-512x512.png`** from the same logo so installed-app and Apple touch icons match the brand.
-4. **Bump the icon cache-buster** in `index.html` by appending `?v=2` to the `rel="icon"` and `apple-touch-icon` hrefs so browsers/service workers stop serving the old cached Lovable icon.
-5. Leave `index.html` metadata otherwise unchanged.
+- `src/hooks/useDayScopedEntry.ts` — returns `mode: 'view'` whenever `checkDate < today`, which every QA/entry page uses to disable inputs and the Save button.
 
-## Confirm before I build
+Pages/components consuming this rule:
 
-Do you want me to reuse the existing Hatchery Pro logo (`/uploads/dc09391b-...png`) for the favicon, or do you have a different icon image you'd like uploaded?
+- `src/pages/HatchHOIEntryPage.tsx` — `isPastWeek = day.isPastDay` → disables inputs + Save (the exact screen in the screenshot).
+- QA Hub entries that pair `useDayScopedEntry` with `useTodaysTrayWash` / `useTodaysQAEntries`:
+  - `src/components/qa-hub/TrayWashEntry.tsx`
+  - `src/components/qa-hub/RectalTempEntry.tsx`
+  - other QA entry components under `src/components/qa-hub/` that import `useDayScopedEntry`
+- Any other page using `day.isPastDay` / `day.mode === 'view'` to gate edits.
+
+## Change
+
+1. **Redefine the rule in `useDayScopedEntry`:**
+   - `mode = 'edit'` when `checkDate <= today` (today OR any past day).
+   - `mode = 'view'` only when `checkDate > today` (future).
+   - Keep `isToday`, `isPastDay`, `isFutureDay` flags so UI can still show a subtle "Editing past entry" hint if desired — but they no longer disable inputs.
+   - Optional guard: cap edit window at 50 days back via an opt-in `maxPastDays` option (default: unlimited). Not enforced globally so the client's "50 days" ask is satisfied without breaking older edits.
+
+2. **Remove the "View only (past week)" badge + input disabling on `HatchHOIEntryPage.tsx`:**
+   - Drop `isPastWeek` gating; `canEdit` becomes `!readOnly` (permission-based only).
+   - Remove the `View only (past week)` Badge from the header.
+
+3. **Sweep QA entry components** that read `day.mode`/`day.isPastDay` and remove the past-date disabling, keeping only the `readOnly` (permissions) gate. Resume/prefill logic already loads the existing row, so Save will update it.
+
+4. **Preserve write permissions:** `hasWriteAccess('data_entry')` / `hasWriteAccess('qa')` still controls edit ability — staff (read-only role) remains read-only per core memory.
+
+5. **Save path stays the same:** existing mutations (`useSaveFlockTotalsToBatches`, QA upserts) already update the matched row by id/date, so no DB changes are needed. No migration required.
+
+## Out of scope
+
+- No schema changes, no RLS changes.
+- No new audit-log entries beyond what `activityLogger` already captures.
+- Future-dated entries remain view-only (prevents accidental forward-dated data).
+
+## Verification
+
+- Open a flock/week from 2+ weeks ago on Hatch/HOI → inputs enabled, Save works, value persists on refetch.
+- Open a QA entry (Tray Wash, Rectal Temp) with a past `checkDate` → fields editable, Save updates the existing row.
+- Staff role → still fully read-only.
+- Future date → still view-only.
