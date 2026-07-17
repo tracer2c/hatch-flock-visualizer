@@ -294,7 +294,12 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                 const aggregated = (item._aggregated_count ?? 1) > 1;
 
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow
+                    key={item.id}
+                    className={!readOnly ? "cursor-pointer hover:bg-muted/50" : undefined}
+                    onClick={!readOnly ? () => handleEdit(item) : undefined}
+                  >
+
                     {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                     {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
                     {show("house_number") && (
@@ -341,7 +346,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                     {show("technician_name") && <TableCell>{item.hoi_technician_name || item.clears_technician_name || item.fertility_technician_name || "-"}</TableCell>}
                     {show("notes") && <TableCell className="max-w-xs truncate">{item.hoi_notes || item.clears_notes || "-"}</TableCell>}
                     {!readOnly && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
@@ -350,6 +355,7 @@ export const EmbrexHOITab = ({ data, searchTerm, filters, onDataUpdate, readOnly
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+
                           <Button
                             variant="outline"
                             size="sm"

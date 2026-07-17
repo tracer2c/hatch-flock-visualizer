@@ -365,7 +365,12 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
             </TableRow>
           ) : (
             displayData.map((item) => (
-              <TableRow key={item.batch_id} className="hover:bg-muted/50">
+              <TableRow
+                key={item.batch_id}
+                className={showActions ? "cursor-pointer hover:bg-muted/50" : "hover:bg-muted/50"}
+                onClick={showActions ? () => handleEdit(item) : undefined}
+              >
+
                 {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
                 {show("age_weeks") && <TableCell className="text-right">{item.age_weeks || "-"}</TableCell>}
@@ -414,7 +419,8 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
                 {show("technician_name") && <TableCell>{item.technician_name || "-"}</TableCell>}
                 {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
                 {showActions && (
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"

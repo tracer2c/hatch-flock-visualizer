@@ -354,7 +354,12 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
             </TableRow>
           ) : (
             displayData.map((item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                className={showActions ? "cursor-pointer hover:bg-muted/50" : undefined}
+                onClick={showActions ? () => handleEdit(item) : undefined}
+              >
+
                 {show("flock_number") && <TableCell>{item.flock_number || "-"}</TableCell>}
                 {show("flock_name") && <TableCell>{item.flock_name || "-"}</TableCell>}
                 {show("house_number") && (
@@ -404,7 +409,8 @@ export const QAMonitoringTab = ({ data, searchTerm, filters, onDataUpdate, readO
                 {show("inspector_name") && <TableCell>{item.inspector_name || "-"}</TableCell>}
                 {show("notes") && <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>}
                 {showActions && (
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+
                     <div className="flex gap-2">
                       <Button
                         variant="outline"

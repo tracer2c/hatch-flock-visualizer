@@ -369,7 +369,18 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
 
                 const sampleSize = item.residue_sample_size || item.sample_size || 648;
                 return (
-                  <TableRow key={item.batch_id}>
+                  <TableRow
+                    key={item.batch_id}
+                    className={(showActions || showFlockActions) ? "cursor-pointer hover:bg-muted/50" : undefined}
+                    onClick={
+                      showActions
+                        ? () => handleEdit(item)
+                        : showFlockActions && item.flock_id && item.set_date_week_start
+                        ? () => setFlockEditRow(item)
+                        : undefined
+                    }
+                  >
+
                     <TableCell>{item.flock_number || "-"}</TableCell>
                     <TableCell>{item.flock_name || "-"}</TableCell>
                     <TableCell>
@@ -424,7 +435,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                     <TableCell>{item.lab_technician || "-"}</TableCell>
                     <TableCell className="max-w-xs truncate">{item.notes || "-"}</TableCell>
                     {showActions && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -445,7 +457,8 @@ export const ResidueBreakoutTable = ({ data, searchTerm, filters, onDataUpdate, 
                       </TableCell>
                     )}
                     {showFlockActions && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+
                         <Button
                           variant="outline"
                           size="sm"
