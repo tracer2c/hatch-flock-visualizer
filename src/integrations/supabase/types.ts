@@ -2592,6 +2592,47 @@ export type Database = {
           },
         ]
       }
+      rooms: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          room_type: Database["public"]["Enums"]["room_type"]
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          room_type?: Database["public"]["Enums"]["room_type"]
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          room_type?: Database["public"]["Enums"]["room_type"]
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sample_size_presets: {
         Row: {
           company_id: string | null
@@ -3451,6 +3492,7 @@ export type Database = {
       company_status: "active" | "suspended" | "cancelled"
       level_type: "Top" | "Middle" | "Bottom"
       machine_type: "setter" | "hatcher" | "combo"
+      room_type: "chick" | "separator" | "hatcher" | "setter" | "wash" | "other"
       setter_mode: "single_setter" | "multi_setter"
       side_type: "Left" | "Right"
       subscription_type: "trial" | "basic" | "premium" | "enterprise"
@@ -3615,6 +3657,7 @@ export const Constants = {
       company_status: ["active", "suspended", "cancelled"],
       level_type: ["Top", "Middle", "Bottom"],
       machine_type: ["setter", "hatcher", "combo"],
+      room_type: ["chick", "separator", "hatcher", "setter", "wash", "other"],
       setter_mode: ["single_setter", "multi_setter"],
       side_type: ["Left", "Right"],
       subscription_type: ["trial", "basic", "premium", "enterprise"],
