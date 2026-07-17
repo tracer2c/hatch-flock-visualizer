@@ -23,6 +23,7 @@ export default function FlockEggPackEntryPage() {
   const [params] = useSearchParams();
   const weekParam = params.get("week");
   const navigate = useNavigate();
+  const goBack = useSmartBack("/data-entry");
   const { toast } = useToast();
   const { profile } = useAuth();
 

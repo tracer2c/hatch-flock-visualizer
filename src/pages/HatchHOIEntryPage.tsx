@@ -43,6 +43,7 @@ export default function HatchHOIEntryPage() {
   const [params] = useSearchParams();
   const weekParam = params.get("week");
   const navigate = useNavigate();
+  const goBack = useSmartBack("/data-entry");
   const { hasWriteAccess } = usePermissions();
   const readOnly = !hasWriteAccess("data_entry");
 
