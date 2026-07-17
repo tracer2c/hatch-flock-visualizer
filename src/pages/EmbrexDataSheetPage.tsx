@@ -1,31 +1,35 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { todayLocalISO } from "@/utils/localDate";
-import { useNavigate } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, TrendingUp, RefreshCw, FileSpreadsheet, FileText } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Download, RefreshCw, FileSpreadsheet, FileText, Search, X, LayoutGrid, Rows3 } from "lucide-react";
 import { CompleteDataView } from "@/components/dashboard/CompleteDataView";
 import { DataSheetCenteredFilterDialog } from "@/components/dashboard/DataSheetCenteredFilterDialog";
+import type { DataSheetViewMode } from "@/components/dashboard/DataSheetViewModeToggle";
 import { usePercentageToggle } from "@/hooks/usePercentageToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ExportService } from "@/services/exportService";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
+import { cn } from "@/lib/utils";
 
 const EmbrexDataSheetPage = () => {
   const { hasWriteAccess } = usePermissions();
   const readOnly = !hasWriteAccess('embrex_data_sheet');
   const [activeTab, setActiveTab] = useState("embrex");
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportData, setExportData] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<DataSheetViewMode>("rows");
   const { showPercentages, setShowPercentages } = usePercentageToggle();
-  const navigate = useNavigate();
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -45,6 +49,12 @@ const EmbrexDataSheetPage = () => {
     loadFilterOptions();
   }, []);
 
+  useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [searchOpen]);
+
   const loadFilterOptions = async () => {
     const [hatcheriesRes, machinesRes] = await Promise.all([
       supabase.from('units').select('id, name').order('name'),
@@ -55,7 +65,7 @@ const EmbrexDataSheetPage = () => {
     if (machinesRes.data) setMachines(machinesRes.data.map(m => ({ id: m.id, name: m.machine_number })));
   };
 
-  const activeFilterCount = 
+  const activeFilterCount =
     (filters.selectedHatcheries.length > 0 ? 1 : 0) +
     (filters.selectedMachines.length > 0 ? 1 : 0) +
     (filters.technicianSearch ? 1 : 0) +
@@ -91,7 +101,6 @@ const EmbrexDataSheetPage = () => {
     }));
   };
 
-  // Sort options based on active tab
   const getSortByOptions = () => {
     const commonOptions = [
       { value: 'set_date', label: 'Set Date' },
@@ -103,7 +112,7 @@ const EmbrexDataSheetPage = () => {
 
     switch (activeTab) {
       case 'embrex':
-        return [...commonOptions, 
+        return [...commonOptions,
           { value: 'eggs_cleared', label: 'Cleared' },
           { value: 'eggs_injected', label: 'Injected' }
         ];
@@ -148,84 +157,42 @@ const EmbrexDataSheetPage = () => {
     }
   }, []);
 
-  // Column mappings for each tab
   const getColumnMapForTab = (tab: string): Record<string, string> => {
     switch (tab) {
       case 'embrex':
         return {
-          'Flock #': 'flock_number',
-          'Flock Name': 'flock_name',
-          'House #': 'house_number',
-          'Age (weeks)': 'age_weeks',
-          'Set Date': 'set_date',
-          'Total Eggs': 'total_eggs_set',
-          'Cleared': 'eggs_cleared',
-          'Injected': 'eggs_injected',
-          'Chicks Hatched': 'chicks_hatched',
-          'Technician': 'hoi_technician_name',
-          'Notes': 'hoi_notes'
+          'Flock #': 'flock_number', 'Flock Name': 'flock_name', 'House #': 'house_number',
+          'Age (weeks)': 'age_weeks', 'Set Date': 'set_date', 'Total Eggs': 'total_eggs_set',
+          'Cleared': 'eggs_cleared', 'Injected': 'eggs_injected', 'Chicks Hatched': 'chicks_hatched',
+          'Technician': 'hoi_technician_name', 'Notes': 'hoi_notes'
         };
       case 'residue':
         return {
-          'Flock #': 'flock_number',
-          'Flock Name': 'flock_name',
-          'House #': 'house_number',
-          'Age (weeks)': 'age_weeks',
-          'Set Date': 'set_date',
-          'Sample Size': 'sample_size',
-          'Infertile': 'infertile_eggs',
-          'Early Dead': 'early_dead',
-          'Mid Dead': 'mid_dead',
-          'Late Dead': 'late_dead',
-          'Cull Chicks': 'cull_chicks',
-          'HOF %': 'hof_percent',
-          'HOI %': 'hoi_percent',
-          'Technician': 'lab_technician',
-          'Notes': 'notes'
+          'Flock #': 'flock_number', 'Flock Name': 'flock_name', 'House #': 'house_number',
+          'Age (weeks)': 'age_weeks', 'Set Date': 'set_date', 'Sample Size': 'sample_size',
+          'Infertile': 'infertile_eggs', 'Early Dead': 'early_dead', 'Mid Dead': 'mid_dead',
+          'Late Dead': 'late_dead', 'Cull Chicks': 'cull_chicks', 'HOF %': 'hof_percent',
+          'HOI %': 'hoi_percent', 'Technician': 'lab_technician', 'Notes': 'notes'
         };
       case 'egg-pack':
         return {
-          'Flock #': 'flock_number',
-          'Flock Name': 'flock_name',
-          'House #': 'house_number',
-          'Age (weeks)': 'age_weeks',
-          'Inspection Date': 'inspection_date',
-          'Sample Size': 'sample_size',
-          'Grade A': 'grade_a',
-          'Grade B': 'grade_b',
-          'Grade C': 'grade_c',
-          'Cracked': 'cracked',
-          'Dirty': 'dirty',
-          'Inspector': 'inspector_name',
-          'Notes': 'notes'
+          'Flock #': 'flock_number', 'Flock Name': 'flock_name', 'House #': 'house_number',
+          'Age (weeks)': 'age_weeks', 'Inspection Date': 'inspection_date', 'Sample Size': 'sample_size',
+          'Grade A': 'grade_a', 'Grade B': 'grade_b', 'Grade C': 'grade_c',
+          'Cracked': 'cracked', 'Dirty': 'dirty', 'Inspector': 'inspector_name', 'Notes': 'notes'
         };
       case 'hatch':
         return {
-          'Flock #': 'flock_number',
-          'Flock Name': 'flock_name',
-          'House #': 'house_number',
-          'Age (weeks)': 'age_weeks',
-          'Set Date': 'set_date',
-          'Fertile Eggs': 'fertile_eggs',
-          'Fertility %': 'fertility_percent',
-          'Hatch %': 'hatch_percent',
-          'HOF %': 'hof_percent',
-          'HOI %': 'hoi_percent',
-          'Technician': 'technician_name',
-          'Notes': 'notes'
+          'Flock #': 'flock_number', 'Flock Name': 'flock_name', 'House #': 'house_number',
+          'Age (weeks)': 'age_weeks', 'Set Date': 'set_date', 'Fertile Eggs': 'fertile_eggs',
+          'Fertility %': 'fertility_percent', 'Hatch %': 'hatch_percent', 'HOF %': 'hof_percent',
+          'HOI %': 'hoi_percent', 'Technician': 'technician_name', 'Notes': 'notes'
         };
       case 'qa':
         return {
-          'Flock #': 'flock_number',
-          'Flock Name': 'flock_name',
-          'House #': 'house_number',
-          'Check Date': 'check_date',
-          'Day': 'day_of_incubation',
-          'Temperature': 'temperature',
-          'Humidity': 'humidity',
-          'CO2 Level': 'co2_level',
-          'Inspector': 'inspector_name',
-          'Notes': 'notes'
+          'Flock #': 'flock_number', 'Flock Name': 'flock_name', 'House #': 'house_number',
+          'Check Date': 'check_date', 'Day': 'day_of_incubation', 'Temperature': 'temperature',
+          'Humidity': 'humidity', 'CO2 Level': 'co2_level', 'Inspector': 'inspector_name', 'Notes': 'notes'
         };
       default:
         return {};
@@ -237,10 +204,7 @@ const EmbrexDataSheetPage = () => {
   }, []);
 
   const handleExportCSV = () => {
-    if (exportData.length === 0) {
-      toast.error("No data to export");
-      return;
-    }
+    if (exportData.length === 0) return toast.error("No data to export");
     const columnMap = getColumnMapForTab(activeTab);
     const headers = Object.keys(columnMap);
     const formattedData = exportData.map(row => {
@@ -255,10 +219,7 @@ const EmbrexDataSheetPage = () => {
   };
 
   const handleExportExcel = () => {
-    if (exportData.length === 0) {
-      toast.error("No data to export");
-      return;
-    }
+    if (exportData.length === 0) return toast.error("No data to export");
     const columnMap = getColumnMapForTab(activeTab);
     const headers = Object.keys(columnMap);
     const formattedData = exportData.map(row => {
@@ -272,75 +233,102 @@ const EmbrexDataSheetPage = () => {
     toast.success("Excel exported successfully");
   };
 
-  const handleTimelineView = () => {
-    navigate("/embrex-timeline");
-  };
-
   const handleManualRefresh = () => {
     setRefreshKey(prev => prev + 1);
-    toast.success("Data refreshed successfully");
+    toast.success("Data refreshed");
   };
 
-  return (
-    <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
-      {/* Header Section */}
-      <div className="border-b bg-card px-6 py-4">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Data Sheet</h1>
-            <p className="text-sm text-muted-foreground mt-1">View and analyze all hatchery data in one place.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="percentage-toggle"
-                checked={showPercentages}
-                onCheckedChange={setShowPercentages}
-              />
-              <Label htmlFor="percentage-toggle" className="text-sm cursor-pointer">
-                Show percentages
-              </Label>
-            </div>
-            <Button variant="outline" onClick={handleManualRefresh} size="sm" className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-            <Button variant="outline" onClick={handleTimelineView} className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Timeline View
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export as Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+  const showViewToggle = activeTab !== "embrex";
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex items-center justify-between gap-3">
-            <TabsList>
-              <TabsTrigger value="embrex">Embrex/HOI</TabsTrigger>
-              <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
-              <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
-              <TabsTrigger value="hatch">Hatch Results</TabsTrigger>
-              <TabsTrigger value="qa">Quality Assurance</TabsTrigger>
-            </TabsList>
-            <div className="flex items-center gap-2">
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
+        {/* Compact single-row toolbar */}
+        <div className="border-b bg-card px-4 py-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-lg font-semibold whitespace-nowrap mr-1">Data Sheet</h1>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="h-9">
+                <TabsTrigger value="embrex">Embrex/HOI</TabsTrigger>
+                <TabsTrigger value="residue">Residue Analysis</TabsTrigger>
+                <TabsTrigger value="egg-pack">Egg Quality</TabsTrigger>
+                <TabsTrigger value="hatch">Hatch Results</TabsTrigger>
+                <TabsTrigger value="qa">Quality Assurance</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="ml-auto flex items-center gap-2">
+              {showViewToggle && (
+                <div className="inline-flex rounded-md border p-0.5">
+                  <Button
+                    variant={viewMode === "rows" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 gap-1.5 px-2"
+                    onClick={() => setViewMode("rows")}
+                  >
+                    <Rows3 className="h-3.5 w-3.5" />
+                    By House
+                  </Button>
+                  <Button
+                    variant={viewMode === "flock-summary" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 gap-1.5 px-2"
+                    onClick={() => setViewMode("flock-summary")}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    By Flock
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <Switch id="percentage-toggle" checked={showPercentages} onCheckedChange={setShowPercentages} />
+                <Label htmlFor="percentage-toggle" className="text-xs cursor-pointer whitespace-nowrap">
+                  Percentages
+                </Label>
+              </div>
+
+              {/* Expandable search */}
+              <div className={cn("flex items-center transition-all", searchOpen ? "w-56" : "w-9")}>
+                {searchOpen ? (
+                  <div className="relative w-full">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      ref={searchInputRef}
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setSearchTerm("");
+                          setSearchOpen(false);
+                        }
+                      }}
+                      onBlur={() => { if (!searchTerm) setSearchOpen(false); }}
+                      className="h-9 pl-7 pr-7 text-sm"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => { setSearchTerm(""); setSearchOpen(false); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSearchOpen(true)}>
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Search</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+
               <DataSheetCenteredFilterDialog
                 filters={filters}
                 setFilters={setFilters}
@@ -352,30 +340,58 @@ const EmbrexDataSheetPage = () => {
                 onToggleHatchery={toggleHatchery}
                 onToggleMachine={toggleMachine}
               />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-xs"
-              />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleManualRefresh}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh</TooltipContent>
+              </Tooltip>
+
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Export</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="bg-background">
+                  <DropdownMenuItem onClick={handleExportCSV}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportExcel}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Export as Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-        </Tabs>
-      </div>
+        </div>
 
-      {/* Content Section */}
-      <div className="flex-1 overflow-auto p-6">
-        <ReadOnlyBanner show={readOnly} />
-        <CompleteDataView 
-          key={`${showPercentages ? 'percentage' : 'count'}-${refreshKey}`}
-          activeTab={activeTab} 
-          searchTerm={searchTerm}
-          filters={filters}
-          onDataReady={handleDataReady}
-          readOnly={readOnly}
-        />
+        {/* Content — internal scroll only */}
+        <div className="flex-1 min-h-0 overflow-auto p-4">
+          <ReadOnlyBanner show={readOnly} />
+          <CompleteDataView
+            key={`${showPercentages ? 'percentage' : 'count'}-${refreshKey}`}
+            activeTab={activeTab}
+            searchTerm={searchTerm}
+            filters={filters}
+            onDataReady={handleDataReady}
+            readOnly={readOnly}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
