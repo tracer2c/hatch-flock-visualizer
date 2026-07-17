@@ -116,8 +116,8 @@ const ProcessScopedShell: React.FC<{
     }
   };
 
-  const handleHumidity = async (data: RoomHumiditySubmitData) => {
-    if (!technicianName) return toast.error('User profile not loaded yet');
+  const handleHumidity = async (data: RoomHumiditySubmitData): Promise<void> => {
+    if (!technicianName) { toast.error('User profile not loaded yet'); return; }
     setSaving(true);
     try {
       const company_id = await resolveCompanyId();
