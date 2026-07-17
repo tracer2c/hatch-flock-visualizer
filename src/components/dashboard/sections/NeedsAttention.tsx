@@ -180,8 +180,9 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState, compact }: Pr
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b">
                   <th className="text-left font-medium py-2 pr-3">Flock</th>
                   <th className="text-left font-medium py-2 pr-3">Issue</th>
+                  <th className="text-left font-medium py-2 pr-3">Severity</th>
                   <th className="text-left font-medium py-2 pr-3">Details</th>
-                  <th className="text-left font-medium py-2 pr-3">Set Date</th>
+                  <th className="text-left font-medium py-2 pr-3">Updated</th>
                   <th className="text-right font-medium py-2">Action</th>
                 </tr>
               </thead>
@@ -189,6 +190,11 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState, compact }: Pr
                 {items.map((it, i) => {
                   const meta = kindMeta[it.kind];
                   const Icon = meta.icon;
+                  const severity = it.kind === "qa" || it.kind === "below" ? "Critical" : "Warning";
+                  const sevClass =
+                    severity === "Critical"
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : "bg-amber-100 text-amber-700 border-amber-200";
                   return (
                     <tr key={i} className="border-b last:border-0 hover:bg-muted/40">
                       <td className="py-2.5 pr-3 font-medium">
@@ -200,13 +206,16 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState, compact }: Pr
                       <td className="py-2.5 pr-3">
                         <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
                       </td>
+                      <td className="py-2.5 pr-3">
+                        <Badge variant="outline" className={sevClass}>{severity}</Badge>
+                      </td>
                       <td className="py-2.5 pr-3 text-muted-foreground">{it.detail}</td>
                       <td className="py-2.5 pr-3 text-muted-foreground text-xs">
-                        {it.setDate ? format(new Date(it.setDate), "MMM d, yyyy") : "—"}
+                        {it.setDate ? formatDistanceToNow(new Date(it.setDate), { addSuffix: true }) : "—"}
                       </td>
                       <td className="py-2.5 text-right">
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigate(it.target)}>
-                          {it.action}
+                          {it.action === "Review" ? "Review Flock" : it.action}
                         </Button>
                       </td>
                     </tr>
