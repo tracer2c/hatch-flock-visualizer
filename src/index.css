@@ -298,64 +298,6 @@
     animation: gradient-shift 8s ease infinite;
   }
 
-  .ai-brief-highlight {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    background:
-      linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-      linear-gradient(135deg, hsl(var(--border)), hsl(var(--primary) / 0.26), hsl(var(--border))) border-box;
-    border-color: transparent;
-  }
-
-  .ai-brief-highlight::before,
-  .ai-brief-highlight::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    z-index: 0;
-    border-radius: inherit;
-    padding: 1px;
-    pointer-events: none;
-    background:
-      conic-gradient(
-        from 0deg,
-        transparent 0deg,
-        transparent 42deg,
-        hsl(var(--primary) / 0.18) 54deg,
-        hsl(199 89% 62% / 0.76) 66deg,
-        hsl(var(--primary) / 0.2) 78deg,
-        transparent 94deg,
-        transparent 360deg
-      );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    opacity: 0.82;
-    animation: brief-border-orbit 7s linear infinite;
-  }
-
-  .ai-brief-highlight::after {
-    background:
-      conic-gradient(
-        from 180deg,
-        transparent 0deg,
-        transparent 38deg,
-        hsl(189 94% 68% / 0.22) 50deg,
-        hsl(var(--primary) / 0.62) 64deg,
-        hsl(210 100% 72% / 0.22) 82deg,
-        transparent 104deg,
-        transparent 360deg
-      );
-    opacity: 0.62;
-    animation-duration: 9s;
-    animation-direction: reverse;
-  }
 }
 
 @layer base {
@@ -394,17 +336,6 @@
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
-}
-
-@keyframes brief-border-orbit {
-  to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-brief-highlight::before,
-  .ai-brief-highlight::after {
-    animation: none;
-  }
 }
 
 @keyframes pulse-alert-critical {

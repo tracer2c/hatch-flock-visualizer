@@ -17,7 +17,11 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import CommandPalette from "@/components/CommandPalette";
 
-export function TopBar() {
+interface TopBarControlsProps {
+  showAnalytics?: boolean;
+}
+
+export function TopBarControls({ showAnalytics = false }: TopBarControlsProps) {
   const { user, profile, roles, signOut } = useAuth();
 
   const formatRole = (role: string) => {
@@ -56,46 +60,35 @@ export function TopBar() {
 
   return (
     <>
-      <header className={cn(
-        "sticky top-0 z-30 border-b border-border/30",
-        "bg-background/95 backdrop-blur-md",
-        "shadow-sm transition-all duration-300"
-      )}>
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
-        <div className="flex h-12 items-center justify-between px-3 pt-1">
-          <div />
-
-
-          {/* Right Side - Search, Dashboard Icon, Notifications & User */}
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-3">
             {/* Search Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCommandOpen(true)}
-              className="h-8 px-3 gap-2 text-muted-foreground hover:text-foreground border-border/50 hover:border-border"
+              className="h-10 w-[306px] justify-start gap-3 border-border/60 bg-card/80 px-4 text-muted-foreground shadow-sm hover:border-border hover:text-foreground"
             >
-              <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-xs">Search...</span>
+              <Search className="h-4 w-4" />
+              <span className="hidden min-w-0 flex-1 truncate text-sm sm:inline">Search flock, house, or batch...</span>
               <kbd className="hidden md:inline-flex h-5 select-none items-center gap-1 rounded border border-border/50 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
                 <span className="text-xs">⌘</span>K
               </kbd>
             </Button>
 
             {/* Analytics Dropdown */}
-            {analyticsItems.length > 0 && (
+            {showAnalytics && analyticsItems.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "h-8 px-3 gap-2 border-border/50",
+                      "h-10 px-3 gap-2 border-border/50",
                       isOnAnalytics && "bg-primary/10 text-primary border-primary/30"
                     )}
                   >
                     <TrendingUp className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline text-xs">Analytics</span>
+                    <span className="hidden sm:inline text-sm">Analytics</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -130,12 +123,12 @@ export function TopBar() {
                    <Button 
                     variant="ghost" 
                     className={cn(
-                      "relative h-9 w-9 rounded-full",
+                      "relative h-10 w-10 rounded-full",
                       "hover:ring-2 hover:ring-primary/20 transition-all duration-200",
                       "hover:scale-105"
                     )}
                   >
-                    <Avatar className="h-8 w-8 ring-1 ring-border shadow-sm">
+                    <Avatar className="h-10 w-10 ring-1 ring-border shadow-sm">
                       <AvatarImage src={profile?.avatar_url} />
                       <AvatarFallback className="bg-gradient-to-r from-primary/10 to-primary/20 text-primary font-medium text-xs">
                         {getUserInitials()}
@@ -195,12 +188,27 @@ export function TopBar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-          </div>
-        </div>
-      </header>
+      </div>
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </>
+  );
+}
+
+export function TopBar() {
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-30 border-b border-border/30",
+        "bg-background/95 backdrop-blur-md",
+        "shadow-sm transition-all duration-300",
+      )}
+    >
+      <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-primary via-success to-accent" />
+      <div className="flex h-12 items-center justify-end px-3 pt-1">
+        <TopBarControls showAnalytics />
+      </div>
+    </header>
   );
 }

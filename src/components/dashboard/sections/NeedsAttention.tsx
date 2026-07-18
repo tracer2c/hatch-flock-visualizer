@@ -1,7 +1,7 @@
 import { format, formatDistanceToNow } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,19 +10,19 @@ import type { WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 interface Item {
   flock: string;
   issue: string;
-  metricLabel: string;
   metricValue: string;
   target: string;
   variance: string;
   updated: string;
-  meta: string;
+  setDate: string;
+  impact: string;
   targetRoute: string;
 }
 
 interface Props {
   rows: WeeklyFlockRollupRow[];
   criticalAlerts: number;
-  emptyState?: React.ReactNode;
+  emptyState?: ReactNode;
 }
 
 const pct = (n: number | null | undefined) => (n == null || isNaN(n) ? "Pending" : `${n.toFixed(1)}%`);
@@ -32,52 +32,55 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
 
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
+
     for (const row of rows) {
-      const flock = `Flock ${row.flock_number ?? row.flock_name ?? "—"}`;
+      const flock = String(row.flock_number ?? row.flock_name ?? "—");
       const updated = row.earliest_set_date
         ? formatDistanceToNow(new Date(row.earliest_set_date), { addSuffix: true })
         : "Recently";
       const setDate = row.earliest_set_date
-        ? `Set Date: ${format(new Date(row.earliest_set_date), "MMM d, yyyy")}`
+        ? `Set date: ${format(new Date(row.earliest_set_date), "MMM d, yyyy")}`
         : "Set date unavailable";
+      const impact = `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}`;
 
       if (row.fertility_pct == null && row.total_eggs_set > 0) {
         out.push({
           flock,
           issue: "Fertility data missing",
-          metricLabel: "Fertility",
-          metricValue: "Not entered",
+          metricValue: "—",
           target: "85%",
           variance: "Missing",
           updated,
-          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          setDate,
+          impact,
           targetRoute: "/data-entry",
         });
       } else if (row.fertility_pct != null && row.fertility_pct < 85) {
         out.push({
           flock,
           issue: "Fertility below target",
-          metricLabel: "Fertility",
           metricValue: pct(row.fertility_pct),
           target: "85%",
           variance: `-${(85 - row.fertility_pct).toFixed(1)}%`,
           updated,
-          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          setDate,
+          impact,
           targetRoute: "/embrex-data-sheet",
         });
       } else if (row.hof_pct == null && row.worst_status === "completed") {
         out.push({
           flock,
           issue: "Hatch data pending",
-          metricLabel: "Hatch",
-          metricValue: "Pending",
+          metricValue: "—",
           target: "88%",
           variance: "Pending",
           updated,
-          meta: `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}  •  ${setDate}`,
+          setDate,
+          impact,
           targetRoute: "/data-entry",
         });
       }
+
       if (out.length >= 3) break;
     }
 
@@ -85,12 +88,12 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
       out.push({
         flock: "QA System",
         issue: `${criticalAlerts} critical QA alert${criticalAlerts === 1 ? "" : "s"}`,
-        metricLabel: "Alerts",
         metricValue: String(criticalAlerts),
         target: "0",
         variance: `+${criticalAlerts}`,
         updated: "Now",
-        meta: "Immediate review recommended",
+        setDate: "QA system",
+        impact: "Immediate review recommended",
         targetRoute: "/qa-hub",
       });
     }
@@ -100,10 +103,10 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
 
   return (
     <Card className="border-border/70 shadow-sm">
-      <CardContent className="p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <Bell className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-base font-medium">Needs Attention</h2>
             {items.length > 0 && (
               <Badge className="h-5 rounded-full bg-red-500 px-2 text-[11px] text-white hover:bg-red-500">
@@ -112,67 +115,88 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
             )}
           </div>
           <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate("/embrex-data-sheet")}>
-            View all
+            View all issues
           </Button>
         </div>
 
         {items.length === 0 ? (
-          emptyState ?? (
-            <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
-              <CheckCircle2 className="h-7 w-7 text-emerald-600" />
-              <div className="text-sm font-semibold text-emerald-700">Nothing needs attention.</div>
-              <div className="text-xs text-muted-foreground">All selected flocks are operating within current targets.</div>
-            </div>
-          )
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={`${item.flock}-${item.issue}`}
-                className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] px-3 py-2.5"
-              >
-                <div className="grid gap-3 xl:grid-cols-[minmax(180px,1.1fr)_minmax(420px,2fr)_auto] xl:items-center">
-                  <div className="flex min-w-0 items-start gap-2.5">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-500" />
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <span className="text-sm font-medium text-foreground">{item.flock}</span>
-                        <span className="text-sm font-medium text-orange-500">{item.issue}</span>
-                      </div>
-                      <div className="mt-1 text-xs font-medium text-muted-foreground">{item.meta}</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">{item.metricLabel}</div>
-                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.metricValue}</div>
-                    </div>
-                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">Target</div>
-                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.target}</div>
-                    </div>
-                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">Variance</div>
-                      <div className="mt-0.5 text-sm font-semibold text-red-500 tabular-nums">{item.variance}</div>
-                    </div>
-                    <div className="rounded-md bg-background/70 px-2.5 py-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">Updated</div>
-                      <div className="mt-0.5 text-sm font-semibold tabular-nums">{item.updated}</div>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 justify-self-start border-primary/30 px-3 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary xl:justify-self-end"
-                    onClick={() => navigate(item.targetRoute)}
-                  >
-                    Review Flock
-                  </Button>
+          <div className="p-4">
+            {emptyState ?? (
+              <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] text-center">
+                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                <div className="text-sm font-semibold text-emerald-700">Nothing needs attention.</div>
+                <div className="text-xs text-muted-foreground">
+                  All selected flocks are operating within current targets.
                 </div>
               </div>
-            ))}
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] table-fixed text-left">
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-[20%]" />
+                <col className="w-[26%]" />
+                <col className="w-[11%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[13%]" />
+                <col className="w-24" />
+              </colgroup>
+              <thead className="border-b border-border/70 bg-muted/[0.16] text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3" colSpan={2}>
+                    Flock
+                  </th>
+                  <th className="px-3 py-3">Issue</th>
+                  <th className="px-3 py-3">Current</th>
+                  <th className="px-3 py-3">Target</th>
+                  <th className="px-3 py-3">Variance</th>
+                  <th className="px-3 py-3">Last Updated</th>
+                  <th className="px-4 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={`${item.flock}-${item.issue}`} className="border-b border-border/60 last:border-b-0">
+                    <td className="px-4 py-4 align-middle">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    </td>
+                    <td className="px-0 py-4 align-middle">
+                      <div className="truncate text-sm font-semibold text-foreground">{item.flock}</div>
+                      <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{item.setDate}</div>
+                    </td>
+                    <td className="px-3 py-4 align-middle">
+                      <div className="truncate text-sm font-semibold text-orange-500">{item.issue}</div>
+                      <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{item.impact}</div>
+                    </td>
+                    <td className="px-3 py-4 align-middle text-sm font-medium tabular-nums text-foreground">
+                      {item.metricValue}
+                    </td>
+                    <td className="px-3 py-4 align-middle text-sm font-medium tabular-nums text-foreground">
+                      {item.target}
+                    </td>
+                    <td className="px-3 py-4 align-middle text-sm font-semibold tabular-nums text-red-500">
+                      {item.variance}
+                    </td>
+                    <td className="px-3 py-4 align-middle text-sm font-medium text-muted-foreground">
+                      {item.updated}
+                    </td>
+                    <td className="px-4 py-4 align-middle text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-primary/25 px-3 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary"
+                        onClick={() => navigate(item.targetRoute)}
+                      >
+                        Review
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

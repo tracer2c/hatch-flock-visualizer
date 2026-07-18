@@ -1,9 +1,10 @@
 import { useMemo } from "react";
-import { addDays, format } from "date-fns";
+import { addDays, format, startOfWeek } from "date-fns";
 import { ArrowRight, CalendarClock, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAnalyticsFilters } from "@/contexts/AnalyticsFilterContext";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
+import { TopBarControls } from "@/components/TopBar";
 import { useWeeklyFlockRollup, type WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 import { useCriticalAlerts } from "@/hooks/useAlerts";
 import { Button } from "@/components/ui/button";
@@ -169,17 +170,76 @@ export default function DashboardHome() {
     [filtered]
   );
 
+  const kpiTrends = useMemo(() => {
+    const buckets = new Map<
+      string,
+      {
+        label: string;
+        eggs: number;
+        fertility: number[];
+        hatch: number[];
+        hoi: number[];
+      }
+    >();
+
+    for (const row of filtered) {
+      if (!row.earliest_set_date) continue;
+
+      const weekStart = startOfWeek(new Date(row.earliest_set_date), { weekStartsOn: 1 });
+      const key = format(weekStart, "yyyy-MM-dd");
+      const bucket =
+        buckets.get(key) ??
+        {
+          label: format(weekStart, "MMM d"),
+          eggs: 0,
+          fertility: [],
+          hatch: [],
+          hoi: [],
+        };
+
+      bucket.eggs += row.total_eggs_set;
+      if (validPercent(row.fertility_pct) != null) bucket.fertility.push(row.fertility_pct as number);
+      if (validPercent(row.hof_pct) != null) bucket.hatch.push(row.hof_pct as number);
+      if (validPercent(row.hoi_pct) != null) bucket.hoi.push(row.hoi_pct as number);
+      buckets.set(key, bucket);
+    }
+
+    const sorted = Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, bucket]) => ({
+        label: bucket.label,
+        eggs: bucket.eggs,
+        fertility: bucket.fertility.length ? avg(bucket.fertility) : null,
+        hatch: bucket.hatch.length ? avg(bucket.hatch) : null,
+        hoi: bucket.hoi.length ? avg(bucket.hoi) : null,
+      }));
+
+    return {
+      eggs: sorted.map((point) => ({ label: point.label, value: point.eggs })),
+      fertility: sorted.map((point) => ({ label: point.label, value: point.fertility })),
+      hatch: sorted.map((point) => ({ label: point.label, value: point.hatch })),
+      hoi: sorted.map((point) => ({ label: point.label, value: point.hoi })),
+    };
+  }, [filtered]);
+
   return (
     <div className="min-h-full bg-gradient-to-br from-background via-background to-primary/[0.025]">
-      <div className="mx-auto max-w-[1560px] space-y-4 p-4 lg:p-6">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <WeatherLocationChip />
-            <span className="text-sm font-medium text-primary">
-              Overview for {rangeLabel}
-            </span>
+      <div className="mx-auto max-w-[1560px] space-y-5 p-4 lg:p-6">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <WeatherLocationChip variant="plain" />
+            <TopBarControls />
           </div>
-          <AnalyticsFilters showMode={false} />
+
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">
+                Production performance and priorities across Wayne's Hatchery
+              </p>
+            </div>
+            <AnalyticsFilters showMode={false} />
+          </div>
         </div>
 
         <KpiRow
@@ -189,6 +249,7 @@ export default function DashboardHome() {
           avgHoi={avgHoi}
           criticalAlerts={criticalCount}
           rangeLabel={rangeLabel}
+          trends={kpiTrends}
         />
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">

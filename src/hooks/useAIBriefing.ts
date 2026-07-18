@@ -17,29 +17,46 @@ interface Context {
   criticalAlerts: number;
   attentionCount: number;
   topAttention: string[];
+  briefPeriod?: string;
 }
 
 export function useAIBriefing(ctx: Context, enabled: boolean) {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
-  const fetchedRef = useRef(false);
+  const inFlightKeyRef = useRef<string | null>(null);
 
-  const cacheKey = `hp:ai-briefing:v2`;
+  const contextSignature = [
+    ctx.rangeLabel,
+    ctx.totalEggs,
+    ctx.avgFertility?.toFixed(1) ?? "na",
+    ctx.avgHatch?.toFixed(1) ?? "na",
+    ctx.avgHoi?.toFixed(1) ?? "na",
+    ctx.criticalAlerts,
+    ctx.attentionCount,
+    ctx.topAttention.slice(0, 5).join(","),
+    ctx.briefPeriod ?? "current",
+  ].join("|");
+  const cacheKey = `hp:ai-briefing:v3:${contextSignature}`;
 
   useEffect(() => {
     if (!enabled) return;
-    // load cache
+    let cancelled = false;
+
     try {
       const raw = localStorage.getItem(cacheKey);
       if (raw) {
         const parsed = JSON.parse(raw) as Briefing;
         setBriefing(parsed);
         if (Date.now() - parsed.generatedAt < REFRESH_MS) return;
+      } else {
+        setBriefing(null);
       }
-    } catch {}
+    } catch {
+      // localStorage can be unavailable in restricted browser contexts.
+    }
 
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
+    if (inFlightKeyRef.current === cacheKey) return;
+    inFlightKeyRef.current = cacheKey;
 
     const fert = ctx.avgFertility;
     const hof = ctx.avgHatch;
@@ -48,10 +65,10 @@ export function useAIBriefing(ctx: Context, enabled: boolean) {
     const hofGap = hof != null ? (88 - hof).toFixed(1) : null;
     const hoiGap = hoi != null ? (75 - hoi).toFixed(1) : null;
 
-    const prompt = `You are a senior hatchery operations analyst writing the morning stand-up briefing for the hatchery manager. Do NOT restate the raw numbers back in sentences — the manager already sees KPI cards. Interpret them.
+    const prompt = `You are a senior hatchery operations analyst writing an ${ctx.briefPeriod ?? "operations"} summary for the hatchery manager. The dashboard already shows the KPI cards, so interpret the day instead of repeating every raw number.
 
 DATA (for your reasoning only — do NOT echo verbatim):
-- Week: ${ctx.rangeLabel}
+- Selected range: ${ctx.rangeLabel}
 - Eggs Set: ${ctx.totalEggs.toLocaleString()}
 - Fertility ${fert?.toFixed(1) ?? "n/a"}% vs 85% target (gap ${fertGap ?? "n/a"} pp)
 - HOF ${hof?.toFixed(1) ?? "n/a"}% vs 88% target (gap ${hofGap ?? "n/a"} pp)
@@ -59,18 +76,19 @@ DATA (for your reasoning only — do NOT echo verbatim):
 - Critical QA alerts: ${ctx.criticalAlerts}
 - Flocks flagged: ${ctx.attentionCount} (${ctx.topAttention.slice(0, 5).join(", ") || "none"})
 
-WRITE exactly 4 markdown bullets, in this fixed order, each ≤ 90 chars, no restating of the raw numbers:
-- **Signal:** the one thing that most defines this week (trend, outlier, or "quiet week").
-- **Risk:** the biggest downside risk right now, tied to a metric gap or QA alert. If data is missing say so ("Residue not entered — HOF unreliable").
-- **Opportunity:** where a small change would move the needle most.
-- **Next step:** one concrete action, name a flock/hatchery/room if possible.
+Write one concise paragraph, 2 to 4 sentences, no markdown, no bullets, no heading, no table, 65 to 105 words.
 
-Rules: no headings, no tables, no preamble, no "Total Eggs Set: 55,000" style lines, no percentages restated back. If everything is missing, say the data is not entered yet and recommend an entry action.`;
+Rules:
+- Focus on the strongest operational signal, the main risk, and one next action.
+- Name a flock if one is flagged.
+- Mention a metric only when it explains the risk or priority.
+- If everything is missing, say the dashboard is not ready for analysis and recommend the entry action.`;
 
     setLoading(true);
     supabase.functions
       .invoke("ai-chat", { body: { message: prompt, history: [] } })
       .then(({ data, error }) => {
+        if (cancelled) return;
         if (error) throw error;
         const text: string = data?.response || data?.message || "";
         if (!text) return;
@@ -78,12 +96,22 @@ Rules: no headings, no tables, no preamble, no "Total Eggs Set: 55,000" style li
         setBriefing(next);
         try {
           localStorage.setItem(cacheKey, JSON.stringify(next));
-        } catch {}
+        } catch {
+          // Cache writes are best-effort; the live summary still renders.
+        }
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+        if (inFlightKeyRef.current === cacheKey) inFlightKeyRef.current = null;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // cacheKey includes every dashboard value used in the prompt.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled]);
+  }, [cacheKey, enabled]);
 
   return { briefing, loading };
 }

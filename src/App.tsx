@@ -60,7 +60,6 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SupportPage from "./pages/SupportPage";
 import DocumentationWhitePaper from "./pages/DocumentationWhitePaper";
 import { ModernSidebar } from "./components/ModernSidebar";
-import { TopBar } from "./components/TopBar";
 import { HelpProvider } from "./contexts/HelpContext";
 import { AuthProvider } from "./hooks/useAuth";
 import { useIsMobile, useIsTablet } from "./hooks/use-mobile";
@@ -111,7 +110,6 @@ function AppContent() {
                 <div className="flex min-h-screen w-full bg-background">
                   <ModernSidebar />
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    <TopBar />
                     <main className="flex-1 overflow-auto">
                     <RouteHistoryTracker />
                     {showBreadcrumbs && (

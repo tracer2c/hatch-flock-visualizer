@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface WxState {
   city: string;
@@ -24,7 +25,11 @@ function iconFor(code: number) {
   return Cloud;
 }
 
-export function WeatherLocationChip() {
+interface Props {
+  variant?: "pill" | "plain";
+}
+
+export function WeatherLocationChip({ variant = "pill" }: Props) {
   const [wx, setWx] = useState<WxState | null>(null);
 
   useEffect(() => {
@@ -78,7 +83,13 @@ export function WeatherLocationChip() {
   const Icon = iconFor(wx.code);
 
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur text-xs">
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 text-xs",
+        variant === "pill" && "rounded-full border border-border/60 bg-card/60 px-3 py-1.5 backdrop-blur",
+        variant === "plain" && "px-1 py-1",
+      )}
+    >
       <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="font-medium text-foreground">
         {wx.city}
