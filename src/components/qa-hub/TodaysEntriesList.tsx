@@ -1,24 +1,28 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { History, Info, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { History, Info, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { useTodaysQAEntries, TodaysQAEntry } from '@/hooks/useTodaysQAEntries';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TodaysEntriesListProps {
   machineId: string | null | undefined;
   checkDate: string;
   type: string | string[];
   isPastDay: boolean;
-  /** Render a per-entry one-line summary from the candling_results JSON blob. */
   renderSummary: (entry: TodaysQAEntry) => React.ReactNode;
   emptyLabel?: string;
   title?: string;
+  entryMode?: 'house' | 'machine' | 'room';
+  /** When provided, an Edit pencil is shown on each row. */
+  onEdit?: (entry: TodaysQAEntry) => void;
+  /** When true (default), rows show a Delete trash. Disabled on past days. */
+  allowDelete?: boolean;
 }
 
-/**
- * Phase B — Compact "entries so far today" list shown inline in each QA daily-entry form.
- * When viewing a past day, we still show the list but banner it as read-only history.
- */
 const TodaysEntriesList: React.FC<TodaysEntriesListProps> = ({
   machineId,
   checkDate,
@@ -27,11 +31,27 @@ const TodaysEntriesList: React.FC<TodaysEntriesListProps> = ({
   renderSummary,
   emptyLabel = 'No entries recorded yet.',
   title,
+  entryMode,
+  onEdit,
+  allowDelete = true,
 }) => {
-  const { data, isLoading } = useTodaysQAEntries(machineId, checkDate, type);
+  const { data, isLoading } = useTodaysQAEntries(machineId, checkDate, type, { entryMode });
+  const queryClient = useQueryClient();
   const entries = data ?? [];
 
   const heading = title ?? (isPastDay ? `Entries on ${checkDate}` : "Today's entries");
+
+  const handleDelete = async (entry: TodaysQAEntry) => {
+    if (!window.confirm('Delete this entry? This cannot be undone.')) return;
+    const { error } = await supabase.from('qa_monitoring').delete().eq('id', entry.id);
+    if (error) {
+      toast.error(`Failed to delete: ${error.message}`);
+      return;
+    }
+    toast.success('Entry deleted.');
+    queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-qa-entries'] });
+  };
 
   return (
     <div className="pt-3 border-t space-y-2">
@@ -64,9 +84,31 @@ const TodaysEntriesList: React.FC<TodaysEntriesListProps> = ({
                 <Badge variant="outline" className="font-mono text-xs shrink-0">{t || '--:--'}</Badge>
                 <div className="flex-1 min-w-0">{renderSummary(e)}</div>
                 {e.inspector_name && (
-                  <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                  <span className="text-xs text-muted-foreground truncate max-w-[120px] hidden sm:inline">
                     {e.inspector_name}
                   </span>
+                )}
+                {onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => onEdit(e)}
+                    aria-label="Edit entry"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {allowDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(e)}
+                    aria-label="Delete entry"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 )}
               </div>
             );

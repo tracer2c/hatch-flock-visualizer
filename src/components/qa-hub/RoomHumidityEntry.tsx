@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Droplets, Plus, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRooms } from '@/hooks/useRooms';
+import TodaysEntriesList from './TodaysEntriesList';
 
 export interface RoomHumiditySubmitData {
   roomId: string;
@@ -21,11 +22,13 @@ interface Props {
   technicianName: string;
   checkDate: string;
   unitId?: string | null;
+  entryMode?: 'house' | 'machine' | 'room';
+  isPastDay?: boolean;
   returnParams?: string;
   onSubmit: (data: RoomHumiditySubmitData) => Promise<void> | void;
 }
 
-const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId, returnParams, onSubmit }) => {
+const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId, entryMode, isPastDay = false, returnParams, onSubmit }) => {
   const navigate = useNavigate();
   const { data: rooms, isLoading } = useRooms(unitId);
 
@@ -127,6 +130,27 @@ const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId,
             {saving ? 'Saving…' : 'Save Humidity Check'}
           </Button>
         </div>
+
+        <TodaysEntriesList
+          machineId={null}
+          checkDate={checkDate}
+          type="humidity"
+          entryMode={entryMode ?? 'room'}
+          isPastDay={isPastDay}
+          emptyLabel="No humidity checks yet today."
+          renderSummary={(e) => {
+            const roomName = (rooms ?? []).find((r) => r.id === e.candling_results?.room_id)?.name ?? 'Room';
+            const h = e.humidity;
+            const t = e.temperature;
+            return (
+              <span>
+                <span className="font-medium">{roomName}</span>
+                {typeof h === 'number' && <> · <span className="font-medium">{h.toFixed(1)}% RH</span></>}
+                {typeof t === 'number' && <> · <span className="text-muted-foreground">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );

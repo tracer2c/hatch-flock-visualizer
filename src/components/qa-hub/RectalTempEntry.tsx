@@ -11,6 +11,7 @@ interface RectalTempEntryProps {
   technicianName: string;
   checkDate: string;
   machineId?: string | null;
+  entryMode?: 'house' | 'machine' | 'room';
   isPastDay?: boolean;
   onSubmit: (data: {
     location: string;
@@ -26,7 +27,7 @@ const locationOptions = [
   { value: 'separator_room', label: 'Separator Room (104-106°F)', min: 104, max: 106 },
 ];
 
-const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, isPastDay = false, onSubmit }) => {
+const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, entryMode, isPastDay = false, onSubmit }) => {
   const [location, setLocation] = useState('hatcher');
   const [temperature, setTemperature] = useState('');
   const [checkTime, setCheckTime] = useState(new Date().toTimeString().slice(0, 5));
@@ -130,6 +131,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           machineId={machineId}
           checkDate={checkDate}
           type="rectal_temperature"
+          entryMode={entryMode}
           isPastDay={isPastDay}
           emptyLabel="No rectal temperature readings yet today."
           renderSummary={(e) => {
