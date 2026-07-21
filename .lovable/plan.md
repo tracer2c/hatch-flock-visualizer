@@ -1,61 +1,62 @@
+## What I found
 
-## Diagnosis
+- The QA Hub save error is a database/code mismatch, not Corey’s permission.
+  - Corey is a `company_admin` for Wayne Sanderson Farms, so he has write access.
+  - `qa_monitoring.entry_mode` currently only allows `house` or `machine`.
+  - The newer Process / Room QA forms save `entry_mode: 'room'`, which is why Tray Wash / room Humidity / room checks fail with `valid_entry_mode`.
+- Wayne Sanderson’s status automation rules already exist, but they are disabled.
+  - Their rules are currently day 19 to `in_hatcher` and day 21 to `completed`, but disabled.
+  - Some rules also require fertility/residue data; per your answer, day 21 should complete regardless and data entry should stay editable.
+- Hatch Progression is being blocked by UI logic when no house/batch is linked to the selected machine/flock. That is app logic, not RLS.
 
-All three issues are **logic/wiring bugs**, not bad data. I traced each one to the exact source.
+## Plan
 
-### 1. Data Sheet showing 600%+ hatch values (worst offender)
+### Phase 1 — Fix QA Hub save errors
+1. Update the `qa_monitoring` database constraint so it accepts the scopes the app now uses:
+   - `house`
+   - `machine`
+   - `room`
+2. Update QA save code so Process / Room forms consistently save room-level checks without needing a machine or house.
+3. Make Tray Wash resume properly for room/process entries, not only machine-based Tray Wash.
+4. Improve user-facing errors so users see a clear message like “Room QA save failed” only if something truly remains wrong.
 
-In `src/components/dashboard/CompleteDataView.tsx` (line ~215), the row's `chicks_hatched` is set from **`batches.chicks_hatched`** — the total chicks for the entire batch (e.g. ~4,270). But the row's `sample_size` is set to **648** (the fertility/residue inspection sample). These two fields describe different populations.
+### Phase 2 — Fix Hatch Progression blocking
+1. Keep Hatch Progression linked to `batch_id` when the selected machine/flock has an active house.
+2. If a multi-setter record has a flock but no linked house, allow the save as machine/flock-level QA instead of blocking the user.
+3. Show a small warning that the record is not tied to a specific house when the batch link is missing.
+4. Preserve QA linkage records when possible so Data Sheet / QA Overview can still show the entry in the right context.
 
-Then in `HatchPerformanceTab.tsx` line 394, the "Hatch" column renders:
-```
-formatValue(item.chicks_hatched, item.sample_size)
-```
-When the % toggle at the top of Data Sheet is ON, `formatValue` computes `chicks_hatched / sample_size × 100` → `4272 / 648 × 100 = 659.4%`. That's exactly what the screenshot shows. The number itself is not wrong — the denominator is.
+### Phase 3 — Automatic status progression
+Per your answers:
+- Day 19: status only, no automatic hatcher machine assignment.
+- Day 21: always complete, even if final data is missing.
 
-Same conflation causes the "Hatch %" column to look inflated in aggregated (By Flock) rows via `aggregateHatchByFlock` (`dataSheetAggregation.ts` line 423), which does `pct(chicks, sample)` where `chicks` is the sum of batch-total chicks but `sample` is the sum of 648-per-record inspection samples.
+Implementation:
+1. Enable/update Wayne Sanderson automation rules:
+   - `scheduled` → `in_setter` at day 0
+   - `in_setter` → `in_hatcher` at day 19
+   - `in_hatcher` → `completed` at day 21
+2. Remove required fertility/residue checks from the day-21 rule.
+3. Keep historical editing open after completion so users can still add Hatch/HOI, residue, QA, etc.
+4. Record status changes in `batch_status_history` so managers can audit why a house moved.
 
-### 2. Dashboard hatch rate 86.5% vs actual 78% (Wayne Sanderson)
+### Phase 4 — Make machine views reflect the selected date
+1. Update single-setter machine occupancy logic to look at the selected date, not only “today.”
+2. Show houses in the correct phase for that selected date:
+   - Set date through day 18/19 = setter phase
+   - Day 19+ = hatcher status
+   - Day 21+ = completed
+3. Ensure QA machine selection pages use that same selected date so temps, angles, Hatch Progression, and machine lookups show what was in the machine for the filtered date.
 
-Two compounding causes:
-- The dashboard averages **`fertility_analysis.hatch_percent`**, which `FertilityAnalysisTab.handleSave` writes as `(fertile − early_dead − late_dead) / 648 × 100`. That formula ignores mid-dead, culls, live pips, and dead pips, so the stored value is systematically higher than the real hatch. Wayne Sanderson's real 78% vs displayed 86.5% is consistent with that overstatement.
-- The dashboard takes a **plain mean** of that value across records instead of weighting by eggs set, so small-batch inspections skew the number further.
+### Phase 5 — Verification
+1. Test as Wayne Sanderson context where possible.
+2. Verify Corey is not blocked by role/RLS.
+3. Save Tray Wash, room Humidity, and Hatch Progression.
+4. Run/trigger status automation and confirm Wayne houses move to `in_hatcher` at day 19 and `completed` at day 21.
+5. Confirm completed houses still allow past/historical data entry.
 
-The correct hatch % for the KPI is `sum(batches.chicks_hatched) / sum(batches.total_eggs_set)` over the selected week — a single egg-weighted figure that matches the operational number the customer sees.
+## Technical notes
 
-### 3. Custom targets not appearing
-
-`KpiRow.tsx` has the targets **hardcoded**: `Target: 85%`, `Target: 88%`, `Target: 75%`. The `custom_targets` table is only read by `TargetManager` (settings screen) and `BatchOverviewDashboard`. The main dashboard never queries it, so anything the user saves in Targets has no effect on Fertility / Hatch / HOI cards.
-
-## Fix plan
-
-**A. Data Sheet Hatch tab (row-level, By House and By Flock)**
-1. In `CompleteDataView.tsx`, add a second field `sample_chicks_hatched` (from `residue_analysis.chicks_hatched` / fertility sample-derived chicks) and keep `chicks_hatched` as the batch total. Do **not** mix them.
-2. In `HatchPerformanceTab.tsx`, the "Hatch" column should render the **batch total chicks** as a raw count only (no % toggle for that column), and the "Hatch %" column should use the pre-computed `hatch_percent` from residue, OR compute `chicks_hatched / total_eggs_set × 100` when the % toggle is on. That kills the 600% display.
-3. In `dataSheetAggregation.ts::aggregateHatchByFlock`, change `hatch_percent` to `pct(chicks, totalEggsSet)` (add `total_eggs_set` to the sum) instead of `pct(chicks, sample)`.
-
-**B. Dashboard hatch %**
-1. Fix the aggregation in the dashboard hook (`useUnitWeeklyMetrics` / wherever `avgHatch` is fed to `KpiRow`) to compute `sum(chicks_hatched) / sum(total_eggs_set) × 100` from `batches` for the selected range, instead of averaging `fertility_analysis.hatch_percent`.
-2. Fix `FertilityAnalysisTab.handleSave` so the stored `hatch_percent` uses `calculateChicksHatched(...)` (which already subtracts mid-dead, culls, pips) rather than the shortcut `fertile − early_dead − late_dead`. This stops future rows from being overstated.
-
-**C. Custom targets wiring**
-1. Add a small `useCustomTargets(companyId)` hook that reads `custom_targets` filtered by company for the metrics `fertility_percent`, `hatch_percent`, `hoi_percent` (falling back to 85 / 88 / 75).
-2. Pass the resolved targets into `KpiRow` as props; replace the hardcoded `85 / 88 / 75` and the `Target: XX%` sub-labels with those values. Also use them to compute the "vs target" delta.
-
-**D. Verify**
-- Reload the Data Sheet Hatch tab with % toggle on — values should now be realistic (70–90% range).
-- Reload dashboard for Wayne Sanderson, current week — hatch rate should match ~78%.
-- Change a target in Settings → Targets → confirm the KPI card sub-label and delta update on next dashboard load.
-
-## Files touched
-
-- `src/components/dashboard/CompleteDataView.tsx` — separate sample chicks vs batch chicks
-- `src/components/dashboard/HatchPerformanceTab.tsx` — correct Hatch / Hatch % column denominators
-- `src/utils/dataSheetAggregation.ts` — fix `aggregateHatchByFlock` denominator
-- `src/components/dashboard/FertilityAnalysisTab.tsx` — use full residue formula for stored `hatch_percent`
-- `src/hooks/useUnitWeeklyMetrics.ts` (and/or the dashboard's hatch aggregator) — egg-weighted hatch %
-- `src/hooks/useCustomTargets.ts` (new) — read `custom_targets` per company
-- `src/components/dashboard/sections/KpiRow.tsx` — accept target props, drop hardcoded values
-- `src/pages/AnalyticsDashboard.tsx` / `DashboardHome.tsx` — pass targets down
-
-No schema/migration changes required.
+- This requires one database migration for the `qa_monitoring.entry_mode` constraint.
+- Updating Wayne’s automation rules is a data update, not a schema migration.
+- No hatcher machine will be auto-selected; only the house status changes to `in_hatcher`.
