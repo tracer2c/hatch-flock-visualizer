@@ -22,11 +22,13 @@ interface Props {
   technicianName: string;
   checkDate: string;
   unitId?: string | null;
+  entryMode?: 'house' | 'machine' | 'room';
+  isPastDay?: boolean;
   returnParams?: string;
   onSubmit: (data: RoomHumiditySubmitData) => Promise<void> | void;
 }
 
-const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId, returnParams, onSubmit }) => {
+const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId, entryMode, isPastDay = false, returnParams, onSubmit }) => {
   const navigate = useNavigate();
   const { data: rooms, isLoading } = useRooms(unitId);
 
