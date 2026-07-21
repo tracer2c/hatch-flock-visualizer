@@ -211,6 +211,7 @@ const ProcessScopedShell: React.FC<{
             technicianName={technicianName}
             checkDate={checkDate}
             machineId={null}
+            entryMode="room"
             onSubmit={handleRectalTemp}
           />
         </TabsContent>
@@ -219,6 +220,7 @@ const ProcessScopedShell: React.FC<{
           <RoomHumidityEntry
             technicianName={technicianName}
             checkDate={checkDate}
+            entryMode="room"
             returnParams={`?group=process&sub=humidity&date=${checkDate}`}
             onSubmit={handleHumidity}
           />
