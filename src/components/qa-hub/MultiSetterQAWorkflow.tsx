@@ -108,7 +108,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
   const { data: hatcheries } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useMultiSetterMachines(
-    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
+    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId,
+    checkDate
   );
 
   // Today's tray-wash row for the selected machine + date (resume support).

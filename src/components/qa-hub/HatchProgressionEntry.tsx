@@ -22,7 +22,7 @@ interface HatchProgressionEntryProps {
   checkDate: string;
   flockOptions?: FlockOption[];
   defaultFlockId?: string;
-  defaultBatchId?: string;
+  defaultBatchId?: string | null;
   machineId?: string | null;
   isPastDay?: boolean;
   /** Optional labels shown in the header so the user can confirm the machine/house being recorded against. */
@@ -73,7 +73,7 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
   }, [defaultFlockId, selectedFlockId]);
 
   const selectedFlock = flockOptions.find(f => f.flock_id === selectedFlockId);
-  const batchId = selectedFlock?.batch_id || defaultBatchId || '';
+  const batchId = selectedFlock?.batch_id || defaultBatchId || null;
 
   // Auto-calculate percentage when counts change
   useEffect(() => {
