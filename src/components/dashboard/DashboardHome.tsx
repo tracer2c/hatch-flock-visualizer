@@ -7,6 +7,7 @@ import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { TopBarControls } from "@/components/TopBar";
 import { useWeeklyFlockRollup, type WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 import { useCriticalAlerts } from "@/hooks/useAlerts";
+import { useCustomTargets } from "@/hooks/useCustomTargets";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { parseLocalDate } from "@/utils/localDate";
@@ -146,13 +147,19 @@ export default function DashboardHome() {
     weekEnd: filters.dateTo,
   });
   const { data: criticalAlerts = [] } = useCriticalAlerts();
+  const { data: targets } = useCustomTargets();
 
   const filtered = useMemo(() => rows, [rows]);
   const totalEggs = filtered.reduce((a, r) => a + r.total_eggs_set, 0);
+  const totalChicks = filtered.reduce((a, r) => a + (r.total_chicks_hatched || 0), 0);
   const avgFertility = validPercent(avg(filtered.map((r) => r.fertility_pct)));
-  const rawAvgHatch = avg(filtered.map((r) => r.hof_pct));
+  // Egg-weighted hatch rate = sum(chicks hatched) / sum(total eggs set).
+  // Prevents skew from small-sample inspection percentages and matches the
+  // operational number hatcheries actually track.
+  const avgHatch = totalEggs > 0 && totalChicks > 0
+    ? validPercent((totalChicks / totalEggs) * 100)
+    : null;
   const rawAvgHoi = avg(filtered.map((r) => r.hoi_pct));
-  const avgHatch = validPercent(rawAvgHatch);
   const avgHoi = validPercent(rawAvgHoi);
   const criticalCount = criticalAlerts.length;
   const rangeLabel = fmtRange(filters.dateFrom, filters.dateTo);
@@ -250,6 +257,7 @@ export default function DashboardHome() {
           criticalAlerts={criticalCount}
           rangeLabel={rangeLabel}
           trends={kpiTrends}
+          targets={targets}
         />
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">

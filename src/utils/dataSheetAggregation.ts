@@ -410,17 +410,22 @@ export function aggregateHatchByFlock(rows: any[]): any[] {
     const infertile = bucket.reduce((a, r) => a + num(r.infertile_eggs), 0);
     const chicks = bucket.reduce((a, r) => a + num(r.chicks_hatched), 0);
     const injected = bucket.reduce((a, r) => a + num(r.eggs_injected), 0);
+    const totalEggs = bucket.reduce((a, r) => a + num(r.total_eggs_set), 0);
 
     out.push({
       ...commonFlockFields(bucket),
       batch_id: `flock-${normalizeFlockNumber(bucket[0].flock_number)}`,
       sample_size: sample || null,
+      total_eggs_set: totalEggs || null,
       fertile_eggs: fertile || null,
       infertile_eggs: infertile || null,
       chicks_hatched: chicks || null,
       eggs_injected: injected || null,
       fertility_percent: pct(fertile, sample),
-      hatch_percent: pct(chicks, sample),
+      // Hatch % must be computed against eggs actually set, not the small
+      // inspection sample size (~648) — otherwise flocks with big batches
+      // display impossible values like 600%.
+      hatch_percent: pct(chicks, totalEggs),
       hof_percent: pct(chicks, fertile),
       hoi_percent: pct(chicks, injected),
       if_dev_percent: pct(infertile, fertile),

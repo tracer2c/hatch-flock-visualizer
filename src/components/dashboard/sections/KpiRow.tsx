@@ -67,6 +67,7 @@ interface Props {
   criticalAlerts: number;
   rangeLabel?: string;
   trends?: Partial<Record<"eggs" | "fertility" | "hatch" | "hoi", KpiTrendPoint[]>>;
+  targets?: { fertility: number; hatch: number; hof: number; hoi: number };
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
@@ -132,10 +133,13 @@ function MiniAreaTrend({
   );
 }
 
-export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, rangeLabel, trends }: Props) {
-  const fertilityGap = avgFertility == null ? null : avgFertility - 85;
-  const hatchGap = avgHatch == null ? null : avgHatch - 88;
-  const hoiGap = avgHoi == null ? null : avgHoi - 75;
+export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, rangeLabel, trends, targets }: Props) {
+  const fertilityTarget = targets?.fertility ?? 85;
+  const hatchTarget = targets?.hatch ?? 88;
+  const hoiTarget = targets?.hoi ?? 75;
+  const fertilityGap = avgFertility == null ? null : avgFertility - fertilityTarget;
+  const hatchGap = avgHatch == null ? null : avgHatch - hatchTarget;
+  const hoiGap = avgHoi == null ? null : avgHoi - hoiTarget;
   const eggsDelta = trendDelta(trends?.eggs);
 
   const kpis: Kpi[] = [
@@ -151,7 +155,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG FERTILITY",
       value: pct(avgFertility) ?? "Not entered",
-      sub: "Target: 85%",
+      sub: `Target: ${fertilityTarget}%`,
       delta:
         fertilityGap == null
           ? "Fertility data not available yet"
@@ -163,7 +167,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG HATCH RATE",
       value: pct(avgHatch) ?? "Pending",
-      sub: "Target: 88%",
+      sub: `Target: ${hatchTarget}%`,
       detail: avgHatch == null ? "Hatch data not available yet" : undefined,
       delta:
         hatchGap == null
@@ -176,7 +180,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG HOI %",
       value: pct(avgHoi) ?? "Not entered",
-      sub: "Target: 75%",
+      sub: `Target: ${hoiTarget}%`,
       detail: avgHoi == null ? "Awaiting HOI data" : undefined,
       delta:
         hoiGap == null

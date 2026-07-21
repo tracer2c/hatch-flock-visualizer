@@ -1,95 +1,61 @@
-## Goal
-Rebalance the Dashboard so action blocks lead, KPIs feel alive with sparklines, and the AI Briefing shrinks into a compact summary — matching the priorities the user described. Frontend-only, no backend changes.
 
-## New layout (top → bottom)
+## Diagnosis
 
+All three issues are **logic/wiring bugs**, not bad data. I traced each one to the exact source.
+
+### 1. Data Sheet showing 600%+ hatch values (worst offender)
+
+In `src/components/dashboard/CompleteDataView.tsx` (line ~215), the row's `chicks_hatched` is set from **`batches.chicks_hatched`** — the total chicks for the entire batch (e.g. ~4,270). But the row's `sample_size` is set to **648** (the fertility/residue inspection sample). These two fields describe different populations.
+
+Then in `HatchPerformanceTab.tsx` line 394, the "Hatch" column renders:
 ```
-[ slim header: weather chip · range · filters ]
-
-[ KPI 1 ][ KPI 2 ][ KPI 3 ][ KPI 4 ][ KPI 5 ]      <- with sparklines & pending states
-
-[ Needs Attention (large, 8 cols) ] [ QA Alerts (4 cols) ]
-                                    [ Upcoming Tasks    ]
-
-[ AI Daily Briefing — compact (~150px, single row of bullets) ]
-
-[ Weekly Trend / Production Pipeline (fills remaining vertical) ]
+formatValue(item.chicks_hatched, item.sample_size)
 ```
+When the % toggle at the top of Data Sheet is ON, `formatValue` computes `chicks_hatched / sample_size × 100` → `4272 / 648 × 100 = 659.4%`. That's exactly what the screenshot shows. The number itself is not wrong — the denominator is.
 
-No `h-[calc(100vh-3.5rem)]` no-scroll clamp — the page becomes normally scrollable so operational widgets can breathe. Header/KPI rows stay above the fold on 1080p; row 3+ scrolls in.
+Same conflation causes the "Hatch %" column to look inflated in aggregated (By Flock) rows via `aggregateHatchByFlock` (`dataSheetAggregation.ts` line 423), which does `pct(chicks, sample)` where `chicks` is the sum of batch-total chicks but `sample` is the sum of 648-per-record inspection samples.
 
-## Row 1 — Header
-- Keep weather chip but demote: smaller text, muted styling, `hidden lg:flex`. Range label to the right of it.
-- Filters on the right (unchanged).
+### 2. Dashboard hatch rate 86.5% vs actual 78% (Wayne Sanderson)
 
-## Row 2 — KPI cards with sparklines and better states
+Two compounding causes:
+- The dashboard averages **`fertility_analysis.hatch_percent`**, which `FertilityAnalysisTab.handleSave` writes as `(fertile − early_dead − late_dead) / 648 × 100`. That formula ignores mid-dead, culls, live pips, and dead pips, so the stored value is systematically higher than the real hatch. Wayne Sanderson's real 78% vs displayed 86.5% is consistent with that overstatement.
+- The dashboard takes a **plain mean** of that value across records instead of weighting by eggs set, so small-batch inspections skew the number further.
 
-Refactor `KpiRow.tsx`:
-- Add a `spark?: number[]` prop per KPI. Render a tiny recharts `<AreaChart>` (or `<LineChart>`) 80×32 in the top-right corner of the card body, tone-tinted (matches the KPI accent). Uses `Total Eggs Set` daily series over the last 14 days; other KPIs use last-4-week averages when available, `undefined` otherwise (sparkline hidden).
-- New states — pass a `pending?: string` prop; when the metric is `null`/`NaN`, render the pending label (e.g. "Awaiting HOI data") in muted italic instead of `—`.
-- Deltas: keep the `↑/↓ X% vs last period` line; when `pending`, hide the delta.
-- Card height fixed (`h-[110px]`) so the row stays tight but readable. Two lines: value + sparkline (row) then sub/delta.
+The correct hatch % for the KPI is `sum(batches.chicks_hatched) / sum(batches.total_eggs_set)` over the selected week — a single egg-weighted figure that matches the operational number the customer sees.
 
-Sparkline data source: derive from `useWeeklyFlockRollup` results grouped by day for Total Eggs Set; for Fertility/Hatch/HOI use `prevRows` + `rows` averages as a simple 2-point trend (upgrade later). Keep the addition non-breaking — sparkline is optional.
+### 3. Custom targets not appearing
 
-Pending labels wired in `DashboardHome`:
-- Avg Hatch % → "Pending hatch data" when no completed rows have `hof_pct`.
-- Avg HOI % → "Awaiting HOI data" when all `hoi_pct` are null.
-- Avg Fertility → "Not entered yet" when all `fertility_pct` are null.
-- Total Eggs Set → normal value (0 is legitimate).
-- Critical QA Alerts → "All clear" when 0 (already handled).
+`KpiRow.tsx` has the targets **hardcoded**: `Target: 85%`, `Target: 88%`, `Target: 75%`. The `custom_targets` table is only read by `TargetManager` (settings screen) and `BatchOverviewDashboard`. The main dashboard never queries it, so anything the user saves in Targets has no effect on Fertility / Hatch / HOI cards.
 
-## Row 3 — Needs Attention (hero) + right rail
+## Fix plan
 
-Use `grid-cols-12`: `NeedsAttention` full mode occupies `col-span-8`; right column `col-span-4` stacks:
-1. `DashboardQaAlerts` (existing)
-2. New **Upcoming Tasks** card that reuses `useChecklistForecast` or `useCriticalEvents` if already present — otherwise a lightweight card that pulls the next 3 items from `daily_tasks` / checklist forecast. If no such data hook exists, render a placeholder card that links to `/checklist` with count of today's tasks from an existing hook (verify — will confirm during implementation and swap for a static "View today's tasks" CTA if no cheap source exists).
+**A. Data Sheet Hatch tab (row-level, By House and By Flock)**
+1. In `CompleteDataView.tsx`, add a second field `sample_chicks_hatched` (from `residue_analysis.chicks_hatched` / fertility sample-derived chicks) and keep `chicks_hatched` as the batch total. Do **not** mix them.
+2. In `HatchPerformanceTab.tsx`, the "Hatch" column should render the **batch total chicks** as a raw count only (no % toggle for that column), and the "Hatch %" column should use the pre-computed `hatch_percent` from residue, OR compute `chicks_hatched / total_eggs_set × 100` when the % toggle is on. That kills the 600% display.
+3. In `dataSheetAggregation.ts::aggregateHatchByFlock`, change `hatch_percent` to `pct(chicks, totalEggsSet)` (add `total_eggs_set` to the sum) instead of `pct(chicks, sample)`.
 
-Upgrade the full `NeedsAttention` variant:
-- Add a small **Severity** column (Warning/Critical) derived from `kind`.
-- Add an **Updated** column showing relative time ("1 hour ago") when `setDate` is present.
-- Keep table dense; primary CTA `Review Flock` navigates to the flock in `/embrex-data-sheet`.
+**B. Dashboard hatch %**
+1. Fix the aggregation in the dashboard hook (`useUnitWeeklyMetrics` / wherever `avgHatch` is fed to `KpiRow`) to compute `sum(chicks_hatched) / sum(total_eggs_set) × 100` from `batches` for the selected range, instead of averaging `fertility_analysis.hatch_percent`.
+2. Fix `FertilityAnalysisTab.handleSave` so the stored `hatch_percent` uses `calculateChicksHatched(...)` (which already subtracts mid-dead, culls, pips) rather than the shortcut `fertile − early_dead − late_dead`. This stops future rows from being overstated.
 
-Compact variant is removed from the dashboard usage (still supported for other callers).
+**C. Custom targets wiring**
+1. Add a small `useCustomTargets(companyId)` hook that reads `custom_targets` filtered by company for the metrics `fertility_percent`, `hatch_percent`, `hoi_percent` (falling back to 85 / 88 / 75).
+2. Pass the resolved targets into `KpiRow` as props; replace the hardcoded `85 / 88 / 75` and the `Target: XX%` sub-labels with those values. Also use them to compute the "vs target" delta.
 
-## Row 4 — Compact AI Daily Briefing
+**D. Verify**
+- Reload the Data Sheet Hatch tab with % toggle on — values should now be realistic (70–90% range).
+- Reload dashboard for Wayne Sanderson, current week — hatch rate should match ~78%.
+- Change a target in Settings → Targets → confirm the KPI card sub-label and delta update on next dashboard load.
 
-Refactor `AIBriefingCard.tsx`:
-- New `variant="compact"` prop. Compact mode:
-  - Fixed height ~150–170px.
-  - Header row: sparkle icon + "AI Daily Briefing" + "Updated X ago" · "Ask HatchAI" ghost button (routes to `/chat`) + "View full briefing" link that opens the existing full-card in a dialog (or navigates to `/chat` with the briefing prefilled — pick dialog for zero routing changes).
-  - Body: 3–5 short single-line bullets rendered from the model output. Prompt updated to force ≤5 bullets, ≤80 chars each, ending with a "Next step:" line.
-- Use compact variant on the dashboard; keep default for anywhere else.
+## Files touched
 
-## Row 5 — Operational widget
+- `src/components/dashboard/CompleteDataView.tsx` — separate sample chicks vs batch chicks
+- `src/components/dashboard/HatchPerformanceTab.tsx` — correct Hatch / Hatch % column denominators
+- `src/utils/dataSheetAggregation.ts` — fix `aggregateHatchByFlock` denominator
+- `src/components/dashboard/FertilityAnalysisTab.tsx` — use full residue formula for stored `hatch_percent`
+- `src/hooks/useUnitWeeklyMetrics.ts` (and/or the dashboard's hatch aggregator) — egg-weighted hatch %
+- `src/hooks/useCustomTargets.ts` (new) — read `custom_targets` per company
+- `src/components/dashboard/sections/KpiRow.tsx` — accept target props, drop hardcoded values
+- `src/pages/AnalyticsDashboard.tsx` / `DashboardHome.tsx` — pass targets down
 
-Add `WeeklyTrendCard.tsx`:
-- Simple `<LineChart>` from recharts (already used) showing the last 6 weeks of Total Eggs Set, Fertility %, Hatch %. Uses `useWeeklyFlockRollup` extended range (query 6 iso weeks back — reuse existing hook by calling it once per week if cheap; otherwise a single `useDatesWithBatches`-style aggregate). Falls back to `ActiveHousesPipeline` if the trend query is empty.
-- Card height ~280px, fills the row.
-
-## Files
-
-### Edit
-- `src/components/dashboard/DashboardHome.tsx` — new grid, no viewport clamp, wire pending states + sparkline data, mount compact briefing + trend card.
-- `src/components/dashboard/sections/KpiRow.tsx` — add `spark`, `pending`, render sparkline, apply pending state.
-- `src/components/dashboard/sections/NeedsAttention.tsx` — add Severity + Updated columns, tighten default variant, CTA copy.
-- `src/components/dashboard/sections/AIBriefingCard.tsx` — add `variant="compact"`, "Ask HatchAI" + "View full" affordances; tighten briefing prompt in `useAIBriefing.ts` for ≤5 bullets.
-
-### Create
-- `src/components/dashboard/sections/UpcomingTasksCard.tsx` — right-rail card.
-- `src/components/dashboard/sections/WeeklyTrendCard.tsx` — row 5 line chart.
-
-### No changes
-- Filters, weather chip, alerts hooks, routes, sidebar.
-
-## Out of scope
-- Real AI-generated sparklines / new backend series.
-- New AI endpoints — the briefing keeps the existing `ai-chat` invocation and 2h cache.
-- Replacing recharts with another library.
-
-## Verification
-1. Build passes.
-2. Preview at ~1280×800: header + KPI row + Needs Attention hero visible above the fold; page scrolls to reveal AI briefing (compact) and trend chart.
-3. KPI cards show a tiny inline sparkline and either a delta or a "Pending / Awaiting … " label instead of `0.0%` / `—` for metrics with no data.
-4. `NeedsAttention` shows Severity + Updated columns and a `Review Flock` CTA.
-5. AI Briefing card is ~150–170px tall, shows ≤5 bullets and an "Ask HatchAI" button.
+No schema/migration changes required.

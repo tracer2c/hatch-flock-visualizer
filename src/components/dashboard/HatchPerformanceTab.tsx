@@ -391,7 +391,9 @@ export const HatchPerformanceTab = ({ data, searchTerm, filters, onDataUpdate, r
                 )}
                 {show("hatch") && (
                   <TableCell className="text-right">
-                    {item.chicks_hatched ? formatValue(item.chicks_hatched, item.sample_size) : "-"}
+                    {item.chicks_hatched
+                      ? formatValue(item.chicks_hatched, item.total_eggs_set)
+                      : "-"}
                   </TableCell>
                 )}
                 {show("hatch_percent") && (
