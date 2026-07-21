@@ -133,10 +133,13 @@ function MiniAreaTrend({
   );
 }
 
-export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, rangeLabel, trends }: Props) {
-  const fertilityGap = avgFertility == null ? null : avgFertility - 85;
-  const hatchGap = avgHatch == null ? null : avgHatch - 88;
-  const hoiGap = avgHoi == null ? null : avgHoi - 75;
+export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAlerts, rangeLabel, trends, targets }: Props) {
+  const fertilityTarget = targets?.fertility ?? 85;
+  const hatchTarget = targets?.hatch ?? 88;
+  const hoiTarget = targets?.hoi ?? 75;
+  const fertilityGap = avgFertility == null ? null : avgFertility - fertilityTarget;
+  const hatchGap = avgHatch == null ? null : avgHatch - hatchTarget;
+  const hoiGap = avgHoi == null ? null : avgHoi - hoiTarget;
   const eggsDelta = trendDelta(trends?.eggs);
 
   const kpis: Kpi[] = [
