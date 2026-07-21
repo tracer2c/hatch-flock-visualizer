@@ -257,6 +257,7 @@ export default function DashboardHome() {
           criticalAlerts={criticalCount}
           rangeLabel={rangeLabel}
           trends={kpiTrends}
+          targets={targets}
         />
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
