@@ -72,16 +72,23 @@ interface SelectedMachine {
 
 interface MultiSetterQAWorkflowProps {
   focusSection?: string;
+  checkDate?: string;
+  onCheckDateChange?: (date: string) => void;
 }
 
-const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSection }) => {
+const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSection, checkDate: controlledCheckDate, onCheckDateChange }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   // technicianName is derived from the signed-in profile (non-editable) — see below.
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const [localCheckDate, setLocalCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const checkDate = controlledCheckDate ?? localCheckDate;
+  const setCheckDate = (date: string) => {
+    if (onCheckDateChange) onCheckDateChange(date);
+    else setLocalCheckDate(date);
+  };
 
   const { isOnline } = useOnlineStatus();
   const { profile } = useAuth();
@@ -101,7 +108,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
 
   const { data: hatcheries } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useMultiSetterMachines(
-    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
+    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId,
+    checkDate
   );
 
   // Today's tray-wash row for the selected machine + date (resume support).

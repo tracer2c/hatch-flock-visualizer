@@ -60,19 +60,28 @@ interface SingleSetterQAWorkflowProps {
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
   focusSection?: string;
+  checkDate?: string;
+  onCheckDateChange?: (date: string) => void;
 }
 
 const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({ 
   preSelectedHouseId, 
   preSelectedAction,
   focusSection,
+  checkDate: controlledCheckDate,
+  onCheckDateChange,
 }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   // Technician name is locked to the signed-in user — see derived value below.
   const [notes, setNotes] = useState('');
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const [localCheckDate, setLocalCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const checkDate = controlledCheckDate ?? localCheckDate;
+  const setCheckDate = (date: string) => {
+    if (onCheckDateChange) onCheckDateChange(date);
+    else setLocalCheckDate(date);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
@@ -99,7 +108,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
 
   const { data: hatcheries, isLoading: hatcheriesLoading } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
-    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
+    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId,
+    checkDate
   );
 
   // Today's tray-wash row for the selected machine + date (resume support).
@@ -298,15 +308,11 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
       toast.error('Select a machine first.');
       return;
     }
-    if (!selectedMachine.currentHouse) {
-      toast.error('This machine has no house assigned — assign a house before recording hatch progression.');
-      return;
-    }
     setIsSubmitting(true);
     try {
       const companyId = await resolveCompanyId();
       await submitQAMonitoring({
-        batch_id: selectedMachine.currentHouse.id,
+        batch_id: data.batch_id,
         machine_id: selectedMachine.id,
         check_date: data.hatchDate,
         check_time: new Date().toTimeString().split(' ')[0],
@@ -315,12 +321,13 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         humidity: data.percentageOut,
         inspector_name: technicianName,
         notes: notes || null,
-        entry_mode: 'house',
+        entry_mode: data.batch_id ? 'house' : 'machine',
         candling_results: JSON.stringify({
           type: 'hatch_progression',
           flock_id: data.flock_id,
-          batch_id: selectedMachine.currentHouse.id,
+          batch_id: data.batch_id,
           machine_id: selectedMachine.id,
+          scope: data.batch_id ? 'house' : 'machine_flock',
           stage: data.stage,
           percentageOut: data.percentageOut,
           totalCount: data.totalCount,
@@ -329,7 +336,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         }),
         company_id: companyId,
       }, 'insert', {
-        batchId: selectedMachine.currentHouse.id,
+        batchId: data.batch_id ?? undefined,
       });
       toast.success('Hatch progression saved!');
     } catch (error: any) {

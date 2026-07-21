@@ -73,7 +73,7 @@ export const useBatchStatusRules = () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       toast({
         title: "Automation completed",
-        description: `${data.batches_updated} batch(es) updated successfully.`,
+        description: `${data.houses_updated ?? data.batches_updated ?? 0} house(s) updated successfully.`,
       });
     },
     onError: (error) => {

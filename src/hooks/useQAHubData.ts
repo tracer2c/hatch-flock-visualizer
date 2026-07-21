@@ -71,9 +71,9 @@ export function useSingleSetterHouses(hatcheryId?: string) {
 }
 
 // Fetch single-setter machines with their current house occupant
-export function useSingleSetterMachines(hatcheryId?: string) {
+export function useSingleSetterMachines(hatcheryId?: string, checkDate?: string) {
   return useQuery({
-    queryKey: ['single-setter-machines', hatcheryId],
+    queryKey: ['single-setter-machines', hatcheryId, checkDate],
     queryFn: async () => {
       // Get single-setter machines (setter_mode is null or 'single_setter')
       let query = supabase
@@ -108,7 +108,7 @@ export function useSingleSetterMachines(hatcheryId?: string) {
       );
       
       // For each machine, find the current house (batch) loaded
-      const today = new Date().toISOString().split('T')[0];
+      const asOfDate = checkDate || new Date().toISOString().split('T')[0];
       const machinesWithOccupant = await Promise.all(
         singleSetterMachines.map(async (machine) => {
           // Find active batch in this machine
@@ -127,19 +127,25 @@ export function useSingleSetterMachines(hatcheryId?: string) {
               )
             `)
             .eq('machine_id', machine.id)
-            .in('status', ['in_setter', 'in_hatcher'])
-            .lte('set_date', today)
+            .neq('status', 'cancelled')
+            .lte('set_date', asOfDate)
             .order('set_date', { ascending: false })
-            .limit(1);
+            .limit(8);
           
-          const currentHouse = batches?.[0] || null;
+          const currentHouse = (batches || []).find((batch) => {
+            if (!batch.set_date) return false;
+            const setDate = new Date(`${batch.set_date}T00:00:00`);
+            const selected = new Date(`${asOfDate}T00:00:00`);
+            const diffDays = Math.floor((selected.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 && diffDays <= 21;
+          }) || null;
           
           // Calculate days in incubation
           let daysInIncubation = 0;
           if (currentHouse?.set_date) {
-            const setDate = new Date(currentHouse.set_date);
-            const now = new Date();
-            daysInIncubation = Math.floor((now.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            const setDate = new Date(`${currentHouse.set_date}T00:00:00`);
+            const selected = new Date(`${asOfDate}T00:00:00`);
+            daysInIncubation = Math.floor((selected.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
           }
           
           return {
@@ -157,11 +163,11 @@ export function useSingleSetterMachines(hatcheryId?: string) {
 }
 
 // Fetch multi-setter machines with occupancy count
-export function useMultiSetterMachines(hatcheryId?: string) {
+export function useMultiSetterMachines(hatcheryId?: string, checkDate?: string) {
   return useQuery({
-    queryKey: ['multi-setter-machines', hatcheryId],
+    queryKey: ['multi-setter-machines', hatcheryId, checkDate],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const asOfDate = checkDate || new Date().toISOString().split('T')[0];
 
       try {
         let query = supabase
@@ -194,18 +200,24 @@ export function useMultiSetterMachines(hatcheryId?: string) {
           (machines || []).map(async (machine) => {
             const { data: sets } = await supabase
               .from('multi_setter_sets')
-              .select('id, flock_id')
+              .select('id, flock_id, batch_id, set_date')
               .eq('machine_id', machine.id)
-              .lte('set_date', today);
+              .lte('set_date', asOfDate);
 
             const { data: transfers } = await supabase
               .from('machine_transfers')
               .select('batch_id')
               .eq('from_machine_id', machine.id)
-              .lte('transfer_date', today);
+              .lte('transfer_date', asOfDate);
 
             const transferredBatchIds = new Set((transfers || []).map(t => t.batch_id));
-            const activeSets = (sets || []).filter(s => !transferredBatchIds.has(s.id));
+            const activeSets = (sets || []).filter(s => {
+              if (s.batch_id && transferredBatchIds.has(s.batch_id)) return false;
+              const setDate = new Date(`${s.set_date}T00:00:00`);
+              const selected = new Date(`${asOfDate}T00:00:00`);
+              const diffDays = Math.floor((selected.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+              return diffDays >= 0 && diffDays <= 21;
+            });
             const uniqueFlocks = new Set(activeSets.map(s => s.flock_id));
 
             return {
@@ -233,12 +245,18 @@ export function useMultiSetterMachines(hatcheryId?: string) {
 
         return multiSetterMachines.map(machine => {
           const machineSets = cachedSets.filter(
-            s => s.machine_id === machine.id && s.set_date <= today
+            s => s.machine_id === machine.id && s.set_date <= asOfDate
           );
-          const uniqueFlocks = new Set(machineSets.map((s: any) => s.flock_id));
+          const activeSets = machineSets.filter((s: any) => {
+            const setDate = new Date(`${s.set_date}T00:00:00`);
+            const selected = new Date(`${asOfDate}T00:00:00`);
+            const diffDays = Math.floor((selected.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 && diffDays <= 21;
+          });
+          const uniqueFlocks = new Set(activeSets.map((s: any) => s.flock_id));
           return {
             ...machine,
-            occupiedPositions: machineSets.length,
+            occupiedPositions: activeSets.length,
             totalPositions: 18,
             activeFlocks: uniqueFlocks.size,
           };
