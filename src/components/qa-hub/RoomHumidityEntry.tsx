@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Droplets, Plus, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRooms } from '@/hooks/useRooms';
+import TodaysEntriesList from './TodaysEntriesList';
 
 export interface RoomHumiditySubmitData {
   roomId: string;
