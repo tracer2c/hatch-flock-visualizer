@@ -192,7 +192,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         humidity: 55,
         inspector_name: technicianName,
         notes: notes || null,
-        entry_mode: data.batch_id ? 'house' : 'machine',
+        entry_mode: 'house',
         candling_results: JSON.stringify({
           type: 'tray_wash',
           firstCheck: data.firstCheck,
@@ -250,7 +250,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         mortality_count: data.maleCount + data.femaleCount,
         inspector_name: technicianName,
         notes: notes || null,
-        entry_mode: 'house',
+        entry_mode: data.batch_id ? 'house' : 'machine',
         candling_results: JSON.stringify({ type: 'cull_check', flock_id: data.flock_id, maleCount: data.maleCount, femaleCount: data.femaleCount, defectType: data.defectType }),
         company_id: companyId,
       }, 'insert', {
