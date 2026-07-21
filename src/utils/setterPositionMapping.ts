@@ -106,12 +106,13 @@ export function findSetForPosition(
   checkDate: string
 ): MultiSetterSet | null {
   // Filter sets that match the position and were set on or before the check date
-  const matchingSets = sets.filter(set => 
-    set.zone === zone && 
-    set.side === side && 
-    set.level === level &&
-    set.set_date <= checkDate
-  );
+  const matchingSets = sets.filter(set => {
+    if (set.zone !== zone || set.side !== side || set.level !== level || set.set_date > checkDate) return false;
+    const setDate = new Date(`${set.set_date}T00:00:00`);
+    const selected = new Date(`${checkDate}T00:00:00`);
+    const diffDays = Math.floor((selected.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 21;
+  });
 
   if (matchingSets.length === 0) return null;
 

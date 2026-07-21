@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Cpu, Home } from "lucide-react";
+import { Timer, Cpu, Home, AlertTriangle } from "lucide-react";
 import { toast } from 'sonner';
 import TodaysEntriesList from './TodaysEntriesList';
 
 interface FlockOption {
   flock_id: string;
-  batch_id: string;
+  batch_id: string | null;
   flock_name: string;
   flock_number: number;
 }
@@ -29,7 +30,7 @@ interface HatchProgressionEntryProps {
   houseLabel?: string;
   onSubmit: (data: {
     flock_id: string;
-    batch_id: string;
+    batch_id: string | null;
     stage: string;
     percentageOut: number;
     totalCount: number;
@@ -92,10 +93,6 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
     }
     if (!selectedFlockId) {
       toast.error('Select a flock before adding the record.');
-      return;
-    }
-    if (!batchId) {
-      toast.error('No house is linked to this machine/flock — assign a house first.');
       return;
     }
     const total = parseInt(totalCount);
@@ -211,6 +208,15 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
             />
           </div>
         </div>
+
+        {selectedFlockId && !batchId && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-700" />
+            <AlertDescription className="text-amber-800">
+              This flock is not linked to a specific house for the selected date. The record will save at machine/flock level.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">

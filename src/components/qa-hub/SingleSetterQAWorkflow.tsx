@@ -60,19 +60,28 @@ interface SingleSetterQAWorkflowProps {
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
   focusSection?: string;
+  checkDate?: string;
+  onCheckDateChange?: (date: string) => void;
 }
 
 const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({ 
   preSelectedHouseId, 
   preSelectedAction,
   focusSection,
+  checkDate: controlledCheckDate,
+  onCheckDateChange,
 }) => {
   const [selectedHatcheryId, setSelectedHatcheryId] = useState<string>('all');
   const [selectedMachine, setSelectedMachine] = useState<SelectedMachine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   // Technician name is locked to the signed-in user — see derived value below.
   const [notes, setNotes] = useState('');
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const [localCheckDate, setLocalCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const checkDate = controlledCheckDate ?? localCheckDate;
+  const setCheckDate = (date: string) => {
+    if (onCheckDateChange) onCheckDateChange(date);
+    else setLocalCheckDate(date);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeQATab, setActiveQATab] = useState(focusSection || 'rectal-temps');
   const { profile } = useAuth();
@@ -99,7 +108,8 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
 
   const { data: hatcheries, isLoading: hatcheriesLoading } = useHatcheries();
   const { data: machines, isLoading: machinesLoading, refetch } = useSingleSetterMachines(
-    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId
+    selectedHatcheryId === 'all' ? undefined : selectedHatcheryId,
+    checkDate
   );
 
   // Today's tray-wash row for the selected machine + date (resume support).

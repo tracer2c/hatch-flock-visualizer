@@ -147,6 +147,8 @@ const QAHubPage: React.FC = () => {
           <MachineGroup
             preSelectedHouseId={houseIdFromUrl}
             preSelectedAction={actionFromUrl}
+            checkDate={checkDate}
+            onCheckDateChange={setCheckDate}
             sub={machineSub}
             onSubChange={setMachineSub}
           />
@@ -167,9 +169,11 @@ const QAHubPage: React.FC = () => {
 const MachineGroup: React.FC<{
   preSelectedHouseId?: string | null;
   preSelectedAction?: string | null;
+  checkDate: string;
+  onCheckDateChange: (date: string) => void;
   sub?: MachineSub;
   onSubChange?: (s: MachineSub) => void;
-}> = ({ preSelectedHouseId, preSelectedAction, sub: controlledSub, onSubChange }) => {
+}> = ({ preSelectedHouseId, preSelectedAction, checkDate, onCheckDateChange, sub: controlledSub, onSubChange }) => {
   // Default sub-tab: hatch (available for both single & multi).
   const initialSub: MachineSub = preSelectedAction === 'candling' || preSelectedHouseId ? 'hatch' : 'temps';
   const [uncontrolledSub, setUncontrolledSub] = useState<MachineSub>(initialSub);
@@ -244,10 +248,12 @@ const MachineGroup: React.FC<{
           <SingleSetterQAWorkflow
             preSelectedHouseId={preSelectedHouseId ?? null}
             preSelectedAction={preSelectedAction ?? null}
+            checkDate={checkDate}
+            onCheckDateChange={onCheckDateChange}
             focusSection={meta.single}
           />
         ) : (
-          <MultiSetterQAWorkflow focusSection={meta.multi} />
+          <MultiSetterQAWorkflow focusSection={meta.multi} checkDate={checkDate} onCheckDateChange={onCheckDateChange} />
         )
       ) : (
         <Alert>
