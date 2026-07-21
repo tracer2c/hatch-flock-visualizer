@@ -130,6 +130,27 @@ const RoomHumidityEntry: React.FC<Props> = ({ technicianName, checkDate, unitId,
             {saving ? 'Saving…' : 'Save Humidity Check'}
           </Button>
         </div>
+
+        <TodaysEntriesList
+          machineId={null}
+          checkDate={checkDate}
+          type="humidity"
+          entryMode={entryMode ?? 'room'}
+          isPastDay={isPastDay}
+          emptyLabel="No humidity checks yet today."
+          renderSummary={(e) => {
+            const roomName = (rooms ?? []).find((r) => r.id === e.candling_results?.room_id)?.name ?? 'Room';
+            const h = e.humidity;
+            const t = e.temperature;
+            return (
+              <span>
+                <span className="font-medium">{roomName}</span>
+                {typeof h === 'number' && <> · <span className="font-medium">{h.toFixed(1)}% RH</span></>}
+                {typeof t === 'number' && <> · <span className="text-muted-foreground">{t.toFixed(1)}°F</span></>}
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
