@@ -8,8 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
  * filters by the `candling_results.type` discriminator (e.g. 'rectal_temperature',
  * 'cull_check', 'hatch_progression', 'setter_angles', 'humidity').
  *
- * When `checkDate` is a past day, callers should render this list read-only
- * (isPastDay decided in the parent workflow).
+ * Supports room-scope (machineId is null, entry_mode='room') so process/room
+ * tabs can list their entries too.
  */
 export interface TodaysQAEntry {
   id: string;
@@ -25,20 +25,31 @@ export interface TodaysQAEntry {
 export function useTodaysQAEntries(
   machineId: string | null | undefined,
   checkDate: string | null | undefined,
-  type: string | string[]
+  type: string | string[],
+  options?: { entryMode?: 'house' | 'machine' | 'room' }
 ) {
   const types = Array.isArray(type) ? type : [type];
+  const entryMode = options?.entryMode;
+  const isRoomScope = entryMode === 'room';
+
   return useQuery({
-    queryKey: ['todays-qa-entries', machineId, checkDate, types.join(',')],
-    enabled: !!machineId && !!checkDate,
+    queryKey: ['todays-qa-entries', machineId ?? null, checkDate, types.join(','), entryMode ?? null],
+    enabled: !!checkDate && (!!machineId || isRoomScope),
     queryFn: async (): Promise<TodaysQAEntry[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('qa_monitoring')
         .select('id, check_date, check_time, created_at, inspector_name, temperature, humidity, candling_results')
-        .eq('machine_id', machineId as string)
         .eq('check_date', checkDate as string)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
+
+      if (isRoomScope) {
+        query = query.is('machine_id', null).eq('entry_mode', 'room');
+      } else if (machineId) {
+        query = query.eq('machine_id', machineId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as any[])
         .map((r) => {
