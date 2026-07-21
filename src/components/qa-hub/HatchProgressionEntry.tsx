@@ -324,10 +324,8 @@ const HatchProgressionEntry: React.FC<HatchProgressionEntryProps> = ({
           <div className="space-y-2">
             <Label>Date checked</Label>
             <DatePicker
-              date={entryDate ? new Date(entryDate + 'T00:00:00') : undefined}
-              onDateChange={(d) => {
-                if (d) setEntryDate(d.toISOString().split('T')[0]);
-              }}
+              date={entryDate}
+              onSelect={(d) => { if (d) setEntryDate(d.toISOString().split('T')[0]); }}
             />
           </div>
         </div>
