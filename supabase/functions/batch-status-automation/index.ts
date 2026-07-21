@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
               success: false,
               error: updateError.message
             });
-            continue;
+            break;
           }
 
           // Log status change to history
