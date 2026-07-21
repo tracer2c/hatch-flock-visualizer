@@ -245,7 +245,7 @@ export function useMultiSetterMachines(hatcheryId?: string, checkDate?: string) 
 
         return multiSetterMachines.map(machine => {
           const machineSets = cachedSets.filter(
-            s => s.machine_id === machine.id && s.set_date <= today
+            s => s.machine_id === machine.id && s.set_date <= asOfDate
           );
           const activeSets = machineSets.filter((s: any) => {
             const setDate = new Date(`${s.set_date}T00:00:00`);
