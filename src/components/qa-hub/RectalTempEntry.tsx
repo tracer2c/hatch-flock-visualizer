@@ -131,6 +131,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           machineId={machineId}
           checkDate={checkDate}
           type="rectal_temperature"
+          entryMode={entryMode}
           isPastDay={isPastDay}
           emptyLabel="No rectal temperature readings yet today."
           renderSummary={(e) => {
