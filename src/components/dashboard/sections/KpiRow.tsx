@@ -155,7 +155,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG FERTILITY",
       value: pct(avgFertility) ?? "Not entered",
-      sub: "Target: 85%",
+      sub: `Target: ${fertilityTarget}%`,
       delta:
         fertilityGap == null
           ? "Fertility data not available yet"
@@ -167,7 +167,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG HATCH RATE",
       value: pct(avgHatch) ?? "Pending",
-      sub: "Target: 88%",
+      sub: `Target: ${hatchTarget}%`,
       detail: avgHatch == null ? "Hatch data not available yet" : undefined,
       delta:
         hatchGap == null
@@ -180,7 +180,7 @@ export function KpiRow({ totalEggs, avgFertility, avgHatch, avgHoi, criticalAler
     {
       label: "AVG HOI %",
       value: pct(avgHoi) ?? "Not entered",
-      sub: "Target: 75%",
+      sub: `Target: ${hoiTarget}%`,
       detail: avgHoi == null ? "Awaiting HOI data" : undefined,
       delta:
         hoiGap == null
