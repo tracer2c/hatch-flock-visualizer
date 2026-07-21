@@ -7,6 +7,7 @@ import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { TopBarControls } from "@/components/TopBar";
 import { useWeeklyFlockRollup, type WeeklyFlockRollupRow } from "@/hooks/useWeeklyFlockRollup";
 import { useCriticalAlerts } from "@/hooks/useAlerts";
+import { useCustomTargets } from "@/hooks/useCustomTargets";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { parseLocalDate } from "@/utils/localDate";
