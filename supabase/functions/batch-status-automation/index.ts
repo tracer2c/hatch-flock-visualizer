@@ -71,21 +71,25 @@ Deno.serve(async (req) => {
     let updatedCount = 0;
     const results = [];
 
-    // Process each house
+    // Process each house. Apply all rules that are due as of now so a house that
+    // is already day 21 cannot get stuck in hatcher until the next scheduled run.
     for (const batch of batches || []) {
       const daysSinceSet = Math.floor(
         (new Date().getTime() - new Date(batch.set_date).getTime()) / (1000 * 60 * 60 * 24)
       );
+      let currentStatus = batch.status;
+      let transitionsApplied = 0;
 
-      // Find applicable rules for this house's current status
-      const applicableRules = rules?.filter(
-        (rule: AutomationRule) => 
-          rule.from_status === batch.status &&
-          rule.company_id === batch.company_id &&
-          daysSinceSet >= rule.min_days_after_set
-      ) || [];
+      while (transitionsApplied < 5) {
+        const rule = rules?.find(
+          (candidate: AutomationRule) =>
+            candidate.from_status === currentStatus &&
+            candidate.company_id === batch.company_id &&
+            daysSinceSet >= candidate.min_days_after_set
+        );
 
-      for (const rule of applicableRules) {
+        if (!rule) break;
+
         // Check data requirements
         const dataValidation = await validateRequiredData(
           supabase,
@@ -118,7 +122,7 @@ Deno.serve(async (req) => {
             .from('batch_status_history')
             .insert({
               batch_id: batch.id,
-              from_status: batch.status,
+              from_status: currentStatus,
               to_status: rule.to_status,
               changed_by: null, // null indicates automatic change
               change_type: 'automatic',
@@ -128,19 +132,19 @@ Deno.serve(async (req) => {
               notes: `Automatically transitioned by rule: ${rule.rule_name}`
             });
 
-          console.log(`Updated house ${batch.batch_number}: ${batch.status} -> ${rule.to_status}`);
+          console.log(`Updated house ${batch.batch_number}: ${currentStatus} -> ${rule.to_status}`);
           updatedCount++;
           results.push({
             house: batch.batch_number,
-            from_status: batch.status,
+            from_status: currentStatus,
             to_status: rule.to_status,
             rule: rule.rule_name,
             days_since_set: daysSinceSet,
             success: true
           });
 
-          // Only apply first matching rule per house
-          break;
+          currentStatus = rule.to_status;
+          transitionsApplied++;
         } else {
           console.log(`House ${batch.batch_number} needs more data: ${dataValidation.reason}`);
           results.push({
@@ -151,6 +155,7 @@ Deno.serve(async (req) => {
             reason: dataValidation.reason,
             days_since_set: daysSinceSet
           });
+          break;
         }
       }
     }

@@ -308,15 +308,11 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
       toast.error('Select a machine first.');
       return;
     }
-    if (!selectedMachine.currentHouse) {
-      toast.error('This machine has no house assigned — assign a house before recording hatch progression.');
-      return;
-    }
     setIsSubmitting(true);
     try {
       const companyId = await resolveCompanyId();
       await submitQAMonitoring({
-        batch_id: selectedMachine.currentHouse.id,
+        batch_id: data.batch_id,
         machine_id: selectedMachine.id,
         check_date: data.hatchDate,
         check_time: new Date().toTimeString().split(' ')[0],
@@ -329,8 +325,9 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         candling_results: JSON.stringify({
           type: 'hatch_progression',
           flock_id: data.flock_id,
-          batch_id: selectedMachine.currentHouse.id,
+          batch_id: data.batch_id,
           machine_id: selectedMachine.id,
+          scope: data.batch_id ? 'house' : 'machine_flock',
           stage: data.stage,
           percentageOut: data.percentageOut,
           totalCount: data.totalCount,
@@ -339,7 +336,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
         }),
         company_id: companyId,
       }, 'insert', {
-        batchId: selectedMachine.currentHouse.id,
+        batchId: data.batch_id ?? undefined,
       });
       toast.success('Hatch progression saved!');
     } catch (error: any) {
