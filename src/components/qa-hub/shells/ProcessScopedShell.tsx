@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import RectalTempEntry from '../RectalTempEntry';
 import TrayWashEntry, { type TrayWashSubmitData } from '../TrayWashEntry';
 import RoomHumidityEntry, { type RoomHumiditySubmitData } from '../RoomHumidityEntry';
+import { useTodaysTrayWash } from '@/hooks/useTodaysTrayWash';
 
 type ProcessTab = 'wash' | 'rectal' | 'humidity';
 
@@ -26,6 +27,9 @@ const ProcessScopedShell: React.FC<{
 
   const [tab, setTab] = useState<ProcessTab>(initialTab);
   const [saving, setSaving] = useState(false);
+  const { data: existingTrayWash, isLoading: trayWashLoading } = useTodaysTrayWash(null, checkDate, {
+    entryMode: 'room',
+  });
 
   const resolveCompanyId = async () => profile?.company_id ?? (await getUserCompanyId());
 
@@ -66,10 +70,18 @@ const ProcessScopedShell: React.FC<{
           ppm_check_5_time: data.ppmChecks[4]?.time || null,
         }),
       };
-      const { error } = await supabase.from('qa_monitoring').insert(payload);
+      const { error } = data.existingId
+        ? await supabase
+            .from('qa_monitoring')
+            .update({
+              ...payload,
+              check_time: new Date().toTimeString().split(' ')[0],
+            })
+            .eq('id', data.existingId)
+        : await supabase.from('qa_monitoring').insert(payload);
       if (error) throw error;
-      toast.success('Tray wash log saved.');
-      queryClient.invalidateQueries({ queryKey: ['qa_monitoring'] });
+      toast.success(data.existingId ? 'Tray wash progress saved.' : 'Tray wash log saved.');
+      queryClient.invalidateQueries({ queryKey: ['tray-wash-daily'] });
       queryClient.invalidateQueries({ queryKey: ['recent-qa-entries'] });
     } catch (e: any) {
       toast.error(`Failed to save: ${e.message ?? e}`);
@@ -188,7 +200,8 @@ const ProcessScopedShell: React.FC<{
           <TrayWashEntry
             technicianName={technicianName}
             checkDate={checkDate}
-            existingRow={null}
+            existingRow={existingTrayWash ?? null}
+            loadingExisting={trayWashLoading}
             onSubmit={handleTrayWash}
           />
         </TabsContent>
