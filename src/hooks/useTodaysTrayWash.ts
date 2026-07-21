@@ -22,19 +22,35 @@ export interface TrayWashRow {
 
 export function useTodaysTrayWash(
   machineId: string | null | undefined,
-  checkDate: string | null | undefined
+  checkDate: string | null | undefined,
+  options?: {
+    entryMode?: 'house' | 'machine' | 'room';
+    batchId?: string | null;
+  }
 ) {
+  const entryMode = options?.entryMode;
+  const batchId = options?.batchId;
+
   return useQuery({
-    queryKey: ['tray-wash-daily', machineId, checkDate],
-    enabled: !!machineId && !!checkDate,
+    queryKey: ['tray-wash-daily', machineId ?? null, batchId ?? null, entryMode ?? null, checkDate],
+    enabled: !!checkDate && (!!machineId || !!batchId || entryMode === 'room'),
     queryFn: async (): Promise<TrayWashRow | null> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('qa_monitoring')
         .select('id, check_date, check_time, created_at, candling_results')
-        .eq('machine_id', machineId as string)
         .eq('check_date', checkDate as string)
         .order('created_at', { ascending: false })
         .limit(20);
+
+      if (machineId) query = query.eq('machine_id', machineId as string);
+      else query = query.is('machine_id', null);
+
+      if (batchId) query = query.eq('batch_id', batchId as string);
+      else if (entryMode === 'room') query = query.is('batch_id', null);
+
+      if (entryMode) query = query.eq('entry_mode', entryMode);
+
+      const { data, error } = await query;
       if (error) throw error;
       const rows = (data ?? []) as any[];
       const parsed = rows
