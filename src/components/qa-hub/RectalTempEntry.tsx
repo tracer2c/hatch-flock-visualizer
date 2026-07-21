@@ -11,6 +11,7 @@ interface RectalTempEntryProps {
   technicianName: string;
   checkDate: string;
   machineId?: string | null;
+  entryMode?: 'house' | 'machine' | 'room';
   isPastDay?: boolean;
   onSubmit: (data: {
     location: string;
