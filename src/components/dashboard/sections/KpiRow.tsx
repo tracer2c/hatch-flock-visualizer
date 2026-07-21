@@ -67,6 +67,7 @@ interface Props {
   criticalAlerts: number;
   rangeLabel?: string;
   trends?: Partial<Record<"eggs" | "fertility" | "hatch" | "hoi", KpiTrendPoint[]>>;
+  targets?: { fertility: number; hatch: number; hof: number; hoi: number };
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
