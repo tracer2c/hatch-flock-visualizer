@@ -5,9 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Droplets, CheckCircle2, XCircle, FlaskConical, Clock, Eye } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Droplets, CheckCircle2, XCircle, FlaskConical, Clock, Eye, CalendarIcon } from "lucide-react";
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
+import TodaysEntriesList from './TodaysEntriesList';
 
 export interface PpmCheck {
   ppm: number | null;
@@ -38,9 +42,9 @@ interface TrayWashEntryProps {
   onSubmit: (data: TrayWashSubmitData) => void;
 }
 
-const MIN_TEMP = 140; // Minimum sanitization temperature (°F)
-const PPM_MIN = 50;   // Acceptable chlorine PPM lower bound
-const PPM_MAX = 200;  // Acceptable chlorine PPM upper bound
+const MIN_TEMP = 140;   // Minimum sanitization temperature (°F)
+const PPM_MIN = 800;    // Acceptable Quat PPM lower bound
+const PPM_MAX = 1000;   // Acceptable Quat PPM upper bound
 const PPM_SLOTS = 5;
 
 // Current local time as HH:MM
@@ -69,6 +73,9 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
     Array.from({ length: PPM_SLOTS }, () => ({ ppm: '', time: '' }))
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [entryDate, setEntryDate] = useState<string>(checkDate);
+
+  useEffect(() => { setEntryDate(checkDate); }, [checkDate]);
 
   // Load from an existing today's row (resume) — or reset when the row/date changes.
   useEffect(() => {
@@ -116,15 +123,12 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
     setPpmRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
   };
 
-  // Auto-fill time with current local time when the user starts entering a PPM value
-  // in a row that doesn't yet have a time. Never overwrites an existing time.
   const handlePpmValueBlurAutofillTime = (idx: number) => {
     setPpmRows((prev) =>
       prev.map((r, i) => (i === idx && r.ppm !== '' && !r.time ? { ...r, time: nowHHMM() } : r))
     );
   };
 
-  // On focus into an empty time field, prefill with current local time.
   const handleTimeFocus = (idx: number) => {
     setPpmRows((prev) =>
       prev.map((r, i) => (i === idx && !r.time ? { ...r, time: nowHHMM() } : r))
@@ -153,10 +157,8 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
       secondCheck: secondCheck === '' ? null : second,
       thirdCheck: thirdCheck === '' ? null : third,
       ppmChecks,
-      washDate: checkDate,
+      washDate: entryDate,
     });
-    // NOTE: do NOT clear inputs — the record is a rolling daily log the user
-    // should continue to see and be able to edit until end-of-day.
   };
 
   const getTempColor = (value: string) => {
@@ -189,6 +191,10 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
     }
   })();
 
+  const parsedEntryDate = (() => {
+    try { return parseISO(entryDate); } catch { return new Date(); }
+  })();
+
   return (
     <Card>
       <CardHeader>
@@ -197,7 +203,7 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
           Tray Wash — Daily Log
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          One entry per day. Temps ≥ {MIN_TEMP}°F, chlorine PPM {PPM_MIN}–{PPM_MAX} across 5 checks.
+          One entry per day. Temps ≥ {MIN_TEMP}°F, Quat PPM {PPM_MIN}–{PPM_MAX} across 5 checks.
           {existingRow && !readOnly && (
             <> · <span className="text-green-700 font-medium">Resuming today's log</span>
               {lastSavedAt ? ` — last saved ${lastSavedAt.slice(0, 5)}` : ''}
@@ -214,6 +220,35 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Check date */}
+        <div className="max-w-xs">
+          <Label className="text-sm font-semibold flex items-center gap-2 mb-2">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            Check Date
+          </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={inputDisabled}
+                className={cn("w-full justify-start text-left font-normal", !entryDate && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {entryDate ? format(parsedEntryDate, "MMM d, yyyy") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parsedEntryDate}
+                onSelect={(d) => d && setEntryDate(format(d, 'yyyy-MM-dd'))}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {/* Temperature checks */}
         <div>
@@ -246,11 +281,11 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
           )}
         </div>
 
-        {/* PPM checks — 5 fixed columns per day-row */}
+        {/* Quat PPM checks — 5 fixed columns per day-row */}
         <div>
           <Label className="text-sm font-semibold flex items-center gap-2 mb-3">
             <FlaskConical className="h-4 w-4 text-cyan-600" />
-            Chlorine PPM (5 checks per day)
+            Quat PPM (5 checks per day)
           </Label>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {ppmRows.map((row, idx) => (
@@ -290,11 +325,11 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
           {filledPpm.length > 0 && (
             <div className="mt-3">
               {ppmAllFilled && ppmAllInRange ? (
-                <Badge className="bg-green-100 text-green-700 gap-1"><CheckCircle2 className="h-3 w-3" /> All 5 PPM checks in range</Badge>
+                <Badge className="bg-green-100 text-green-700 gap-1"><CheckCircle2 className="h-3 w-3" /> All 5 Quat PPM checks in range</Badge>
               ) : ppmAllFilled ? (
-                <Badge className="bg-amber-100 text-amber-800 gap-1"><XCircle className="h-3 w-3" /> One or more PPM checks outside {PPM_MIN}–{PPM_MAX}</Badge>
+                <Badge className="bg-amber-100 text-amber-800 gap-1"><XCircle className="h-3 w-3" /> One or more Quat PPM checks outside {PPM_MIN}–{PPM_MAX}</Badge>
               ) : (
-                <Badge variant="outline">{filledPpm.length} of {PPM_SLOTS} PPM checks entered</Badge>
+                <Badge variant="outline">{filledPpm.length} of {PPM_SLOTS} Quat PPM checks entered</Badge>
               )}
             </div>
           )}
@@ -310,10 +345,36 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-          <span className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded" /> Temp ≥ {MIN_TEMP}°F / PPM in range</span>
-          <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-500 rounded" /> PPM outside {PPM_MIN}–{PPM_MAX}</span>
+          <span className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded" /> Temp ≥ {MIN_TEMP}°F / Quat PPM in range</span>
+          <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-500 rounded" /> Quat PPM outside {PPM_MIN}–{PPM_MAX}</span>
           <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded" /> Temp &lt; {MIN_TEMP}°F</span>
         </div>
+
+        {/* Recent tray wash logs */}
+        <TodaysEntriesList
+          machineId={null}
+          checkDate={checkDate}
+          type="tray_wash"
+          entryMode="room"
+          isPastDay={false}
+          title="Recent tray wash logs"
+          emptyLabel="No tray wash logs saved yet."
+          renderSummary={(e) => {
+            const cr = e.candling_results || {};
+            const temps = [cr.firstCheck, cr.secondCheck, cr.thirdCheck].filter(
+              (v: any) => typeof v === 'number'
+            );
+            const avg = temps.length ? temps.reduce((a: number, b: number) => a + b, 0) / temps.length : null;
+            const ppmCount = [1, 2, 3, 4, 5].filter((i) => typeof cr[`ppm_check_${i}`] === 'number').length;
+            return (
+              <span>
+                {avg !== null && <>Avg temp <span className="font-medium">{avg.toFixed(1)}°F</span></>}
+                {avg !== null && ' · '}
+                <span>{ppmCount}/5 Quat PPM</span>
+              </span>
+            );
+          }}
+        />
       </CardContent>
     </Card>
   );
