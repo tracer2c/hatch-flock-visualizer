@@ -94,8 +94,13 @@ const ComplianceDot: React.FC<{ cell: ComplianceCell; onClick?: () => void }> = 
   );
 };
 
-const QAOverviewDashboard: React.FC<Props> = ({ onJumpTo }) => {
-  const { data, isLoading } = useQAOverviewData();
+const QAOverviewDashboard: React.FC<Props> = ({ checkDate, onJumpTo }) => {
+  const { data, isLoading } = useQAOverviewData(checkDate);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isHistorical = !!checkDate && checkDate !== todayStr;
+  const dateLabel = isHistorical
+    ? new Date(`${checkDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : 'Today';
   const [selected, setSelected] = useState<QAEntry | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
