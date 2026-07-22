@@ -222,7 +222,11 @@ export function useQAOverviewData(referenceDate?: string) {
       const qa = (qaRowsRaw ?? []) as any as QAEntry[];
 
       const todayRows = qa.filter((r) => r.check_date === today);
-      const last24h = qa.filter((r) => new Date(r.created_at).getTime() >= new Date(dayAgo).getTime());
+      const anchorMs = anchor.getTime();
+      const last24h = qa.filter((r) => {
+        const t = new Date(r.created_at).getTime();
+        return t >= new Date(dayAgo).getTime() && t <= anchorMs;
+      });
 
       // 3. KPIs
       const outOfRange24h = last24h.reduce((acc, r) => {
