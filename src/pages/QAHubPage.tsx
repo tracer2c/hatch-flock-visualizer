@@ -110,7 +110,9 @@ const QAHubPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DayPickerCard
+            dotsSource="qa"
             value={checkDate ? parseISO(checkDate) : new Date()}
+
             onChange={(d) => setCheckDate(format(d, 'yyyy-MM-dd'))}
             maxDate={new Date()}
           />
