@@ -153,7 +153,7 @@ const ProcessScopedShell: React.FC<{
       });
       if (error) throw error;
       toast.success('Humidity check saved.');
-      queryClient.invalidateQueries({ queryKey: ['qa_monitoring'] });
+      queryClient.invalidateQueries({ queryKey: ['todays-qa-entries'] });
       queryClient.invalidateQueries({ queryKey: ['recent-qa-entries'] });
     } catch (e: any) {
       toast.error(`Failed to save: ${e.message ?? e}`);
