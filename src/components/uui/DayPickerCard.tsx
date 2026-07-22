@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useDatesWithBatches } from "@/hooks/useDatesWithBatches";
 import { useLatestBatchDate } from "@/hooks/useLatestBatchDate";
+import { useDatesWithQAEntries, useLatestQADate } from "@/hooks/useDatesWithQAEntries";
 
 interface Props {
   value: Date;
@@ -23,6 +24,8 @@ interface Props {
   buttonClassName?: string;
   maxDate?: Date;
   showDots?: boolean;
+  /** Which dataset drives the "has data" dots. Default: batches. */
+  dotsSource?: "batches" | "qa";
 }
 
 interface Preset {
@@ -32,7 +35,7 @@ interface Preset {
 
 /**
  * Single-date picker — same UUI style as WeekPickerCard.
- * Shows a dot on days that have data (batches).
+ * Shows a dot on days that have data (batches or QA entries).
  */
 export function DayPickerCard({
   value,
@@ -41,16 +44,21 @@ export function DayPickerCard({
   buttonClassName,
   maxDate = new Date(),
   showDots = true,
+  dotsSource = "batches",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(value);
   const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(value));
 
-  const { data: latest } = useLatestBatchDate();
+  const { data: latestBatch } = useLatestBatchDate();
+  const { data: latestQA } = useLatestQADate();
+  const latest = dotsSource === "qa" ? latestQA : latestBatch;
 
   const rangeFrom = useMemo(() => startOfMonth(displayMonth), [displayMonth]);
   const rangeTo = useMemo(() => endOfMonth(addMonths(displayMonth, 1)), [displayMonth]);
-  const { data: markedDates } = useDatesWithBatches(rangeFrom, rangeTo);
+  const { data: batchDates } = useDatesWithBatches(rangeFrom, rangeTo);
+  const { data: qaDates } = useDatesWithQAEntries(rangeFrom, rangeTo);
+  const markedDates = dotsSource === "qa" ? qaDates : batchDates;
 
   const presets: Preset[] = useMemo(
     () => [
@@ -65,6 +73,7 @@ export function DayPickerCard({
     ],
     [latest]
   );
+
 
   const commit = () => {
     onChange(draft);

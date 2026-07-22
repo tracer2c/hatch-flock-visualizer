@@ -1,36 +1,35 @@
+# QA Hub — Calendar dots misrepresent "has data"
 
-## Problem (confirmed)
+## Root cause (verified)
 
-The QA Hub header has a date picker (`checkDate` in `QAHubPage.tsx`), but the Overview tab ignores it:
+- `DayPickerCard` always fetches dots from `useDatesWithBatches`, which returns days where a **batch was set** (`batches.set_date`).
+- The QA Hub Overview reads from `qa_monitoring.check_date`, which is a completely different dataset.
+- Confirmed against the DB for Jun 2026: `qa_monitoring` has entries on Jun 5, 8, 12, 15, 16, 19, 22, 26, 29 — **nothing on Jun 9**. But Jun 9 shows a blue dot because a batch was set that day. That's why the Overview is empty on a "dotted" date.
 
-- `QAOverviewDashboard` takes no `checkDate` prop.
-- `useQAOverviewData()` hardcodes `today = new Date()` and derives `weekAgo` / `dayAgo` / overdue thresholds from the wall clock.
-- Query key is a constant `['qa-overview']`, so changing the header date can't even invalidate the cache.
-
-Result: KPIs, Today's Compliance, Attention Needed and Recent Activity always show "today (real world)" numbers no matter which date the user picks.
+So the Overview is behaving correctly — the calendar is lying.
 
 ## Fix
 
-1. **`src/hooks/useQAOverviewData.ts`**
-   - Accept a `referenceDate: string` (YYYY-MM-DD) argument.
-   - Include it in the `queryKey` so React Query refetches per date.
-   - Compute all windows from an anchor = end-of-day of `referenceDate` (or "now" if the reference date is today):
-     - `today` = `referenceDate`
-     - `weekAgo` = anchor − 7d
-     - `dayAgo` = anchor − 24h
-     - `nowMs` for overdue math = anchor time (so past-date views measure "was it overdue as of that day", not "as of right now")
-   - Everything else (filters, overdue thresholds, compliance building) already keys off these values — no logic change needed.
+Make the dot source configurable and use QA entries on the QA Hub.
 
-2. **`src/components/qa-hub/overview/QAOverviewDashboard.tsx`**
-   - Add `checkDate: string` prop.
-   - Pass it to `useQAOverviewData(checkDate)`.
-   - Show the active date in the "Today's Compliance" / KPI labels when it's not the real today (e.g. "Checks on Jun 5" instead of "Today's Checks") so managers viewing history aren't confused.
+### 1. New hook `src/hooks/useDatesWithQAEntries.ts`
+Mirror of `useDatesWithBatches` but queries `qa_monitoring` distinct `check_date` in the visible window. Returns `Set<'yyyy-MM-dd'>`.
 
-3. **`src/pages/QAHubPage.tsx`**
-   - Pass `checkDate` down: `<QAOverviewDashboard checkDate={checkDate} onJumpTo={handleJumpTo} />`.
+### 2. `src/components/uui/DayPickerCard.tsx`
+- Add prop `dotsSource?: 'batches' | 'qa'` (default `'batches'` to keep other pages unchanged).
+- When `'qa'`, use the new hook instead.
+- Tooltip/legend copy under the calendar becomes "Days with QA entries" vs "Days with batches" (small helper text row above Cancel/Apply).
+
+### 3. `src/pages/QAHubPage.tsx`
+Pass `dotsSource="qa"` to the `DayPickerCard` at line 112.
+
+### 4. `useLatestBatchDate` preset
+Rename usage inside `DayPickerCard` so the "Most recent with data" preset uses the QA-latest date when `dotsSource='qa'`. Add a tiny `useLatestQADate` hook, or reuse a max() over the fetched set.
 
 ## Out of scope
+- No changes to Overview aggregation logic — that's already correct.
+- Dashboard/Data Entry pickers keep the batch-based dots.
 
-- No DB/schema changes.
-- No changes to Machine / Process / Flock tabs (they already consume `checkDate`).
-- No changes to entry forms.
+## Verification
+- Open QA Hub on Jun 2026: dots should appear on 5, 8, 12, 15, 16, 19, 22, 26, 29 (matching DB) — not Jun 9.
+- Click Jun 12 → Overview populates. Click Jun 9 → correctly empty, and the calendar no longer suggests otherwise.
