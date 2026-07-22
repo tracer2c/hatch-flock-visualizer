@@ -140,7 +140,7 @@ const QAHubPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <QAOverviewDashboard onJumpTo={handleJumpTo} />
+          <QAOverviewDashboard checkDate={checkDate} onJumpTo={handleJumpTo} />
         </TabsContent>
 
         <TabsContent value="machine" className="space-y-4">

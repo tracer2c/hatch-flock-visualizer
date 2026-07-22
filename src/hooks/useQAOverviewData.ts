@@ -180,15 +180,21 @@ function checkInRange(entry: QAEntry, type: QACheckType | null): boolean {
 
 const HOURS = (ms: number) => ms / (1000 * 60 * 60);
 
-export function useQAOverviewData() {
+export function useQAOverviewData(referenceDate?: string) {
   return useQuery({
-    queryKey: ['qa-overview'],
+    queryKey: ['qa-overview', referenceDate ?? null],
     refetchInterval: 60_000,
     queryFn: async (): Promise<QAOverviewData> => {
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
-      const dayAgo = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+      const realNow = new Date();
+      const todayStr = realNow.toISOString().split('T')[0];
+      const today = referenceDate || todayStr;
+      // Anchor = end-of-day of referenceDate, capped to actual now if today.
+      const anchor = referenceDate && referenceDate !== todayStr
+        ? new Date(`${referenceDate}T23:59:59`)
+        : realNow;
+      const now = anchor;
+      const weekAgo = new Date(anchor.getTime() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+      const dayAgo = new Date(anchor.getTime() - 24 * 3600 * 1000).toISOString();
 
       // 1. Active machines (per hatcheries)
       const { data: machinesRaw } = await supabase
@@ -216,7 +222,11 @@ export function useQAOverviewData() {
       const qa = (qaRowsRaw ?? []) as any as QAEntry[];
 
       const todayRows = qa.filter((r) => r.check_date === today);
-      const last24h = qa.filter((r) => new Date(r.created_at).getTime() >= new Date(dayAgo).getTime());
+      const anchorMs = anchor.getTime();
+      const last24h = qa.filter((r) => {
+        const t = new Date(r.created_at).getTime();
+        return t >= new Date(dayAgo).getTime() && t <= anchorMs;
+      });
 
       // 3. KPIs
       const outOfRange24h = last24h.reduce((acc, r) => {
