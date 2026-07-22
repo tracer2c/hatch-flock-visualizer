@@ -159,7 +159,7 @@ const QAOverviewDashboard: React.FC<Props> = ({ checkDate, onJumpTo }) => {
         <Card className="flex flex-col min-h-0">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Today's Compliance
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> {dateLabel}'s Compliance
             </CardTitle>
           </CardHeader>
           <ScrollArea className="flex-1">
