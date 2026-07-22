@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Thermometer } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Thermometer, CalendarIcon } from "lucide-react";
+import { format, parseISO } from 'date-fns';
+import { cn } from "@/lib/utils";
 import TodaysEntriesList from './TodaysEntriesList';
 
 interface RectalTempEntryProps {
@@ -31,13 +35,16 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
   const [location, setLocation] = useState('hatcher');
   const [temperature, setTemperature] = useState('');
   const [checkTime, setCheckTime] = useState(new Date().toTimeString().slice(0, 5));
+  const [entryDate, setEntryDate] = useState<string>(checkDate);
+
+  // Keep entry date synced when header date changes
+  useEffect(() => { setEntryDate(checkDate); }, [checkDate]);
 
   const selectedLocation = locationOptions.find(l => l.value === location);
   const temp = parseFloat(temperature);
   const isWithinRange = selectedLocation && temp >= selectedLocation.min && temp <= selectedLocation.max;
 
   const handleSubmit = () => {
-    if (isPastDay) return;
     if (!technicianName.trim()) return;
     if (!temperature || isNaN(temp)) return;
 
@@ -45,7 +52,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
       location,
       temperature: temp,
       checkTime,
-      checkDate
+      checkDate: entryDate,
     });
 
     setTemperature('');
@@ -57,6 +64,10 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
     return 'border-red-500 bg-red-50';
   };
 
+  const parsedEntryDate = (() => {
+    try { return parseISO(entryDate); } catch { return new Date(); }
+  })();
+
   return (
     <Card>
       <CardHeader>
@@ -67,7 +78,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
         <p className="text-sm text-muted-foreground">Monitor chick health post-hatch</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="space-y-2">
             <Label>Location</Label>
             <Select value={location} onValueChange={setLocation}>
@@ -93,6 +104,29 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
             />
           </div>
           <div className="space-y-2">
+            <Label>Check Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !entryDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {entryDate ? format(parsedEntryDate, "MMM d, yyyy") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parsedEntryDate}
+                  onSelect={(d) => d && setEntryDate(format(d, 'yyyy-MM-dd'))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-2">
             <Label>Check Time</Label>
             <Input
               type="time"
@@ -109,7 +143,7 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           <div className="flex items-end">
             <Button 
               onClick={handleSubmit}
-              disabled={isPastDay || !technicianName.trim() || !temperature}
+              disabled={!technicianName.trim() || !temperature}
               className="w-full"
             >
               Add Reading
@@ -132,11 +166,11 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
           checkDate={checkDate}
           type="rectal_temperature"
           entryMode={entryMode}
-          isPastDay={isPastDay}
-          emptyLabel="No rectal temperature readings yet today."
+          isPastDay={false}
+          emptyLabel="No rectal temperature readings yet for this date."
           renderSummary={(e) => {
             const loc = e.candling_results?.location ?? '—';
-            const t = e.candling_results?.temperature;
+            const t = e.candling_results?.temperature ?? e.temperature;
             return (
               <span>
                 <span className="capitalize">{String(loc).replace(/_/g, ' ')}</span>
