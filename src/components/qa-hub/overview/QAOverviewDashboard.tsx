@@ -140,17 +140,18 @@ const QAOverviewDashboard: React.FC<Props> = ({ checkDate, onJumpTo }) => {
     <div className="flex flex-col gap-3 h-[calc(100vh-260px)] min-h-[600px]">
       {/* KPI STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-shrink-0">
-        <KpiCard label="Today's Checks"    value={kpis.today} icon={ClipboardCheck} />
+        <KpiCard label={`${dateLabel}'s Checks`} value={kpis.today} icon={ClipboardCheck} />
         <KpiCard label="This Week"         value={kpis.week}  icon={Activity} />
         <KpiCard label="Out of Range (24h)" value={kpis.outOfRange24h} icon={AlertTriangle}
           tone={kpis.outOfRange24h > 0 ? 'critical' : 'success'} />
         <KpiCard label="Overdue Checks"    value={kpis.overdue} icon={Clock}
           tone={kpis.overdue > 0 ? 'warning' : 'success'} />
-        <KpiCard label="Machines Active Today"
+        <KpiCard label={`Machines Active ${dateLabel}`}
           value={`${kpis.activeMachinesToday}/${kpis.totalActiveMachines || '—'}`}
           icon={Factory}
-          sub="reporting in last 24h" />
+          sub={isHistorical ? `on ${dateLabel}` : 'reporting in last 24h'} />
       </div>
+
 
       {/* 3-COLUMN BODY */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 min-h-0">
