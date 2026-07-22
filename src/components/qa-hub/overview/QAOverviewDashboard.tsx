@@ -26,6 +26,7 @@ const TYPE_ICON: Record<QACheckType | 'overdue', React.ComponentType<any>> = {
 };
 
 interface Props {
+  checkDate?: string;
   onJumpTo?: (target: {
     group: 'machine' | 'process' | 'flock';
     sub?: string;
