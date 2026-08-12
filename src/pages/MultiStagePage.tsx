@@ -47,6 +47,8 @@ import {
 } from "@/hooks/useMultiStage";
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
+import SetReportGrid from "@/components/data-entry/SetReportGrid";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -112,6 +114,8 @@ const MultiStagePage = () => {
 
   const [header, setHeader] = useState<DraftHeader>(() => initialHeader(null));
   const [rows, setRows] = useState<DraftRow[]>(() => [newRow()]);
+  /** "grid" = paper Set Report sheet (default), "rows" = legacy one-row-at-a-time. */
+  const [entryMode, setEntryMode] = useState<"grid" | "rows">("grid");
 
   // Backfill day_number once it's computed by the hook
   if (nextDay && header.day_number === null) {
@@ -315,6 +319,15 @@ const MultiStagePage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <ToggleGroup
+            type="single"
+            value={entryMode}
+            onValueChange={(v) => v && setEntryMode(v as "grid" | "rows")}
+            size="sm"
+          >
+            <ToggleGroupItem value="grid" className="text-xs px-3">Sheet grid</ToggleGroupItem>
+            <ToggleGroupItem value="rows" className="text-xs px-3">Row list</ToggleGroupItem>
+          </ToggleGroup>
           {resumeDecided && lastSavedAt && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Check className="h-3 w-3 text-green-600" />
@@ -496,7 +509,75 @@ const MultiStagePage = () => {
         </CardContent>
       </Card>
 
-      {/* Rows table */}
+      {/* Paper-sheet bulk grid: all setters × 3 positions on one page */}
+      {entryMode === "grid" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Set Report — all setters</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Type a flock number on each position line, exactly like the paper card.
+              Press{" "}
+              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-semibold">Enter</kbd>{" "}
+              to jump to the next line. Blank lines are ignored on save.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Buggies entered</span>
+                <span className="font-medium tabular-nums">
+                  {totals.buggiesSet} / {header.total_buggies}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(
+                  100,
+                  (totals.buggiesSet / Math.max(1, header.total_buggies)) * 100
+                )}
+              />
+            </div>
+
+            <SetReportGrid
+              setters={setters}
+              flocks={flocks}
+              rows={rows}
+              onRowsChange={setRows}
+              defaultDate={header.operation_date}
+              canWrite={canWrite}
+            />
+
+            <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="holdovers">Holdovers</Label>
+                <Input
+                  id="holdovers"
+                  placeholder="e.g. 2 buggies flock 6501 held in DHN-04"
+                  value={header.holdovers ?? ""}
+                  onChange={(e) => setHeader((h) => ({ ...h, holdovers: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Lines:</span>{" "}
+                  <strong className="tabular-nums">
+                    {rows.filter((r) => r.machine_id && r.flock_id).length}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total Eggs Set:</span>{" "}
+                  <strong className="tabular-nums">{totals.eggsSet.toLocaleString()}</strong>
+                </div>
+                {totals.buggiesSet + header.carry_overs > header.total_buggies && (
+                  <Badge variant="destructive">
+                    Capacity exceeded: {totals.buggiesSet + header.carry_overs} /{" "}
+                    {header.total_buggies}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -830,6 +911,7 @@ const MultiStagePage = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Optional notes */}
       <Card>
