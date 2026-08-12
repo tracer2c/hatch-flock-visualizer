@@ -813,6 +813,18 @@ export default function EmbrexDashboard() {
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, selectedHouses, flocksMap, extractBaseFlockName]);
 
+  /**
+   * How much of the current selection actually has breakout data. Without this
+   * a sparse fertility/residue chart looks like a bug rather than "nobody
+   * entered a breakout for those houses yet".
+   */
+  const coverage = useMemo(() => {
+    const houses = baseFilteredRows.length;
+    const fertility = baseFilteredRows.filter((r) => r.fertility_percent != null).length;
+    const residue = baseFilteredRows.filter((r) => r.hatch_percent != null).length;
+    return { houses, fertility, residue };
+  }, [baseFilteredRows]);
+
   /* Bucketing + chart data */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
     const map = new Map<string, BucketRow>();
