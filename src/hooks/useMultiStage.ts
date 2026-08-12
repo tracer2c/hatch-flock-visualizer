@@ -58,6 +58,10 @@ export type DraftRow = {
   notes: string;
   /** UI-only: locked/"saved" in the sequential entry flow. Not sent to the DB. */
   confirmed?: boolean;
+  /** Paper-sheet position line inside the setter card (1, 2 or 3). */
+  position?: number;
+  /** Per-line set date; falls back to the header's operation_date. */
+  set_date?: string;
 };
 
 /**
@@ -75,6 +79,8 @@ export type DraftHeader = {
   carry_overs: number;
   eggs_per_buggy: number;       // header fallback size; rows now carry their own
   notes: string;
+  /** Free-text holdovers box from the paper sheet; merged into notes on save. */
+  holdovers?: string;
 };
 
 /**
@@ -277,7 +283,10 @@ export function useSaveMultiStageOperation() {
           eggs_per_buggy: headerEggsPerBuggy,
           projected_hatch_count: projectedHatch,
           total_eggs_set: totalEggsSet,
-          notes: header.notes || null,
+          notes:
+            [header.notes?.trim(), header.holdovers?.trim() ? `Holdovers: ${header.holdovers.trim()}` : ""]
+              .filter(Boolean)
+              .join(" · ") || null,
           created_by: user.id,
         })
         .select("id")
@@ -291,7 +300,16 @@ export function useSaveMultiStageOperation() {
           const flock = flockLookup(r.flock_id);
           const flockTag =
             flock?.flock_name?.slice(0, 16).replace(/\s+/g, "-") ?? "flock";
-          const batchNumber = `MS-${header.operation_date}-${flockTag}-${idx + 1}`;
+          // Per-line date wins (the paper sheet allows different dates on the
+          // same card); header date is the fallback.
+          const setDate = r.set_date || header.operation_date;
+          const hatchDate =
+            setDate === header.operation_date
+              ? header.hatch_date
+              : new Date(new Date(`${setDate}T00:00:00`).getTime() + 21 * 86400000)
+                  .toISOString()
+                  .slice(0, 10);
+          const batchNumber = `MS-${setDate}-${flockTag}-${idx + 1}`;
           // company_id will be auto-derived via trigger from parent flock
           const { data: batch, error: batchErr } = await (supabase
             .from("batches")
@@ -299,8 +317,8 @@ export function useSaveMultiStageOperation() {
               batch_number: batchNumber,
               flock_id: r.flock_id,
               machine_id: r.machine_id,
-              set_date: header.operation_date,
-              expected_hatch_date: header.hatch_date,
+              set_date: setDate,
+              expected_hatch_date: hatchDate,
               total_eggs_set: rowEggsSet(r.buggies_set, sizeOf(r)),
               status: "in_setter",
             } as any)

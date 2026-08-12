@@ -445,42 +445,55 @@ export default function EmbrexDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("batches")
-          .select(`
-            id, batch_number, total_eggs_set, eggs_cleared, eggs_injected, chicks_hatched, set_date, status,
-            units ( name ),
-            flocks!inner(flock_number, flock_name, age_weeks),
-            fertility_analysis (
-              fertility_percent,
-              fertile_eggs,
-              infertile_eggs,
-              sample_size
-            ),
-            residue_analysis (
-              residue_percent,
-              hatch_percent,
-              hof_percent,
-              hoi_percent,
-              if_dev_percent,
-              early_dead,
-              mid_dead,
-              late_dead,
-              cull_chicks,
-              live_pip_number,
-              dead_pip_number
-            )
-          `)
-          .order("set_date", { ascending: true });
-        if (error) throw error;
+        // PostgREST caps a single response at 1000 rows. The company already has
+        // >2000 batches, so an unpaged query silently dropped everything past the
+        // first page — which is exactly why recent sets were missing from the
+        // graphs. Page through until a short page comes back.
+        const PAGE = 1000;
+        const data: any[] = [];
+        for (let page = 0; ; page++) {
+          const { data: chunk, error } = await supabase
+            .from("batches")
+            .select(`
+              id, batch_number, total_eggs_set, eggs_cleared, eggs_injected, chicks_hatched, set_date, status,
+              units ( name ),
+              flocks!inner(flock_number, flock_name, age_weeks),
+              fertility_analysis (
+                fertility_percent,
+                fertile_eggs,
+                infertile_eggs,
+                sample_size
+              ),
+              residue_analysis (
+                residue_percent,
+                hatch_percent,
+                hof_percent,
+                hoi_percent,
+                if_dev_percent,
+                early_dead,
+                mid_dead,
+                late_dead,
+                cull_chicks,
+                live_pip_number,
+                dead_pip_number
+              )
+            `)
+            .order("set_date", { ascending: true })
+            .order("id", { ascending: true })
+            .range(page * PAGE, page * PAGE + PAGE - 1);
+          if (error) throw error;
+          data.push(...(chunk ?? []));
+          if (!chunk || chunk.length < PAGE) break;
+        }
+
 
         const formatted: RawRow[] = (data ?? []).map((b: any) => {
           const fertility = b.fertility_analysis;
           const residue = b.residue_analysis;
           const totalEggs = Number(b.total_eggs_set ?? 0);
-          
+
           const sampleSize = Number(fertility?.sample_size ?? residue?.sample_size ?? 648);
-          
+
           const infertileEggs = Number(fertility?.infertile_eggs ?? 0);
           const earlyDead = Number(residue?.early_dead ?? 0);
           const midDead = Number(residue?.mid_dead ?? 0);
@@ -488,43 +501,41 @@ export default function EmbrexDashboard() {
           const cullChicks = Number(residue?.cull_chicks ?? 0);
           const livePips = Number(residue?.live_pip_number ?? 0);
           const deadPips = Number(residue?.dead_pip_number ?? 0);
-          
-          const fertileEggs = calculateFertileEggs(sampleSize, infertileEggs);
-          const chicksHatched = calculateChicksHatched(
-            sampleSize, infertileEggs, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips
-          );
-          
-          const eggsCleared = Number(b.eggs_cleared ?? infertileEggs);
-          const eggsInjected = Number(b.eggs_injected ?? fertileEggs);
-          
-          let early_dead_percent = 0;
-          let mid_dead_percent = 0;
-          let late_dead_percent = 0;
-          let total_mortality_percent = 0;
-          
-          if (residue && sampleSize > 0) {
-            early_dead_percent = ((residue.early_dead ?? 0) / sampleSize) * 100;
-            mid_dead_percent = ((residue.mid_dead ?? 0) / sampleSize) * 100;
-            late_dead_percent = ((residue.late_dead ?? 0) / sampleSize) * 100;
-          }
-          
-          total_mortality_percent = early_dead_percent + mid_dead_percent + late_dead_percent;
-          const totalPips = livePips + deadPips;
-          const embryonicMortalityCount = (residue?.early_dead ?? 0) + (residue?.mid_dead ?? 0) + (residue?.late_dead ?? 0);
 
-          let cull_percent = 0;
-          let live_pip_percent = 0;
-          let dead_pip_percent = 0;
-          let total_pip_percent = 0;
-          let embryonic_mortality_percent = 0;
+          const fertileEggs = fertility
+            ? calculateFertileEggs(sampleSize, infertileEggs)
+            : undefined;
+          const chicksHatched = residue
+            ? calculateChicksHatched(
+                sampleSize, infertileEggs, earlyDead, midDead, lateDead, cullChicks, livePips, deadPips
+              )
+            : undefined;
 
-          if (sampleSize > 0) {
-            cull_percent = (cullChicks / sampleSize) * 100;
-            live_pip_percent = (livePips / sampleSize) * 100;
-            dead_pip_percent = (deadPips / sampleSize) * 100;
-            total_pip_percent = (totalPips / sampleSize) * 100;
-            embryonic_mortality_percent = (embryonicMortalityCount / sampleSize) * 100;
-          }
+          const eggsCleared = b.eggs_cleared != null ? Number(b.eggs_cleared) : undefined;
+          const eggsInjected = b.eggs_injected != null ? Number(b.eggs_injected) : undefined;
+
+          // A house with no residue/fertility breakout has NO value for these
+          // metrics — it is not a 0%. Returning undefined leaves a gap in the
+          // chart and keeps the bucket averages honest (a zero used to drag
+          // every weekly average down and made real entries look wrong).
+          const hasResidue = !!residue && sampleSize > 0;
+          const early_dead_percent = hasResidue ? (earlyDead / sampleSize) * 100 : undefined;
+          const mid_dead_percent = hasResidue ? (midDead / sampleSize) * 100 : undefined;
+          const late_dead_percent = hasResidue ? (lateDead / sampleSize) * 100 : undefined;
+          const total_mortality_percent = hasResidue
+            ? (early_dead_percent ?? 0) + (mid_dead_percent ?? 0) + (late_dead_percent ?? 0)
+            : undefined;
+
+          const totalPips = residue ? livePips + deadPips : undefined;
+          const embryonicMortalityCount = residue ? earlyDead + midDead + lateDead : undefined;
+
+          const cull_percent = hasResidue ? (cullChicks / sampleSize) * 100 : undefined;
+          const live_pip_percent = hasResidue ? (livePips / sampleSize) * 100 : undefined;
+          const dead_pip_percent = hasResidue ? (deadPips / sampleSize) * 100 : undefined;
+          const total_pip_percent = hasResidue ? ((totalPips ?? 0) / sampleSize) * 100 : undefined;
+          const embryonic_mortality_percent = hasResidue
+            ? ((embryonicMortalityCount ?? 0) / sampleSize) * 100
+            : undefined;
 
           return {
             batch_id: b.id,
@@ -532,21 +543,21 @@ export default function EmbrexDashboard() {
             flock_number: b.flocks.flock_number,
             unit_name: b.units?.name ?? "",
             flock_name: b.flocks.flock_name,
-            age_weeks: Number(b.flocks.age_weeks ?? 0),
+            age_weeks: b.flocks.age_weeks != null ? Number(b.flocks.age_weeks) : undefined,
             total_eggs_set: totalEggs,
             eggs_cleared: eggsCleared,
             eggs_injected: eggsInjected,
             set_date: b.set_date,
             status: b.status ?? "",
-            fertility_percent: fertility?.fertility_percent ?? 0,
+            fertility_percent: fertility?.fertility_percent ?? undefined,
             early_dead_percent,
             mid_dead_percent,
             late_dead_percent,
             total_mortality_percent,
-            hatch_percent: residue?.hatch_percent ?? 0,
-            hof_percent: residue?.hof_percent ?? 0,
-            hoi_percent: residue?.hoi_percent ?? 0,
-            if_dev_percent: residue?.if_dev_percent ?? 0,
+            hatch_percent: residue?.hatch_percent ?? undefined,
+            hof_percent: residue?.hof_percent ?? undefined,
+            hoi_percent: residue?.hoi_percent ?? undefined,
+            if_dev_percent: residue?.if_dev_percent ?? undefined,
             cull_percent,
             live_pip_percent,
             dead_pip_percent,
@@ -558,10 +569,10 @@ export default function EmbrexDashboard() {
             mid_dead: residue?.mid_dead,
             late_dead: residue?.late_dead,
             hatch_count: chicksHatched,
-            sample_size: fertility?.sample_size,
-            cull_chicks: cullChicks,
-            live_pips: livePips,
-            dead_pips: deadPips,
+            sample_size: fertility?.sample_size ?? residue?.sample_size,
+            cull_chicks: residue ? cullChicks : undefined,
+            live_pips: residue ? livePips : undefined,
+            dead_pips: residue ? deadPips : undefined,
             total_pips: totalPips,
             embryonic_mortality_count: embryonicMortalityCount,
           };
@@ -802,6 +813,18 @@ export default function EmbrexDashboard() {
     return out.length ? out : [{ key: "ALL", title: "All flocks", rows: data }];
   }, [facetBy, baseFilteredRows, selectedFlocks, selectedUnits, selectedHouses, flocksMap, extractBaseFlockName]);
 
+  /**
+   * How much of the current selection actually has breakout data. Without this
+   * a sparse fertility/residue chart looks like a bug rather than "nobody
+   * entered a breakout for those houses yet".
+   */
+  const coverage = useMemo(() => {
+    const houses = baseFilteredRows.length;
+    const fertility = baseFilteredRows.filter((r) => r.fertility_percent != null).length;
+    const residue = baseFilteredRows.filter((r) => r.hatch_percent != null).length;
+    return { houses, fertility, residue };
+  }, [baseFilteredRows]);
+
   /* Bucketing + chart data */
   const buildBuckets = (subset: RawRow[]): BucketRow[] => {
     const map = new Map<string, BucketRow>();
@@ -814,7 +837,6 @@ export default function EmbrexDashboard() {
       b.count.total_eggs_set = (b.count.total_eggs_set ?? 0) + (r.total_eggs_set ?? 0);
       b.count.eggs_cleared   = (b.count.eggs_cleared   ?? 0) + (r.eggs_cleared   ?? 0);
       b.count.eggs_injected  = (b.count.eggs_injected  ?? 0) + (r.eggs_injected  ?? 0);
-      b.count.age_weeks      = (b.count.age_weeks      ?? 0) + (r.age_weeks      ?? 0);
       b.count.fertile_eggs   = (b.count.fertile_eggs   ?? 0) + (r.fertile_eggs   ?? 0);
       b.count.infertile_eggs = (b.count.infertile_eggs ?? 0) + (r.infertile_eggs ?? 0);
       b.count.early_dead     = (b.count.early_dead     ?? 0) + (r.early_dead     ?? 0);
@@ -831,93 +853,62 @@ export default function EmbrexDashboard() {
     }
     const out: BucketRow[] = [];
     map.forEach((b) => {
-      const sumSet = b.count.total_eggs_set ?? 0;
-      const sumClr = b.count.eggs_cleared ?? 0;
-      const sumInj = b.count.eggs_injected ?? 0;
-      
-      const fertilityVals = b.raw.filter(r => r.fertility_percent != null);
-      const earlyVals = b.raw.filter(r => r.early_dead_percent != null);
-      const midVals = b.raw.filter(r => r.mid_dead_percent != null);
-      const lateVals = b.raw.filter(r => r.late_dead_percent != null);
-      const totalMortVals = b.raw.filter(r => r.total_mortality_percent != null);
-      const hatchVals = b.raw.filter(r => r.hatch_percent != null);
-      const hofVals = b.raw.filter(r => r.hof_percent != null);
-      const hoiVals = b.raw.filter(r => r.hoi_percent != null);
-      const ifVals = b.raw.filter(r => r.if_dev_percent != null);
-      const cullVals = b.raw.filter(r => r.cull_percent != null);
-      const livePipVals = b.raw.filter(r => r.live_pip_percent != null);
-      const deadPipVals = b.raw.filter(r => r.dead_pip_percent != null);
-      const totalPipVals = b.raw.filter(r => r.total_pip_percent != null);
-      const embryonicMortVals = b.raw.filter(r => r.embryonic_mortality_percent != null);
-      
-      if (percentAgg === "weighted") {
-        b.pct.clear_pct = sumSet > 0 ? (sumClr / sumSet) * 100 : 0;
-        b.pct.injected_pct = sumSet > 0 ? (sumInj / sumSet) * 100 : 0;
-        
-        b.pct.fertility_percent = fertilityVals.length > 0 ? 
-          fertilityVals.reduce((sum, r) => sum + (r.fertility_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.early_dead_percent = earlyVals.length > 0 ? 
-          earlyVals.reduce((sum, r) => sum + (r.early_dead_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.mid_dead_percent = midVals.length > 0 ? 
-          midVals.reduce((sum, r) => sum + (r.mid_dead_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.late_dead_percent = lateVals.length > 0 ? 
-          lateVals.reduce((sum, r) => sum + (r.late_dead_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.total_mortality_percent = totalMortVals.length > 0 ? 
-          totalMortVals.reduce((sum, r) => sum + (r.total_mortality_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.hatch_percent = hatchVals.length > 0 ? 
-          hatchVals.reduce((sum, r) => sum + (r.hatch_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.hof_percent = hofVals.length > 0 ? 
-          hofVals.reduce((sum, r) => sum + (r.hof_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.hoi_percent = hoiVals.length > 0 ? 
-          hoiVals.reduce((sum, r) => sum + (r.hoi_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.if_dev_percent = ifVals.length > 0 ? 
-          ifVals.reduce((sum, r) => sum + (r.if_dev_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.cull_percent = cullVals.length > 0 ?
-          cullVals.reduce((sum, r) => sum + (r.cull_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.live_pip_percent = livePipVals.length > 0 ? 
-          livePipVals.reduce((sum, r) => sum + (r.live_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.dead_pip_percent = deadPipVals.length > 0 ? 
-          deadPipVals.reduce((sum, r) => sum + (r.dead_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.total_pip_percent = totalPipVals.length > 0 ? 
-          totalPipVals.reduce((sum, r) => sum + (r.total_pip_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-        b.pct.embryonic_mortality_percent = embryonicMortVals.length > 0 ? 
-          embryonicMortVals.reduce((sum, r) => sum + (r.embryonic_mortality_percent! * (r.total_eggs_set || 0)), 0) / sumSet : 0;
-      } else {
-        const valsClr = b.raw.map(r => (r.total_eggs_set ? (r.eggs_cleared ?? 0) / r.total_eggs_set * 100 : 0));
-        const valsInj = b.raw.map(r => (r.total_eggs_set ? (r.eggs_injected ?? 0) / r.total_eggs_set * 100 : 0));
-        
-        b.pct.fertility_percent = fertilityVals.length > 0 ? 
-          fertilityVals.reduce((sum, r) => sum + r.fertility_percent!, 0) / fertilityVals.length : 0;
-        b.pct.early_dead_percent = earlyVals.length > 0 ? 
-          earlyVals.reduce((sum, r) => sum + r.early_dead_percent!, 0) / earlyVals.length : 0;
-        b.pct.mid_dead_percent = midVals.length > 0 ? 
-          midVals.reduce((sum, r) => sum + r.mid_dead_percent!, 0) / midVals.length : 0;
-        b.pct.late_dead_percent = lateVals.length > 0 ? 
-          lateVals.reduce((sum, r) => sum + r.late_dead_percent!, 0) / lateVals.length : 0;
-        b.pct.total_mortality_percent = totalMortVals.length > 0 ? 
-          totalMortVals.reduce((sum, r) => sum + r.total_mortality_percent!, 0) / totalMortVals.length : 0;
-        b.pct.hatch_percent = hatchVals.length > 0 ? 
-          hatchVals.reduce((sum, r) => sum + r.hatch_percent!, 0) / hatchVals.length : 0;
-        b.pct.hof_percent = hofVals.length > 0 ? 
-          hofVals.reduce((sum, r) => sum + r.hof_percent!, 0) / hofVals.length : 0;
-        b.pct.hoi_percent = hoiVals.length > 0 ? 
-          hoiVals.reduce((sum, r) => sum + r.hoi_percent!, 0) / hoiVals.length : 0;
-        b.pct.if_dev_percent = ifVals.length > 0 ? 
-          ifVals.reduce((sum, r) => sum + r.if_dev_percent!, 0) / ifVals.length : 0;
-        b.pct.cull_percent = cullVals.length > 0 ?
-          cullVals.reduce((sum, r) => sum + r.cull_percent!, 0) / cullVals.length : 0;
-        b.pct.live_pip_percent = livePipVals.length > 0 ? 
-          livePipVals.reduce((sum, r) => sum + r.live_pip_percent!, 0) / livePipVals.length : 0;
-        b.pct.dead_pip_percent = deadPipVals.length > 0 ? 
-          deadPipVals.reduce((sum, r) => sum + r.dead_pip_percent!, 0) / deadPipVals.length : 0;
-        b.pct.total_pip_percent = totalPipVals.length > 0 ? 
-          totalPipVals.reduce((sum, r) => sum + r.total_pip_percent!, 0) / totalPipVals.length : 0;
-        b.pct.embryonic_mortality_percent = embryonicMortVals.length > 0 ? 
-          embryonicMortVals.reduce((sum, r) => sum + r.embryonic_mortality_percent!, 0) / embryonicMortVals.length : 0;
-        
-        b.pct.clear_pct = valsClr.length ? valsClr.reduce((a, c) => a + c, 0) / valsClr.length : 0;
-        b.pct.injected_pct = valsInj.length ? valsInj.reduce((a, c) => a + c, 0) / valsInj.length : 0;
-      }
+      /**
+       * Percent aggregation only ever looks at houses that actually have the
+       * metric. Weighted mode divides by the eggs of *those* houses — dividing
+       * by the bucket's full egg total (the old behaviour) diluted every real
+       * reading toward zero whenever some houses had no breakout.
+       */
+      const agg = (pick: (r: RawRow) => number | null | undefined): number | undefined => {
+        const vals = b.raw.filter((r) => pick(r) != null);
+        if (vals.length === 0) return undefined;
+        if (percentAgg === "weighted") {
+          const w = vals.reduce((s, r) => s + (r.total_eggs_set || 0), 0);
+          if (w > 0) {
+            return vals.reduce((s, r) => s + pick(r)! * (r.total_eggs_set || 0), 0) / w;
+          }
+        }
+        return vals.reduce((s, r) => s + pick(r)!, 0) / vals.length;
+      };
+
+      // Age is an average across houses, never a sum — a weekly sum of ages
+      // read like a 300-week-old flock on the chart.
+      const ageVals = b.raw.filter((r) => r.age_weeks != null);
+      b.count.age_weeks = ageVals.length
+        ? ageVals.reduce((s, r) => s + r.age_weeks!, 0) / ageVals.length
+        : undefined;
+
+      // Clears / injected % come from egg counts, so they stay ratio-based over
+      // just the houses that reported them.
+      const clrRows = b.raw.filter((r) => r.eggs_cleared != null && (r.total_eggs_set ?? 0) > 0);
+      const injRows = b.raw.filter((r) => r.eggs_injected != null && (r.total_eggs_set ?? 0) > 0);
+      const ratio = (rws: RawRow[], num: (r: RawRow) => number) => {
+        if (rws.length === 0) return undefined;
+        if (percentAgg === "weighted") {
+          const den = rws.reduce((s, r) => s + (r.total_eggs_set || 0), 0);
+          return den > 0 ? (rws.reduce((s, r) => s + num(r), 0) / den) * 100 : undefined;
+        }
+        return (
+          rws.reduce((s, r) => s + num(r) / (r.total_eggs_set || 1), 0) / rws.length
+        ) * 100;
+      };
+      b.pct.clear_pct = ratio(clrRows, (r) => r.eggs_cleared ?? 0);
+      b.pct.injected_pct = ratio(injRows, (r) => r.eggs_injected ?? 0);
+
+      b.pct.fertility_percent = agg((r) => r.fertility_percent);
+      b.pct.early_dead_percent = agg((r) => r.early_dead_percent);
+      b.pct.mid_dead_percent = agg((r) => r.mid_dead_percent);
+      b.pct.late_dead_percent = agg((r) => r.late_dead_percent);
+      b.pct.total_mortality_percent = agg((r) => r.total_mortality_percent);
+      b.pct.hatch_percent = agg((r) => r.hatch_percent);
+      b.pct.hof_percent = agg((r) => r.hof_percent);
+      b.pct.hoi_percent = agg((r) => r.hoi_percent);
+      b.pct.if_dev_percent = agg((r) => r.if_dev_percent);
+      b.pct.cull_percent = agg((r) => r.cull_percent);
+      b.pct.live_pip_percent = agg((r) => r.live_pip_percent);
+      b.pct.dead_pip_percent = agg((r) => r.dead_pip_percent);
+      b.pct.total_pip_percent = agg((r) => r.total_pip_percent);
+      b.pct.embryonic_mortality_percent = agg((r) => r.embryonic_mortality_percent);
       out.push(b);
     });
     out.sort((a,b)=>+a.date - +b.date);
@@ -927,17 +918,23 @@ export default function EmbrexDashboard() {
   const chartDataForFacet = (facetRows: RawRow[]) => {
     const buckets = buildBuckets(facetRows);
     const firstMetric = metrics[0] ?? "total_eggs_set";
-    const values = buckets.map(b => isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] ?? 0 : (b.count as any)[firstMetric] ?? 0);
+    // Percent metrics keep `null` for buckets with no reading so Recharts draws
+    // a gap; forcing 0 used to plot a fake crash down to the axis.
+    const values = buckets.map(b =>
+      isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] : (b.count as any)[firstMetric]
+    );
     const rollWindow = 3;
     const rolling = rollingAvg ? values.map((_, i) => {
-      const s = Math.max(0, i - rollWindow + 1); const slice = values.slice(s, i + 1); return slice.reduce((a,c)=>a+c,0) / slice.length;
+      const s = Math.max(0, i - rollWindow + 1);
+      const slice = values.slice(s, i + 1).filter((v) => v != null) as number[];
+      return slice.length ? slice.reduce((a, c) => a + c, 0) / slice.length : null;
     }) : [];
     return buckets.map((b, i) => ({
       bucket: b.bucketKey, date: b.date,
       total_eggs_set: b.count.total_eggs_set ?? 0,
       eggs_cleared: b.count.eggs_cleared ?? 0,
       eggs_injected: b.count.eggs_injected ?? 0,
-      age_weeks: b.count.age_weeks ?? 0,
+      age_weeks: b.count.age_weeks ?? null,
       fertile_eggs: b.count.fertile_eggs ?? 0,
       infertile_eggs: b.count.infertile_eggs ?? 0,
       early_dead: b.count.early_dead ?? 0,
@@ -950,22 +947,22 @@ export default function EmbrexDashboard() {
       dead_pips: b.count.dead_pips ?? 0,
       total_pips: b.count.total_pips ?? 0,
       embryonic_mortality_count: b.count.embryonic_mortality_count ?? 0,
-      clear_pct: b.pct.clear_pct ?? 0,
-      injected_pct: b.pct.injected_pct ?? 0,
-      fertility_percent: b.pct.fertility_percent ?? 0,
-      early_dead_percent: b.pct.early_dead_percent ?? 0,
-      mid_dead_percent: b.pct.mid_dead_percent ?? 0,
-      late_dead_percent: b.pct.late_dead_percent ?? 0,
-      total_mortality_percent: b.pct.total_mortality_percent ?? 0,
-      hatch_percent: b.pct.hatch_percent ?? 0,
-      hof_percent: b.pct.hof_percent ?? 0,
-      hoi_percent: b.pct.hoi_percent ?? 0,
-      if_dev_percent: b.pct.if_dev_percent ?? 0,
-      cull_percent: b.pct.cull_percent ?? 0,
-      live_pip_percent: b.pct.live_pip_percent ?? 0,
-      dead_pip_percent: b.pct.dead_pip_percent ?? 0,
-      total_pip_percent: b.pct.total_pip_percent ?? 0,
-      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? 0,
+      clear_pct: b.pct.clear_pct ?? null,
+      injected_pct: b.pct.injected_pct ?? null,
+      fertility_percent: b.pct.fertility_percent ?? null,
+      early_dead_percent: b.pct.early_dead_percent ?? null,
+      mid_dead_percent: b.pct.mid_dead_percent ?? null,
+      late_dead_percent: b.pct.late_dead_percent ?? null,
+      total_mortality_percent: b.pct.total_mortality_percent ?? null,
+      hatch_percent: b.pct.hatch_percent ?? null,
+      hof_percent: b.pct.hof_percent ?? null,
+      hoi_percent: b.pct.hoi_percent ?? null,
+      if_dev_percent: b.pct.if_dev_percent ?? null,
+      cull_percent: b.pct.cull_percent ?? null,
+      live_pip_percent: b.pct.live_pip_percent ?? null,
+      dead_pip_percent: b.pct.dead_pip_percent ?? null,
+      total_pip_percent: b.pct.total_pip_percent ?? null,
+      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? null,
       rolling: rolling[i],
       _raw: b.raw,
     }));
@@ -1946,6 +1943,26 @@ export default function EmbrexDashboard() {
                         <SelectItem value="heatmap">Heatmap</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {/* Data coverage — makes empty fertility/residue lines explainable */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="hidden md:inline-flex items-center gap-2 text-xs text-muted-foreground border rounded-md px-2 h-8">
+                            <span className="tabular-nums">{coverage.houses.toLocaleString()} houses</span>
+                            <span className="tabular-nums">· fert {coverage.fertility.toLocaleString()}</span>
+                            <span className="tabular-nums">· res {coverage.residue.toLocaleString()}</span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-[260px] text-xs">
+                            Houses in the current filters, and how many have a fertility /
+                            residue breakout entered. Percent charts skip houses with no
+                            breakout instead of plotting them as 0%.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   <div className="flex items-center gap-1.5">
