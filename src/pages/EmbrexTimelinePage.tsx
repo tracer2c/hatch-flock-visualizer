@@ -1943,6 +1943,26 @@ export default function EmbrexDashboard() {
                         <SelectItem value="heatmap">Heatmap</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {/* Data coverage — makes empty fertility/residue lines explainable */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="hidden md:inline-flex items-center gap-2 text-xs text-muted-foreground border rounded-md px-2 h-8">
+                            <span className="tabular-nums">{coverage.houses.toLocaleString()} houses</span>
+                            <span className="tabular-nums">· fert {coverage.fertility.toLocaleString()}</span>
+                            <span className="tabular-nums">· res {coverage.residue.toLocaleString()}</span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-[260px] text-xs">
+                            Houses in the current filters, and how many have a fertility /
+                            residue breakout entered. Percent charts skip houses with no
+                            breakout instead of plotting them as 0%.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   <div className="flex items-center gap-1.5">
