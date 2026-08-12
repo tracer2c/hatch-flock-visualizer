@@ -906,17 +906,23 @@ export default function EmbrexDashboard() {
   const chartDataForFacet = (facetRows: RawRow[]) => {
     const buckets = buildBuckets(facetRows);
     const firstMetric = metrics[0] ?? "total_eggs_set";
-    const values = buckets.map(b => isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] ?? 0 : (b.count as any)[firstMetric] ?? 0);
+    // Percent metrics keep `null` for buckets with no reading so Recharts draws
+    // a gap; forcing 0 used to plot a fake crash down to the axis.
+    const values = buckets.map(b =>
+      isPercentMetric(firstMetric) ? (b.pct as any)[firstMetric] : (b.count as any)[firstMetric]
+    );
     const rollWindow = 3;
     const rolling = rollingAvg ? values.map((_, i) => {
-      const s = Math.max(0, i - rollWindow + 1); const slice = values.slice(s, i + 1); return slice.reduce((a,c)=>a+c,0) / slice.length;
+      const s = Math.max(0, i - rollWindow + 1);
+      const slice = values.slice(s, i + 1).filter((v) => v != null) as number[];
+      return slice.length ? slice.reduce((a, c) => a + c, 0) / slice.length : null;
     }) : [];
     return buckets.map((b, i) => ({
       bucket: b.bucketKey, date: b.date,
       total_eggs_set: b.count.total_eggs_set ?? 0,
       eggs_cleared: b.count.eggs_cleared ?? 0,
       eggs_injected: b.count.eggs_injected ?? 0,
-      age_weeks: b.count.age_weeks ?? 0,
+      age_weeks: b.count.age_weeks ?? null,
       fertile_eggs: b.count.fertile_eggs ?? 0,
       infertile_eggs: b.count.infertile_eggs ?? 0,
       early_dead: b.count.early_dead ?? 0,
@@ -929,22 +935,22 @@ export default function EmbrexDashboard() {
       dead_pips: b.count.dead_pips ?? 0,
       total_pips: b.count.total_pips ?? 0,
       embryonic_mortality_count: b.count.embryonic_mortality_count ?? 0,
-      clear_pct: b.pct.clear_pct ?? 0,
-      injected_pct: b.pct.injected_pct ?? 0,
-      fertility_percent: b.pct.fertility_percent ?? 0,
-      early_dead_percent: b.pct.early_dead_percent ?? 0,
-      mid_dead_percent: b.pct.mid_dead_percent ?? 0,
-      late_dead_percent: b.pct.late_dead_percent ?? 0,
-      total_mortality_percent: b.pct.total_mortality_percent ?? 0,
-      hatch_percent: b.pct.hatch_percent ?? 0,
-      hof_percent: b.pct.hof_percent ?? 0,
-      hoi_percent: b.pct.hoi_percent ?? 0,
-      if_dev_percent: b.pct.if_dev_percent ?? 0,
-      cull_percent: b.pct.cull_percent ?? 0,
-      live_pip_percent: b.pct.live_pip_percent ?? 0,
-      dead_pip_percent: b.pct.dead_pip_percent ?? 0,
-      total_pip_percent: b.pct.total_pip_percent ?? 0,
-      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? 0,
+      clear_pct: b.pct.clear_pct ?? null,
+      injected_pct: b.pct.injected_pct ?? null,
+      fertility_percent: b.pct.fertility_percent ?? null,
+      early_dead_percent: b.pct.early_dead_percent ?? null,
+      mid_dead_percent: b.pct.mid_dead_percent ?? null,
+      late_dead_percent: b.pct.late_dead_percent ?? null,
+      total_mortality_percent: b.pct.total_mortality_percent ?? null,
+      hatch_percent: b.pct.hatch_percent ?? null,
+      hof_percent: b.pct.hof_percent ?? null,
+      hoi_percent: b.pct.hoi_percent ?? null,
+      if_dev_percent: b.pct.if_dev_percent ?? null,
+      cull_percent: b.pct.cull_percent ?? null,
+      live_pip_percent: b.pct.live_pip_percent ?? null,
+      dead_pip_percent: b.pct.dead_pip_percent ?? null,
+      total_pip_percent: b.pct.total_pip_percent ?? null,
+      embryonic_mortality_percent: b.pct.embryonic_mortality_percent ?? null,
       rolling: rolling[i],
       _raw: b.raw,
     }));
