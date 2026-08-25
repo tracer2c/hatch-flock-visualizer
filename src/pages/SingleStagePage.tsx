@@ -21,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck } from "lucide-react";
+import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck, LayoutGrid, Rows3 } from "lucide-react";
+import SingleStageSetSheetGrid from "@/components/data-entry/SingleStageSetSheetGrid";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -106,6 +107,9 @@ const SingleStagePage = () => {
   const [header, setHeader] = useState<SingleStageHeader>(initialHeader);
   const [rows, setRows] = useState<SingleStageRow[]>(() => [newRow()]);
   const saveMutation = useSaveSingleStageOperation();
+  /** Sheet grid mirrors the paper set sheet; row list is the legacy flow. */
+  const [view, setView] = useState<"sheet" | "rows">("sheet");
+  const [carryOver, setCarryOver] = useState("");
 
   // Resumable draft: autosaves as the tech types so a closed tab / shift
   // change doesn't lose an in-progress operation.
@@ -270,10 +274,19 @@ const SingleStagePage = () => {
     if (validRows.length === 0) {
       return; // useSaveSingleStageOperation will toast a sensible error
     }
-    await saveMutation.mutateAsync({ header, rows: validRows, flockLookup });
+    // Carry-over from the sheet rides along in the operation notes.
+    const notes = [header.notes, carryOver.trim() ? `Carry-over: ${carryOver.trim()}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+    await saveMutation.mutateAsync({
+      header: { ...header, notes },
+      rows: validRows,
+      flockLookup,
+    });
     await clearDraft();
     setHeader(initialHeader());
     setRows([newRow()]);
+    setCarryOver("");
   };
 
   const handleReset = () => {
@@ -281,6 +294,7 @@ const SingleStagePage = () => {
     clearDraft();
     setHeader(initialHeader());
     setRows([newRow()]);
+    setCarryOver("");
   };
 
   return (
@@ -303,6 +317,26 @@ const SingleStagePage = () => {
               Draft saved {format(lastSavedAt, "h:mm:ss a")}
             </span>
           )}
+          <div className="flex rounded-md border p-0.5">
+            <Button
+              variant={view === "sheet" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setView("sheet")}
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Sheet grid
+            </Button>
+            <Button
+              variant={view === "rows" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setView("rows")}
+            >
+              <Rows3 className="h-4 w-4 mr-1" />
+              Row list
+            </Button>
+          </div>
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
@@ -470,7 +504,64 @@ const SingleStagePage = () => {
         </CardContent>
       </Card>
 
-      {/* Rows table */}
+      {/* Paper-style sheet grid — default */}
+      {view === "sheet" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Set Sheet</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              One card per single-stage setter with the sheet&apos;s 20 buggy lines. Type flock
+              numbers straight in — house and age fill themselves. <strong>T</strong> = Tall,{" "}
+              <strong>S</strong> = Short. Enter / ↓ moves to the next line.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Buggies entered</span>
+                <span className="font-medium tabular-nums">
+                  {totals.buggiesSet} / {header.total_buggies}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(
+                  100,
+                  (totals.buggiesSet / Math.max(1, header.total_buggies)) * 100
+                )}
+              />
+            </div>
+            <SingleStageSetSheetGrid
+              setters={setters}
+              flocks={flocks}
+              rows={rows}
+              onRowsChange={setRows}
+              defaultDate={header.set_date}
+              carryOver={carryOver}
+              onCarryOverChange={setCarryOver}
+              canWrite={canWrite}
+            />
+            <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Buggies in:</span>{" "}
+                <strong className="tabular-nums">{totals.buggiesSet}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Eggs Set:</span>{" "}
+                <strong className="tabular-nums">{totals.eggsSet.toLocaleString()}</strong>
+              </div>
+              {totals.buggiesSet + header.carry_overs > header.total_buggies && (
+                <Badge variant="destructive">
+                  Capacity exceeded: {totals.buggiesSet + header.carry_overs} /{" "}
+                  {header.total_buggies}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rows table (legacy sequential flow) */}
+      {view === "rows" && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -799,6 +890,7 @@ const SingleStagePage = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Optional notes */}
       <Card>
