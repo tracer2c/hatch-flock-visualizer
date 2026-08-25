@@ -890,6 +890,7 @@ const SingleStagePage = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Optional notes */}
       <Card>
