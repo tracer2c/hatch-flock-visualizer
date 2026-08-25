@@ -504,7 +504,64 @@ const SingleStagePage = () => {
         </CardContent>
       </Card>
 
-      {/* Rows table */}
+      {/* Paper-style sheet grid — default */}
+      {view === "sheet" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Set Sheet</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              One card per single-stage setter with the sheet&apos;s 20 buggy lines. Type flock
+              numbers straight in — house and age fill themselves. <strong>T</strong> = Tall,{" "}
+              <strong>S</strong> = Short. Enter / ↓ moves to the next line.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Buggies entered</span>
+                <span className="font-medium tabular-nums">
+                  {totals.buggiesSet} / {header.total_buggies}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(
+                  100,
+                  (totals.buggiesSet / Math.max(1, header.total_buggies)) * 100
+                )}
+              />
+            </div>
+            <SingleStageSetSheetGrid
+              setters={setters}
+              flocks={flocks}
+              rows={rows}
+              onRowsChange={setRows}
+              defaultDate={header.set_date}
+              carryOver={carryOver}
+              onCarryOverChange={setCarryOver}
+              canWrite={canWrite}
+            />
+            <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Buggies in:</span>{" "}
+                <strong className="tabular-nums">{totals.buggiesSet}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Eggs Set:</span>{" "}
+                <strong className="tabular-nums">{totals.eggsSet.toLocaleString()}</strong>
+              </div>
+              {totals.buggiesSet + header.carry_overs > header.total_buggies && (
+                <Badge variant="destructive">
+                  Capacity exceeded: {totals.buggiesSet + header.carry_overs} /{" "}
+                  {header.total_buggies}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rows table (legacy sequential flow) */}
+      {view === "rows" && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
