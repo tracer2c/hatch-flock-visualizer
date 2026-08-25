@@ -21,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck } from "lucide-react";
+import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck, LayoutGrid, Rows3 } from "lucide-react";
+import SingleStageSetSheetGrid from "@/components/data-entry/SingleStageSetSheetGrid";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import {
