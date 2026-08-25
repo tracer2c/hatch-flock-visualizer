@@ -107,6 +107,9 @@ const SingleStagePage = () => {
   const [header, setHeader] = useState<SingleStageHeader>(initialHeader);
   const [rows, setRows] = useState<SingleStageRow[]>(() => [newRow()]);
   const saveMutation = useSaveSingleStageOperation();
+  /** Sheet grid mirrors the paper set sheet; row list is the legacy flow. */
+  const [view, setView] = useState<"sheet" | "rows">("sheet");
+  const [carryOver, setCarryOver] = useState("");
 
   // Resumable draft: autosaves as the tech types so a closed tab / shift
   // change doesn't lose an in-progress operation.
