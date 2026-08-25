@@ -317,6 +317,26 @@ const SingleStagePage = () => {
               Draft saved {format(lastSavedAt, "h:mm:ss a")}
             </span>
           )}
+          <div className="flex rounded-md border p-0.5">
+            <Button
+              variant={view === "sheet" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setView("sheet")}
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Sheet grid
+            </Button>
+            <Button
+              variant={view === "rows" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setView("rows")}
+            >
+              <Rows3 className="h-4 w-4 mr-1" />
+              Row list
+            </Button>
+          </div>
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
