@@ -274,10 +274,19 @@ const SingleStagePage = () => {
     if (validRows.length === 0) {
       return; // useSaveSingleStageOperation will toast a sensible error
     }
-    await saveMutation.mutateAsync({ header, rows: validRows, flockLookup });
+    // Carry-over from the sheet rides along in the operation notes.
+    const notes = [header.notes, carryOver.trim() ? `Carry-over: ${carryOver.trim()}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+    await saveMutation.mutateAsync({
+      header: { ...header, notes },
+      rows: validRows,
+      flockLookup,
+    });
     await clearDraft();
     setHeader(initialHeader());
     setRows([newRow()]);
+    setCarryOver("");
   };
 
   const handleReset = () => {
@@ -285,6 +294,7 @@ const SingleStagePage = () => {
     clearDraft();
     setHeader(initialHeader());
     setRows([newRow()]);
+    setCarryOver("");
   };
 
   return (
