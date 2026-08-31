@@ -380,10 +380,20 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
         {visibleSetters.map((s, machineIdx) => {
           const setterRows = rows.filter((r) => r.machine_id === s.id && r.flock_id);
           const hasAny = setterRows.length > 0;
-          const size = buggySizeOf(s.id);
+          const sizes = sizesOf(s.id);
           const buggies = setterRows.reduce((sum, r) => sum + (r.buggies_set || 0), 0);
-          const eggs = rowEggsSet(buggies, size);
+          const tallBuggies = setterRows.reduce(
+            (sum, r) => sum + (r.notes === "S" ? 0 : r.buggies_set || 0),
+            0
+          );
+          const shortBuggies = buggies - tallBuggies;
+          const eggs = setterRows.reduce(
+            (sum, r) =>
+              sum + rowEggsSet(r.buggies_set || 0, r.eggs_per_buggy || DEFAULT_BUGGY_SIZE),
+            0
+          );
           const heights = new Set(setterRows.map((r) => (r.notes === "S" ? "S" : "T")));
+
           return (
             <Card
               key={s.id}
