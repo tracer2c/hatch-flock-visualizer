@@ -241,7 +241,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
       textPatch[key(target.id, line)] = cellText(source.id, line);
     }
     setFlockText((t) => ({ ...t, ...textPatch }));
-    commit(target.id, next, buggySizeOf(source.id));
+    commit(target.id, next, sizesOf(source.id));
   };
 
   const clearSetter = (machineId: string) => {
