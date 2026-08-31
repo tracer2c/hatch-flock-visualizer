@@ -26,8 +26,15 @@ const RIGHT_LINES = BUGGY_LINES.slice(10);
 export type HeightCode = "T" | "S";
 const HEIGHT_LABEL: Record<HeightCode, string> = { T: "Tall", S: "Short" };
 
+/** Wayne single-stage buggies: tall holds 5,508 eggs, short holds 4,860. */
+export const TALL_BUGGY_EGGS = 5508;
+export const SHORT_BUGGY_EGGS = 4860;
+type HeightSizes = Record<HeightCode, number>;
+const DEFAULT_HEIGHT_SIZES: HeightSizes = { T: TALL_BUGGY_EGGS, S: SHORT_BUGGY_EGGS };
+
 type Cell = { flock_id: string; height: HeightCode };
 type CellMap = Map<string, Cell>; // `${machine_id}:${line}` → cell
+
 
 interface Props {
   setters: SetterOption[];
@@ -65,12 +72,13 @@ function rowsToCells(rows: SingleStageRow[]): CellMap {
 /**
  * Collapse the per-line cells of one setter back into save-ready rows:
  * one row per flock + height group, buggies_set = how many lines it fills.
+ * Each group carries the egg count of its own buggy height (tall vs short).
  */
 function cellsToRows(
   machineId: string,
   cells: CellMap,
   flocks: FlockOption[],
-  buggySize: number
+  sizes: HeightSizes
 ): SingleStageRow[] {
   const groups = new Map<string, { flock_id: string; height: HeightCode; lines: number[] }>();
   for (const line of BUGGY_LINES) {
@@ -92,7 +100,7 @@ function cellsToRows(
       expected_hatch_percent: null,
       buggies_set: g.lines.length,
       buggies_transferred: 0,
-      eggs_per_buggy: buggySize,
+      eggs_per_buggy: sizes[g.height] ?? DEFAULT_HEIGHT_SIZES[g.height],
       location: String(Math.min(...g.lines)),
       buggy_numbers: g.lines.map(String),
       notes: g.height,
@@ -100,6 +108,7 @@ function cellsToRows(
     } satisfies SingleStageRow;
   });
 }
+
 
 /**
  * Paper "SINGLE STAGE SET SHEET" style bulk entry: one card per single-stage
@@ -131,20 +140,33 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     return m;
   }, [flocks]);
 
-  const buggySizeOf = (machineId: string) =>
-    rows.find((r) => r.machine_id === machineId)?.eggs_per_buggy ?? DEFAULT_BUGGY_SIZE;
+  /** Per-setter tall/short buggy sizes the tech can override on the card. */
+  const [sizeOverrides, setSizeOverrides] = useState<Record<string, Partial<HeightSizes>>>({});
+
+  const sizesOf = (machineId: string): HeightSizes => {
+    const override = sizeOverrides[machineId] ?? {};
+    const fromRows = (h: HeightCode) =>
+      rows.find(
+        (r) => r.machine_id === machineId && (r.notes === "S" ? "S" : "T") === h
+      )?.eggs_per_buggy;
+    return {
+      T: override.T ?? fromRows("T") ?? DEFAULT_HEIGHT_SIZES.T,
+      S: override.S ?? fromRows("S") ?? DEFAULT_HEIGHT_SIZES.S,
+    };
+  };
 
   /** Rewrite the rows of a single setter from a mutated cell map. */
-  const commit = (machineId: string, nextCells: CellMap, size?: number) => {
+  const commit = (machineId: string, nextCells: CellMap, sizes?: HeightSizes) => {
     const others = rows.filter((r) => r.machine_id !== machineId);
     const rebuilt = cellsToRows(
       machineId,
       nextCells,
       flocks,
-      size ?? buggySizeOf(machineId)
+      sizes ?? sizesOf(machineId)
     );
     onRowsChange([...others, ...rebuilt]);
   };
+
 
   const setCell = (machineId: string, line: number, cell: Cell | null) => {
     const next = new Map(cells);
@@ -180,9 +202,13 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     setCell(machineId, line, { ...existing, height });
   };
 
-  const setSetterBuggySize = (machineId: string, size: number) => {
-    commit(machineId, cells, size);
+  /** Change the egg count of one buggy height on a setter. */
+  const setSetterHeightSize = (machineId: string, height: HeightCode, size: number) => {
+    const next = { ...sizesOf(machineId), [height]: size } as HeightSizes;
+    setSizeOverrides((o) => ({ ...o, [machineId]: { ...(o[machineId] ?? {}), [height]: size } }));
+    commit(machineId, cells, next);
   };
+
 
   /** Copy line 1 of this setter down every remaining empty line. */
   const fillDown = (machineId: string) => {
@@ -215,7 +241,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
       textPatch[key(target.id, line)] = cellText(source.id, line);
     }
     setFlockText((t) => ({ ...t, ...textPatch }));
-    commit(target.id, next, buggySizeOf(source.id));
+    commit(target.id, next, sizesOf(source.id));
   };
 
   const clearSetter = (machineId: string) => {
@@ -354,10 +380,20 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
         {visibleSetters.map((s, machineIdx) => {
           const setterRows = rows.filter((r) => r.machine_id === s.id && r.flock_id);
           const hasAny = setterRows.length > 0;
-          const size = buggySizeOf(s.id);
+          const sizes = sizesOf(s.id);
           const buggies = setterRows.reduce((sum, r) => sum + (r.buggies_set || 0), 0);
-          const eggs = rowEggsSet(buggies, size);
+          const tallBuggies = setterRows.reduce(
+            (sum, r) => sum + (r.notes === "S" ? 0 : r.buggies_set || 0),
+            0
+          );
+          const shortBuggies = buggies - tallBuggies;
+          const eggs = setterRows.reduce(
+            (sum, r) =>
+              sum + rowEggsSet(r.buggies_set || 0, r.eggs_per_buggy || DEFAULT_BUGGY_SIZE),
+            0
+          );
           const heights = new Set(setterRows.map((r) => (r.notes === "S" ? "S" : "T")));
+
           return (
             <Card
               key={s.id}
@@ -431,31 +467,37 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Per-setter footer: buggy size + totals */}
+                {/* Per-setter footer: tall/short buggy sizes + totals */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Buggy size
-                  </span>
-                  <Select
-                    value={String(size)}
-                    onValueChange={(v) => setSetterBuggySize(s.id, parseInt(v))}
-                    disabled={!canWrite || !hasAny}
-                  >
-                    <SelectTrigger className="h-7 w-[104px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUGGY_SIZES.map((b) => (
-                        <SelectItem key={b} value={String(b)}>
-                          {b.toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(["T", "S"] as HeightCode[]).map((h) => (
+                    <div key={h} className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {HEIGHT_LABEL[h]}
+                      </span>
+                      <Select
+                        value={String(sizes[h])}
+                        onValueChange={(v) => setSetterHeightSize(s.id, h, parseInt(v))}
+                        disabled={!canWrite}
+                      >
+                        <SelectTrigger className="h-7 w-[96px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BUGGY_SIZES.map((b) => (
+                            <SelectItem key={b} value={String(b)}>
+                              {b.toLocaleString()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {buggies} buggies · {eggs.toLocaleString()} eggs
+                    {tallBuggies} T · {shortBuggies} S · {buggies} buggies ·{" "}
+                    {eggs.toLocaleString()} eggs
                   </span>
                 </div>
+
               </CardContent>
             </Card>
           );
