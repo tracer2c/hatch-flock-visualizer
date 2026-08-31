@@ -467,31 +467,37 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Per-setter footer: buggy size + totals */}
+                {/* Per-setter footer: tall/short buggy sizes + totals */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Buggy size
-                  </span>
-                  <Select
-                    value={String(size)}
-                    onValueChange={(v) => setSetterBuggySize(s.id, parseInt(v))}
-                    disabled={!canWrite || !hasAny}
-                  >
-                    <SelectTrigger className="h-7 w-[104px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUGGY_SIZES.map((b) => (
-                        <SelectItem key={b} value={String(b)}>
-                          {b.toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(["T", "S"] as HeightCode[]).map((h) => (
+                    <div key={h} className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {HEIGHT_LABEL[h]}
+                      </span>
+                      <Select
+                        value={String(sizes[h])}
+                        onValueChange={(v) => setSetterHeightSize(s.id, h, parseInt(v))}
+                        disabled={!canWrite}
+                      >
+                        <SelectTrigger className="h-7 w-[96px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BUGGY_SIZES.map((b) => (
+                            <SelectItem key={b} value={String(b)}>
+                              {b.toLocaleString()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {buggies} buggies · {eggs.toLocaleString()} eggs
+                    {tallBuggies} T · {shortBuggies} S · {buggies} buggies ·{" "}
+                    {eggs.toLocaleString()} eggs
                   </span>
                 </div>
+
               </CardContent>
             </Card>
           );
