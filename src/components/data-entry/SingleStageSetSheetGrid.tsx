@@ -140,20 +140,33 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     return m;
   }, [flocks]);
 
-  const buggySizeOf = (machineId: string) =>
-    rows.find((r) => r.machine_id === machineId)?.eggs_per_buggy ?? DEFAULT_BUGGY_SIZE;
+  /** Per-setter tall/short buggy sizes the tech can override on the card. */
+  const [sizeOverrides, setSizeOverrides] = useState<Record<string, Partial<HeightSizes>>>({});
+
+  const sizesOf = (machineId: string): HeightSizes => {
+    const override = sizeOverrides[machineId] ?? {};
+    const fromRows = (h: HeightCode) =>
+      rows.find(
+        (r) => r.machine_id === machineId && (r.notes === "S" ? "S" : "T") === h
+      )?.eggs_per_buggy;
+    return {
+      T: override.T ?? fromRows("T") ?? DEFAULT_HEIGHT_SIZES.T,
+      S: override.S ?? fromRows("S") ?? DEFAULT_HEIGHT_SIZES.S,
+    };
+  };
 
   /** Rewrite the rows of a single setter from a mutated cell map. */
-  const commit = (machineId: string, nextCells: CellMap, size?: number) => {
+  const commit = (machineId: string, nextCells: CellMap, sizes?: HeightSizes) => {
     const others = rows.filter((r) => r.machine_id !== machineId);
     const rebuilt = cellsToRows(
       machineId,
       nextCells,
       flocks,
-      size ?? buggySizeOf(machineId)
+      sizes ?? sizesOf(machineId)
     );
     onRowsChange([...others, ...rebuilt]);
   };
+
 
   const setCell = (machineId: string, line: number, cell: Cell | null) => {
     const next = new Map(cells);
