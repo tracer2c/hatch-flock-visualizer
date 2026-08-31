@@ -72,12 +72,13 @@ function rowsToCells(rows: SingleStageRow[]): CellMap {
 /**
  * Collapse the per-line cells of one setter back into save-ready rows:
  * one row per flock + height group, buggies_set = how many lines it fills.
+ * Each group carries the egg count of its own buggy height (tall vs short).
  */
 function cellsToRows(
   machineId: string,
   cells: CellMap,
   flocks: FlockOption[],
-  buggySize: number
+  sizes: HeightSizes
 ): SingleStageRow[] {
   const groups = new Map<string, { flock_id: string; height: HeightCode; lines: number[] }>();
   for (const line of BUGGY_LINES) {
@@ -99,7 +100,7 @@ function cellsToRows(
       expected_hatch_percent: null,
       buggies_set: g.lines.length,
       buggies_transferred: 0,
-      eggs_per_buggy: buggySize,
+      eggs_per_buggy: sizes[g.height] ?? DEFAULT_HEIGHT_SIZES[g.height],
       location: String(Math.min(...g.lines)),
       buggy_numbers: g.lines.map(String),
       notes: g.height,
@@ -107,6 +108,7 @@ function cellsToRows(
     } satisfies SingleStageRow;
   });
 }
+
 
 /**
  * Paper "SINGLE STAGE SET SHEET" style bulk entry: one card per single-stage
