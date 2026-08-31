@@ -202,9 +202,13 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     setCell(machineId, line, { ...existing, height });
   };
 
-  const setSetterBuggySize = (machineId: string, size: number) => {
-    commit(machineId, cells, size);
+  /** Change the egg count of one buggy height on a setter. */
+  const setSetterHeightSize = (machineId: string, height: HeightCode, size: number) => {
+    const next = { ...sizesOf(machineId), [height]: size } as HeightSizes;
+    setSizeOverrides((o) => ({ ...o, [machineId]: { ...(o[machineId] ?? {}), [height]: size } }));
+    commit(machineId, cells, next);
   };
+
 
   /** Copy line 1 of this setter down every remaining empty line. */
   const fillDown = (machineId: string) => {
