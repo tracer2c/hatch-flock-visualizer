@@ -41,7 +41,7 @@ import SetSheetPrintView, {
   type PrintSetter,
 } from "@/components/data-entry/SetSheetPrintView";
 import { usePrintMeta } from "@/hooks/usePrintMeta";
-import { POSITION_LABELS } from "@/config/multiStage";
+import { POSITION_LABELS } from "@/components/data-entry/SetReportGrid";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
