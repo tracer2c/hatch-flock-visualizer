@@ -322,7 +322,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
         <span className="text-[10px] text-muted-foreground tabular-nums text-right">
           {line}
         </span>
-        <div className="relative">
+        <div className="relative min-w-0">
           <Input
             data-buggy-cell={key(s.id, line)}
             inputMode="numeric"
@@ -414,7 +414,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
               key={s.id}
               className={hasAny ? "border-primary/40 bg-primary/[0.03]" : undefined}
             >
-              <CardContent className="p-3 space-y-2">
+              <CardContent className="p-3 space-y-2 overflow-hidden">
                 {/* Card header — SETTER #: n  Tall/Short */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
