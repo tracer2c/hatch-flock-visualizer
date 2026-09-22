@@ -8,6 +8,7 @@ import { ArrowDownToLine, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 import type { FlockWeekBatch } from "@/hooks/useFlockWeekBatches";
 
 export type HouseMatrixTable =
@@ -122,7 +123,6 @@ export function HouseMatrixEntry({
       });
       setValues(nextValues);
       setRowIds(nextIds);
-      setTechnician(tech);
       setDirty({});
       setLoading(false);
     })();

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 import { parseLocalDate } from "@/utils/localDate";
 import type { FlockWeekBatch } from "@/hooks/useFlockWeekBatches";
 import type { FlockWeeklyClear } from "@/hooks/useFlockWeeklyClears";
@@ -112,9 +113,8 @@ export default function WeeklyClearsSheet({
   }, [rowsKey]);
 
   useEffect(() => {
-    setTechnician(existingRow?.technician_name ?? "");
     setNotes(existingRow?.notes ?? "");
-  }, [existingRow?.technician_name, existingRow?.notes]);
+  }, [existingRow?.notes]);
 
   const derive = (c: Cells | undefined) => {
     const sample = toNum(c?.sample ?? "") ?? 0;
@@ -469,13 +469,13 @@ export default function WeeklyClearsSheet({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <Label htmlFor="clears-tech">Technician</Label>
+            <Label htmlFor="clears-tech">Technician (signed in)</Label>
             <Input
               id="clears-tech"
               value={technician}
-              onChange={(e) => setTechnician(e.target.value)}
-              placeholder="Name"
-              disabled={readOnly}
+              readOnly
+              disabled
+              placeholder="Loading…"
             />
           </div>
           <div className="md:col-span-2">

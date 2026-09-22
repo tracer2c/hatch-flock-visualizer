@@ -9,6 +9,7 @@ import { Home, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 export type FlockWeeklyTable =
   | "flock_weekly_egg_pack"
@@ -197,13 +198,13 @@ export function FlockWeeklyEntryCard({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="technician">Technician / Inspector</Label>
+            <Label htmlFor="technician">Technician / Inspector (signed in)</Label>
             <Input
               id="technician"
               value={technician}
-              onChange={(e) => setTechnician(e.target.value)}
-              placeholder="Name"
-              disabled={disabled}
+              readOnly
+              disabled
+              placeholder="Loading…"
             />
           </div>
           <div>
