@@ -18,6 +18,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { fetchWithOfflineFallback } from "@/lib/offlineDataCache";
 import { PendingSyncList } from "@/components/ui/pending-sync-list";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface FertilityRecord {
   id: string;
@@ -46,6 +47,7 @@ interface FertilityDataEntryProps {
 }
 
 const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntryProps) => {
+  const currentUserName = useCurrentUserName();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -158,7 +160,7 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
         infertile_eggs: infertile,
         fertile_eggs: calculated.fertileEggs,
         analysis_date: formData.analysisDate || new Date().toISOString().split('T')[0],
-        technician_name: formData.technicianName || null,
+        technician_name: currentUserName || null,
         notes: formData.notes || null
       };
 
@@ -469,12 +471,13 @@ const FertilityDataEntry = ({ data, onDataUpdate, batchInfo }: FertilityDataEntr
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="technicianName">Technician Name</Label>
+              <Label htmlFor="technicianName">Technician (signed in)</Label>
               <Input
                 id="technicianName"
-                placeholder="e.g., John Doe"
-                value={formData.technicianName}
-                onChange={(e) => handleInputChange('technicianName', e.target.value)}
+                placeholder="Loading…"
+                value={currentUserName}
+                readOnly
+                disabled
               />
             </div>
             <div className="space-y-2 md:col-span-4">
