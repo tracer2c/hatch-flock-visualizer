@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Save, RotateCcw, Layers, History, Check } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Layers, History, Check, Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
@@ -37,6 +37,11 @@ import {
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
 import SetReportGrid from "@/components/data-entry/SetReportGrid";
+import SetSheetPrintView, {
+  type PrintSetter,
+} from "@/components/data-entry/SetSheetPrintView";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
+import { POSITION_LABELS } from "@/config/multiStage";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
