@@ -522,6 +522,38 @@ const SingleStagePage = () => {
       <p className="text-xs text-muted-foreground text-center">
         Today: {format(new Date(), "EEEE, MMMM d, yyyy")} · Each saved row becomes a batch in your data sheet.
       </p>
+
+      {/* Paper copy — hidden on screen, the only thing that prints */}
+      <SetSheetPrintView
+        title="Single-Stage Set Sheet"
+        companyName={printMeta.companyName}
+        printedBy={printMeta.userName}
+        role={printMeta.role}
+        location={printLocation}
+        summary={[
+          { label: "Set Date", value: header.set_date },
+          { label: "Day", value: header.day_of_week },
+          { label: "Transfer Date", value: header.transfer_date },
+          { label: "Hatch Date", value: header.hatch_date },
+          { label: "Set Color", value: header.set_color },
+          { label: "# of Buggies", value: String(header.total_buggies) },
+          { label: "Carry Overs", value: String(header.carry_overs) },
+          {
+            label: "# of Machines",
+            value: header.number_of_machines
+              ? String(header.number_of_machines)
+              : String(printSetters.length),
+          },
+          { label: "Carry-over Note", value: carryOver },
+        ]}
+        totals={{
+          buggies: totals.buggiesSet,
+          eggs: totals.eggsSet,
+          projectedHatch: totals.projectedHatch,
+        }}
+        setters={printSetters}
+        notes={header.notes}
+      />
     </div>
   );
 };
