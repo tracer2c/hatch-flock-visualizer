@@ -13,8 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Save, RotateCcw, Box, History, Check } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Box, History, Check, Printer } from "lucide-react";
 import SingleStageSetSheetGrid from "@/components/data-entry/SingleStageSetSheetGrid";
+import SetSheetPrintView, {
+  type PrintSetter,
+} from "@/components/data-entry/SetSheetPrintView";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
@@ -197,6 +201,63 @@ const SingleStagePage = () => {
     setCarryOver("");
   };
 
+  // ── Printing ───────────────────────────────────────────────────────────
+  const printMeta = usePrintMeta();
+
+  /** "1–4, 7" style label for the buggy lines a flock group fills. */
+  const lineLabel = (nums: number[]): string => {
+    const sorted = [...nums].sort((a, b) => a - b);
+    const parts: string[] = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+    for (let i = 1; i <= sorted.length; i++) {
+      const n = sorted[i];
+      if (n !== prev + 1) {
+        parts.push(start === prev ? String(start) : `${start}–${prev}`);
+        start = n;
+      }
+      prev = n;
+    }
+    return parts.join(", ");
+  };
+
+  const printSetters: PrintSetter[] = useMemo(() => {
+    return setters
+      .map((s) => {
+        const lines = rows
+          .filter((r) => r.machine_id === s.id && r.flock_id)
+          .map((r) => {
+            const f = flocks.find((x) => x.id === r.flock_id);
+            const nums = (r.buggy_numbers ?? [])
+              .map((n) => parseInt(n, 10))
+              .filter((n) => !Number.isNaN(n));
+            return {
+              label: nums.length ? lineLabel(nums) : r.location || "",
+              flockNumber: f ? String(f.flock_number) : "",
+              houseNumber: r.house_number || "",
+              ageWeeks: r.age_weeks,
+              eggsPerBuggy: r.eggs_per_buggy || DEFAULT_BUGGY_SIZE,
+              buggies: Number(r.buggies_set) || 0,
+              sortKey: nums.length ? Math.min(...nums) : 0,
+            };
+          })
+          .sort((a, b) => a.sortKey - b.sortKey)
+          .map(({ sortKey, ...l }) => l);
+        return { machineNumber: s.machine_number, location: s.location, lines };
+      })
+      .filter((s) => s.lines.length > 0);
+  }, [setters, rows, flocks]);
+
+  const printLocation = useMemo(() => {
+    const used = new Set(
+      setters
+        .filter((s) => rows.some((r) => r.machine_id === s.id && r.flock_id))
+        .map((s) => s.location)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(used).join(", ");
+  }, [setters, rows]);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Page header */}
@@ -217,6 +278,10 @@ const SingleStagePage = () => {
               Draft saved {format(lastSavedAt, "h:mm:ss a")}
             </span>
           )}
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
@@ -457,6 +522,38 @@ const SingleStagePage = () => {
       <p className="text-xs text-muted-foreground text-center">
         Today: {format(new Date(), "EEEE, MMMM d, yyyy")} · Each saved row becomes a batch in your data sheet.
       </p>
+
+      {/* Paper copy — hidden on screen, the only thing that prints */}
+      <SetSheetPrintView
+        title="Single-Stage Set Sheet"
+        companyName={printMeta.companyName}
+        printedBy={printMeta.userName}
+        role={printMeta.role}
+        location={printLocation}
+        summary={[
+          { label: "Set Date", value: header.set_date },
+          { label: "Day", value: header.day_of_week },
+          { label: "Transfer Date", value: header.transfer_date },
+          { label: "Hatch Date", value: header.hatch_date },
+          { label: "Set Color", value: header.set_color },
+          { label: "# of Buggies", value: String(header.total_buggies) },
+          { label: "Carry Overs", value: String(header.carry_overs) },
+          {
+            label: "# of Machines",
+            value: header.number_of_machines
+              ? String(header.number_of_machines)
+              : String(printSetters.length),
+          },
+          { label: "Carry-over Note", value: carryOver },
+        ]}
+        totals={{
+          buggies: totals.buggiesSet,
+          eggs: totals.eggsSet,
+          projectedHatch: totals.projectedHatch,
+        }}
+        setters={printSetters}
+        notes={header.notes}
+      />
     </div>
   );
 };

@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Save, RotateCcw, Layers, History, Check } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Layers, History, Check, Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
@@ -37,6 +37,11 @@ import {
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
 import SetReportGrid from "@/components/data-entry/SetReportGrid";
+import SetSheetPrintView, {
+  type PrintSetter,
+} from "@/components/data-entry/SetSheetPrintView";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
+import { POSITION_LABELS } from "@/components/data-entry/SetReportGrid";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -205,6 +210,41 @@ const MultiStagePage = () => {
     setRows([newRow()]);
   };
 
+  // ── Printing ───────────────────────────────────────────────────────────
+  const printMeta = usePrintMeta();
+
+  const printSetters: PrintSetter[] = useMemo(() => {
+    return setters
+      .map((s) => {
+        const lines = rows
+          .filter((r) => r.machine_id === s.id && r.flock_id)
+          .sort((a, b) => (a.position ?? 1) - (b.position ?? 1))
+          .map((r) => {
+            const f = flocks.find((x) => x.id === r.flock_id);
+            return {
+              label: POSITION_LABELS[r.position ?? 1] ?? String(r.position ?? 1),
+              flockNumber: f ? String(f.flock_number) : "",
+              houseNumber: r.house_number || "",
+              ageWeeks: r.age_weeks,
+              eggsPerBuggy: r.eggs_per_buggy || DEFAULT_BUGGY_SIZE,
+              buggies: Number(r.buggies_set) || 0,
+            };
+          });
+        return { machineNumber: s.machine_number, location: s.location, lines };
+      })
+      .filter((s) => s.lines.length > 0);
+  }, [setters, rows, flocks]);
+
+  const printLocation = useMemo(() => {
+    const used = new Set(
+      setters
+        .filter((s) => rows.some((r) => r.machine_id === s.id && r.flock_id))
+        .map((s) => s.location)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(used).join(", ");
+  }, [setters, rows]);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Page header */}
@@ -225,6 +265,10 @@ const MultiStagePage = () => {
               Draft saved {format(lastSavedAt, "h:mm:ss a")}
             </span>
           )}
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
@@ -485,6 +529,37 @@ const MultiStagePage = () => {
       <p className="text-xs text-muted-foreground text-center">
         Today: {format(new Date(), "EEEE, MMMM d, yyyy")} · Each saved row becomes a batch in your data sheet.
       </p>
+
+      {/* Paper copy — hidden on screen, the only thing that prints */}
+      <SetSheetPrintView
+        title="Multi-Stage Set Report"
+        companyName={printMeta.companyName}
+        printedBy={printMeta.userName}
+        role={printMeta.role}
+        location={printLocation}
+        summary={[
+          { label: "Set Date", value: header.operation_date },
+          { label: "Day", value: header.day_of_week },
+          { label: "Day #", value: header.day_number ? String(header.day_number) : "" },
+          { label: "Transfer Date", value: header.transfer_date },
+          { label: "Hatch Date", value: header.hatch_date },
+          { label: "Set Color", value: header.set_color },
+          { label: "# of Buggies", value: String(header.total_buggies) },
+          { label: "Carry Overs", value: String(header.carry_overs) },
+          {
+            label: "# of Machines",
+            value: header.number_of_machines ? String(header.number_of_machines) : String(printSetters.length),
+          },
+          { label: "Holdovers", value: header.holdovers ?? "" },
+        ]}
+        totals={{
+          buggies: totals.buggiesSet,
+          eggs: totals.eggsSet,
+          projectedHatch: totals.projectedHatch,
+        }}
+        setters={printSetters}
+        notes={header.notes}
+      />
     </div>
   );
 };
