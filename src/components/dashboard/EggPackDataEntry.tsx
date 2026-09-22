@@ -12,6 +12,7 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { fetchWithOfflineFallback } from "@/lib/offlineDataCache";
 import { PendingSyncBadge } from "@/components/ui/pending-sync-badge";
 import { PendingSyncList } from "@/components/ui/pending-sync-list";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface EggPackData {
   id: string;
@@ -65,7 +66,7 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
     setWeek: '',
     hatchWeek: ''
   });
-  const [technicianName, setTechnicianName] = useState('');
+  const technicianName = useCurrentUserName();
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
   const { isOnline } = useOnlineStatus();
@@ -433,12 +434,13 @@ const EggPackDataEntry: React.FC<EggPackDataEntryProps> = ({ data, onDataUpdate,
                 />
               </div>
               <div className="md:col-span-2">
-                <Label htmlFor="technicianName">Technician Name</Label>
+                <Label htmlFor="technicianName">Technician (signed in)</Label>
                 <Input
                   id="technicianName"
                   value={technicianName}
-                  onChange={(e) => setTechnicianName(e.target.value)}
-                  placeholder="Enter technician name"
+                  readOnly
+                  disabled
+                  placeholder="Loading…"
                 />
               </div>
             </div>

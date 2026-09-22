@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 type Props = {
   initialClear?: number | null;
@@ -35,7 +36,7 @@ export default function ClearsInjectedDataEntry({
 }: Props) {
   const [sampleSize, setSampleSize] = useState<string>('');
   const [clearNum, setClearNum] = useState<string>(initialClear?.toString() ?? "");
-  const [technicianName, setTechnicianName] = useState<string>('');
+  const technicianName = useCurrentUserName();
   const [notes, setNotes] = useState<string>('');
 
   const sampleSizeNum = parseInt(sampleSize) || 0;
@@ -107,12 +108,13 @@ export default function ClearsInjectedDataEntry({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="technicianName">Technician Name *</Label>
+            <Label htmlFor="technicianName">Technician (signed in)</Label>
             <Input
               id="technicianName"
               value={technicianName}
-              onChange={(e) => setTechnicianName(e.target.value)}
-              placeholder="Enter technician name"
+              readOnly
+              disabled
+              placeholder="Loading…"
             />
           </div>
 
@@ -135,7 +137,6 @@ export default function ClearsInjectedDataEntry({
                   clears_technician_name: technicianName.trim(),
                   clears_notes: notes.trim() || null,
                 });
-                setTechnicianName('');
                 setNotes('');
               }}
               disabled={!valid || saving || readOnly}

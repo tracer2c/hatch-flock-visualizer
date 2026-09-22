@@ -8,6 +8,7 @@ import { ArrowDownToLine, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 import type { FlockWeekBatch } from "@/hooks/useFlockWeekBatches";
 
 export type HouseMatrixTable =
@@ -66,7 +67,7 @@ export function HouseMatrixEntry({
   const qc = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [technician, setTechnician] = useState("");
+  const technician = useCurrentUserName();
   /** batch_id -> field -> raw string */
   const [values, setValues] = useState<Record<string, Record<string, string>>>({});
   /** batch_id -> existing row id (for updates) */
@@ -122,7 +123,6 @@ export function HouseMatrixEntry({
       });
       setValues(nextValues);
       setRowIds(nextIds);
-      setTechnician(tech);
       setDirty({});
       setLoading(false);
     })();
@@ -371,13 +371,13 @@ export function HouseMatrixEntry({
 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="w-full max-w-xs">
-            <Label htmlFor="matrix-technician">Technician / Inspector</Label>
+            <Label htmlFor="matrix-technician">Technician / Inspector (signed in)</Label>
             <Input
               id="matrix-technician"
               value={technician}
-              onChange={(e) => setTechnician(e.target.value)}
-              placeholder="Name"
-              disabled={readOnly}
+              readOnly
+              disabled
+              placeholder="Loading…"
             />
           </div>
           {!readOnly && (

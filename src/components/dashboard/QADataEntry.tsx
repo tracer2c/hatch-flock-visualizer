@@ -13,6 +13,7 @@ import Setter18PointDisplay from "./Setter18PointDisplay";
 import MultiSetterQAEntry from "./MultiSetterQAEntry";
 import { submitMachineLevelQA } from "@/services/qaSubmissionService";
 import type { OccupancyInfo } from "@/utils/setterPositionMapping";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface BatchInfo {
   id: string;
@@ -44,7 +45,7 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
   const { toast } = useToast();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [currentMachine, setCurrentMachine] = useState<Machine | null>(null);
-  const [globalTechnicianName, setGlobalTechnicianName] = useState<string>('');
+  const globalTechnicianName = useCurrentUserName();
   const [globalNotes, setGlobalNotes] = useState<string>('');
 
   useEffect(() => {
@@ -671,14 +672,15 @@ const QADataEntry: React.FC<QADataEntryProps> = ({ data, onDataUpdate, batchInfo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="globalTechnicianName" className="flex items-center gap-2">
-                Technician Name *
+                Technician (signed in)
                 <span className="text-xs text-muted-foreground">(applies to all QA entries below)</span>
               </Label>
               <Input
                 id="globalTechnicianName"
                 value={globalTechnicianName}
-                onChange={(e) => setGlobalTechnicianName(e.target.value)}
-                placeholder="Enter technician name"
+                readOnly
+                disabled
+                placeholder="Loading…"
                 className="bg-background"
               />
             </div>

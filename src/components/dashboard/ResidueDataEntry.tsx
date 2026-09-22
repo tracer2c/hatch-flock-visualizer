@@ -18,6 +18,7 @@ import {
   calculateChicksHatched,
   calculateFertileEggs
 } from "@/utils/hatcheryFormulas";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface ResidueRecord {
   id: string;
@@ -87,6 +88,7 @@ interface ResidueDataEntryProps {
 }
 
 const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryProps) => {
+  const currentUserName = useCurrentUserName();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: batchInfo.flock_name,
@@ -277,7 +279,7 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
       hofPercent: hatchabilityMetrics.hofPercent,
       hoiPercent: hatchabilityMetrics.hoiPercent,
       ifDevPercent: hatchabilityMetrics.ifDevPercent,
-      technicianName: formData.technicianName,
+      technicianName: currentUserName,
       notes: formData.notes
     };
 
@@ -934,12 +936,13 @@ const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryPro
           {/* Technician Name and Notes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="technicianName">Technician Name</Label>
+              <Label htmlFor="technicianName">Technician (signed in)</Label>
               <Input
                 id="technicianName"
-                value={formData.technicianName}
-                onChange={(e) => handleInputChange('technicianName', e.target.value)}
-                placeholder="Enter technician name"
+                value={currentUserName}
+                readOnly
+                disabled
+                placeholder="Loading…"
               />
             </div>
             <div className="space-y-2">
