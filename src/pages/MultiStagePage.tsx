@@ -13,21 +13,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Layers, History, Check, CheckCircle2, Pencil, CheckCheck } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Layers, History, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { toast } from "sonner";
 import {
   DEFAULT_TOTAL_BUGGIES,
   DEFAULT_BUGGY_SIZE,
-  BUGGY_SIZES,
   computeHatchDate,
   computeTransferDate,
   computeFlockAgeWeeks,
@@ -37,7 +27,6 @@ import {
   type SetColor,
 } from "@/config/multiStage";
 import { SetColorPicker } from "@/components/dashboard/SetColorPicker";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   useMultiStageOptions,
   useNextDayNumber,

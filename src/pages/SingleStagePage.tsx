@@ -13,22 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Box, History, Check, CheckCircle2, Pencil, CheckCheck, LayoutGrid, Rows3 } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Box, History, Check } from "lucide-react";
 import SingleStageSetSheetGrid from "@/components/data-entry/SingleStageSetSheetGrid";
 import { format, parseISO } from "date-fns";
-import { toast } from "sonner";
 import {
   DEFAULT_TOTAL_BUGGIES,
   DEFAULT_BUGGY_SIZE,
-  BUGGY_SIZES,
   computeHatchDate,
   computeTransferDate,
   computeFlockAgeWeeks,
@@ -44,7 +34,6 @@ import {
 } from "@/hooks/useSingleStage";
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { SetColorPicker } from "@/components/dashboard/SetColorPicker";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
