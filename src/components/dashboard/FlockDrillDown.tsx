@@ -128,6 +128,15 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
   };
 
 
+  // House numbers are optional on set records. Only say "house" when we actually
+  // have house numbers; otherwise describe what we really counted: set records.
+  const knownHouses = (flock as any).known_house_count ?? 0;
+  const recordCount = (flock as any).record_count ?? flock.house_count;
+  const scopeLabel =
+    knownHouses > 0
+      ? `${knownHouses} ${knownHouses === 1 ? "house" : "houses"}`
+      : `${recordCount} ${recordCount === 1 ? "set record" : "set records"}`;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
