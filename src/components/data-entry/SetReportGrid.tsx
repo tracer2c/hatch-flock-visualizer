@@ -337,7 +337,7 @@ const SetReportGrid: React.FC<Props> = ({
               key={s.id}
               className={hasAny ? "border-primary/40 bg-primary/[0.03]" : undefined}
             >
-              <CardContent className="p-3 space-y-2">
+              <CardContent className="p-3 space-y-2 overflow-hidden">
                 {/* Card header */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -410,7 +410,7 @@ const SetReportGrid: React.FC<Props> = ({
                         <span className="text-xs font-medium text-muted-foreground">
                           {POSITION_LABELS[pos]}
                         </span>
-                        <div className="relative">
+                        <div className="relative min-w-0">
                           <Input
                             data-flock-cell={cellKey(s.id, pos)}
                             inputMode="numeric"
