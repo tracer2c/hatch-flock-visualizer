@@ -78,7 +78,7 @@ export function FlockWeeklyEntryCard({
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
-  const [technician, setTechnician] = useState("");
+  const technician = useCurrentUserName();
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
@@ -90,12 +90,6 @@ export function FlockWeeklyEntryCard({
     });
     setValues(next);
     setNotes(existing?.notes ?? "");
-    setTechnician(
-      existing?.inspector_name ??
-        existing?.technician_name ??
-        existing?.lab_technician ??
-        ""
-    );
     setPrefilled(true);
   }, [existing, isLoading, prefilled, fields]);
 

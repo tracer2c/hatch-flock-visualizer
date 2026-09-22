@@ -66,7 +66,7 @@ export function HouseMatrixEntry({
   const qc = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [technician, setTechnician] = useState("");
+  const technician = useCurrentUserName();
   /** batch_id -> field -> raw string */
   const [values, setValues] = useState<Record<string, Record<string, string>>>({});
   /** batch_id -> existing row id (for updates) */

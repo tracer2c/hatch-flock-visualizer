@@ -73,7 +73,7 @@ export default function WeeklyClearsSheet({
   const qc = useQueryClient();
   const { user, profile } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [technician, setTechnician] = useState(existingRow?.technician_name ?? "");
+  const technician = useCurrentUserName();
   const [notes, setNotes] = useState(existingRow?.notes ?? "");
   const [cells, setCells] = useState<Record<string, Cells>>({});
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
