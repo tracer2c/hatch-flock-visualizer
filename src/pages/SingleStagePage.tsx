@@ -13,8 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Save, RotateCcw, Box, History, Check } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Box, History, Check, Printer } from "lucide-react";
 import SingleStageSetSheetGrid from "@/components/data-entry/SingleStageSetSheetGrid";
+import SetSheetPrintView, {
+  type PrintSetter,
+} from "@/components/data-entry/SetSheetPrintView";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
 import { format, parseISO } from "date-fns";
 import {
   DEFAULT_TOTAL_BUGGIES,
