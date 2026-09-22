@@ -371,13 +371,13 @@ export function HouseMatrixEntry({
 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="w-full max-w-xs">
-            <Label htmlFor="matrix-technician">Technician / Inspector</Label>
+            <Label htmlFor="matrix-technician">Technician / Inspector (signed in)</Label>
             <Input
               id="matrix-technician"
               value={technician}
-              onChange={(e) => setTechnician(e.target.value)}
-              placeholder="Name"
-              disabled={readOnly}
+              readOnly
+              disabled
+              placeholder="Loading…"
             />
           </div>
           {!readOnly && (
