@@ -267,6 +267,8 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
           flock_number: bucket[0].flock_number,
           flock_name: bucket[0].flock_name,
           house_count: houseSet.size || bucket.length,
+          known_house_count: houseSet.size,
+          record_count: bucket.length,
           house_ids: bucket.map((r) => r.id),
           set_dates: setDates,
           earliest_set_date: setDates[0] ?? null,
