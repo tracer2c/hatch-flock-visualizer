@@ -13,10 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowDownToLine, Copy, Eraser, Search, X } from "lucide-react";
-import { BUGGY_SIZES, DEFAULT_BUGGY_SIZE } from "@/config/multiStage";
+import {
+  BUGGY_SIZES,
+  DEFAULT_HEIGHT_SIZES,
+  HEIGHT_LABEL,
+  rowEggsSet,
+} from "@/config/multiStage";
+import type { HeightCode, HeightSizes } from "@/config/multiStage";
 import type { DraftRow, FlockOption, SetterOption } from "@/hooks/useMultiStage";
 
 export const POSITIONS = [1, 2, 3] as const;
+
+/** The paper card labels the three lines A, B, C; storage keeps 1, 2, 3. */
+export const POSITION_LABELS: Record<number, string> = { 1: "A", 2: "B", 3: "C" };
 
 interface Props {
   setters: SetterOption[];
@@ -52,9 +61,9 @@ const newLine = (
 
 /**
  * Paper "SET REPORT" style bulk entry: every multi-setter machine is a card
- * with three position lines. The technician types flock numbers straight in —
- * no dialogs, no per-machine selection — which is what makes a full sheet a
- * couple of minutes instead of 45.
+ * with three position lines (A, B, C). The technician types flock numbers
+ * straight in, marks each line Tall or Short, and the house number — which is
+ * what makes a full sheet a couple of minutes instead of 45.
  */
 const SetReportGrid: React.FC<Props> = ({
   setters,
@@ -68,6 +77,10 @@ const SetReportGrid: React.FC<Props> = ({
   const [onlyFilled, setOnlyFilled] = useState(false);
   /** Raw text the tech is typing per cell, keyed `${machineId}:${pos}`. */
   const [flockText, setFlockText] = useState<Record<string, string>>({});
+  /** Per-setter Tall/Short egg counts when the defaults don't apply. */
+  const [sizeOverrides, setSizeOverrides] = useState<
+    Record<string, Partial<HeightSizes>>
+  >({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   // flock_number → flock (first match wins when a number repeats per hatchery)
@@ -82,19 +95,25 @@ const SetReportGrid: React.FC<Props> = ({
 
   const cellKey = (machineId: string, pos: number) => `${machineId}:${pos}`;
 
+  const sizesOf = (machineId: string): HeightSizes => ({
+    ...DEFAULT_HEIGHT_SIZES,
+    ...(sizeOverrides[machineId] ?? {}),
+  });
+
+  /** A line's height is read back from the egg count it was saved with. */
+  const heightOf = (machineId: string, pos: number): HeightCode => {
+    const r = rowFor(machineId, pos);
+    if (!r) return "T";
+    return r.eggs_per_buggy === sizesOf(machineId).S ? "S" : "T";
+  };
+
   const patchCell = (machineId: string, pos: number, patch: Partial<DraftRow>) => {
     const existing = rowFor(machineId, pos);
     if (existing) {
       onRowsChange(rows.map((r) => (r.tempId === existing.tempId ? { ...r, ...patch } : r)));
       return;
     }
-    const sibling = rows.find((r) => r.machine_id === machineId);
-    const line = newLine(
-      machineId,
-      pos,
-      defaultDate,
-      sibling?.eggs_per_buggy ?? DEFAULT_BUGGY_SIZE
-    );
+    const line = newLine(machineId, pos, defaultDate, sizesOf(machineId).T);
     onRowsChange([...rows, { ...line, ...patch }]);
   };
 
@@ -114,20 +133,45 @@ const SetReportGrid: React.FC<Props> = ({
       clearCell(machineId, pos);
       return;
     }
+    const existing = rowFor(machineId, pos);
+    const sameFlock = existing?.flock_id && existing.flock_id === flock?.id;
     patchCell(machineId, pos, {
       flock_id: flock?.id ?? "",
-      house_number: flock?.house_number ?? "",
+      // Keep whatever the tech typed for the house when the flock hasn't changed.
+      house_number: sameFlock
+        ? existing?.house_number ?? ""
+        : flock?.house_number ?? "",
       age_weeks: flock?.age_weeks ?? null,
     });
   };
 
-  const setSetterBuggySize = (machineId: string, size: number) => {
+  /** Flip a line between Tall and Short, repricing its eggs immediately. */
+  const setCellHeight = (machineId: string, pos: number, height: HeightCode) => {
+    const existing = rowFor(machineId, pos);
+    if (!existing) return;
+    patchCell(machineId, pos, { eggs_per_buggy: sizesOf(machineId)[height] });
+  };
+
+  /** Change the egg count of one buggy height on a setter. */
+  const setSetterHeightSize = (machineId: string, height: HeightCode, size: number) => {
+    const heights = new Map<number, HeightCode>(
+      POSITIONS.map((p) => [p as number, heightOf(machineId, p)])
+    );
+    const nextSizes = { ...sizesOf(machineId), [height]: size } as HeightSizes;
+    setSizeOverrides((o) => ({
+      ...o,
+      [machineId]: { ...(o[machineId] ?? {}), [height]: size },
+    }));
     onRowsChange(
-      rows.map((r) => (r.machine_id === machineId ? { ...r, eggs_per_buggy: size } : r))
+      rows.map((r) =>
+        r.machine_id === machineId
+          ? { ...r, eggs_per_buggy: nextSizes[heights.get(r.position ?? 1) ?? "T"] }
+          : r
+      )
     );
   };
 
-  /** Copy position 1 down to positions 2 & 3 of the same setter. */
+  /** Copy line A down to lines B & C of the same setter. */
   const fillDown = (machineId: string) => {
     const first = rowFor(machineId, 1);
     if (!first) return;
@@ -178,6 +222,7 @@ const SetReportGrid: React.FC<Props> = ({
         [cellKey(target.id, pos)]: t[cellKey(source.id, pos)] ?? "",
       }));
     }
+    setSizeOverrides((o) => ({ ...o, [target.id]: { ...(o[source.id] ?? {}) } }));
     onRowsChange(next);
   };
 
@@ -267,12 +312,24 @@ const SetReportGrid: React.FC<Props> = ({
         </p>
       )}
 
-      {/* Setter cards — 3 positions each, like the paper card */}
+      {/* Setter cards — 3 lines (A, B, C) each, like the paper card */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {visibleSetters.map((s, machineIdx) => {
           const setterRows = POSITIONS.map((p) => rowFor(s.id, p));
           const hasAny = setterRows.some((r) => r?.flock_id);
-          const size = setterRows.find((r) => r)?.eggs_per_buggy ?? DEFAULT_BUGGY_SIZE;
+          const sizes = sizesOf(s.id);
+          const filled = setterRows.filter((r) => r?.flock_id);
+          const tallBuggies = filled
+            .filter((r) => r!.eggs_per_buggy !== sizes.S)
+            .reduce((sum, r) => sum + (r!.buggies_set || 0), 0);
+          const shortBuggies = filled
+            .filter((r) => r!.eggs_per_buggy === sizes.S)
+            .reduce((sum, r) => sum + (r!.buggies_set || 0), 0);
+          const buggies = tallBuggies + shortBuggies;
+          const eggs = filled.reduce(
+            (sum, r) => sum + rowEggsSet(r!.buggies_set || 0, r!.eggs_per_buggy || sizes.T),
+            0
+          );
           return (
             <Card
               key={s.id}
@@ -292,7 +349,7 @@ const SetReportGrid: React.FC<Props> = ({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      title="Fill position 1 down to 2 & 3"
+                      title="Fill line A down to B & C"
                       disabled={!canWrite || !setterRows[0]?.flock_id}
                       onClick={() => fillDown(s.id)}
                     >
@@ -322,15 +379,17 @@ const SetReportGrid: React.FC<Props> = ({
                 </div>
 
                 {/* Column labels */}
-                <div className="grid grid-cols-[18px_1fr_92px_52px_24px] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <span>#</span>
+                <div className="grid grid-cols-[18px_1fr_44px_52px_86px_48px_24px] gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span />
                   <span>Flock #</span>
+                  <span>T/S</span>
+                  <span>House</span>
                   <span>Date</span>
                   <span>Bug.</span>
                   <span />
                 </div>
 
-                {/* Three position lines */}
+                {/* Three lines: A, B, C */}
                 {POSITIONS.map((pos) => {
                   const r = setterRows[pos - 1];
                   const text = flockText[cellKey(s.id, pos)] ??
@@ -341,10 +400,13 @@ const SetReportGrid: React.FC<Props> = ({
                     ? flocks.find((f) => f.id === r.flock_id)
                     : undefined;
                   const unknown = !!text.trim() && !resolved;
+                  const height = heightOf(s.id, pos);
                   return (
                     <div key={pos} className="space-y-0.5">
-                      <div className="grid grid-cols-[18px_1fr_92px_52px_24px] gap-1.5 items-center">
-                        <span className="text-xs text-muted-foreground tabular-nums">{pos}</span>
+                      <div className="grid grid-cols-[18px_1fr_44px_52px_86px_48px_24px] gap-1 items-center">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {POSITION_LABELS[pos]}
+                        </span>
                         <Input
                           data-flock-cell={cellKey(s.id, pos)}
                           inputMode="numeric"
@@ -354,6 +416,29 @@ const SetReportGrid: React.FC<Props> = ({
                           onChange={(e) => onFlockInput(s.id, pos, e.target.value)}
                           onKeyDown={(e) => onFlockKeyDown(e, machineIdx, pos)}
                           className={`h-8 tabular-nums ${unknown ? "border-destructive" : ""}`}
+                        />
+                        <Select
+                          value={height}
+                          onValueChange={(v) => setCellHeight(s.id, pos, v as HeightCode)}
+                          disabled={!canWrite || !r}
+                        >
+                          <SelectTrigger className="h-8 px-1.5 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="T">T</SelectItem>
+                            <SelectItem value="S">S</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          inputMode="numeric"
+                          value={r?.house_number ?? ""}
+                          disabled={!canWrite || !r}
+                          placeholder="1-6"
+                          onChange={(e) =>
+                            patchCell(s.id, pos, { house_number: e.target.value })
+                          }
+                          className="h-8 px-1 text-xs tabular-nums"
                         />
                         <Input
                           type="date"
@@ -384,13 +469,14 @@ const SetReportGrid: React.FC<Props> = ({
                         </Button>
                       </div>
                       {resolved && (
-                        <div className="pl-[26px] text-[10px] text-muted-foreground truncate">
+                        <div className="pl-[22px] text-[10px] text-muted-foreground truncate">
                           {resolved.flock_name}
-                          {resolved.house_number ? ` · House ${resolved.house_number}` : ""}
+                          {r?.house_number ? ` · House ${r.house_number}` : ""}
+                          {` · ${rowEggsSet(r?.buggies_set || 0, r?.eggs_per_buggy || sizes.T).toLocaleString()} eggs`}
                         </div>
                       )}
                       {unknown && (
-                        <div className="pl-[26px] text-[10px] text-destructive">
+                        <div className="pl-[22px] text-[10px] text-destructive">
                           No flock #{text.trim()} found — it won&apos;t be saved
                         </div>
                       )}
@@ -398,27 +484,35 @@ const SetReportGrid: React.FC<Props> = ({
                   );
                 })}
 
-                {/* Buggy size for the whole setter */}
-                <div className="flex items-center gap-2 pt-1 border-t">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Buggy size
+                {/* Per-setter footer: tall/short buggy sizes + totals */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t">
+                  {(["T", "S"] as HeightCode[]).map((h) => (
+                    <div key={h} className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {HEIGHT_LABEL[h]}
+                      </span>
+                      <Select
+                        value={String(sizes[h])}
+                        onValueChange={(v) => setSetterHeightSize(s.id, h, parseInt(v))}
+                        disabled={!canWrite}
+                      >
+                        <SelectTrigger className="h-7 w-[96px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BUGGY_SIZES.map((b) => (
+                            <SelectItem key={b} value={String(b)}>
+                              {b.toLocaleString()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {tallBuggies} T · {shortBuggies} S · {buggies} buggies ·{" "}
+                    {eggs.toLocaleString()} eggs
                   </span>
-                  <Select
-                    value={String(size)}
-                    onValueChange={(v) => setSetterBuggySize(s.id, parseInt(v))}
-                    disabled={!canWrite || !hasAny}
-                  >
-                    <SelectTrigger className="h-7 w-[110px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUGGY_SIZES.map((b) => (
-                        <SelectItem key={b} value={String(b)}>
-                          {b.toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </CardContent>
             </Card>
