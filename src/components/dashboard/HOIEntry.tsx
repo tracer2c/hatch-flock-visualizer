@@ -70,7 +70,6 @@ const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated, readOnly }:
     }
 
     onUpdated(payload);
-    setTechnicianName('');
     setNotes('');
     toast({
       title: "Saved",

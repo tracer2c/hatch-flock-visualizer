@@ -137,7 +137,6 @@ export default function ClearsInjectedDataEntry({
                   clears_technician_name: technicianName.trim(),
                   clears_notes: notes.trim() || null,
                 });
-                setTechnicianName('');
                 setNotes('');
               }}
               disabled={!valid || saving || readOnly}
