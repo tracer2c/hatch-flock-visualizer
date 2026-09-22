@@ -265,6 +265,10 @@ const MultiStagePage = () => {
               Draft saved {format(lastSavedAt, "h:mm:ss a")}
             </span>
           )}
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
           <Button variant="outline" onClick={handleReset} disabled={saveMutation.isPending}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
