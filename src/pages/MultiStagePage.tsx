@@ -37,7 +37,6 @@ import {
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
 import SetReportGrid from "@/components/data-entry/SetReportGrid";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -64,7 +63,6 @@ const newRow = (): DraftRow => ({
   confirmed: false,
 });
 
-const LOCATIONS_ABC = ["A", "B", "C"] as const;
 
 const initialHeader = (dayNumber: number | null): DraftHeader => {
   const today = new Date();
