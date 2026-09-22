@@ -235,13 +235,13 @@ export function HouseMatrixEntry({
             .eq("id", existingId);
           if (error) throw error;
         } else {
-          const { data, error } = await supabase
-            .from(table as any)
+          const { data, error } = await (supabase.from(table as any) as any)
             .insert(payload)
             .select("id")
             .maybeSingle();
           if (error) throw error;
-          if (data?.id) setRowIds((m) => ({ ...m, [b.id]: data.id }));
+          const newId = (data as { id?: string } | null)?.id;
+          if (newId) setRowIds((m) => ({ ...m, [b.id]: newId }));
         }
       }
       setDirty({});
