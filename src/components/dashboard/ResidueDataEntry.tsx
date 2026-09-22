@@ -88,6 +88,7 @@ interface ResidueDataEntryProps {
 }
 
 const ResidueDataEntry = ({ data, onDataUpdate, batchInfo }: ResidueDataEntryProps) => {
+  const currentUserName = useCurrentUserName();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: batchInfo.flock_name,
