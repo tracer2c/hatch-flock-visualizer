@@ -13,7 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowDownToLine, Copy, Eraser, Search } from "lucide-react";
-import { BUGGY_SIZES, DEFAULT_BUGGY_SIZE, rowEggsSet } from "@/config/multiStage";
+import {
+  BUGGY_SIZES,
+  DEFAULT_BUGGY_SIZE,
+  DEFAULT_HEIGHT_SIZES,
+  HEIGHT_LABEL,
+  SHORT_BUGGY_EGGS,
+  TALL_BUGGY_EGGS,
+  rowEggsSet,
+} from "@/config/multiStage";
+import type { HeightCode, HeightSizes } from "@/config/multiStage";
 import type { FlockOption, SetterOption } from "@/hooks/useMultiStage";
 import type { SingleStageRow } from "@/hooks/useSingleStage";
 
