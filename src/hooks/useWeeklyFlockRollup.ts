@@ -15,6 +15,10 @@ export interface WeeklyFlockRollupRow {
   flock_number: string | number | null;
   flock_name: string | null;
   house_count: number;
+  /** Number of distinct house numbers actually recorded (0 when unknown). */
+  known_house_count: number;
+  /** Number of set records (batches) rolled up for this flock/week. */
+  record_count: number;
   house_ids: string[];
   set_dates: string[];
   earliest_set_date: string | null;
