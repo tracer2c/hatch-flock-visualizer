@@ -210,6 +210,41 @@ const MultiStagePage = () => {
     setRows([newRow()]);
   };
 
+  // ── Printing ───────────────────────────────────────────────────────────
+  const printMeta = usePrintMeta();
+
+  const printSetters: PrintSetter[] = useMemo(() => {
+    return setters
+      .map((s) => {
+        const lines = rows
+          .filter((r) => r.machine_id === s.id && r.flock_id)
+          .sort((a, b) => (a.position ?? 1) - (b.position ?? 1))
+          .map((r) => {
+            const f = flocks.find((x) => x.id === r.flock_id);
+            return {
+              label: POSITION_LABELS[r.position ?? 1] ?? String(r.position ?? 1),
+              flockNumber: f ? String(f.flock_number) : "",
+              houseNumber: r.house_number || "",
+              ageWeeks: r.age_weeks,
+              eggsPerBuggy: r.eggs_per_buggy || DEFAULT_BUGGY_SIZE,
+              buggies: Number(r.buggies_set) || 0,
+            };
+          });
+        return { machineNumber: s.machine_number, location: s.location, lines };
+      })
+      .filter((s) => s.lines.length > 0);
+  }, [setters, rows, flocks]);
+
+  const printLocation = useMemo(() => {
+    const used = new Set(
+      setters
+        .filter((s) => rows.some((r) => r.machine_id === s.id && r.flock_id))
+        .map((s) => s.location)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(used).join(", ");
+  }, [setters, rows]);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Page header */}
