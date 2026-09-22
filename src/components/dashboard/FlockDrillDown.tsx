@@ -183,8 +183,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
                 <div className="text-sm font-semibold">Weekly Flock Totals</div>
                 <div className="text-xs text-muted-foreground">
                   Set Week: {formatSetWeekLabel(weekMonday ?? flock.earliest_set_date)} ·{" "}
-                  Consolidated across {flock.house_count}{" "}
-                  {flock.house_count === 1 ? "house" : "houses"}
+                  Consolidated across {scopeLabel}
                 </div>
               </div>
               <Badge variant="outline" className={statusColor(flock.worst_status)}>
