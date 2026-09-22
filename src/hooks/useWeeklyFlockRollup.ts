@@ -15,6 +15,10 @@ export interface WeeklyFlockRollupRow {
   flock_number: string | number | null;
   flock_name: string | null;
   house_count: number;
+  /** Number of distinct house numbers actually recorded (0 when unknown). */
+  known_house_count: number;
+  /** Number of set records (batches) rolled up for this flock/week. */
+  record_count: number;
   house_ids: string[];
   set_dates: string[];
   earliest_set_date: string | null;
@@ -263,6 +267,8 @@ export function useWeeklyFlockRollup({ weekStart, weekEnd }: Params) {
           flock_number: bucket[0].flock_number,
           flock_name: bucket[0].flock_name,
           house_count: houseSet.size || bucket.length,
+          known_house_count: houseSet.size,
+          record_count: bucket.length,
           house_ids: bucket.map((r) => r.id),
           set_dates: setDates,
           earliest_set_date: setDates[0] ?? null,

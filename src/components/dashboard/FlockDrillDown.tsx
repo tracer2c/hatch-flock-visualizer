@@ -128,6 +128,15 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
   };
 
 
+  // House numbers are optional on set records. Only say "house" when we actually
+  // have house numbers; otherwise describe what we really counted: set records.
+  const knownHouses = (flock as any).known_house_count ?? 0;
+  const recordCount = (flock as any).record_count ?? flock.house_count;
+  const scopeLabel =
+    knownHouses > 0
+      ? `${knownHouses} ${knownHouses === 1 ? "house" : "houses"}`
+      : `${recordCount} ${recordCount === 1 ? "set record" : "set records"}`;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -143,8 +152,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
             <div>
               <CardTitle>{flock.flock_name || "Flock"}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Flock #{flock.flock_number ?? "—"} · {flock.house_count}{" "}
-                {flock.house_count === 1 ? "house" : "houses"} this week
+                Flock #{flock.flock_number ?? "—"} · {scopeLabel} this week
               </p>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
@@ -175,8 +183,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
                 <div className="text-sm font-semibold">Weekly Flock Totals</div>
                 <div className="text-xs text-muted-foreground">
                   Set Week: {formatSetWeekLabel(weekMonday ?? flock.earliest_set_date)} ·{" "}
-                  Consolidated across {flock.house_count}{" "}
-                  {flock.house_count === 1 ? "house" : "houses"}
+                  Consolidated across {scopeLabel}
                 </div>
               </div>
               <Badge variant="outline" className={statusColor(flock.worst_status)}>
