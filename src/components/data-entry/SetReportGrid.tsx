@@ -402,6 +402,7 @@ const SetReportGrid: React.FC<Props> = ({
                     ? flocks.find((f) => f.id === r.flock_id)
                     : undefined;
                   const unknown = !!text.trim() && !resolved;
+                  const isActive = activeFlockCell === cellKey(s.id, pos);
                   const height = heightOf(s.id, pos);
                   return (
                     <div key={pos} className="space-y-0.5">
