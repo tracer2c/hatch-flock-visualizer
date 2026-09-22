@@ -143,8 +143,7 @@ export default function FlockDrillDown({ flock, onBack, onOpenHouse, weekStart }
             <div>
               <CardTitle>{flock.flock_name || "Flock"}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Flock #{flock.flock_number ?? "—"} · {flock.house_count}{" "}
-                {flock.house_count === 1 ? "house" : "houses"} this week
+                Flock #{flock.flock_number ?? "—"} · {scopeLabel} this week
               </p>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
