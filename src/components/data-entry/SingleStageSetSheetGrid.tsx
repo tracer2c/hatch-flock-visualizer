@@ -31,15 +31,10 @@ export const BUGGY_LINES = Array.from({ length: 20 }, (_, i) => i + 1);
 const LEFT_LINES = BUGGY_LINES.slice(0, 10);
 const RIGHT_LINES = BUGGY_LINES.slice(10);
 
-/** Egg height code written next to the flock number on the sheet. */
-export type HeightCode = "T" | "S";
-const HEIGHT_LABEL: Record<HeightCode, string> = { T: "Tall", S: "Short" };
-
-/** Wayne single-stage buggies: tall holds 5,508 eggs, short holds 4,860. */
-export const TALL_BUGGY_EGGS = 5508;
-export const SHORT_BUGGY_EGGS = 4860;
-type HeightSizes = Record<HeightCode, number>;
-const DEFAULT_HEIGHT_SIZES: HeightSizes = { T: TALL_BUGGY_EGGS, S: SHORT_BUGGY_EGGS };
+// Height codes, labels and buggy egg counts now live in @/config/multiStage
+// so the multi-stage sheet uses the exact same T/S sizing.
+export { TALL_BUGGY_EGGS, SHORT_BUGGY_EGGS } from "@/config/multiStage";
+export type { HeightCode } from "@/config/multiStage";
 
 type Cell = { flock_id: string; height: HeightCode };
 type CellMap = Map<string, Cell>; // `${machine_id}:${line}` → cell
