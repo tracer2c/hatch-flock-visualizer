@@ -77,6 +77,8 @@ const SetReportGrid: React.FC<Props> = ({
   const [onlyFilled, setOnlyFilled] = useState(false);
   /** Raw text the tech is typing per cell, keyed `${machineId}:${pos}`. */
   const [flockText, setFlockText] = useState<Record<string, string>>({});
+  /** The flock cell currently being typed in — it expands while active. */
+  const [activeFlockCell, setActiveFlockCell] = useState<string | null>(null);
   /** Per-setter Tall/Short egg counts when the defaults don't apply. */
   const [sizeOverrides, setSizeOverrides] = useState<
     Record<string, Partial<HeightSizes>>
@@ -400,6 +402,7 @@ const SetReportGrid: React.FC<Props> = ({
                     ? flocks.find((f) => f.id === r.flock_id)
                     : undefined;
                   const unknown = !!text.trim() && !resolved;
+                  const isActive = activeFlockCell === cellKey(s.id, pos);
                   const height = heightOf(s.id, pos);
                   return (
                     <div key={pos} className="space-y-0.5">
@@ -407,16 +410,26 @@ const SetReportGrid: React.FC<Props> = ({
                         <span className="text-xs font-medium text-muted-foreground">
                           {POSITION_LABELS[pos]}
                         </span>
-                        <Input
-                          data-flock-cell={cellKey(s.id, pos)}
-                          inputMode="numeric"
-                          value={text}
-                          disabled={!canWrite}
-                          placeholder="6501"
-                          onChange={(e) => onFlockInput(s.id, pos, e.target.value)}
-                          onKeyDown={(e) => onFlockKeyDown(e, machineIdx, pos)}
-                          className={`h-8 tabular-nums ${unknown ? "border-destructive" : ""}`}
-                        />
+                        <div className="relative">
+                          <Input
+                            data-flock-cell={cellKey(s.id, pos)}
+                            inputMode="numeric"
+                            value={text}
+                            disabled={!canWrite}
+                            placeholder="6501"
+                            onChange={(e) => onFlockInput(s.id, pos, e.target.value)}
+                            onKeyDown={(e) => onFlockKeyDown(e, machineIdx, pos)}
+                            onFocus={() => setActiveFlockCell(cellKey(s.id, pos))}
+                            onBlur={() =>
+                              setActiveFlockCell((c) => (c === cellKey(s.id, pos) ? null : c))
+                            }
+                            className={`h-8 tabular-nums transition-all duration-200 ease-out ${
+                              isActive
+                                ? "w-[190px] relative z-10 bg-background shadow-lg ring-2 ring-primary/30"
+                                : "w-full"
+                            } ${unknown ? "border-destructive" : ""}`}
+                          />
+                        </div>
                         <Select
                           value={height}
                           onValueChange={(v) => setCellHeight(s.id, pos, v as HeightCode)}

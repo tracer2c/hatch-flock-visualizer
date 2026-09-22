@@ -133,6 +133,8 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
   const [onlyFilled, setOnlyFilled] = useState(false);
   /** Raw text the tech is typing per cell, keyed `${machineId}:${line}`. */
   const [flockText, setFlockText] = useState<Record<string, string>>({});
+  /** The flock cell currently being typed in — it expands while active. */
+  const [activeFlockCell, setActiveFlockCell] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const cells = useMemo(() => rowsToCells(rows), [rows]);
@@ -314,22 +316,31 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     const cell = cells.get(key(s.id, line));
     const resolved = cell ? flocks.find((f) => f.id === cell.flock_id) : undefined;
     const unknown = !!text.trim() && !resolved;
+    const isActive = activeFlockCell === key(s.id, line);
     return (
       <div key={line} className="grid grid-cols-[20px_1fr_52px] gap-1 items-center">
         <span className="text-[10px] text-muted-foreground tabular-nums text-right">
           {line}
         </span>
-        <Input
-          data-buggy-cell={key(s.id, line)}
-          inputMode="numeric"
-          value={text}
-          disabled={!canWrite}
-          placeholder="—"
-          onChange={(e) => onFlockInput(s.id, line, e.target.value)}
-          onKeyDown={(e) => onFlockKeyDown(e, machineIdx, line)}
-          title={resolved ? `${resolved.flock_name}${resolved.house_number ? ` · House ${resolved.house_number}` : ""}` : unknown ? `No flock #${text.trim()} found` : undefined}
-          className={`h-7 px-1.5 text-xs tabular-nums ${unknown ? "border-destructive" : ""}`}
-        />
+        <div className="relative">
+          <Input
+            data-buggy-cell={key(s.id, line)}
+            inputMode="numeric"
+            value={text}
+            disabled={!canWrite}
+            placeholder="—"
+            onChange={(e) => onFlockInput(s.id, line, e.target.value)}
+            onKeyDown={(e) => onFlockKeyDown(e, machineIdx, line)}
+            onFocus={() => setActiveFlockCell(key(s.id, line))}
+            onBlur={() => setActiveFlockCell((c) => (c === key(s.id, line) ? null : c))}
+            title={resolved ? `${resolved.flock_name}${resolved.house_number ? ` · House ${resolved.house_number}` : ""}` : unknown ? `No flock #${text.trim()} found` : undefined}
+            className={`h-7 px-1.5 text-xs tabular-nums transition-all duration-200 ease-out ${
+              isActive
+                ? "w-[160px] relative z-10 bg-background shadow-lg ring-2 ring-primary/30"
+                : "w-full"
+            } ${unknown ? "border-destructive" : ""}`}
+          />
+        </div>
         <Select
           value={cell?.height ?? "T"}
           onValueChange={(v) => onHeightChange(s.id, line, v as HeightCode)}
