@@ -41,8 +41,6 @@ const weekdayOf = (iso: string): string => {
   const wd = format(parseISO(iso), "EEE");
   return (WEEKDAYS as readonly string[]).includes(wd) ? wd : "Mon";
 };
-// Single-setter slot positions 1–18.
-const LOCATIONS_1_18 = Array.from({ length: 18 }, (_, i) => String(i + 1));
 
 const newRow = (): SingleStageRow => ({
   tempId: crypto.randomUUID(),
