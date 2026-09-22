@@ -13,21 +13,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Trash2, Sparkles, Save, RotateCcw, Layers, History, Check, CheckCircle2, Pencil, CheckCheck } from "lucide-react";
+import { Sparkles, Save, RotateCcw, Layers, History, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { toast } from "sonner";
 import {
   DEFAULT_TOTAL_BUGGIES,
   DEFAULT_BUGGY_SIZE,
-  BUGGY_SIZES,
   computeHatchDate,
   computeTransferDate,
   computeFlockAgeWeeks,
@@ -37,7 +27,6 @@ import {
   type SetColor,
 } from "@/config/multiStage";
 import { SetColorPicker } from "@/components/dashboard/SetColorPicker";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   useMultiStageOptions,
   useNextDayNumber,
@@ -48,7 +37,6 @@ import {
 import { useOperationDraft } from "@/hooks/useOperationDraft";
 import { usePermissions } from "@/hooks/usePermissions";
 import SetReportGrid from "@/components/data-entry/SetReportGrid";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // Operating weekdays.
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -75,7 +63,6 @@ const newRow = (): DraftRow => ({
   confirmed: false,
 });
 
-const LOCATIONS_ABC = ["A", "B", "C"] as const;
 
 const initialHeader = (dayNumber: number | null): DraftHeader => {
   const today = new Date();
@@ -114,8 +101,6 @@ const MultiStagePage = () => {
 
   const [header, setHeader] = useState<DraftHeader>(() => initialHeader(null));
   const [rows, setRows] = useState<DraftRow[]>(() => [newRow()]);
-  /** "grid" = paper Set Report sheet (default), "rows" = legacy one-row-at-a-time. */
-  const [entryMode, setEntryMode] = useState<"grid" | "rows">("grid");
 
   // Backfill day_number once it's computed by the hook
   if (nextDay && header.day_number === null) {
@@ -171,70 +156,6 @@ const MultiStagePage = () => {
     }));
   };
 
-  // When a flock is picked, auto-fill house_number + age_weeks
-  const updateRowFlock = (tempId: string, flockId: string) => {
-    const flock = flocks.find((f) => f.id === flockId);
-    setRows((rs) =>
-      rs.map((r) =>
-        r.tempId === tempId
-          ? {
-              ...r,
-              flock_id: flockId,
-              house_number: flock?.house_number ?? r.house_number,
-              age_weeks:
-                flock?.age_weeks ??
-                computeFlockAgeWeeks(flock?.arrival_date) ??
-                r.age_weeks,
-            }
-          : r
-      )
-    );
-  };
-
-  const updateRow = <K extends keyof DraftRow>(
-    tempId: string,
-    key: K,
-    value: DraftRow[K]
-  ) => {
-    setRows((rs) => rs.map((r) => (r.tempId === tempId ? { ...r, [key]: value } : r)));
-  };
-
-  // Sequential entry flow: confirming a row locks it into a compact "saved"
-  // line and — as long as the running buggy total hasn't hit the header's
-  // declared # of Buggies yet, and no other open row is already waiting —
-  // opens a fresh blank row underneath so the tech can keep going without
-  // touching "Add Setter" each time.
-  const confirmRow = (tempId: string) => {
-    const row = rows.find((r) => r.tempId === tempId);
-    if (!row) return;
-    if (!row.machine_id || !row.flock_id) {
-      toast.error("Pick a setter and flock before confirming this row");
-      return;
-    }
-    setRows((rs) => {
-      const next = rs.map((r) => (r.tempId === tempId ? { ...r, confirmed: true } : r));
-      const buggiesSoFar = next.reduce((s, r) => s + (Number(r.buggies_set) || 0), 0);
-      const hasOpenRow = next.some((r) => !r.confirmed);
-      if (!hasOpenRow && buggiesSoFar < header.total_buggies) {
-        return [...next, newRow()];
-      }
-      return next;
-    });
-  };
-
-  const unconfirmRow = (tempId: string) => {
-    setRows((rs) => rs.map((r) => (r.tempId === tempId ? { ...r, confirmed: false } : r)));
-  };
-
-  // "Done with this set" — locks any still-open row that has enough to save,
-  // and stops here even if the declared total hasn't been reached (a
-  // partial set that continues tomorrow, for instance).
-  const handleDoneWithSet = () => {
-    setRows((rs) =>
-      rs.map((r) => (!r.confirmed && r.machine_id && r.flock_id ? { ...r, confirmed: true } : r))
-    );
-  };
-
   // Live totals — use the chosen buggy size
   const totals = useMemo(() => {
     const buggiesSet = rows.reduce((s, r) => s + (Number(r.buggies_set) || 0), 0);
@@ -260,27 +181,6 @@ const MultiStagePage = () => {
   }, [rows]);
 
   const flockLookup = (id: string) => flocks.find((f) => f.id === id);
-  const setterLookup = (id: string) => setters.find((s) => s.id === id);
-
-  // Options for the searchable dropdowns
-  const setterOptions = useMemo(
-    () =>
-      setters.map((s) => ({
-        value: s.id,
-        label: s.machine_number,
-        keywords: `${s.machine_type ?? ""} ${s.location ?? ""}`,
-      })),
-    [setters]
-  );
-  const flockOptions = useMemo(
-    () =>
-      flocks.map((f) => ({
-        value: f.id,
-        label: `#${f.flock_number} — ${f.flock_name}`,
-        keywords: String(f.flock_number),
-      })),
-    [flocks]
-  );
 
   const handleSave = async () => {
     const validRows = rows.filter((r) => r.machine_id && r.flock_id);
@@ -319,15 +219,6 @@ const MultiStagePage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ToggleGroup
-            type="single"
-            value={entryMode}
-            onValueChange={(v) => v && setEntryMode(v as "grid" | "rows")}
-            size="sm"
-          >
-            <ToggleGroupItem value="grid" className="text-xs px-3">Sheet grid</ToggleGroupItem>
-            <ToggleGroupItem value="rows" className="text-xs px-3">Row list</ToggleGroupItem>
-          </ToggleGroup>
           {resumeDecided && lastSavedAt && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Check className="h-3 w-3 text-green-600" />
@@ -510,7 +401,6 @@ const MultiStagePage = () => {
       </Card>
 
       {/* Paper-sheet bulk grid: all setters × 3 positions on one page */}
-      {entryMode === "grid" ? (
         <Card>
           <CardHeader>
             <CardTitle>Set Report — all setters</CardTitle>
@@ -577,341 +467,6 @@ const MultiStagePage = () => {
             </div>
           </CardContent>
         </Card>
-      ) : (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Setters</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              One row per setter being operated on today. Fill in a row and press{" "}
-              <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-semibold">Enter</kbd>{" "}
-              (or hit Confirm) to lock it in and open the next one. <strong>S</strong> = buggies set in, <strong>T</strong> = buggies transferred out.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDoneWithSet}
-              disabled={!canWrite || rows.every((r) => r.confirmed)}
-            >
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Done with this set
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRows((rs) => [...rs, newRow()])}
-              disabled={!canWrite}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Setter
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Progress against the declared # of Buggies */}
-          <div className="mb-4 space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Buggies entered</span>
-              <span className="font-medium tabular-nums">
-                {totals.buggiesSet} / {header.total_buggies}
-              </span>
-            </div>
-            <Progress value={Math.min(100, (totals.buggiesSet / Math.max(1, header.total_buggies)) * 100)} />
-          </div>
-
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[170px]">Setter</TableHead>
-                  <TableHead className="min-w-[90px]">Age (wks)</TableHead>
-                  <TableHead className="min-w-[90px]">House</TableHead>
-                  <TableHead className="min-w-[110px]">Location</TableHead>
-                  <TableHead className="min-w-[100px]">Machine No.</TableHead>
-                  <TableHead className="min-w-[200px]">Flock</TableHead>
-                  <TableHead className="min-w-[120px]">Buggie</TableHead>
-                  <TableHead className="min-w-[90px]">Hatch %</TableHead>
-                  <TableHead className="min-w-[70px]">S</TableHead>
-                  <TableHead className="min-w-[70px]">T</TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => {
-                  const flock = flockLookup(r.flock_id);
-                  const setter = setterLookup(r.machine_id);
-
-                  // Confirmed rows collapse to a compact "saved" line — the
-                  // detail is still there, just not taking up a full row of
-                  // editable fields while the tech keeps entering new ones.
-                  if (r.confirmed) {
-                    return (
-                      <TableRow key={r.tempId} className="bg-green-50/60 hover:bg-green-50">
-                        <TableCell colSpan={10}>
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                            <span className="font-medium">{setter?.machine_number || "—"}</span>
-                            <span className="text-muted-foreground">·</span>
-                            <span>{flock ? `#${flock.flock_number} — ${flock.flock_name}` : "—"}</span>
-                            <span className="text-muted-foreground">·</span>
-                            <span>Loc {r.location || "—"}</span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="tabular-nums">{r.buggies_set} buggies</span>
-                            <Badge variant="outline" className="ml-1 border-green-300 text-green-700 bg-green-100">
-                              Saved
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => unconfirmRow(r.tempId)}
-                            title="Edit this row"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }
-
-                  const confirmOnEnter = (e: React.KeyboardEvent) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      confirmRow(r.tempId);
-                    }
-                  };
-
-                  return (
-                    <TableRow key={r.tempId}>
-                      {/* Setter — searchable */}
-                      <TableCell>
-                        <SearchableSelect
-                          options={setterOptions}
-                          value={r.machine_id}
-                          onChange={(v) => updateRow(r.tempId, "machine_id", v)}
-                          placeholder="Select setter"
-                          searchPlaceholder="Search setters…"
-                          emptyText={optionsLoading ? "Loading…" : "No active setters"}
-                        />
-                      </TableCell>
-
-                      {/* Age (auto from flock, range 1–56) */}
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min={1}
-                          max={56}
-                          value={r.age_weeks ?? ""}
-                          placeholder="—"
-                          onKeyDown={confirmOnEnter}
-                          onChange={(e) =>
-                            updateRow(
-                              r.tempId,
-                              "age_weeks",
-                              e.target.value === "" ? null : parseFloat(e.target.value)
-                            )
-                          }
-                        />
-                      </TableCell>
-
-                      {/* House (auto from flock, range 1–6) */}
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          <Input
-                            value={r.house_number}
-                            placeholder="1–6"
-                            onKeyDown={confirmOnEnter}
-                            onChange={(e) =>
-                              updateRow(r.tempId, "house_number", e.target.value)
-                            }
-                          />
-                          {flock?.house_number && (
-                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Sparkles className="h-2.5 w-2.5" />
-                              from flock
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Location — A / B / C zone */}
-                      <TableCell>
-                        <Select
-                          value={r.location}
-                          onValueChange={(v) => updateRow(r.tempId, "location", v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LOCATIONS_ABC.map((loc) => (
-                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      {/* Machine No. — derived from setter */}
-                      <TableCell>
-                        <span className="text-sm font-medium">
-                          {setter?.machine_number || "—"}
-                        </span>
-                      </TableCell>
-
-                      {/* Flock — searchable */}
-                      <TableCell>
-                        <SearchableSelect
-                          options={flockOptions}
-                          value={r.flock_id}
-                          onChange={(v) => updateRowFlock(r.tempId, v)}
-                          placeholder="Select flock"
-                          searchPlaceholder="Search flocks…"
-                          emptyText="No active flocks"
-                        />
-                      </TableCell>
-
-                      {/* Buggie — per-row size */}
-                      <TableCell>
-                        <Select
-                          value={String(r.eggs_per_buggy)}
-                          onValueChange={(v) =>
-                            updateRow(r.tempId, "eggs_per_buggy", parseInt(v))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {BUGGY_SIZES.map((size) => (
-                              <SelectItem key={size} value={String(size)}>
-                                {size.toLocaleString()}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      {/* Expected hatch % */}
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min={0}
-                          max={100}
-                          value={r.expected_hatch_percent ?? ""}
-                          placeholder="—"
-                          onKeyDown={confirmOnEnter}
-                          onChange={(e) =>
-                            updateRow(
-                              r.tempId,
-                              "expected_hatch_percent",
-                              e.target.value === "" ? null : parseFloat(e.target.value)
-                            )
-                          }
-                        />
-                      </TableCell>
-
-                      {/* S */}
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.buggies_set}
-                          onKeyDown={confirmOnEnter}
-                          onChange={(e) =>
-                            updateRow(
-                              r.tempId,
-                              "buggies_set",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          className="tabular-nums font-medium"
-                        />
-                      </TableCell>
-
-                      {/* T */}
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={r.buggies_transferred}
-                          onKeyDown={confirmOnEnter}
-                          onChange={(e) =>
-                            updateRow(
-                              r.tempId,
-                              "buggies_transferred",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          className="tabular-nums font-medium"
-                        />
-                      </TableCell>
-
-                      {/* Confirm + Remove */}
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => confirmRow(r.tempId)}
-                            title="Confirm this row (or press Enter)"
-                          >
-                            <Check className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setRows((rs) => rs.filter((x) => x.tempId !== r.tempId))
-                            }
-                            disabled={rows.length === 1}
-                            title={rows.length === 1 ? "At least one row required" : "Remove row"}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Footer summary */}
-          <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <div>
-              <span className="text-muted-foreground">Rows:</span>{" "}
-              <strong>{rows.length}</strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Buggies in (Σ S):</span>{" "}
-              <strong className="tabular-nums">{totals.buggiesSet}</strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Buggies out (Σ T):</span>{" "}
-              <strong className="tabular-nums">{totals.buggiesTransferred}</strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Total Eggs Set:</span>{" "}
-              <strong className="tabular-nums">{totals.eggsSet.toLocaleString()}</strong>
-            </div>
-            {/* Capacity warning */}
-            {totals.buggiesSet + header.carry_overs > header.total_buggies && (
-              <Badge variant="destructive">
-                Capacity exceeded:{" "}
-                {totals.buggiesSet + header.carry_overs} / {header.total_buggies}
-              </Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      )}
 
       {/* Optional notes */}
       <Card>
