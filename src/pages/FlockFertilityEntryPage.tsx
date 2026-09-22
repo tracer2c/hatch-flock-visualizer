@@ -1,73 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useSmartBack } from "@/hooks/useSmartBack";
-import { ArrowLeft, Egg } from "lucide-react";
+import { ArrowLeft, Egg, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import FertilityDataEntry from "@/components/dashboard/FertilityDataEntry";
 import { useFlockWeekBatches } from "@/hooks/useFlockWeekBatches";
 import { FlockEntryHeader } from "@/components/dashboard/FlockEntryHeader";
-import {
-  HouseSelectField,
-  WHOLE_FLOCK_VALUE,
-  resolveBatchId,
-  isWholeFlock,
-} from "@/components/dashboard/HouseSelectField";
 import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
+import HouseMatrixEntry, {
+  type HouseMatrixField,
+  type HouseMatrixRowSnapshot,
+} from "@/components/data-entry/HouseMatrixEntry";
+import HouseMatrixPrintView from "@/components/data-entry/HouseMatrixPrintView";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
 import { useAuth } from "@/hooks/useAuth";
+
+const FIELDS: HouseMatrixField[] = [
+  { key: "sample_size", label: "Sample Size", defaultValue: 648 },
+  { key: "fertile_eggs", label: "Fertile Eggs" },
+  { key: "infertile_eggs", label: "Infertile Eggs" },
+  { key: "early_dead", label: "Early Dead" },
+  { key: "late_dead", label: "Late Dead" },
+];
 
 export default function FlockFertilityEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
   const [params] = useSearchParams();
   const weekParam = params.get("week");
-  const navigate = useNavigate();
   const goBack = useSmartBack("/data-entry");
-  const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, isStaff } = useAuth();
+  const printMeta = usePrintMeta();
+  const readOnly = isStaff();
 
   const ctx = useFlockWeekBatches(flockKey, weekParam);
-  const [houseSel, setHouseSel] = useState<string>(WHOLE_FLOCK_VALUE);
-  const wholeFlock = isWholeFlock(houseSel);
-  const batchId = useMemo(
-    () => resolveBatchId(houseSel, ctx.batches),
-    [houseSel, ctx.batches]
-  );
-  const activeBatch = ctx.batches.find((b) => b.id === batchId) ?? null;
-
-  const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => {
-    if (!batchId) {
-      setRows([]);
-      return;
-    }
-    (async () => {
-      const { data, error } = await supabase
-        .from("fertility_analysis")
-        .select("*")
-        .eq("batch_id", batchId);
-      if (error) toast({ title: "Load error", description: error.message, variant: "destructive" });
-      else setRows(data || []);
-    })();
-  }, [batchId, toast]);
-
-  const handleUpdate = async (newData: any[]) => {
-    if (!batchId) return;
-    setRows(newData.map((r) => ({ ...r, batch_id: batchId })));
-    toast({
-      title: "Fertility saved",
-      description: `Recorded for House ${activeBatch?.house_number || "—"}`,
-    });
-  };
+  const [scope, setScope] = useState<"houses" | "flock">("houses");
+  const [snapshot, setSnapshot] = useState<HouseMatrixRowSnapshot[]>([]);
+  const [technician, setTechnician] = useState("");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
-        <Button variant="outline" size="sm" onClick={goBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Weekly Flock Rollup
-        </Button>
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="outline" size="sm" onClick={goBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Weekly Flock Rollup
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+        </div>
 
         <FlockEntryHeader
           ctx={ctx}
@@ -83,12 +65,24 @@ export default function FlockFertilityEntryPage() {
           </CardContent></Card>
         ) : (
           <>
-            <HouseSelectField
-              batches={ctx.batches}
-              value={houseSel}
-              onChange={setHouseSel}
-            />
-            {wholeFlock ? (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={scope === "houses" ? "default" : "outline"}
+                onClick={() => setScope("houses")}
+              >
+                By house
+              </Button>
+              <Button
+                size="sm"
+                variant={scope === "flock" ? "default" : "outline"}
+                onClick={() => setScope("flock")}
+              >
+                Whole flock
+              </Button>
+            </div>
+
+            {scope === "flock" ? (
               <FlockWeeklyEntryCard
                 title="Fertility — Whole Flock Entry"
                 icon={<Egg className="h-5 w-5 text-primary" />}
@@ -99,30 +93,39 @@ export default function FlockFertilityEntryPage() {
                 flockNumber={ctx.flockNumber}
                 periodStart={ctx.periodStart}
                 periodEnd={ctx.periodEnd}
-                fields={[
-                  { key: "sample_size", label: "Sample Size" },
-                  { key: "fertile_eggs", label: "Fertile Eggs" },
-                  { key: "infertile_eggs", label: "Infertile Eggs" },
-                  { key: "early_dead", label: "Early Dead" },
-                  { key: "late_dead", label: "Late Dead" },
-                ]}
+                fields={FIELDS.map(({ key, label }) => ({ key, label }))}
               />
-            ) : activeBatch ? (
-              <FertilityDataEntry
-                data={rows}
-                onDataUpdate={handleUpdate}
-                batchInfo={{
-                  id: activeBatch.id,
-                  batch_number: `${ctx.flockName} #${activeBatch.house_number || "—"}`,
-                  flock_name: ctx.flockName,
-                  flock_number: Number(ctx.flockNumber) || 0,
-                  set_date: activeBatch.set_date,
+            ) : (
+              <HouseMatrixEntry
+                title="Fertility — All Houses"
+                icon={<Egg className="h-5 w-5 text-primary" />}
+                table="fertility_analysis"
+                batches={ctx.batches}
+                fields={FIELDS}
+                technicianKey="technician_name"
+                dateKey="analysis_date"
+                readOnly={readOnly}
+                onSnapshot={(rows, tech) => {
+                  setSnapshot(rows);
+                  setTechnician(tech);
                 }}
               />
-            ) : null}
+            )}
           </>
         )}
       </div>
+
+      <HouseMatrixPrintView
+        title="Fertility Analysis"
+        companyName={printMeta.companyName}
+        printedBy={printMeta.userName}
+        role={printMeta.role}
+        flockLabel={`Flock ${ctx.flockName} #${ctx.flockNumber}`}
+        weekLabel={`${ctx.periodStart} – ${ctx.periodEnd}`}
+        technician={technician}
+        fields={FIELDS}
+        rows={snapshot}
+      />
     </div>
   );
 }
