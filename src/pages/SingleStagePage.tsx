@@ -201,6 +201,63 @@ const SingleStagePage = () => {
     setCarryOver("");
   };
 
+  // ── Printing ───────────────────────────────────────────────────────────
+  const printMeta = usePrintMeta();
+
+  /** "1–4, 7" style label for the buggy lines a flock group fills. */
+  const lineLabel = (nums: number[]): string => {
+    const sorted = [...nums].sort((a, b) => a - b);
+    const parts: string[] = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+    for (let i = 1; i <= sorted.length; i++) {
+      const n = sorted[i];
+      if (n !== prev + 1) {
+        parts.push(start === prev ? String(start) : `${start}–${prev}`);
+        start = n;
+      }
+      prev = n;
+    }
+    return parts.join(", ");
+  };
+
+  const printSetters: PrintSetter[] = useMemo(() => {
+    return setters
+      .map((s) => {
+        const lines = rows
+          .filter((r) => r.machine_id === s.id && r.flock_id)
+          .map((r) => {
+            const f = flocks.find((x) => x.id === r.flock_id);
+            const nums = (r.buggy_numbers ?? [])
+              .map((n) => parseInt(n, 10))
+              .filter((n) => !Number.isNaN(n));
+            return {
+              label: nums.length ? lineLabel(nums) : r.location || "",
+              flockNumber: f ? String(f.flock_number) : "",
+              houseNumber: r.house_number || "",
+              ageWeeks: r.age_weeks,
+              eggsPerBuggy: r.eggs_per_buggy || DEFAULT_BUGGY_SIZE,
+              buggies: Number(r.buggies_set) || 0,
+              sortKey: nums.length ? Math.min(...nums) : 0,
+            };
+          })
+          .sort((a, b) => a.sortKey - b.sortKey)
+          .map(({ sortKey, ...l }) => l);
+        return { machineNumber: s.machine_number, location: s.location, lines };
+      })
+      .filter((s) => s.lines.length > 0);
+  }, [setters, rows, flocks]);
+
+  const printLocation = useMemo(() => {
+    const used = new Set(
+      setters
+        .filter((s) => rows.some((r) => r.machine_id === s.id && r.flock_id))
+        .map((s) => s.location)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(used).join(", ");
+  }, [setters, rows]);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Page header */}
