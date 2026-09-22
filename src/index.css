@@ -359,3 +359,48 @@
     border-color: hsl(38 92% 50% / 0.8);
   }
 }
+
+/* ── Printing (set sheets, reports) ───────────────────────────────────────
+   Print-only blocks are hidden on screen; while printing, only the
+   print root stays visible so app chrome (sidebar, top bar, buttons)
+   never lands on paper. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #sheet-print-root,
+  #sheet-print-root * {
+    visibility: visible !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #sheet-print-root {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

@@ -14,7 +14,7 @@ const ROLE_LABEL: Record<string, string> = {
  * falls back to the product name when it can't be read.
  */
 export function usePrintMeta() {
-  const { profile, userRoles } = useAuth();
+  const { profile, roles } = useAuth();
 
   const companyQ = useQuery({
     queryKey: ["print-company-name", profile?.company_id],
@@ -36,6 +36,6 @@ export function usePrintMeta() {
   return {
     companyName: companyQ.data || "Hatchery Pro",
     userName: fullName || profile?.email || "—",
-    role: userRoles?.[0]?.role ? ROLE_LABEL[userRoles[0].role] ?? userRoles[0].role : "",
+    role: roles?.[0]?.role ? ROLE_LABEL[roles[0].role] ?? roles[0].role : "",
   };
 }
