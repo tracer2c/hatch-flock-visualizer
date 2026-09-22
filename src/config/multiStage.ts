@@ -23,6 +23,19 @@ export const DEFAULT_BUGGY_SIZE: BuggySize = 5184;
 // Back-compat alias for old call sites. New code should pass eggs_per_buggy explicitly.
 export const EGGS_PER_BUGGY = DEFAULT_BUGGY_SIZE;
 
+/** Egg height code written next to the flock number on the paper sheets. */
+export type HeightCode = "T" | "S";
+export const HEIGHT_LABEL: Record<HeightCode, string> = { T: "Tall", S: "Short" };
+
+/** Wayne buggies: tall holds 5,508 eggs, short holds 4,860. */
+export const TALL_BUGGY_EGGS = 5508;
+export const SHORT_BUGGY_EGGS = 4860;
+export type HeightSizes = Record<HeightCode, number>;
+export const DEFAULT_HEIGHT_SIZES: HeightSizes = {
+  T: TALL_BUGGY_EGGS,
+  S: SHORT_BUGGY_EGGS,
+};
+
 // Set color choices in display order (matches the physical color tags
 // technicians put on buggies inside the setter).
 export const SET_COLORS = [

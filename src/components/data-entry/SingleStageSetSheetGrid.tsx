@@ -13,7 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowDownToLine, Copy, Eraser, Search } from "lucide-react";
-import { BUGGY_SIZES, DEFAULT_BUGGY_SIZE, rowEggsSet } from "@/config/multiStage";
+import {
+  BUGGY_SIZES,
+  DEFAULT_BUGGY_SIZE,
+  DEFAULT_HEIGHT_SIZES,
+  HEIGHT_LABEL,
+  SHORT_BUGGY_EGGS,
+  TALL_BUGGY_EGGS,
+  rowEggsSet,
+} from "@/config/multiStage";
+import type { HeightCode, HeightSizes } from "@/config/multiStage";
 import type { FlockOption, SetterOption } from "@/hooks/useMultiStage";
 import type { SingleStageRow } from "@/hooks/useSingleStage";
 
@@ -22,15 +31,10 @@ export const BUGGY_LINES = Array.from({ length: 20 }, (_, i) => i + 1);
 const LEFT_LINES = BUGGY_LINES.slice(0, 10);
 const RIGHT_LINES = BUGGY_LINES.slice(10);
 
-/** Egg height code written next to the flock number on the sheet. */
-export type HeightCode = "T" | "S";
-const HEIGHT_LABEL: Record<HeightCode, string> = { T: "Tall", S: "Short" };
-
-/** Wayne single-stage buggies: tall holds 5,508 eggs, short holds 4,860. */
-export const TALL_BUGGY_EGGS = 5508;
-export const SHORT_BUGGY_EGGS = 4860;
-type HeightSizes = Record<HeightCode, number>;
-const DEFAULT_HEIGHT_SIZES: HeightSizes = { T: TALL_BUGGY_EGGS, S: SHORT_BUGGY_EGGS };
+// Height codes, labels and buggy egg counts now live in @/config/multiStage
+// so the multi-stage sheet uses the exact same T/S sizing.
+export { TALL_BUGGY_EGGS, SHORT_BUGGY_EGGS } from "@/config/multiStage";
+export type { HeightCode } from "@/config/multiStage";
 
 type Cell = { flock_id: string; height: HeightCode };
 type CellMap = Map<string, Cell>; // `${machine_id}:${line}` → cell
