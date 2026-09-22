@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { calculateHOIPercent } from "@/utils/hatcheryFormulas";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface HOIEntryProps {
   batchId: string;
@@ -17,7 +18,7 @@ interface HOIEntryProps {
 const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated, readOnly }: HOIEntryProps) => {
   const [eggsInjectedStr, setEggsInjectedStr] = useState<string>(String(eggsInjected ?? 0));
   const [chicksHatchedStr, setChicksHatchedStr] = useState<string>(String(chicksHatched ?? 0));
-  const [technicianName, setTechnicianName] = useState<string>('');
+  const technicianName = useCurrentUserName();
   const [notes, setNotes] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -108,12 +109,8 @@ const HOIEntry = ({ batchId, eggsInjected, chicksHatched, onUpdated, readOnly }:
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Technician Name *</label>
-          <Input
-            value={technicianName}
-            onChange={(e) => setTechnicianName(e.target.value)}
-            placeholder="Enter technician name"
-          />
+          <label className="text-sm text-muted-foreground">Technician (signed in)</label>
+          <Input value={technicianName} readOnly disabled placeholder="Loading…" />
         </div>
         <div className="space-y-2">
           <label className="text-sm text-muted-foreground">Notes (Optional)</label>
