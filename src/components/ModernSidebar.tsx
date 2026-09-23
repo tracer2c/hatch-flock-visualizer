@@ -173,7 +173,14 @@ export function ModernSidebar() {
 
   const isSubActive = (sub: SubItem) => {
     const [subPath, subQuery] = sub.href.split("?");
-    if (subQuery) return fullPath === sub.href;
+    if (subQuery) {
+      if (pathname !== subPath) return false;
+      const expected = new URLSearchParams(subQuery);
+      const current = new URLSearchParams(search);
+      return Array.from(expected.entries()).every(
+        ([key, value]) => current.get(key) === value
+      );
+    }
     return pathname === subPath;
   };
 
