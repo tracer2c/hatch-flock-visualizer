@@ -975,6 +975,45 @@ export type Database = {
           },
         ]
       }
+      flock_units: {
+        Row: {
+          company_id: string
+          created_at: string
+          flock_id: string
+          id: string
+          unit_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          flock_id: string
+          id?: string
+          unit_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          flock_id?: string
+          id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flock_units_flock_id_fkey"
+            columns: ["flock_id"]
+            isOneToOne: false
+            referencedRelation: "flocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flock_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flock_weekly_clears: {
         Row: {
           chicks_hatched: number | null
