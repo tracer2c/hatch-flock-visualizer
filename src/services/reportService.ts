@@ -553,7 +553,7 @@ export class ReportService {
       const width = Math.min(38, Math.max(18, pdf.getTextWidth(label) + 5));
       const left = align === 'right' ? x - width : x;
       setFill(fill);
-      pdf.setDrawColor(...(tone === 'neutral' ? REPORT_COLORS.line : color));
+      pdf.setDrawColor(color[0], color[1], color[2]);
       pdf.roundedRect(left, badgeY, width, 6.5, 2, 2, 'FD');
       setColor(color);
       pdf.text(label, left + width / 2, badgeY + 4.4, { align: 'center' });
