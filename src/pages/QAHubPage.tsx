@@ -38,6 +38,17 @@ type Group = 'overview' | 'machine' | 'process' | 'flock';
 type MachineSub = 'temps' | 'angles' | 'hatch';
 type Scope = 'single' | 'multi';
 
+const LEGACY_TAB_TARGETS: Record<string, { group: Group; sub: string }> = {
+  temps: { group: 'machine', sub: 'temps' },
+  angles: { group: 'machine', sub: 'angles' },
+  hatch: { group: 'machine', sub: 'hatch' },
+  humidity: { group: 'process', sub: 'humidity' },
+  rectal: { group: 'process', sub: 'rectal' },
+  wash: { group: 'process', sub: 'wash' },
+  gravity: { group: 'flock', sub: 'gravity' },
+  culls: { group: 'flock', sub: 'culls' },
+};
+
 const MACHINE_SUB: Record<MachineSub, {
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -58,14 +69,23 @@ const QAHubPage: React.FC = () => {
   const dateFromUrl = searchParams.get('date');
   const groupFromUrl = searchParams.get('group') as Group | null;
   const subFromUrl = searchParams.get('sub');
+  const legacyTarget = LEGACY_TAB_TARGETS[searchParams.get('tab') ?? ''];
+  const selectedGroup = groupFromUrl || legacyTarget?.group || 'overview';
+  const selectedSub = subFromUrl || legacyTarget?.sub;
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const [group, setGroup] = useState<Group>(groupFromUrl || 'overview');
-  const [machineSub, setMachineSub] = useState<MachineSub>('temps');
-  const [processTab, setProcessTab] = useState<'wash' | 'rectal' | 'humidity'>(
-    (subFromUrl === 'wash' || subFromUrl === 'rectal' || subFromUrl === 'humidity') ? subFromUrl : 'wash'
+  const [group, setGroup] = useState<Group>(selectedGroup);
+  const [machineSub, setMachineSub] = useState<MachineSub>(
+    selectedGroup === 'machine' && (selectedSub === 'temps' || selectedSub === 'angles' || selectedSub === 'hatch')
+      ? selectedSub
+      : 'temps'
   );
-  const [flockTab, setFlockTab] = useState<'gravity' | 'culls'>('gravity');
+  const [processTab, setProcessTab] = useState<'wash' | 'rectal' | 'humidity'>(
+    (selectedSub === 'wash' || selectedSub === 'rectal' || selectedSub === 'humidity') ? selectedSub : 'wash'
+  );
+  const [flockTab, setFlockTab] = useState<'gravity' | 'culls'>(
+    selectedSub === 'culls' ? 'culls' : 'gravity'
+  );
   const [checkDate, setCheckDate] = useState<string>(dateFromUrl || todayStr);
   const { data: stats } = useQAStats();
 
@@ -78,11 +98,33 @@ const QAHubPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkDate]);
 
+  // Keep sidebar links and browser navigation synchronized with the visible QA section.
+  useEffect(() => {
+    const target = LEGACY_TAB_TARGETS[searchParams.get('tab') ?? ''];
+    const nextGroup = (searchParams.get('group') as Group | null) || target?.group || 'overview';
+    const nextSub = searchParams.get('sub') || target?.sub;
+    setGroup(nextGroup);
+    if (nextGroup === 'machine' && (nextSub === 'temps' || nextSub === 'angles' || nextSub === 'hatch')) {
+      setMachineSub(nextSub);
+    } else if (nextGroup === 'process' && (nextSub === 'wash' || nextSub === 'rectal' || nextSub === 'humidity')) {
+      setProcessTab(nextSub);
+    } else if (nextGroup === 'flock' && (nextSub === 'gravity' || nextSub === 'culls')) {
+      setFlockTab(nextSub);
+    }
+  }, [searchParams]);
+
+  const updateSection = (nextGroup: Group, nextSub?: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('tab');
+    if (nextGroup === 'overview') next.delete('group');
+    else next.set('group', nextGroup);
+    if (nextSub) next.set('sub', nextSub);
+    else next.delete('sub');
+    setSearchParams(next, { replace: false });
+  };
+
   const handleJumpTo = ({ group: g, sub }: { group: 'machine' | 'process' | 'flock'; sub?: string }) => {
-    setGroup(g);
-    if (g === 'machine' && sub) setMachineSub(sub as MachineSub);
-    if (g === 'process' && sub) setProcessTab(sub as 'wash' | 'rectal' | 'humidity');
-    if (g === 'flock' && sub) setFlockTab(sub as 'gravity' | 'culls');
+    updateSection(g, sub);
   };
 
   useEffect(() => {
@@ -125,7 +167,7 @@ const QAHubPage: React.FC = () => {
       </div>
 
       {/* Top-level scope tabs */}
-      <Tabs value={group} onValueChange={(v) => setGroup(v as Group)} className="space-y-4">
+      <Tabs value={group} onValueChange={(v) => updateSection(v as Group)} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5 py-2">
             <ClipboardCheck className="h-4 w-4" /> Overview
@@ -152,7 +194,7 @@ const QAHubPage: React.FC = () => {
             checkDate={checkDate}
             onCheckDateChange={setCheckDate}
             sub={machineSub}
-            onSubChange={setMachineSub}
+            onSubChange={(sub) => updateSection('machine', sub)}
           />
         </TabsContent>
 
