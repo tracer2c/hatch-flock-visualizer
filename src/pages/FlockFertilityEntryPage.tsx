@@ -22,6 +22,7 @@ const FIELDS: HouseMatrixField[] = [
   { key: "early_dead", label: "Early Dead" },
   { key: "late_dead", label: "Late Dead" },
 ];
+const FLOCK_FIELDS = FIELDS.map(({ key, label }) => ({ key, label }));
 
 const fmtInt = (value: number) => Math.round(value).toLocaleString();
 const fmtPct = (value: number, total: number) =>
@@ -107,7 +108,7 @@ export default function FlockFertilityEntryPage() {
                 flockNumber={ctx.flockNumber}
                 periodStart={ctx.periodStart}
                 periodEnd={ctx.periodEnd}
-                fields={FIELDS.map(({ key, label }) => ({ key, label }))}
+                fields={FLOCK_FIELDS}
                 onTotalsChange={setTotals}
               />
             ) : (
