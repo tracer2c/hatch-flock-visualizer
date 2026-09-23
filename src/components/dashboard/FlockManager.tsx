@@ -247,62 +247,69 @@ const FlockManager = () => {
         return;
       }
 
-      const groupId = selectedHatcheries.length > 1 ? crypto.randomUUID() : null;
+      const isShared = selectedHatcheries.length > 1;
+      const flockNumber = parseInt(formData.flock_number);
 
-      const flocksToCreate = selectedHatcheries.map(unitId => {
-        // Use per-hatchery bird count if available, otherwise use global value
-        const birdCount = birdCountsPerHatchery[unitId] || formData.total_birds;
-        return {
-          flock_number: parseInt(formData.flock_number),
+      // Prevent clashing with an existing flock number in any chosen hatchery
+      const clash = flocks.find(f => !f.archived_at && f.flock_number === flockNumber &&
+        selectedHatcheries.some(u => getFlockUnitIds(f).includes(u)));
+      if (clash) {
+        toast({
+          title: "Flock number already used",
+          description: `Flock ${flockNumber} already exists in ${getFlockUnitNames(clash).join(', ') || 'a selected hatchery'}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data: created, error } = await supabase
+        .from('flocks')
+        .insert({
+          flock_number: flockNumber,
           flock_name: formData.flock_name,
           age_weeks: parseInt(formData.age_weeks),
           arrival_date: formData.arrival_date,
-          total_birds: birdCount ? parseInt(birdCount) : null,
+          total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
           notes: formData.notes || null,
-          unit_id: unitId,
-          flock_group_id: groupId,
+          unit_id: isShared ? null : selectedHatcheries[0],
+          flock_group_id: null,
           technician_name: technicianName || null,
           data_type: 'original' as const,
           created_by: user?.id,
           updated_by: user?.id,
           breed: 'broiler' as const,
           company_id: profile.company_id,
-        };
-      });
-      
-      const { data, error } = await supabase
-        .from('flocks')
-        .insert(flocksToCreate)
-        .select();
-      
-      if (error) {
+        })
+        .select()
+        .single();
+
+      if (error || !created) {
         toast({
-          title: "Error creating flocks",
-          description: error.message,
+          title: "Error creating flock",
+          description: error?.message ?? 'Unknown error',
           variant: "destructive"
         });
-      } else {
-        // Log creation history
-        if (data) {
-          for (const flock of data) {
-            await FlockHistoryService.logFlockCreation(
-              flock.id,
-              user?.id || '',
-              technicianName
-            );
-          }
-        }
-        
-        toast({ 
-          title: "Flocks created successfully",
-          description: selectedHatcheries.length > 1 
-            ? `Created ${data?.length || 0} flocks across ${selectedHatcheries.length} hatcheries`
-            : "Flock created successfully"
-        });
-        setShowDialog(false);
-        resetForm();
-        loadFlocks();
+        return;
       }
+
+      const { error: linkError } = await (supabase as any).from('flock_units').insert(
+        selectedHatcheries.map(unitId => ({ flock_id: created.id, unit_id: unitId, company_id: profile.company_id }))
+      );
+      if (linkError) {
+        toast({ title: "Flock created, but hatchery links failed", description: linkError.message, variant: "destructive" });
+      }
+
+      await FlockHistoryService.logFlockCreation(created.id, user?.id || '', technicianName);
+
+      toast({
+        title: "Flock created",
+        description: isShared
+          ? `One shared flock available in ${selectedHatcheries.length} hatcheries`
+          : "Flock created successfully"
+      });
+      setShowDialog(false);
+      resetForm();
+      loadFlocks();
       return;
     }
 
