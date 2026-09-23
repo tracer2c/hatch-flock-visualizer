@@ -430,7 +430,7 @@ const FlockManager = () => {
       notes: flock.notes || '',
       technician_name: currentUserName,
     });
-    setSelectedHatcheries(flock.unit_id ? [flock.unit_id] : []);
+    setSelectedHatcheries(getFlockUnitIds(flock));
     setShowDialog(true);
   };
 
@@ -469,7 +469,7 @@ const FlockManager = () => {
       if (search && ![
         flock.flock_number.toString(),
         flock.flock_name,
-        flock.unit?.name ?? '',
+        getFlockUnitNames(flock).join(' ') || (flock.unit?.name ?? ''),
         flock.house_number ?? '',
       ].some(value => value.toLowerCase().includes(search))) return false;
       if (filters.flockNumber && !flock.flock_number.toString().includes(filters.flockNumber)) return false;
@@ -563,27 +563,9 @@ const FlockManager = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 pr-4">
                 {/* 1. Hatchery selection (first) */}
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Hatchery * {!editingFlock && <span className="text-muted-foreground text-xs">(select one or more)</span>}</Label>
+                  <Label>Hatchery * <span className="text-muted-foreground text-xs">(select one or more)</span></Label>
                   
-                  {editingFlock ? (
-                    // Single select for editing
-                    <Select
-                      value={selectedHatcheries[0] || ''}
-                      onValueChange={(value) => setSelectedHatcheries([value])}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select hatchery" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeUnits.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    // Multi-select checkboxes for creating
+                  {(
                     <div className="border rounded-lg p-3 space-y-3">
                       {/* Select All */}
                       <div className="flex items-center space-x-2 pb-2 border-b">
@@ -627,19 +609,14 @@ const FlockManager = () => {
                   )}
                   
                   {/* Summary of flocks to create */}
-                  {!editingFlock && selectedHatcheries.length > 1 && (
+                  {selectedHatcheries.length > 1 && (
                     <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-sm">
-                      <p className="font-medium text-primary">Multiple Flocks Will Be Created:</p>
+                      <p className="font-medium text-primary">1 shared flock</p>
                       <p className="text-muted-foreground mt-1">
-                        One flock will be created in each selected hatchery:
+                        Available in: {activeUnits.filter(u => selectedHatcheries.includes(u.id)).map(u => u.name).join(', ')}
                       </p>
-                      <ul className="mt-2 space-y-1 text-foreground">
-                        {activeUnits.filter(u => selectedHatcheries.includes(u.id)).map(unit => (
-                          <li key={unit.id}>• {unit.name} {unit.code ? `(${unit.code})` : ''}</li>
-                        ))}
-                      </ul>
-                      <p className="text-primary mt-2 font-medium">
-                        Total flocks to create: {selectedHatcheries.length}
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Each house records its own hatchery when it is set.
                       </p>
                     </div>
                   )}
@@ -870,7 +847,16 @@ const FlockManager = () => {
                     <p className="truncate font-medium">{flock.flock_name}</p>
                     {flock.house_number && <p className="text-xs text-muted-foreground">House {flock.house_number}</p>}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="h-4 w-4 shrink-0" /><span className="truncate">{flock.unit?.name ?? 'Not assigned'}</span></div>
+                  <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    {getFlockUnitIds(flock).length > 1 ? (
+                      <Badge variant="secondary" title={getFlockUnitNames(flock).join(', ')} className="truncate">
+                        Shared · {getFlockUnitIds(flock).length} hatcheries
+                      </Badge>
+                    ) : (
+                      <span className="truncate">{getFlockUnitNames(flock)[0] ?? flock.unit?.name ?? 'Not assigned'}</span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4 shrink-0" />{formatLocalDate(flock.arrival_date)}</div>
                   <div className="text-sm text-muted-foreground">{flock.age_weeks} weeks</div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><Egg className="h-4 w-4 shrink-0" />{flock.total_birds?.toLocaleString() ?? '—'} eggs</div>
