@@ -310,26 +310,26 @@ function ReportDownloadCard({
 }) {
   const Icon = option.icon;
   return (
-    <Card className={cn("shadow-sm hover:translate-y-0 hover:shadow-md", active && "border-primary/50 ring-1 ring-primary/20")}>
+    <Card className={cn("min-w-0 overflow-hidden shadow-sm hover:translate-y-0 hover:shadow-md", active && "border-primary/50 ring-1 ring-primary/20")}>
       <CardHeader className="pb-4">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-5 w-5" /></div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <CardTitle className="text-lg">{option.title}</CardTitle>
             <CardDescription className="mt-1">{option.description}</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="min-w-0 space-y-4">
         <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-sm">
           <span className="text-muted-foreground">Current selection</span>
           <Badge variant={rowCount ? "secondary" : "outline"}>{rowCount} rows</Badge>
         </div>
-        <div className="flex gap-2">
-          <Button variant={active ? "secondary" : "outline"} className="flex-1" onClick={onSelect}>Select</Button>
-          <Button className="flex-1" onClick={onDownload} disabled={disabled || loading}>
-            <Download className="mr-2 h-4 w-4" />
-            {loading ? "Preparing…" : option.action}
+        <div className="grid gap-2 2xl:grid-cols-[0.7fr_1.3fr]">
+          <Button variant={active ? "secondary" : "outline"} className="min-h-10 w-full" onClick={onSelect}>Select</Button>
+          <Button className="min-h-10 w-full whitespace-normal px-3 text-center leading-tight" onClick={onDownload} disabled={disabled || loading}>
+            <Download className="mr-2 h-4 w-4 shrink-0" />
+            <span className="min-w-0">{loading ? "Preparing…" : option.action}</span>
           </Button>
         </div>
       </CardContent>
