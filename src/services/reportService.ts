@@ -448,25 +448,56 @@ export class ReportService {
 
     const setColor = (color: readonly [number, number, number]) => pdf.setTextColor(color[0], color[1], color[2]);
     const setFill = (color: readonly [number, number, number]) => pdf.setFillColor(color[0], color[1], color[2]);
-    const ensureRoom = (needed: number) => {
-      if (y + needed <= pageHeight - margin) return;
-      pdf.addPage();
-      y = margin;
-      drawPageHeader(false);
-    };
     const drawPageHeader = (firstPage: boolean) => {
+      if (firstPage) {
+        setFill(REPORT_COLORS.softer);
+        pdf.rect(0, 0, pageWidth, 28, 'F');
+        setFill(REPORT_COLORS.blue);
+        pdf.rect(0, 0, 4, 28, 'F');
+        setFill(REPORT_COLORS.orange);
+        pdf.rect(4, 0, 2, 28, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        setColor(REPORT_COLORS.blue);
+        pdf.text('PERFORMANCE REPORT', margin, y + 1.5);
+        pdf.setFontSize(19);
+        setColor(REPORT_COLORS.navy);
+        pdf.text(opts.title, margin, y + 10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        setColor(REPORT_COLORS.muted);
+        pdf.text(`${opts.dateRange}  ·  ${opts.hatcheryScope}`, margin, y + 17);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        setColor(REPORT_COLORS.navy);
+        pdf.text(opts.companyName || 'Hatchery Pro', pageWidth - margin, y + 7, { align: 'right' });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        setColor(REPORT_COLORS.muted);
+        pdf.text(`Printed by ${opts.userName || 'Not recorded'}`, pageWidth - margin, y + 13, { align: 'right' });
+        pdf.text(opts.generatedAt, pageWidth - margin, y + 18.5, { align: 'right' });
+        y = 34;
+        return;
+      }
+
       setColor(REPORT_COLORS.ink);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(firstPage ? 17 : 11);
-      pdf.text(firstPage ? opts.title : `${opts.title} continued`, margin, y + 4);
+      pdf.setFontSize(11);
+      pdf.text(`${opts.title} continued`, margin, y + 4);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8.5);
       setColor(REPORT_COLORS.muted);
       pdf.text(opts.companyName || 'Hatchery Pro', pageWidth - margin, y + 4, { align: 'right' });
-      y += firstPage ? 9 : 7;
+      y += 7;
       pdf.setDrawColor(...REPORT_COLORS.line);
       pdf.line(margin, y, pageWidth - margin, y);
       y += 5;
+    };
+    const ensureRoom = (needed: number) => {
+      if (y + needed <= pageHeight - margin - 5) return;
+      pdf.addPage();
+      y = margin;
+      drawPageHeader(false);
     };
     const drawMeta = () => {
       const meta = [
@@ -476,20 +507,25 @@ export class ReportService {
         ['Generated', opts.generatedAt],
       ];
       const boxWidth = contentWidth / meta.length;
-      setFill(REPORT_COLORS.soft);
-      pdf.rect(margin, y, contentWidth, 17, 'F');
+      setFill(REPORT_COLORS.white);
+      pdf.setDrawColor(...REPORT_COLORS.line);
+      pdf.rect(margin, y, contentWidth, 20, 'FD');
       meta.forEach(([label, value], index) => {
         const x = margin + index * boxWidth + 3;
+        if (index > 0) {
+          pdf.setDrawColor(...REPORT_COLORS.line);
+          pdf.line(margin + index * boxWidth, y + 4, margin + index * boxWidth, y + 16);
+        }
         pdf.setFontSize(7.5);
         pdf.setFont('helvetica', 'bold');
         setColor(REPORT_COLORS.muted);
-        pdf.text(label.toUpperCase(), x, y + 6);
+        pdf.text(label.toUpperCase(), x, y + 7);
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'normal');
         setColor(REPORT_COLORS.ink);
-        pdf.text(String(value), x, y + 12, { maxWidth: boxWidth - 6 });
+        pdf.text(String(value), x, y + 14, { maxWidth: boxWidth - 6 });
       });
-      y += 22;
+      y += 25;
     };
     const drawSummary = () => {
       ensureRoom(30);
@@ -509,6 +545,101 @@ export class ReportService {
       });
       y += 2;
     };
+    const drawTrendBadge = (label: string, tone: 'good' | 'bad' | 'neutral', x: number, badgeY: number, align: 'left' | 'right' = 'left') => {
+      const fill = tone === 'good' ? REPORT_COLORS.greenSoft : tone === 'bad' ? REPORT_COLORS.redSoft : REPORT_COLORS.soft;
+      const color = tone === 'good' ? REPORT_COLORS.green : tone === 'bad' ? REPORT_COLORS.red : REPORT_COLORS.muted;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.8);
+      const width = Math.min(38, Math.max(18, pdf.getTextWidth(label) + 5));
+      const left = align === 'right' ? x - width : x;
+      setFill(fill);
+      pdf.setDrawColor(...(tone === 'neutral' ? REPORT_COLORS.line : color));
+      pdf.roundedRect(left, badgeY, width, 6.5, 2, 2, 'FD');
+      setColor(color);
+      pdf.text(label, left + width / 2, badgeY + 4.4, { align: 'center' });
+    };
+    const drawBar = ({ x, barY, width, value, max, color }: { x: number; barY: number; width: number; value: number | null; max: number; color: readonly [number, number, number] }) => {
+      setFill(REPORT_COLORS.soft);
+      pdf.roundedRect(x, barY, width, 4, 1.5, 1.5, 'F');
+      const pctWidth = value == null || max <= 0 ? 0 : Math.max(1.5, Math.min(width, (value / max) * width));
+      if (pctWidth > 0) {
+        setFill(color);
+        pdf.roundedRect(x, barY, pctWidth, 4, 1.5, 1.5, 'F');
+      }
+    };
+    const drawVisuals = () => {
+      const current = totals(opts.rows);
+      const previous = totals(opts.previousRows);
+      const panels = [
+        {
+          title: 'Weighted fertility trend',
+          metric: 'Fertility',
+          current: current.fertilityPercent,
+          previous: previous.fertilityPercent,
+          inverse: false,
+          color: REPORT_COLORS.blue,
+        },
+        {
+          title: 'Weekly hatch trend',
+          metric: 'Hatch',
+          current: current.hatchPercent,
+          previous: previous.hatchPercent,
+          inverse: false,
+          color: REPORT_COLORS.green,
+        },
+        {
+          title: 'Residue risk trend',
+          metric: 'Contamination',
+          current: current.contaminationPercent,
+          previous: previous.contaminationPercent,
+          inverse: true,
+          color: REPORT_COLORS.orange,
+          secondaryMetric: 'Late dead',
+          secondaryCurrent: current.lateDeadPercent,
+          secondaryPrevious: previous.lateDeadPercent,
+        },
+      ];
+      const gap = 4;
+      const panelWidth = (contentWidth - gap * (panels.length - 1)) / panels.length;
+      const panelHeight = 36;
+      ensureRoom(panelHeight + 7);
+      panels.forEach((panel, index) => {
+        const x = margin + index * (panelWidth + gap);
+        const trend = deltaLabel(panel.current, panel.previous, panel.inverse);
+        pdf.setDrawColor(...REPORT_COLORS.line);
+        setFill(REPORT_COLORS.white);
+        pdf.roundedRect(x, y, panelWidth, panelHeight, 2, 2, 'FD');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8.4);
+        setColor(REPORT_COLORS.ink);
+        pdf.text(panel.title, x + 4, y + 6);
+        drawTrendBadge(trend.label, trend.tone, x + panelWidth - 4, y + 3, 'right');
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.3);
+        setColor(REPORT_COLORS.muted);
+        pdf.text(`Current ${panel.metric}`, x + 4, y + 14);
+        setColor(REPORT_COLORS.ink);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(pct(panel.current), x + panelWidth - 4, y + 14, { align: 'right' });
+        const max = Math.max(100, panel.current || 0, panel.previous || 0, panel.secondaryCurrent || 0, panel.secondaryPrevious || 0);
+        drawBar({ x: x + 4, barY: y + 16.5, width: panelWidth - 8, value: panel.current, max, color: panel.color });
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.1);
+        setColor(REPORT_COLORS.muted);
+        pdf.text(`Prior ${panel.metric}`, x + 4, y + 25);
+        pdf.text(pct(panel.previous), x + panelWidth - 4, y + 25, { align: 'right' });
+        drawBar({ x: x + 4, barY: y + 27.2, width: panelWidth - 8, value: panel.previous, max, color: REPORT_COLORS.muted });
+
+        if (panel.secondaryMetric) {
+          pdf.setFontSize(6.8);
+          setColor(REPORT_COLORS.muted);
+          pdf.text(`${panel.secondaryMetric}: ${pct(panel.secondaryCurrent)} current / ${pct(panel.secondaryPrevious)} prior`, x + 4, y + 34);
+        }
+      });
+      y += panelHeight + 7;
+    };
     const drawKpis = () => {
       const current = totals(opts.rows);
       const previous = totals(opts.previousRows);
@@ -520,28 +651,25 @@ export class ReportService {
       ];
       const gap = 3;
       const width = (contentWidth - gap * (cards.length - 1)) / cards.length;
-      ensureRoom(24);
+      ensureRoom(28);
       cards.forEach(([label, value, trend], index) => {
         const x = margin + index * (width + gap);
         pdf.setDrawColor(...REPORT_COLORS.line);
         pdf.setFillColor(255, 255, 255);
-        pdf.rect(x, y, width, 20, 'FD');
+        pdf.roundedRect(x, y, width, 24, 2, 2, 'FD');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(7.5);
         setColor(REPORT_COLORS.muted);
         pdf.text(String(label).toUpperCase(), x + 3, y + 6);
         pdf.setFontSize(13);
         setColor(REPORT_COLORS.ink);
-        pdf.text(String(value), x + 3, y + 14);
+        pdf.text(String(value), x + 3, y + 15);
         if (trend) {
           const typedTrend = trend as ReturnType<typeof deltaLabel>;
-          const color = typedTrend.tone === 'good' ? REPORT_COLORS.green : typedTrend.tone === 'bad' ? REPORT_COLORS.red : REPORT_COLORS.muted;
-          pdf.setFontSize(8.5);
-          setColor(color);
-          pdf.text(typedTrend.label, x + width - 3, y + 14, { align: 'right' });
+          drawTrendBadge(typedTrend.label, typedTrend.tone, x + width - 3, y + 14, 'right');
         }
       });
-      y += 26;
+      y += 30;
     };
     const drawSectionTitle = (title: string) => {
       ensureRoom(10);
@@ -553,39 +681,50 @@ export class ReportService {
     };
     const drawTable = (headers: string[], rows: string[][], widths: number[], aligns: Array<'left' | 'right'> = []) => {
       const rowHeight = 7;
+      const lineHeight = 3.6;
+      const drawHeaderRow = () => {
+        setFill(REPORT_COLORS.ink);
+        pdf.rect(margin, y, contentWidth, rowHeight, 'F');
+        let x = margin;
+        headers.forEach((header, index) => {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7.2);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text(header, x + 1.5, y + 4.7, { maxWidth: widths[index] - 3 });
+          x += widths[index];
+        });
+        y += rowHeight;
+      };
       ensureRoom(rowHeight * 2);
-      setFill(REPORT_COLORS.ink);
-      pdf.rect(margin, y, contentWidth, rowHeight, 'F');
-      let x = margin;
-      headers.forEach((header, index) => {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(7.2);
-        pdf.setTextColor(255, 255, 255);
-        pdf.text(header, x + 1.5, y + 4.7, { maxWidth: widths[index] - 3 });
-        x += widths[index];
-      });
-      y += rowHeight;
+      drawHeaderRow();
       rows.forEach((row, rowIndex) => {
-        ensureRoom(rowHeight);
+        const wrappedCells = row.map((cell, index) => pdf.splitTextToSize(String(cell), Math.max(4, widths[index] - 3)) as string[]);
+        const dynamicHeight = Math.max(rowHeight, Math.max(...wrappedCells.map((cell) => cell.length)) * lineHeight + 3);
+        if (y + dynamicHeight > pageHeight - margin - 7) {
+          pdf.addPage();
+          y = margin;
+          drawPageHeader(false);
+          drawHeaderRow();
+        }
         if (rowIndex % 2 === 0) {
           pdf.setFillColor(248, 250, 252);
-          pdf.rect(margin, y, contentWidth, rowHeight, 'F');
+          pdf.rect(margin, y, contentWidth, dynamicHeight, 'F');
         }
-        x = margin;
-        row.forEach((cell, index) => {
+        let x = margin;
+        wrappedCells.forEach((cellLines, index) => {
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(7.1);
           setColor(REPORT_COLORS.ink);
           const align = aligns[index] || 'left';
-          pdf.text(String(cell), align === 'right' ? x + widths[index] - 1.5 : x + 1.5, y + 4.7, {
+          pdf.text(cellLines, align === 'right' ? x + widths[index] - 1.5 : x + 1.5, y + 4.5, {
             align,
             maxWidth: widths[index] - 3,
           });
           x += widths[index];
         });
         pdf.setDrawColor(...REPORT_COLORS.line);
-        pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
-        y += rowHeight;
+        pdf.line(margin, y + dynamicHeight, pageWidth - margin, y + dynamicHeight);
+        y += dynamicHeight;
       });
       y += 5;
     };
@@ -598,6 +737,7 @@ export class ReportService {
     drawPageHeader(true);
     drawMeta();
     drawSummary();
+    drawVisuals();
     drawKpis();
 
     if (opts.type === 'fertility') {
@@ -605,7 +745,7 @@ export class ReportService {
       drawTable(
         ['Flock', 'House', 'Hatchery', 'Sample', 'Fertile', 'Fertility', 'Trend', 'Eggs set', 'Hatch'],
         opts.rows.map((row) => [row.flockNumber, row.houseNumber, row.unitName, int(row.fertilitySample), int(row.fertileEggs), pct(row.fertilityPercent), trendText(row, 'fertilityPercent'), int(row.eggsSet), pct(row.hatchPercent)]),
-        [24, 20, 44, 22, 22, 22, 18, 26, 19],
+        [18, 56, 34, 23, 23, 23, 40, 34, 26],
         ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right'],
       );
     } else if (opts.type === 'comparison') {
@@ -618,14 +758,14 @@ export class ReportService {
       drawTable(
         ['Flock', 'Age', 'Houses', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
         groupTotals.map(({ first, values, houses }) => [first.flockNumber, first.ageWeeks == null ? '—' : `${first.ageWeeks} wk`, String(houses), int(values.eggsSet), pct(values.fertilityPercent), pct(values.contaminationPercent), pct(values.lateDeadPercent), int(values.upsideDown), int(values.earlyDead), pct(values.hatchPercent)]),
-        [28, 18, 18, 26, 24, 22, 23, 27, 24, 21],
+        [26, 18, 20, 32, 29, 27, 27, 34, 32, 32],
         ['left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
       );
       drawSectionTitle('House-level detail');
       drawTable(
         ['Flock', 'House', 'Hatchery', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
         opts.rows.map((row) => [row.flockNumber, row.houseNumber, row.unitName, int(row.eggsSet), pct(row.fertilityPercent), pct(row.contaminationPercent), pct(row.lateDeadPercent), int(row.upsideDown), int(row.earlyDead), pct(row.hatchPercent)]),
-        [22, 18, 42, 26, 24, 22, 23, 27, 24, 21],
+        [22, 46, 36, 30, 29, 27, 27, 34, 32, 24],
         ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
       );
     } else {
@@ -633,7 +773,7 @@ export class ReportService {
       drawTable(
         ['Flock', 'Grower', 'House', 'Hatchery', 'Breed', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
         opts.rows.map((row) => [row.flockNumber, 'Not recorded', row.houseNumber, row.unitName, row.breed, int(row.eggsSet), pct(row.fertilityPercent), pct(row.contaminationPercent), pct(row.lateDeadPercent), int(row.upsideDown), int(row.earlyDead), pct(row.hatchPercent)]),
-        [20, 25, 18, 34, 24, 23, 22, 20, 22, 23, 22, 19],
+        [17, 23, 36, 30, 20, 24, 21, 20, 21, 23, 22, 20],
         ['left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
       );
     }
