@@ -85,14 +85,14 @@ const NAV_GROUPS: NavGroup[] = [
         icon: ClipboardCheck,
         featureKey: "qa_hub",
         items: [
-          { label: "Temps", href: "/qa-hub?tab=temps", icon: Thermometer },
-          { label: "Angles", href: "/qa-hub?tab=angles", icon: Compass },
-          { label: "Humidity", href: "/qa-hub?tab=humidity", icon: Droplets },
-          { label: "Rectal", href: "/qa-hub?tab=rectal", icon: Activity },
-          { label: "Wash", href: "/qa-hub?tab=wash", icon: Sparkles },
-          { label: "Culls", href: "/qa-hub?tab=culls", icon: Skull },
-          { label: "Gravity", href: "/qa-hub?tab=gravity", icon: Scale },
-          { label: "Hatch", href: "/qa-hub?tab=hatch", icon: Egg },
+          { label: "Temps", href: "/qa-hub?group=machine&sub=temps", icon: Thermometer },
+          { label: "Angles", href: "/qa-hub?group=machine&sub=angles", icon: Compass },
+          { label: "Humidity", href: "/qa-hub?group=process&sub=humidity", icon: Droplets },
+          { label: "Rectal", href: "/qa-hub?group=process&sub=rectal", icon: Activity },
+          { label: "Wash", href: "/qa-hub?group=process&sub=wash", icon: Sparkles },
+          { label: "Culls", href: "/qa-hub?group=flock&sub=culls", icon: Skull },
+          { label: "Gravity", href: "/qa-hub?group=flock&sub=gravity", icon: Scale },
+          { label: "Hatch", href: "/qa-hub?group=machine&sub=hatch", icon: Egg },
         ],
       },
       { label: "Daily Tasks", href: "/checklist", icon: CheckSquare, featureKey: "checklist" },
@@ -173,7 +173,14 @@ export function ModernSidebar() {
 
   const isSubActive = (sub: SubItem) => {
     const [subPath, subQuery] = sub.href.split("?");
-    if (subQuery) return fullPath === sub.href;
+    if (subQuery) {
+      if (pathname !== subPath) return false;
+      const expected = new URLSearchParams(subQuery);
+      const current = new URLSearchParams(search);
+      return Array.from(expected.entries()).every(
+        ([key, value]) => current.get(key) === value
+      );
+    }
     return pathname === subPath;
   };
 
@@ -186,7 +193,7 @@ export function ModernSidebar() {
     }
     return d;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleGroups, pathname]);
+  }, [visibleGroups, pathname, search]);
 
   const { state: expanded, toggle, setOpen } = useExpanded(defaults);
 
@@ -198,7 +205,7 @@ export function ModernSidebar() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, search]);
 
   const renderItem = (item: NavItem, groupIndex: number, itemIndex: number) => {
     const Icon = item.icon;
