@@ -1,11 +1,11 @@
 /**
-import { useFlockUnitLinks, flockInUnit } from "@/hooks/useFlockUnitLinks";
  * Machine Allocation Wizard
  * 
  * Multi-step wizard for creating houses with capacity visualization
  * and split allocation support across multiple machines.
  */
 
+import { useFlockUnitLinks, flockInUnit } from "@/hooks/useFlockUnitLinks";
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
