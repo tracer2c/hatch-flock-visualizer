@@ -59,6 +59,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
   const { createAllocation } = useCreateAllocation();
   
   // Step 1: Basic info
+  const { data: flockLinks } = useFlockUnitLinks();
   const [step, setStep] = useState<WizardStep>('basic');
   const [formData, setFormData] = useState({
     flockId: '',
@@ -115,9 +116,9 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
     }
   };
 
-  // Filter flocks by selected hatchery
+  // Filter flocks by selected hatchery (includes shared flocks)
   const filteredFlocks = formData.unitId 
-    ? flocks.filter(f => f.unit_id === formData.unitId)
+    ? flocks.filter(f => flockInUnit(f, formData.unitId, flockLinks))
     : [];
 
   const selectedFlock = flocks.find(f => f.id === formData.flockId);
@@ -125,7 +126,7 @@ export function MachineAllocationWizard({ flocks, units, onComplete, onCancel }:
 
   // Check if selected flock belongs to selected hatchery
   const isFlockValidForHatchery = !formData.flockId || !formData.unitId || 
-    flocks.find(f => f.id === formData.flockId)?.unit_id === formData.unitId;
+    (!!selectedFlock && flockInUnit(selectedFlock, formData.unitId, flockLinks));
 
   const canProceedBasic = formData.flockId && formData.unitId && formData.customHouseNumber && 
     formData.totalEggs && parseInt(formData.totalEggs) > 0 && formData.technicianName && isFlockValidForHatchery;
