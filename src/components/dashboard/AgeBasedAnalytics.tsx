@@ -159,7 +159,7 @@ const AgeBasedAnalytics = () => {
         .select(`
           id, candling_results, day_of_incubation, check_date,
           batch:batches(
-            id, batch_number, set_date,
+            id, batch_number, set_date, unit_id,
             flock:flocks(id, flock_name, age_weeks, unit_id)
           )
         `)
@@ -177,7 +177,7 @@ const AgeBasedAnalytics = () => {
         if (!batch?.flock) return;
         
         // Apply filters
-        if (selectedHatcheries.length > 0 && !selectedHatcheries.includes(batch.flock.unit_id)) return;
+        if (selectedHatcheries.length > 0 && !selectedHatcheries.includes(batch.unit_id ?? batch.flock.unit_id)) return;
         if (selectedFlock !== 'all' && batch.flock.id !== selectedFlock) return;
         
         const ageWeeks = batch.flock.age_weeks;

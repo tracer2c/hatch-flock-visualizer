@@ -181,9 +181,16 @@ const MultiSetterSetsManager = ({ open, onOpenChange, machine, unitName, dateFro
       .is('archived_at', null)
       .order('flock_name', { ascending: true });
 
-    // Filter by same hatchery if machine has unit_id
+    // Filter by same hatchery if machine has unit_id (includes shared flocks)
     if (machine.unit_id) {
-      query = query.eq('unit_id', machine.unit_id);
+      const { data: links } = await (supabase as any)
+        .from('flock_units')
+        .select('flock_id')
+        .eq('unit_id', machine.unit_id);
+      const sharedIds = (links || []).map((l: { flock_id: string }) => l.flock_id);
+      query = sharedIds.length
+        ? query.or(`unit_id.eq.${machine.unit_id},id.in.(${sharedIds.join(',')})`)
+        : query.eq('unit_id', machine.unit_id);
     }
     
     const { data, error } = await query;
