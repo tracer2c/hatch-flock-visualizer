@@ -100,6 +100,11 @@ const average = (values: Array<number | null | undefined>) => {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 };
 
+const numericValues = (values: unknown[]) => values
+  .filter((value) => value !== null && value !== undefined && value !== '')
+  .map(Number)
+  .filter(Number.isFinite);
+
 const parseResults = (value: any) => {
   if (!value) return {};
   if (typeof value !== 'string') return value;
@@ -167,7 +172,7 @@ export function useQAOverviewData(referenceDate?: string, unitId?: string) {
       const byType = (type: QACheckType) => typed.filter((row) => row.type === type);
 
       const rectalRows = byType('rectal_temperature');
-      const rectalValues = rectalRows.map(({ entry, results }) => Number(results.temperature ?? entry.temperature)).filter(Number.isFinite);
+      const rectalValues = numericValues(rectalRows.map(({ entry, results }) => results.temperature ?? entry.temperature));
       const rectalInRange = rectalRows.filter(({ entry, results }) => {
         const value = Number(results.temperature ?? entry.temperature);
         const location = results.location;
@@ -175,8 +180,8 @@ export function useQAOverviewData(referenceDate?: string, unitId?: string) {
       }).length;
 
       const trayRows = byType('tray_wash');
-      const trayTemps = trayRows.flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]).map(Number).filter(Number.isFinite);
-      const ppmValues = trayRows.flatMap(({ results }) => [1, 2, 3, 4, 5].map((i) => results[`ppm_check_${i}`])).map(Number).filter(Number.isFinite);
+      const trayTemps = numericValues(trayRows.flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]));
+      const ppmValues = numericValues(trayRows.flatMap(({ results }) => [1, 2, 3, 4, 5].map((i) => results[`ppm_check_${i}`])));
 
       const temperatureRows = byType('temperature');
       const temperatureValues = temperatureRows.map(({ entry }) => entry.temp_avg_overall ?? entry.temperature).filter((v): v is number => typeof v === 'number');
@@ -247,7 +252,7 @@ export function useQAOverviewData(referenceDate?: string, unitId?: string) {
           day: format(dayDate, 'EEE'),
           eggshell: average(entriesOf('temperature').map(({ entry }) => entry.temp_avg_overall ?? entry.temperature)),
           rectal: average(entriesOf('rectal_temperature').map(({ entry, results }) => Number(results.temperature ?? entry.temperature))),
-          trayWash: average(entriesOf('tray_wash').flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]).map(Number)),
+          trayWash: average(numericValues(entriesOf('tray_wash').flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]))),
           leftAngle: average(entriesOf('angles').flatMap(({ entry }) => [entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left])),
           rightAngle: average(entriesOf('angles').flatMap(({ entry }) => [entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right])),
           hatch: hatchTotal > 0 ? (hatchCount / hatchTotal) * 100 : null,

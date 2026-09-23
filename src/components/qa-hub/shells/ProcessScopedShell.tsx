@@ -40,6 +40,7 @@ const ProcessScopedShell: React.FC<{
 
   const handleTrayWash = async (data: TrayWashSubmitData) => {
     if (!technicianName) return toast.error('User profile not loaded yet');
+    if (!unitId) return toast.error('Select a hatchery first.');
     setSaving(true);
     try {
       const company_id = await resolveCompanyId();
@@ -104,6 +105,7 @@ const ProcessScopedShell: React.FC<{
     checkDate: string;
   }) => {
     if (!technicianName) return toast.error('User profile not loaded yet');
+    if (!unitId) return toast.error('Select a hatchery first.');
     setSaving(true);
     try {
       const company_id = await resolveCompanyId();
@@ -138,6 +140,7 @@ const ProcessScopedShell: React.FC<{
 
   const handleHumidity = async (data: RoomHumiditySubmitData): Promise<void> => {
     if (!technicianName) { toast.error('User profile not loaded yet'); return; }
+    if (!unitId) { toast.error('Select a hatchery first.'); return; }
     setSaving(true);
     try {
       const company_id = await resolveCompanyId();
