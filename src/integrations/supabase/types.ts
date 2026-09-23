@@ -2132,6 +2132,7 @@ export type Database = {
           temp_middle_top_right: number | null
           temperature: number
           turning_frequency: number | null
+          unit_id: string | null
           ventilation_rate: number | null
         }
         Insert: {
@@ -2182,6 +2183,7 @@ export type Database = {
           temp_middle_top_right?: number | null
           temperature: number
           turning_frequency?: number | null
+          unit_id?: string | null
           ventilation_rate?: number | null
         }
         Update: {
@@ -2232,6 +2234,7 @@ export type Database = {
           temp_middle_top_right?: number | null
           temperature?: number
           turning_frequency?: number | null
+          unit_id?: string | null
           ventilation_rate?: number | null
         }
         Relationships: [
@@ -2261,6 +2264,13 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_monitoring_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
