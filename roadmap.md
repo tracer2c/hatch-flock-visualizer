@@ -18,8 +18,8 @@
 
 # Management Reports
 
-- [x] Replace report cards with the executive report workbench
-- [x] Add combined hatchery fertility with prior-period trends
-- [x] Add by-house breeder performance metrics
-- [x] Add 2–5 flock side-by-side comparison
-- [x] Add shared filters, print, PDF, and partial-data states
+- [x] Restore the simple card-based Reports page
+- [x] Add separate House Performance, Combined Fertility, and Flock Comparison downloads
+- [x] Move the polished detailed layout into the generated PDFs
+- [x] Add Summary text via a secure report-summary call with a local fallback
+- [x] Add red/green trend markers and report metadata in PDFs
