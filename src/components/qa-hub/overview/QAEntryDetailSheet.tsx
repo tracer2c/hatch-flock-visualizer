@@ -61,9 +61,9 @@ const TypeBody: React.FC<{ entry: QAEntry; type: QACheckType | null }> = ({ entr
           <div className="flex items-center gap-2"><Verdict ok={ok} /> <span className="text-sm text-muted-foreground">Target 99.5–100.5°F</span></div>
           <div className="grid grid-cols-4 gap-2">
             <KV label="Overall" value={<span className="text-lg">{t?.toFixed(1) ?? '—'}°F</span>} />
-            <KV label="Front" value={cr.temp_avg_front != null ? `${Number(cr.temp_avg_front).toFixed(1)}°F` : '—'} />
-            <KV label="Middle" value={cr.temp_avg_middle != null ? `${Number(cr.temp_avg_middle).toFixed(1)}°F` : '—'} />
-            <KV label="Back" value={cr.temp_avg_back != null ? `${Number(cr.temp_avg_back).toFixed(1)}°F` : '—'} />
+            <KV label="Front" value={entry.temp_avg_front != null ? `${entry.temp_avg_front.toFixed(1)}°F` : '—'} />
+            <KV label="Middle" value={entry.temp_avg_middle != null ? `${entry.temp_avg_middle.toFixed(1)}°F` : '—'} />
+            <KV label="Back" value={entry.temp_avg_back != null ? `${entry.temp_avg_back.toFixed(1)}°F` : '—'} />
           </div>
           {cr.temperatures && (
             <div>
@@ -104,7 +104,7 @@ const TypeBody: React.FC<{ entry: QAEntry; type: QACheckType | null }> = ({ entr
       return (
         <div className="grid grid-cols-3 gap-2">
           {positions.map(([k, lbl]) => {
-            const v = cr[k];
+            const v = entry[k];
             const ok = typeof v === 'number' && v >= 38 && v <= 47;
             return (
               <div key={k} className={`border rounded p-2 text-center ${typeof v === 'number' ? (ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') : ''}`}>
@@ -122,7 +122,7 @@ const TypeBody: React.FC<{ entry: QAEntry; type: QACheckType | null }> = ({ entr
       ] as const;
       return (
         <div className="space-y-3">
-          <div className="text-xs text-muted-foreground">Target: temps ≥ 140°F · chlorine 50–200 PPM</div>
+          <div className="text-xs text-muted-foreground">Target: temps ≥ 140°F · Quat 800–1000 PPM</div>
           <div>
             <div className="text-xs font-semibold mb-1">Temperature checks</div>
             <div className="grid grid-cols-3 gap-2">
@@ -143,7 +143,7 @@ const TypeBody: React.FC<{ entry: QAEntry; type: QACheckType | null }> = ({ entr
               {[1,2,3,4,5].map((i) => {
                 const v = cr[`ppm_check_${i}`];
                 const t = cr[`ppm_check_${i}_time`];
-                const ok = typeof v === 'number' && v >= 50 && v <= 200;
+                const ok = typeof v === 'number' && v >= 800 && v <= 1000;
                 return (
                   <div key={i} className={`border rounded p-2 text-center ${typeof v === 'number' ? (ok ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200') : ''}`}>
                     <div className="text-[11px] text-muted-foreground">#{i}{t ? ` · ${t}` : ''}</div>
