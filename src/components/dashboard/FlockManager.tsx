@@ -52,6 +52,12 @@ interface Flock {
   } | null;
 }
 
+interface FlockChange {
+  field_changed: string;
+  old_value: string;
+  new_value: string;
+}
+
 const FlockManager = () => {
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const [showDialog, setShowDialog] = useState(false);
@@ -302,7 +308,7 @@ const FlockManager = () => {
 
     // Editing existing flock
     // Track changes for history
-    const changes: any[] = [];
+    const changes: FlockChange[] = [];
     const newUnitId = selectedHatcheries[0] || null;
     
     if (parseInt(formData.flock_number) !== editingFlock.flock_number) {
@@ -448,11 +454,11 @@ const FlockManager = () => {
         flock.unit?.name ?? '',
         flock.house_number ?? '',
       ].some(value => value.toLowerCase().includes(search))) return false;
-      if ((filters as any).flockNumber && !flock.flock_number.toString().includes((filters as any).flockNumber)) return false;
-      if ((filters as any).flockName && !flock.flock_name.toLowerCase().includes((filters as any).flockName.toLowerCase())) return false;
-      if ((filters as any).houseNumber && (filters as any).houseNumber !== "all" && flock.house_number !== (filters as any).houseNumber) return false;
-      if ((filters as any).minAge && flock.age_weeks < parseInt((filters as any).minAge)) return false;
-      if ((filters as any).maxAge && flock.age_weeks > parseInt((filters as any).maxAge)) return false;
+      if (filters.flockNumber && !flock.flock_number.toString().includes(filters.flockNumber)) return false;
+      if (filters.flockName && !flock.flock_name.toLowerCase().includes(filters.flockName.toLowerCase())) return false;
+      if (filters.houseNumber && filters.houseNumber !== "all" && flock.house_number !== filters.houseNumber) return false;
+      if (filters.minAge && flock.age_weeks < parseInt(filters.minAge)) return false;
+      if (filters.maxAge && flock.age_weeks > parseInt(filters.maxAge)) return false;
       return true;
     });
   }, [flocks, filters, searchQuery]);
