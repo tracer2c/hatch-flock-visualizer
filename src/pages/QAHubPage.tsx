@@ -25,6 +25,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DayPickerCard } from '@/components/uui/DayPickerCard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useHatcheries } from '@/hooks/useQAHubData';
 import { format, parseISO } from 'date-fns';
 
 /**
@@ -87,6 +89,8 @@ const QAHubPage: React.FC = () => {
     selectedSub === 'culls' ? 'culls' : 'gravity'
   );
   const [checkDate, setCheckDate] = useState<string>(dateFromUrl || todayStr);
+  const [overviewHatcheryId, setOverviewHatcheryId] = useState<string>('all');
+  const { data: hatcheries } = useHatcheries();
   const { data: stats } = useQAStats();
 
   // Persist date in URL for return-context flows
@@ -184,7 +188,16 @@ const QAHubPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <QAOverviewDashboard checkDate={checkDate} onJumpTo={handleJumpTo} />
+          <div className="flex justify-end">
+            <Select value={overviewHatcheryId} onValueChange={setOverviewHatcheryId}>
+              <SelectTrigger className="w-full sm:w-[240px]" aria-label="Filter overview by hatchery"><SelectValue placeholder="Select hatchery" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All hatcheries</SelectItem>
+                {(hatcheries ?? []).map((hatchery) => <SelectItem key={hatchery.id} value={hatchery.id}>{hatchery.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <QAOverviewDashboard checkDate={checkDate} unitId={overviewHatcheryId} onJumpTo={handleJumpTo} />
         </TabsContent>
 
         <TabsContent value="machine" className="space-y-4">

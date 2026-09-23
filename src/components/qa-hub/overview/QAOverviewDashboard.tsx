@@ -1,309 +1,151 @@
-import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { format, parseISO } from 'date-fns';
+import { AlertTriangle, ArrowRight, Check, CircleDashed, Gauge, MoveHorizontal, Thermometer, Timer, Waves } from 'lucide-react';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  Activity, AlertTriangle, ClipboardCheck, Clock, Factory,
-  Thermometer, Ruler, Droplets, Timer, Waves, Scale, Bird, Eye, ChevronRight, CheckCircle2,
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { useQAOverviewData, type QAEntry, type QACheckType, type ComplianceCell } from '@/hooks/useQAOverviewData';
+import { useQAOverviewData, type QAEntry } from '@/hooks/useQAOverviewData';
 import QAEntryDetailSheet from './QAEntryDetailSheet';
-
-const TYPE_ICON: Record<QACheckType | 'overdue', React.ComponentType<any>> = {
-  temperature: Thermometer,
-  humidity: Droplets,
-  angles: Ruler,
-  hatch_progression: Timer,
-  tray_wash: Waves,
-  rectal_temperature: Thermometer,
-  gravity: Scale,
-  cull_check: Bird,
-  overdue: Clock,
-};
 
 interface Props {
   checkDate?: string;
-  onJumpTo?: (target: {
-    group: 'machine' | 'process' | 'flock';
-    sub?: string;
-  }) => void;
+  unitId?: string;
+  onJumpTo?: (target: { group: 'machine' | 'process' | 'flock'; sub?: string }) => void;
 }
 
-const KpiCard: React.FC<{
-  label: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  icon: React.ComponentType<any>;
-  tone?: 'default' | 'critical' | 'warning' | 'success';
-}> = ({ label, value, sub, icon: Icon, tone = 'default' }) => {
-  const toneCls =
-    tone === 'critical' ? 'border-red-300 bg-red-50/60'
-    : tone === 'warning' ? 'border-amber-300 bg-amber-50/60'
-    : tone === 'success' ? 'border-emerald-300 bg-emerald-50/60'
-    : '';
-  const iconCls =
-    tone === 'critical' ? 'text-red-600 bg-red-100'
-    : tone === 'warning' ? 'text-amber-600 bg-amber-100'
-    : tone === 'success' ? 'text-emerald-600 bg-emerald-100'
-    : 'text-primary bg-primary/10';
-  return (
-    <Card className={`${toneCls}`}>
-      <CardContent className="p-3 flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${iconCls}`}>
-          <Icon className="h-4 w-4" />
-        </div>
+const chartConfig = {
+  eggshell: { label: 'Eggshell °F', color: 'hsl(var(--chart-1))' },
+  rectal: { label: 'Rectal °F', color: 'hsl(var(--chart-3))' },
+  trayWash: { label: 'Tray wash °F', color: 'hsl(var(--chart-2))' },
+  leftAngle: { label: 'Left angle °', color: 'hsl(var(--chart-4))' },
+  rightAngle: { label: 'Right angle °', color: 'hsl(var(--chart-5))' },
+} satisfies ChartConfig;
+
+const fmt = (value: number | null, suffix = '') => value == null ? '—' : `${value.toFixed(1)}${suffix}`;
+
+const MetricCard = ({ title, value, detail, footer, icon: Icon }: { title: string; value: string; detail: string; footer: string; icon: React.ComponentType<any> }) => (
+  <Card>
+    <CardContent className="p-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground truncate">{label}</div>
-          <div className="text-xl font-bold leading-tight">{value}</div>
-          {sub && <div className="text-[11px] text-muted-foreground truncate">{sub}</div>}
+          <p className="text-xs font-medium text-muted-foreground">{title}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
         </div>
-      </CardContent>
-    </Card>
-  );
-};
+        <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-4 w-4" /></div>
+      </div>
+      <p className="mt-3 text-xs font-medium">{detail}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">{footer}</p>
+    </CardContent>
+  </Card>
+);
 
-const ComplianceDot: React.FC<{ cell: ComplianceCell; onClick?: () => void }> = ({ cell, onClick }) => {
-  const cls =
-    cell.status === 'ok' ? 'bg-emerald-500 border-emerald-600'
-    : cell.status === 'warn' ? 'bg-amber-500 border-amber-600'
-    : 'bg-muted border-border';
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onClick}
-            className={`h-4 w-4 rounded-full border ${cls} transition-transform hover:scale-125`}
-            aria-label={`${cell.label} — ${cell.status}`}
-          />
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <div className="text-xs">
-            <div className="font-semibold">{cell.label}</div>
-            <div className="text-muted-foreground capitalize">
-              {cell.status === 'missing' ? 'Not logged today' : cell.lastValue ?? cell.status}
-            </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
-
-const QAOverviewDashboard: React.FC<Props> = ({ checkDate, onJumpTo }) => {
-  const { data, isLoading } = useQAOverviewData(checkDate);
-  const todayStr = new Date().toISOString().split('T')[0];
-  const isHistorical = !!checkDate && checkDate !== todayStr;
-  const dateLabel = isHistorical
-    ? new Date(`${checkDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    : 'Today';
+const QAOverviewDashboard: React.FC<Props> = ({ checkDate, unitId, onJumpTo }) => {
+  const { data, isLoading } = useQAOverviewData(checkDate, unitId);
   const [selected, setSelected] = useState<QAEntry | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  if (isLoading || !data) return <div className="space-y-4"><Skeleton className="h-56" /><div className="grid gap-3 md:grid-cols-5">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-32" />)}</div><Skeleton className="h-80" /></div>;
+
   const openEntry = (id?: string) => {
-    if (!id || !data) return;
-    const e = data.recent.find((r) => r.id === id);
-    if (e) { setSelected(e); setSheetOpen(true); }
+    const entry = data.entries.find((row) => row.id === id);
+    if (!entry) return;
+    setSelected(entry);
+    setSheetOpen(true);
   };
-
-  const jumpTargets = useMemo(() => ([
-    { key: 'temperature',        label: 'Log Temp',      group: 'machine' as const, sub: 'temps',    icon: Thermometer },
-    { key: 'angles',             label: 'Log Angles',    group: 'machine' as const, sub: 'angles',   icon: Ruler },
-    { key: 'humidity',           label: 'Log Humidity',  group: 'machine' as const, sub: 'humidity', icon: Droplets },
-    { key: 'hatch_progression',  label: 'Log Hatch',     group: 'machine' as const, sub: 'hatch',    icon: Timer },
-    { key: 'tray_wash',          label: 'Tray Wash',     group: 'process' as const, sub: 'wash',     icon: Waves },
-    { key: 'rectal_temperature', label: 'Rectal Temps',  group: 'process' as const, sub: 'rectal',   icon: Thermometer },
-    { key: 'gravity',            label: 'Gravity',       group: 'flock'   as const, sub: 'gravity',  icon: Scale },
-    { key: 'cull_check',         label: 'Culls',         group: 'flock'   as const, sub: 'culls',    icon: Bird },
-  ]), []);
-
-  if (isLoading || !data) {
-    return (
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[0,1,2,3,4].map((i) => <Skeleton key={i} className="h-16" />)}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Skeleton className="h-96" /><Skeleton className="h-96" /><Skeleton className="h-96" />
-        </div>
-      </div>
-    );
-  }
-
-  const { kpis, compliance, attention, recent } = data;
+  const weekLabel = `${format(parseISO(data.weekStart), 'MMM d')}–${format(parseISO(data.weekEnd), 'MMM d, yyyy')}`;
+  const { rectal, trayWash, eggshell, angles, completion } = data.metrics;
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-260px)] min-h-[600px]">
-      {/* KPI STRIP */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-shrink-0">
-        <KpiCard label={`${dateLabel}'s Checks`} value={kpis.today} icon={ClipboardCheck} />
-        <KpiCard label="This Week"         value={kpis.week}  icon={Activity} />
-        <KpiCard label="Out of Range (24h)" value={kpis.outOfRange24h} icon={AlertTriangle}
-          tone={kpis.outOfRange24h > 0 ? 'critical' : 'success'} />
-        <KpiCard label="Overdue Checks"    value={kpis.overdue} icon={Clock}
-          tone={kpis.overdue > 0 ? 'warning' : 'success'} />
-        <KpiCard label={`Machines Active ${dateLabel}`}
-          value={`${kpis.activeMachinesToday}/${kpis.totalActiveMachines || '—'}`}
-          icon={Factory}
-          sub={isHistorical ? `on ${dateLabel}` : 'reporting in last 24h'} />
-      </div>
-
-
-      {/* 3-COLUMN BODY */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 min-h-0">
-        {/* Compliance */}
-        <Card className="flex flex-col min-h-0">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> {dateLabel}'s Compliance
-            </CardTitle>
-          </CardHeader>
-          <ScrollArea className="flex-1">
-            <CardContent className="pt-0 space-y-3">
-              {compliance.map((row) => {
-                const Icon = TYPE_ICON[row.type];
-                return (
-                  <div key={row.type} className="border rounded-lg p-2.5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 text-xs font-medium">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                        {row.label}
-                      </div>
-                      <Badge variant="outline" className="text-[10px] h-5">
-                        {row.doneCount}/{row.totalCount || '—'}
-                      </Badge>
-                    </div>
-                    {row.cells.length === 0 ? (
-                      <div className="text-[11px] text-muted-foreground">No active targets</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {row.cells.map((c) => (
-                          <ComplianceDot key={c.key} cell={c} onClick={() => openEntry(c.entryId)} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </ScrollArea>
-        </Card>
-
-        {/* Attention */}
-        <Card className="flex flex-col min-h-0">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-red-600" /> Attention Needed
-              {attention.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 text-[10px]">{attention.length}</Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <ScrollArea className="flex-1">
-            <CardContent className="pt-0 space-y-1.5">
-              {attention.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center gap-2 text-muted-foreground">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                  <div className="text-sm">All clear.</div>
-                  <div className="text-xs">No out-of-range readings or overdue checks.</div>
-                </div>
-              ) : attention.map((item) => {
-                const Icon = TYPE_ICON[item.type as any] ?? AlertTriangle;
-                const isCrit = item.severity === 'critical';
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => item.entryId && openEntry(item.entryId)}
-                    className={`w-full text-left border rounded-md p-2 text-xs flex items-start gap-2 hover:bg-muted/50 transition-colors ${
-                      isCrit ? 'border-red-200 bg-red-50/50' : 'border-amber-200 bg-amber-50/50'
-                    }`}
-                  >
-                    <Icon className={`h-3.5 w-3.5 mt-0.5 ${isCrit ? 'text-red-600' : 'text-amber-600'}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{item.target}</div>
-                      <div className="text-muted-foreground truncate">{item.reason}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-                      </div>
-                    </div>
-                    {item.entryId && <Eye className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
-                  </button>
-                );
-              })}
-            </CardContent>
-          </ScrollArea>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="flex flex-col min-h-0">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" /> Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <ScrollArea className="flex-1">
-            <CardContent className="pt-0 space-y-1">
-              {recent.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-6 text-center">No recent entries.</div>
-              ) : recent.map((r) => {
-                const cr = typeof r.candling_results === 'string'
-                  ? (() => { try { return JSON.parse(r.candling_results); } catch { return null; } })()
-                  : r.candling_results;
-                const type: QACheckType =
-                  cr?.type ?? (cr?.qa_type === 'angles' ? 'angles' : 'temperature');
-                const Icon = TYPE_ICON[type] ?? Thermometer;
-                const label =
-                  r.machine?.machine_number ??
-                  (cr?.location ? String(cr.location).replace(/_/g, ' ') : null) ??
-                  r.batch?.batch_number ?? '—';
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => { setSelected(r); setSheetOpen(true); }}
-                    className="w-full text-left border rounded-md p-2 text-xs flex items-start gap-2 hover:bg-muted/50 transition-colors"
-                  >
-                    <Icon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate capitalize">
-                        {String(type).replace(/_/g, ' ')} · {label}
-                      </div>
-                      <div className="text-muted-foreground truncate">
-                        {r.inspector_name ?? '—'} · {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </CardContent>
-          </ScrollArea>
-        </Card>
-      </div>
-
-      {/* JUMP CHIPS */}
-      <div className="flex-shrink-0 border rounded-lg p-2 bg-muted/30">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground pl-1">Jump to entry:</span>
-          {jumpTargets.map((t) => {
-            const Icon = t.icon;
-            return (
-              <Button
-                key={t.key}
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => onJumpTo?.({ group: t.group, sub: t.sub })}
-              >
-                <Icon className="h-3 w-3" /> {t.label}
-              </Button>
-            );
-          })}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b pb-3">
+        <div>
+          <p className="text-sm font-semibold">Weekly QA dashboard</p>
+          <p className="text-xs text-muted-foreground">{weekLabel} · values include only this hatchery</p>
         </div>
+        <Badge variant="outline" className="tabular-nums">{completion.done}/{completion.expected} checks</Badge>
       </div>
+
+      <Card className="overflow-hidden border-primary/25">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-primary/5 pb-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base"><Timer className="h-4 w-4 text-primary" /> Hatch Progression</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Latest weekly reading for each active hatcher</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => onJumpTo?.({ group: 'machine', sub: 'hatch' })}>Log hatch <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {data.hatchProgress.length === 0 ? (
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">No hatch progression entered for this week.</div>
+          ) : (
+            <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
+              {data.hatchProgress.map((row) => (
+                <button key={row.machineId} onClick={() => openEntry(row.entryId)} className="p-4 text-left transition-colors hover:bg-muted/40">
+                  <div className="flex items-center justify-between gap-2"><span className="font-semibold">{row.machineLabel}</span><Badge variant={row.stale ? 'secondary' : 'outline'}>Stage {row.stage}</Badge></div>
+                  <div className="mt-3 flex items-end justify-between"><span className="text-2xl font-semibold tabular-nums">{row.percentage.toFixed(1)}%</span><span className="text-xs text-muted-foreground">{row.hatched.toLocaleString()} / {row.total.toLocaleString()}</span></div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(row.percentage, 100)}%` }} /></div>
+                  <p className="mt-2 text-[11px] text-muted-foreground">{row.stale ? 'Update due' : 'Current'} · {format(new Date(row.checkedAt), 'EEE h:mm a')}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard title="Rectal temperature" value={fmt(rectal.value, '°F')} detail={`${rectal.inRange}/${rectal.total || 0} readings in range`} footer={`${rectal.count} checks · room targets applied`} icon={Thermometer} />
+        <MetricCard title="Tray wash" value={fmt(trayWash.value, '°F')} detail={`${trayWash.ppmInRange}/${trayWash.ppmTotal || 0} Quat checks in range`} footer={`${trayWash.completedDays}/7 days logged · target ≥140°F`} icon={Waves} />
+        <MetricCard title="Eggshell temperature" value={fmt(eggshell.value, '°F')} detail={`Front ${fmt(eggshell.front)} · Mid ${fmt(eggshell.middle)} · Back ${fmt(eggshell.back)}`} footer={`${eggshell.count} checks · target 99.5–100.5°F`} icon={Thermometer} />
+        <MetricCard title="Setter angles" value={`${fmt(angles.left, '°')} / ${fmt(angles.right, '°')}`} detail="Left / Right weekly average" footer={`${angles.count} checks · ${angles.outOfRange} outside range`} icon={MoveHorizontal} />
+        <MetricCard title="Overall QA completion" value={`${completion.percentage.toFixed(0)}%`} detail={`${completion.done} of ${completion.expected} expected checks`} footer="Through today in the selected week" icon={Gauge} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Seven-day QA trends</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[260px] w-full aspect-auto">
+              <LineChart data={data.trend} margin={{ left: 0, right: 8, top: 8 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={34} domain={['auto', 'auto']} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line type="monotone" dataKey="eggshell" stroke="var(--color-eggshell)" strokeWidth={2} connectNulls dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="rectal" stroke="var(--color-rectal)" strokeWidth={2} connectNulls dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="trayWash" stroke="var(--color-trayWash)" strokeWidth={2} connectNulls dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="leftAngle" stroke="var(--color-leftAngle)" strokeWidth={2} connectNulls dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="rightAngle" stroke="var(--color-rightAngle)" strokeWidth={2} connectNulls dot={{ r: 3 }} />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="min-h-[320px]">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><AlertTriangle className="h-4 w-4 text-destructive" /> Attention needed <Badge variant="secondary">{data.attention.length}</Badge></CardTitle></CardHeader>
+          <ScrollArea className="h-[265px]">
+            <CardContent className="space-y-2 pt-0">
+              {data.attention.length === 0 ? <div className="flex h-44 flex-col items-center justify-center gap-2 text-sm text-muted-foreground"><Check className="h-6 w-6 text-success" />No exceptions this week.</div> : data.attention.map((item) => (
+                <button key={item.id} onClick={() => openEntry(item.entryId)} className="w-full rounded-md border p-2.5 text-left hover:bg-muted/50">
+                  <p className="text-xs font-semibold capitalize">{item.target}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{item.reason}</p>
+                </button>
+              ))}
+            </CardContent>
+          </ScrollArea>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Weekly QA coverage</CardTitle></CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-xs">
+            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 font-medium">Day</th>{['Hatch progression', 'Eggshell temp', 'Setter angles', 'Rectal temp', 'Tray wash'].map((label) => <th key={label} className="px-2 py-2 text-center font-medium">{label}</th>)}</tr></thead>
+            <tbody>{data.coverage.map((day) => <tr key={day.date} className="border-b last:border-0"><td className="py-3 font-medium">{day.day} <span className="ml-1 text-muted-foreground">{format(parseISO(day.date), 'M/d')}</span></td>{(['hatch', 'temperature', 'angles', 'rectal', 'trayWash'] as const).map((key) => { const cell = day.values[key]; const complete = cell.expected > 0 && cell.done >= cell.expected; return <td key={key} className="px-2 py-3 text-center"><span className={`inline-flex items-center gap-1 rounded px-2 py-1 ${day.isFuture ? 'text-muted-foreground' : complete ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning-foreground'}`}>{day.isFuture ? <CircleDashed className="h-3 w-3" /> : complete ? <Check className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}{cell.done}/{cell.expected}</span></td>; })}</tr>)}</tbody>
+          </table>
+        </CardContent>
+      </Card>
 
       <QAEntryDetailSheet entry={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
