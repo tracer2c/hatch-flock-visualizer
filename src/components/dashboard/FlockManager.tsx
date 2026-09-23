@@ -38,6 +38,7 @@ interface Flock {
   updated_by?: string | null;
   last_modified_at?: string | null;
   flock_group_id?: string | null;
+  linked_unit_ids?: string[];
   archived_at?: string | null;
   archived_by?: string | null;
   updated_by_profile?: {
@@ -117,11 +118,12 @@ const FlockManager = () => {
   };
 
   const loadFlocks = async () => {
-    let query = supabase
+    let query = (supabase as any)
       .from('flocks')
       .select(`
         *,
-        unit:units(id, name)
+        unit:units(id, name),
+        flock_units(unit_id)
       `)
       .order('flock_number', { ascending: true });
 
@@ -166,7 +168,8 @@ const FlockManager = () => {
           created_by_profile = profile;
         }
         
-        return { ...flock, updated_by_profile, created_by_profile };
+        const linked_unit_ids = ((flock as any).flock_units || []).map((l: { unit_id: string }) => l.unit_id);
+        return { ...flock, linked_unit_ids, updated_by_profile, created_by_profile };
       })
     );
 
@@ -189,6 +192,14 @@ const FlockManager = () => {
   };
 
   const activeUnits = useMemo(() => units.filter(u => u.status === 'active'), [units]);
+
+  const getFlockUnitIds = (f: Flock): string[] => {
+    const ids = new Set<string>(f.linked_unit_ids ?? []);
+    if (f.unit_id) ids.add(f.unit_id);
+    return Array.from(ids);
+  };
+  const getFlockUnitNames = (f: Flock): string[] =>
+    getFlockUnitIds(f).map(id => units.find(u => u.id === id)?.name).filter(Boolean) as string[];
 
   const toggleAllHatcheries = () => {
     if (selectedHatcheries.length === activeUnits.length) {
