@@ -8,6 +8,14 @@ const numberOf = (value: unknown) => Number.isFinite(Number(value)) ? Number(val
 const percent = (part: number, whole: number) => whole > 0 ? (part / whole) * 100 : null;
 
 type AnalysisRow = Record<string, unknown> & { batch_id: string; analysis_date?: string | null; inspection_date?: string | null; created_at?: string | null };
+type BatchRecord = {
+  id: string; batch_number: string; flock_id: string; machine_id: string | null; unit_id: string | null;
+  set_date: string; total_eggs_set: number; chicks_hatched: number;
+  flock: { id: string; flock_number: string | number; flock_name: string; house_number: string | number | null; age_weeks: number | null; breed: string | null } | null;
+  unit: { id: string; name: string; code: string | null } | null;
+  machine: { id: string; machine_number: string } | null;
+};
+type GroupedBatch = BatchRecord & { houseNumber: string };
 
 export interface ReportRow {
   key: string;
@@ -40,7 +48,7 @@ export interface ReportRow {
 }
 
 async function fetchBatchPages(from: string, to: string) {
-  const collected: any[] = [];
+  const collected: BatchRecord[] = [];
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const { data, error } = await supabase.from("batches").select(`
       id, batch_number, flock_id, machine_id, unit_id, set_date, total_eggs_set, chicks_hatched,
@@ -50,7 +58,7 @@ async function fetchBatchPages(from: string, to: string) {
     `).is("archived_at", null).gte("set_date", from).lte("set_date", to)
       .order("set_date", { ascending: true }).range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
-    collected.push(...(data || []));
+    collected.push(...((data || []) as unknown as BatchRecord[]));
     if (!data || data.length < PAGE_SIZE) break;
   }
   return collected;
@@ -76,14 +84,14 @@ function latestByBatch(rows: AnalysisRow[]) {
   return latest;
 }
 
-function aggregateRows(batches: any[], fertilityRows: AnalysisRow[], residueRows: AnalysisRow[]) {
+function aggregateRows(batches: BatchRecord[], fertilityRows: AnalysisRow[], residueRows: AnalysisRow[]) {
   const fertilityByBatch = latestByBatch(fertilityRows);
   const residueByBatch = latestByBatch(residueRows);
-  const groups = new Map<string, any[]>();
+  const groups = new Map<string, GroupedBatch[]>();
   batches.forEach((batch) => {
-    const flock = Array.isArray(batch.flock) ? batch.flock[0] : batch.flock;
-    const unit = Array.isArray(batch.unit) ? batch.unit[0] : batch.unit;
-    const machine = Array.isArray(batch.machine) ? batch.machine[0] : batch.machine;
+    const flock = batch.flock;
+    const unit = batch.unit;
+    const machine = batch.machine;
     const houseNumber = String(flock?.house_number || batch.batch_number || "Not recorded");
     const key = [batch.flock_id || "unassigned", houseNumber.toLowerCase(), batch.unit_id || "unassigned"].join("|");
     groups.set(key, [...(groups.get(key) || []), { ...batch, flock, unit, machine, houseNumber }]);

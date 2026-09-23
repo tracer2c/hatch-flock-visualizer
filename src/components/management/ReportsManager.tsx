@@ -92,7 +92,7 @@ export default function ReportsManager() {
   const { data, isLoading, error, dataUpdatedAt } = useManagementReportData({ from, to });
   const { data: hatcheries = [] } = useHatcheries();
   const printMeta = usePrintMeta();
-  const rows = data?.rows || [];
+  const rows = useMemo(() => data?.rows || [], [data?.rows]);
   const filtered = useMemo(() => rows.filter((row) => (unitId === "all" || row.unitId === unitId) && (flockId === "all" || row.flockId === flockId) && (house === "all" || row.houseNumber === house)), [rows, unitId, flockId, house]);
   const previous = (data?.previousRows || []).filter((row) => unitId === "all" || row.unitId === unitId);
   const flockOptions = useMemo(() => Array.from(new Map(rows.filter((row) => unitId === "all" || row.unitId === unitId).map((row) => [row.flockId, { id: row.flockId, label: `${row.flockNumber} · ${row.flockName}`, ageWeeks: row.ageWeeks }])).values()).filter((option) => option.id), [rows, unitId]);
