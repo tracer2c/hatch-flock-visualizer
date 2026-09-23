@@ -95,6 +95,13 @@ function sameGroupRows(previousRows: ReportRow[], row: ReportRow) {
   return previousRows.filter((prior) => prior.flockId === row.flockId && prior.houseNumber === row.houseNumber && prior.unitId === row.unitId);
 }
 
+function relationField(relation: unknown, field: string) {
+  const value = Array.isArray(relation) ? relation[0] : relation;
+  if (!value || typeof value !== 'object') return undefined;
+  const fieldValue = (value as Record<string, unknown>)[field];
+  return typeof fieldValue === 'string' || typeof fieldValue === 'number' ? String(fieldValue) : undefined;
+}
+
 export class ReportService {
   /**
    * Generic "report generation" PDF used by the per-page export buttons.
@@ -238,10 +245,10 @@ export class ReportService {
     pdf.setFontSize(10);
     const info = [
       ['House Number:', batch.batch_number],
-      ['Flock:', (batch.flock as any)?.flock_name || 'N/A'],
-      ['Breed:', (batch.flock as any)?.breed || 'N/A'],
-      ['Machine:', (batch.machine as any)?.machine_number || 'N/A'],
-      ['Hatchery:', (batch.unit as any)?.name || 'N/A'],
+      ['Flock:', relationField(batch.flock, 'flock_name') || 'N/A'],
+      ['Breed:', relationField(batch.flock, 'breed') || 'N/A'],
+      ['Machine:', relationField(batch.machine, 'machine_number') || 'N/A'],
+      ['Hatchery:', relationField(batch.unit, 'name') || 'N/A'],
       ['Set Date:', format(new Date(batch.set_date), 'MMM dd, yyyy')],
       ['Expected Hatch:', format(new Date(batch.expected_hatch_date), 'MMM dd, yyyy')],
       ['Status:', batch.status.toUpperCase()],
@@ -403,7 +410,7 @@ export class ReportService {
         xPos = 20;
         const row = [
           batch.batch_number.substring(0, 20),
-          ((batch.flock as any)?.flock_name || 'N/A').substring(0, 20),
+          (relationField(batch.flock, 'flock_name') || 'N/A').substring(0, 20),
           format(new Date(batch.set_date), 'MMM dd'),
           batch.total_eggs_set.toLocaleString(),
           batch.status
