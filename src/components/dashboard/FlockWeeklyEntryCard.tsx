@@ -37,6 +37,7 @@ interface Props {
   /** House aggregation sum (for reconciliation note) */
   houseSum?: { label: string; value: number } | null;
   disabled?: boolean;
+  onTotalsChange?: (totals: Record<string, number>) => void;
 }
 
 /**
@@ -57,6 +58,7 @@ export function FlockWeeklyEntryCard({
   fields,
   houseSum,
   disabled,
+  onTotalsChange,
 }: Props) {
   const qc = useQueryClient();
   const queryKey = [table, companyId, flockId, periodStart];
@@ -141,6 +143,19 @@ export function FlockWeeklyEntryCard({
       return sum + (Number.isFinite(n) ? n : 0);
     }, 0);
   }, [values, fields]);
+
+  const fieldTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    fields.forEach((field) => {
+      const value = Number(values[field.key] || 0);
+      totals[field.key] = Number.isFinite(value) ? value : 0;
+    });
+    return totals;
+  }, [values, fields]);
+
+  useEffect(() => {
+    onTotalsChange?.(fieldTotals);
+  }, [fieldTotals, onTotalsChange]);
 
   return (
     <Card>

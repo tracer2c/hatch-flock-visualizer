@@ -15,6 +15,10 @@ import WeeklyClearsPrintView from "@/components/data-entry/WeeklyClearsPrintView
 import { useFlockWeeklyClearsMap } from "@/hooks/useFlockWeeklyClears";
 import { usePrintMeta } from "@/hooks/usePrintMeta";
 
+const fmtInt = (value: number) => Math.round(value).toLocaleString();
+const fmtPct = (value: number | null) =>
+  value == null ? "—" : `${value.toFixed(1)}%`;
+
 export default function FlockClearsInjectedEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
   const [params] = useSearchParams();
@@ -30,6 +34,12 @@ export default function FlockClearsInjectedEntryPage() {
 
   const [snapshot, setSnapshot] = useState<ClearsSheetRowSnapshot[]>([]);
   const [technician, setTechnician] = useState("");
+  const [totals, setTotals] = useState({
+    sample: 0,
+    injectionPct: null as number | null,
+    hatchPct: null as number | null,
+    hoiPct: null as number | null,
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -51,6 +61,12 @@ export default function FlockClearsInjectedEntryPage() {
           title="Clears, Injected & Hatch (set week)"
           subtitle="One line per set record — fill in as counts come through the week"
           icon={<Syringe className="h-5 w-5 text-primary" />}
+          metrics={[
+            { label: "Sample Size", value: fmtInt(totals.sample) },
+            { label: "Injection %", value: fmtPct(totals.injectionPct) },
+            { label: "Hatch %", value: fmtPct(totals.hatchPct) },
+            { label: "HOI %", value: fmtPct(totals.hoiPct) },
+          ]}
         />
 
         {ctx.isLoading ? (
@@ -68,6 +84,7 @@ export default function FlockClearsInjectedEntryPage() {
             existingRow={existingRow}
             readOnly={readOnly}
             onSaved={ctx.refetch}
+            onTotalsChange={setTotals}
             onSnapshot={(rows, tech) => {
               setSnapshot(rows);
               setTechnician(tech);
