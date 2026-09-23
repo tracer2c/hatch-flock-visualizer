@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import type { ReportRow } from '@/hooks/useManagementReportData';
 
 export interface ReportData {
   title: string;
@@ -25,6 +26,73 @@ export interface VisualReportOptions {
   captureElementId?: string;
   /** Output filename (no extension) */
   filename: string;
+}
+
+export type ManagementReportType = 'house' | 'fertility' | 'comparison';
+
+export interface ManagementReportPdfOptions {
+  type: ManagementReportType;
+  title: string;
+  dateRange: string;
+  hatcheryScope: string;
+  companyName: string;
+  userName: string;
+  generatedAt: string;
+  rows: ReportRow[];
+  previousRows: ReportRow[];
+  summary: string[];
+}
+
+const REPORT_COLORS = {
+  ink: [36, 54, 75] as const,
+  muted: [100, 116, 139] as const,
+  line: [203, 213, 225] as const,
+  soft: [231, 237, 243] as const,
+  red: [185, 28, 28] as const,
+  green: [21, 128, 61] as const,
+  orange: [221, 85, 12] as const,
+};
+
+const pct = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? '—' : `${value.toFixed(1)}%`;
+const int = (value: number | null | undefined) => Math.round(value || 0).toLocaleString();
+
+function totals(rows: ReportRow[]) {
+  const eggsSet = rows.reduce((sum, row) => sum + row.eggsSet, 0);
+  const chicksHatched = rows.reduce((sum, row) => sum + row.chicksHatched, 0);
+  const fertilitySample = rows.reduce((sum, row) => sum + row.fertilitySample, 0);
+  const fertileEggs = rows.reduce((sum, row) => sum + row.fertileEggs, 0);
+  const residueSample = rows.reduce((sum, row) => sum + row.residueSample, 0);
+  const contaminatedEggs = rows.reduce((sum, row) => sum + row.contaminatedEggs, 0);
+  const lateDead = rows.reduce((sum, row) => sum + row.lateDead, 0);
+  const earlyDead = rows.reduce((sum, row) => sum + row.earlyDead, 0);
+  const upsideDown = rows.reduce((sum, row) => sum + row.upsideDown, 0);
+  return {
+    eggsSet,
+    chicksHatched,
+    fertilitySample,
+    fertileEggs,
+    residueSample,
+    contaminatedEggs,
+    lateDead,
+    earlyDead,
+    upsideDown,
+    fertilityPercent: fertilitySample > 0 ? (fertileEggs / fertilitySample) * 100 : null,
+    contaminationPercent: residueSample > 0 ? (contaminatedEggs / residueSample) * 100 : null,
+    lateDeadPercent: residueSample > 0 ? (lateDead / residueSample) * 100 : null,
+    hatchPercent: eggsSet > 0 ? (chicksHatched / eggsSet) * 100 : null,
+  };
+}
+
+function deltaLabel(current: number | null | undefined, previous: number | null | undefined, inverse = false) {
+  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous)) return { label: '—', tone: 'neutral' as const };
+  const delta = current - previous;
+  if (Math.abs(delta) < 0.05) return { label: '→ 0.0', tone: 'neutral' as const };
+  const good = inverse ? delta < 0 : delta > 0;
+  return { label: `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(1)}`, tone: good ? 'good' as const : 'bad' as const };
+}
+
+function sameGroupRows(previousRows: ReportRow[], row: ReportRow) {
+  return previousRows.filter((prior) => prior.flockId === row.flockId && prior.houseNumber === row.houseNumber && prior.unitId === row.unitId);
 }
 
 export class ReportService {
@@ -352,6 +420,218 @@ export class ReportService {
     pdf.setFontSize(8);
     pdf.setTextColor(150);
     pdf.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 20, 285);
+
+    return pdf.output('blob');
+  }
+
+  static generateManagementReportPdf(opts: ManagementReportPdfOptions): Blob {
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const setColor = (color: readonly [number, number, number]) => pdf.setTextColor(color[0], color[1], color[2]);
+    const setFill = (color: readonly [number, number, number]) => pdf.setFillColor(color[0], color[1], color[2]);
+    const ensureRoom = (needed: number) => {
+      if (y + needed <= pageHeight - margin) return;
+      pdf.addPage();
+      y = margin;
+      drawPageHeader(false);
+    };
+    const drawPageHeader = (firstPage: boolean) => {
+      setColor(REPORT_COLORS.ink);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(firstPage ? 17 : 11);
+      pdf.text(firstPage ? opts.title : `${opts.title} continued`, margin, y + 4);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      setColor(REPORT_COLORS.muted);
+      pdf.text(opts.companyName || 'Hatchery Pro', pageWidth - margin, y + 4, { align: 'right' });
+      y += firstPage ? 9 : 7;
+      pdf.setDrawColor(...REPORT_COLORS.line);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 5;
+    };
+    const drawMeta = () => {
+      const meta = [
+        ['Date range', opts.dateRange],
+        ['Hatchery scope', opts.hatcheryScope],
+        ['Printed by', opts.userName || 'Not recorded'],
+        ['Generated', opts.generatedAt],
+      ];
+      const boxWidth = contentWidth / meta.length;
+      setFill(REPORT_COLORS.soft);
+      pdf.rect(margin, y, contentWidth, 17, 'F');
+      meta.forEach(([label, value], index) => {
+        const x = margin + index * boxWidth + 3;
+        pdf.setFontSize(7.5);
+        pdf.setFont('helvetica', 'bold');
+        setColor(REPORT_COLORS.muted);
+        pdf.text(label.toUpperCase(), x, y + 6);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        setColor(REPORT_COLORS.ink);
+        pdf.text(String(value), x, y + 12, { maxWidth: boxWidth - 6 });
+      });
+      y += 22;
+    };
+    const drawSummary = () => {
+      ensureRoom(30);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      setColor(REPORT_COLORS.ink);
+      pdf.text('Summary', margin, y);
+      y += 6;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9.5);
+      opts.summary.slice(0, 4).forEach((line) => {
+        const wrapped = pdf.splitTextToSize(`• ${line}`, contentWidth - 4);
+        ensureRoom(wrapped.length * 4.4 + 1);
+        setColor(REPORT_COLORS.ink);
+        pdf.text(wrapped, margin + 2, y);
+        y += wrapped.length * 4.4 + 1;
+      });
+      y += 2;
+    };
+    const drawKpis = () => {
+      const current = totals(opts.rows);
+      const previous = totals(opts.previousRows);
+      const cards = [
+        ['Eggs set', int(current.eggsSet), null],
+        ['Weighted fertility', pct(current.fertilityPercent), deltaLabel(current.fertilityPercent, previous.fertilityPercent)],
+        ['Residue contamination', pct(current.contaminationPercent), deltaLabel(current.contaminationPercent, previous.contaminationPercent, true)],
+        ['Weekly hatch', pct(current.hatchPercent), deltaLabel(current.hatchPercent, previous.hatchPercent)],
+      ];
+      const gap = 3;
+      const width = (contentWidth - gap * (cards.length - 1)) / cards.length;
+      ensureRoom(24);
+      cards.forEach(([label, value, trend], index) => {
+        const x = margin + index * (width + gap);
+        pdf.setDrawColor(...REPORT_COLORS.line);
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(x, y, width, 20, 'FD');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        setColor(REPORT_COLORS.muted);
+        pdf.text(String(label).toUpperCase(), x + 3, y + 6);
+        pdf.setFontSize(13);
+        setColor(REPORT_COLORS.ink);
+        pdf.text(String(value), x + 3, y + 14);
+        if (trend) {
+          const typedTrend = trend as ReturnType<typeof deltaLabel>;
+          const color = typedTrend.tone === 'good' ? REPORT_COLORS.green : typedTrend.tone === 'bad' ? REPORT_COLORS.red : REPORT_COLORS.muted;
+          pdf.setFontSize(8.5);
+          setColor(color);
+          pdf.text(typedTrend.label, x + width - 3, y + 14, { align: 'right' });
+        }
+      });
+      y += 26;
+    };
+    const drawSectionTitle = (title: string) => {
+      ensureRoom(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      setColor(REPORT_COLORS.ink);
+      pdf.text(title, margin, y);
+      y += 5;
+    };
+    const drawTable = (headers: string[], rows: string[][], widths: number[], aligns: Array<'left' | 'right'> = []) => {
+      const rowHeight = 7;
+      ensureRoom(rowHeight * 2);
+      setFill(REPORT_COLORS.ink);
+      pdf.rect(margin, y, contentWidth, rowHeight, 'F');
+      let x = margin;
+      headers.forEach((header, index) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.2);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(header, x + 1.5, y + 4.7, { maxWidth: widths[index] - 3 });
+        x += widths[index];
+      });
+      y += rowHeight;
+      rows.forEach((row, rowIndex) => {
+        ensureRoom(rowHeight);
+        if (rowIndex % 2 === 0) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(margin, y, contentWidth, rowHeight, 'F');
+        }
+        x = margin;
+        row.forEach((cell, index) => {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(7.1);
+          setColor(REPORT_COLORS.ink);
+          const align = aligns[index] || 'left';
+          pdf.text(String(cell), align === 'right' ? x + widths[index] - 1.5 : x + 1.5, y + 4.7, {
+            align,
+            maxWidth: widths[index] - 3,
+          });
+          x += widths[index];
+        });
+        pdf.setDrawColor(...REPORT_COLORS.line);
+        pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+        y += rowHeight;
+      });
+      y += 5;
+    };
+    const trendText = (row: ReportRow, metric: 'fertilityPercent' | 'hatchPercent' | 'contaminationPercent' | 'lateDeadPercent', inverse = false) => {
+      const previous = totals(sameGroupRows(opts.previousRows, row));
+      const trend = deltaLabel(row[metric], previous[metric], inverse);
+      return trend.label;
+    };
+
+    drawPageHeader(true);
+    drawMeta();
+    drawSummary();
+    drawKpis();
+
+    if (opts.type === 'fertility') {
+      drawSectionTitle('Combined fertility by flock and house');
+      drawTable(
+        ['Flock', 'House', 'Hatchery', 'Sample', 'Fertile', 'Fertility', 'Trend', 'Eggs set', 'Hatch'],
+        opts.rows.map((row) => [row.flockNumber, row.houseNumber, row.unitName, int(row.fertilitySample), int(row.fertileEggs), pct(row.fertilityPercent), trendText(row, 'fertilityPercent'), int(row.eggsSet), pct(row.hatchPercent)]),
+        [24, 20, 44, 22, 22, 22, 18, 26, 19],
+        ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right'],
+      );
+    } else if (opts.type === 'comparison') {
+      drawSectionTitle('Flock comparison');
+      const groupTotals = Array.from(new Map(opts.rows.map((row) => [row.flockId, row])).keys()).map((id) => {
+        const group = opts.rows.filter((row) => row.flockId === id);
+        const first = group[0];
+        return { first, values: totals(group), houses: new Set(group.map((row) => row.houseNumber)).size };
+      });
+      drawTable(
+        ['Flock', 'Age', 'Houses', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
+        groupTotals.map(({ first, values, houses }) => [first.flockNumber, first.ageWeeks == null ? '—' : `${first.ageWeeks} wk`, String(houses), int(values.eggsSet), pct(values.fertilityPercent), pct(values.contaminationPercent), pct(values.lateDeadPercent), int(values.upsideDown), int(values.earlyDead), pct(values.hatchPercent)]),
+        [28, 18, 18, 26, 24, 22, 23, 27, 24, 21],
+        ['left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
+      );
+      drawSectionTitle('House-level detail');
+      drawTable(
+        ['Flock', 'House', 'Hatchery', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
+        opts.rows.map((row) => [row.flockNumber, row.houseNumber, row.unitName, int(row.eggsSet), pct(row.fertilityPercent), pct(row.contaminationPercent), pct(row.lateDeadPercent), int(row.upsideDown), int(row.earlyDead), pct(row.hatchPercent)]),
+        [22, 18, 42, 26, 24, 22, 23, 27, 24, 21],
+        ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
+      );
+    } else {
+      drawSectionTitle('House performance detail');
+      drawTable(
+        ['Flock', 'Grower', 'House', 'Hatchery', 'Breed', 'Eggs set', 'Fertility', 'Contam.', 'Late dead', 'Upside down', 'Early dead', 'Hatch'],
+        opts.rows.map((row) => [row.flockNumber, 'Not recorded', row.houseNumber, row.unitName, row.breed, int(row.eggsSet), pct(row.fertilityPercent), pct(row.contaminationPercent), pct(row.lateDeadPercent), int(row.upsideDown), int(row.earlyDead), pct(row.hatchPercent)]),
+        [20, 25, 18, 34, 24, 23, 22, 20, 22, 23, 22, 19],
+        ['left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
+      );
+    }
+
+    const pages = pdf.getNumberOfPages();
+    for (let page = 1; page <= pages; page += 1) {
+      pdf.setPage(page);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      setColor(REPORT_COLORS.muted);
+      pdf.text(`Page ${page} of ${pages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+    }
 
     return pdf.output('blob');
   }
