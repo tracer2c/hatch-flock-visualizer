@@ -12,6 +12,9 @@ import RectalTempEntry from '../RectalTempEntry';
 import TrayWashEntry, { type TrayWashSubmitData } from '../TrayWashEntry';
 import RoomHumidityEntry, { type RoomHumiditySubmitData } from '../RoomHumidityEntry';
 import { useTodaysTrayWash } from '@/hooks/useTodaysTrayWash';
+import { useHatcheries } from '@/hooks/useQAHubData';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 type ProcessTab = 'wash' | 'rectal' | 'humidity';
 
@@ -27,6 +30,8 @@ const ProcessScopedShell: React.FC<{
 
   const [tab, setTab] = useState<ProcessTab>(initialTab);
   const [saving, setSaving] = useState(false);
+  const [unitId, setUnitId] = useState('');
+  const { data: hatcheries } = useHatcheries();
   const { data: existingTrayWash, isLoading: trayWashLoading } = useTodaysTrayWash(null, checkDate, {
     entryMode: 'room',
   });
@@ -44,6 +49,7 @@ const ProcessScopedShell: React.FC<{
       const avg = filled.length ? filled.reduce((a, b) => a + b, 0) / filled.length : 0;
       const payload = {
         company_id,
+        unit_id: unitId || null,
         machine_id: null,
         batch_id: null,
         check_date: data.washDate,
@@ -103,6 +109,7 @@ const ProcessScopedShell: React.FC<{
       const company_id = await resolveCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         company_id,
+        unit_id: unitId || null,
         machine_id: null,
         batch_id: null,
         check_date: data.checkDate,
@@ -136,6 +143,7 @@ const ProcessScopedShell: React.FC<{
       const company_id = await resolveCompanyId();
       const { error } = await supabase.from('qa_monitoring').insert({
         company_id,
+        unit_id: unitId || null,
         machine_id: null,
         batch_id: null,
         check_date: checkDate,
@@ -170,9 +178,14 @@ const ProcessScopedShell: React.FC<{
             <Waves className="h-5 w-5 text-primary" />
             Process / Room Checks
           </CardTitle>
-          <CardDescription>
-            Room-level QA — no machine required. Uses the date from the header above.
-          </CardDescription>
+          <CardDescription>Room-level QA — choose the hatchery these readings belong to.</CardDescription>
+          <div className="mt-4 max-w-xs space-y-1.5">
+            <Label className="text-xs">Hatchery</Label>
+            <Select value={unitId} onValueChange={setUnitId}>
+              <SelectTrigger><SelectValue placeholder="Select hatchery" /></SelectTrigger>
+              <SelectContent>{(hatcheries ?? []).map((hatchery) => <SelectItem key={hatchery.id} value={hatchery.id}>{hatchery.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
         </CardHeader>
       </Card>
 
@@ -204,6 +217,7 @@ const ProcessScopedShell: React.FC<{
             existingRow={existingTrayWash ?? null}
             loadingExisting={trayWashLoading}
             onSubmit={handleTrayWash}
+            readOnly={!unitId}
           />
         </TabsContent>
 
@@ -214,6 +228,7 @@ const ProcessScopedShell: React.FC<{
             machineId={null}
             entryMode="room"
             onSubmit={handleRectalTemp}
+            isPastDay={!unitId}
           />
         </TabsContent>
 
