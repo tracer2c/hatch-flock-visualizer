@@ -1,35 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { eachDayOfInterval, endOfWeek, format, startOfWeek } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Manager-grade QA overview data — combines KPIs, today's compliance-by-type,
- * attention items (out-of-range + overdue), and a compact activity feed
- * into a single hook so the dashboard renders from one loading state.
- *
- * Ranges (ideal):
- *   • Machine temp    99.5 – 100.5 °F
- *   • Humidity        53 – 58 %
- *   • Tray wash temp  ≥ 140 °F
- *   • Chlorine PPM    50 – 200
- *   • Rectal (hatcher/separator) 104 – 106 °F, chick room 103 – 105 °F
- *
- * Overdue thresholds (per active target):
- *   • temp / angles / humidity : 24 h
- *   • hatch_progression         : during hatcher window (day 18+) 6 h; else N/A
- *   • tray_wash                 : 24 h
- *   • rectal_temperature        : 24 h (per room)
- *   • gravity / culls           : N/A on the "overdue" list (owner-triggered)
- */
-
-export type QACheckType =
-  | 'temperature'
-  | 'angles'
-  | 'humidity'
-  | 'hatch_progression'
-  | 'tray_wash'
-  | 'rectal_temperature'
-  | 'gravity'
-  | 'cull_check';
+export type QACheckType = 'temperature' | 'angles' | 'humidity' | 'hatch_progression' | 'tray_wash' | 'rectal_temperature' | 'gravity' | 'cull_check';
 
 export interface QAEntry {
   id: string;
@@ -41,357 +14,283 @@ export interface QAEntry {
   temperature: number | null;
   humidity: number | null;
   temp_avg_overall: number | null;
+  temp_avg_front: number | null;
+  temp_avg_middle: number | null;
+  temp_avg_back: number | null;
+  angle_top_left: number | null;
+  angle_mid_left: number | null;
+  angle_bottom_left: number | null;
+  angle_top_right: number | null;
+  angle_mid_right: number | null;
+  angle_bottom_right: number | null;
   day_of_incubation: number | null;
   notes: string | null;
   machine_id: string | null;
   batch_id: string | null;
+  unit_id: string | null;
   candling_results: any;
-  batch?: {
-    id: string;
-    batch_number: string;
-    flock?: { flock_name: string; flock_number: number } | null;
-  } | null;
-  machine?: { id: string; machine_number: string } | null;
+  batch?: { id: string; batch_number: string; flock?: { flock_name: string; flock_number: number } | null } | null;
+  machine?: { id: string; machine_number: string; machine_type?: string | null } | null;
 }
 
-export interface ComplianceCell {
-  key: string;
-  label: string;
-  status: 'ok' | 'warn' | 'missing';
-  lastValue?: string;
-  entryId?: string;
+export interface WeeklyMetric {
+  value: number | null;
+  count: number;
+  inRange: number;
+  total: number;
 }
 
-export interface ComplianceRow {
-  type: QACheckType;
-  label: string;
-  cells: ComplianceCell[];
-  doneCount: number;
-  totalCount: number;
+export interface HatchProgressRow {
+  machineId: string;
+  machineLabel: string;
+  stage: string;
+  hatched: number;
+  total: number;
+  percentage: number;
+  checkedAt: string;
+  entryId: string;
+  stale: boolean;
+}
+
+export interface DailyTrend {
+  date: string;
+  day: string;
+  eggshell: number | null;
+  rectal: number | null;
+  trayWash: number | null;
+  leftAngle: number | null;
+  rightAngle: number | null;
+  hatch: number | null;
+}
+
+export interface CoverageDay {
+  date: string;
+  day: string;
+  isFuture: boolean;
+  values: Record<'hatch' | 'temperature' | 'angles' | 'rectal' | 'trayWash', { done: number; expected: number }>;
 }
 
 export interface AttentionItem {
   id: string;
-  severity: 'critical' | 'warning';
-  type: QACheckType | 'overdue';
+  type: QACheckType;
   target: string;
   reason: string;
-  timestamp: string;
   entryId?: string;
 }
 
 export interface QAOverviewData {
-  kpis: {
-    today: number;
-    week: number;
-    outOfRange24h: number;
-    overdue: number;
-    activeMachinesToday: number;
-    totalActiveMachines: number;
+  weekStart: string;
+  weekEnd: string;
+  entries: QAEntry[];
+  hatchProgress: HatchProgressRow[];
+  trend: DailyTrend[];
+  coverage: CoverageDay[];
+  metrics: {
+    rectal: WeeklyMetric;
+    trayWash: WeeklyMetric & { ppmInRange: number; ppmTotal: number; completedDays: number };
+    eggshell: WeeklyMetric & { front: number | null; middle: number | null; back: number | null };
+    angles: { left: number | null; right: number | null; count: number; outOfRange: number };
+    completion: { done: number; expected: number; percentage: number };
   };
-  compliance: ComplianceRow[];
   attention: AttentionItem[];
-  recent: QAEntry[];
 }
 
-const CHECK_TYPE_LABEL: Record<QACheckType, string> = {
-  temperature: 'Temperature',
-  angles: 'Angles',
-  humidity: 'Humidity',
-  hatch_progression: 'Hatch Progression',
-  tray_wash: 'Tray Wash',
-  rectal_temperature: 'Rectal Temps',
-  gravity: 'Specific Gravity',
-  cull_check: 'Culls',
+const average = (values: Array<number | null | undefined>) => {
+  const valid = values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 };
 
-const ROOM_TARGETS = [
-  { key: 'setter_room',    label: 'Setter Room' },
-  { key: 'hatcher_room',   label: 'Hatcher Room' },
-  { key: 'chick_room',     label: 'Chick Room' },
-];
-const RECTAL_ROOMS = [
-  { key: 'hatcher',        label: 'Hatcher' },
-  { key: 'chick_room',     label: 'Chick Room' },
-  { key: 'separator_room', label: 'Separator Room' },
-];
+const parseResults = (value: any) => {
+  if (!value) return {};
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return {}; }
+};
 
-function parseCR(v: any): any {
-  if (v == null) return null;
-  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
-  return v;
-}
-
-function inferType(entry: QAEntry): QACheckType | null {
-  const cr = parseCR(entry.candling_results);
-  const t = cr?.type;
-  if (t === 'tray_wash') return 'tray_wash';
-  if (t === 'rectal_temperature') return 'rectal_temperature';
-  if (t === 'hatch_progression') return 'hatch_progression';
-  if (t === 'humidity') return 'humidity';
-  if (t === 'cull_check') return 'cull_check';
-  if (cr?.qa_type === 'angles' || cr?.type === 'angles') return 'angles';
-  if (cr?.qa_type === 'humidity') return 'humidity';
-  // Machine-wide temp entries write temp_avg_overall + no explicit type discriminator
-  if (entry.temp_avg_overall != null || cr?.temperatures) return 'temperature';
+export const inferQAType = (entry: QAEntry): QACheckType | null => {
+  const results = parseResults(entry.candling_results);
+  const type = results.type ?? results.qa_type;
+  if (type === 'setter_angles' || type === 'angles') return 'angles';
+  if (['tray_wash', 'rectal_temperature', 'hatch_progression', 'humidity', 'cull_check'].includes(type)) return type as QACheckType;
+  if (entry.temp_avg_overall != null || entry.temp_avg_front != null || results.temperatures) return 'temperature';
+  if (entry.angle_top_left != null || entry.angle_top_right != null) return 'angles';
   return null;
-}
+};
 
-function checkInRange(entry: QAEntry, type: QACheckType | null): boolean {
-  const cr = parseCR(entry.candling_results);
-  switch (type) {
-    case 'temperature': {
-      const t = entry.temp_avg_overall ?? entry.temperature;
-      return t == null || (t >= 99.5 && t <= 100.5);
-    }
-    case 'humidity': {
-      const h = entry.humidity;
-      return h == null || (h >= 53 && h <= 58);
-    }
-    case 'tray_wash': {
-      const temps = [cr?.firstCheck, cr?.secondCheck, cr?.thirdCheck].filter((v: any) => typeof v === 'number');
-      const tempsOK = temps.every((v: number) => v >= 140);
-      const ppms = [1, 2, 3, 4, 5]
-        .map((i) => cr?.[`ppm_check_${i}`])
-        .filter((v: any) => typeof v === 'number');
-      const ppmOK = ppms.every((v: number) => v >= 50 && v <= 200);
-      return tempsOK && ppmOK;
-    }
-    case 'rectal_temperature': {
-      const loc = cr?.location;
-      const t = cr?.temperature ?? entry.temperature;
-      if (t == null) return true;
-      if (loc === 'chick_room') return t >= 103 && t <= 105;
-      return t >= 104 && t <= 106;
-    }
-    case 'angles': {
-      const angles = [cr?.angle_top_left, cr?.angle_mid_left, cr?.angle_bottom_left,
-                      cr?.angle_top_right, cr?.angle_mid_right, cr?.angle_bottom_right]
-        .filter((v: any) => typeof v === 'number');
-      // Expected 40–45 degrees typical setter tilt tolerance
-      return angles.every((a: number) => a >= 38 && a <= 47);
-    }
-    case 'hatch_progression': return true; // no range — it's a counter
-    case 'gravity': return true;
-    case 'cull_check': return true;
-    default: return true;
+const entryTimestamp = (entry: QAEntry) => new Date(`${entry.check_date}T${entry.check_time || '23:59:59'}`).getTime();
+const isBetween = (value: number, min: number, max: number) => value >= min && value <= max;
+
+async function fetchAllQA(start: string, end: string, unitId?: string) {
+  const rows: QAEntry[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase.from('qa_monitoring').select(`
+      id, check_date, check_time, created_at, entry_mode, inspector_name, temperature, humidity,
+      temp_avg_overall, temp_avg_front, temp_avg_middle, temp_avg_back,
+      angle_top_left, angle_mid_left, angle_bottom_left, angle_top_right, angle_mid_right, angle_bottom_right,
+      day_of_incubation, notes, machine_id, batch_id, unit_id, candling_results,
+      batch:batches!qa_monitoring_batch_id_fkey(id, batch_number, flock:flocks!batches_flock_id_fkey(flock_name, flock_number)),
+      machine:machines!qa_monitoring_machine_id_fkey(id, machine_number, machine_type)
+    `).gte('check_date', start).lte('check_date', end).order('created_at', { ascending: false }).range(from, from + pageSize - 1);
+    if (unitId && unitId !== 'all') query = query.eq('unit_id', unitId);
+    const { data, error } = await query;
+    if (error) throw error;
+    rows.push(...((data ?? []) as unknown as QAEntry[]));
+    if (!data || data.length < pageSize) break;
   }
+  return rows;
 }
 
-const HOURS = (ms: number) => ms / (1000 * 60 * 60);
-
-export function useQAOverviewData(referenceDate?: string) {
+export function useQAOverviewData(referenceDate?: string, unitId?: string) {
   return useQuery({
-    queryKey: ['qa-overview', referenceDate ?? null],
+    queryKey: ['qa-overview-weekly', referenceDate ?? null, unitId ?? 'all'],
     refetchInterval: 60_000,
     queryFn: async (): Promise<QAOverviewData> => {
-      const realNow = new Date();
-      const todayStr = realNow.toISOString().split('T')[0];
-      const today = referenceDate || todayStr;
-      // Anchor = end-of-day of referenceDate, capped to actual now if today.
-      const anchor = referenceDate && referenceDate !== todayStr
-        ? new Date(`${referenceDate}T23:59:59`)
-        : realNow;
-      const now = anchor;
-      const weekAgo = new Date(anchor.getTime() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
-      const dayAgo = new Date(anchor.getTime() - 24 * 3600 * 1000).toISOString();
+      const anchor = referenceDate ? new Date(`${referenceDate}T12:00:00`) : new Date();
+      const weekStartDate = startOfWeek(anchor, { weekStartsOn: 1 });
+      const weekEndDate = endOfWeek(anchor, { weekStartsOn: 1 });
+      const weekStart = format(weekStartDate, 'yyyy-MM-dd');
+      const weekEnd = format(weekEndDate, 'yyyy-MM-dd');
+      const days = eachDayOfInterval({ start: weekStartDate, end: weekEndDate });
 
-      // 1. Active machines (per hatcheries)
-      const { data: machinesRaw } = await supabase
-        .from('machines')
-        .select('id, machine_number, machine_type, setter_mode, status')
-        .eq('status', 'active');
-      const machines = machinesRaw ?? [];
-      const setters = machines.filter((m: any) => ['setter', 'combo'].includes(m.machine_type));
-      const hatchers = machines.filter((m: any) => ['hatcher', 'combo'].includes(m.machine_type));
+      let machineQuery = supabase.from('machines').select('id, machine_number, machine_type, unit_id').eq('status', 'active');
+      if (unitId && unitId !== 'all') machineQuery = machineQuery.eq('unit_id', unitId);
+      const [{ data: machineRows, error: machineError }, entries] = await Promise.all([
+        machineQuery.order('machine_number'),
+        fetchAllQA(weekStart, weekEnd, unitId),
+      ]);
+      if (machineError) throw machineError;
 
-      // 2. Pull last 7 days of QA rows once — most of the panels derive from this.
-      const { data: qaRowsRaw } = await supabase
-        .from('qa_monitoring')
-        .select(`
-          id, check_date, check_time, created_at, entry_mode, inspector_name,
-          temperature, humidity, temp_avg_overall, day_of_incubation, notes,
-          machine_id, batch_id, candling_results,
-          batch:batches!qa_monitoring_batch_id_fkey(id, batch_number,
-            flock:flocks!batches_flock_id_fkey(flock_name, flock_number)),
-          machine:machines!qa_monitoring_machine_id_fkey(id, machine_number)
-        `)
-        .gte('check_date', weekAgo)
-        .order('created_at', { ascending: false })
-        .limit(500);
-      const qa = (qaRowsRaw ?? []) as any as QAEntry[];
+      const machines = machineRows ?? [];
+      const setters = machines.filter((m) => m.machine_type === 'setter' || m.machine_type === 'combo');
+      const hatchers = machines.filter((m) => m.machine_type === 'hatcher' || m.machine_type === 'combo');
+      const typed = entries.map((entry) => ({ entry, type: inferQAType(entry), results: parseResults(entry.candling_results) }));
+      const byType = (type: QACheckType) => typed.filter((row) => row.type === type);
 
-      const todayRows = qa.filter((r) => r.check_date === today);
-      const anchorMs = anchor.getTime();
-      const last24h = qa.filter((r) => {
-        const t = new Date(r.created_at).getTime();
-        return t >= new Date(dayAgo).getTime() && t <= anchorMs;
-      });
+      const rectalRows = byType('rectal_temperature');
+      const rectalValues = rectalRows.map(({ entry, results }) => Number(results.temperature ?? entry.temperature)).filter(Number.isFinite);
+      const rectalInRange = rectalRows.filter(({ entry, results }) => {
+        const value = Number(results.temperature ?? entry.temperature);
+        const location = results.location;
+        return Number.isFinite(value) && isBetween(value, location === 'chick_room' ? 103 : 104, location === 'chick_room' ? 105 : 106);
+      }).length;
 
-      // 3. KPIs
-      const outOfRange24h = last24h.reduce((acc, r) => {
-        const t = inferType(r);
-        return acc + (t && !checkInRange(r, t) ? 1 : 0);
-      }, 0);
-      const activeMachinesToday = new Set(todayRows.map((r) => r.machine_id).filter(Boolean)).size;
+      const trayRows = byType('tray_wash');
+      const trayTemps = trayRows.flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]).map(Number).filter(Number.isFinite);
+      const ppmValues = trayRows.flatMap(({ results }) => [1, 2, 3, 4, 5].map((i) => results[`ppm_check_${i}`])).map(Number).filter(Number.isFinite);
 
-      // 4. Compliance per type
-      const buildCells = (
-        targets: { key: string; label: string }[],
-        rowsForType: QAEntry[],
-        targetFor: (r: QAEntry) => string | null,
-        type: QACheckType,
-      ): ComplianceCell[] => {
-        return targets.map((tgt) => {
-          const rowsHere = rowsForType.filter((r) => targetFor(r) === tgt.key);
-          if (rowsHere.length === 0) {
-            return { key: tgt.key, label: tgt.label, status: 'missing' as const };
-          }
-          const latest = rowsHere[0];
-          const ok = checkInRange(latest, type);
-          const cr = parseCR(latest.candling_results);
-          const val =
-            type === 'temperature' ? `${(latest.temp_avg_overall ?? latest.temperature)?.toFixed(1) ?? '—'}°F`
-            : type === 'humidity'  ? `${latest.humidity?.toFixed(1) ?? '—'}%`
-            : type === 'tray_wash' ? 'Logged'
-            : type === 'rectal_temperature' ? `${(cr?.temperature ?? latest.temperature)?.toFixed(1) ?? '—'}°F`
-            : 'Logged';
-          return {
-            key: tgt.key,
-            label: tgt.label,
-            status: (ok ? 'ok' : 'warn') as 'ok' | 'warn',
-            lastValue: val,
-            entryId: latest.id,
-          };
+      const temperatureRows = byType('temperature');
+      const temperatureValues = temperatureRows.map(({ entry }) => entry.temp_avg_overall ?? entry.temperature).filter((v): v is number => typeof v === 'number');
+      const angleRows = byType('angles');
+      const leftValues = angleRows.flatMap(({ entry }) => [entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left]).filter((v): v is number => typeof v === 'number');
+      const rightValues = angleRows.flatMap(({ entry }) => [entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right]).filter((v): v is number => typeof v === 'number');
+      const angleOutOfRange = angleRows.filter(({ entry }) => [...[entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left], ...[entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right]].filter((v): v is number => typeof v === 'number').some((v) => !isBetween(v, 38, 47))).length;
+
+      const hatchByMachine = new Map<string, HatchProgressRow>();
+      byType('hatch_progression').forEach(({ entry, results }) => {
+        const machineId = entry.machine_id ?? `unassigned-${entry.id}`;
+        const previous = hatchByMachine.get(machineId);
+        if (previous && entryTimestamp(entry) <= new Date(previous.checkedAt).getTime()) return;
+        const total = Number(results.totalCount) || 0;
+        const hatched = Number(results.hatchedCount) || 0;
+        hatchByMachine.set(machineId, {
+          machineId,
+          machineLabel: entry.machine?.machine_number ?? 'Unassigned hatcher',
+          stage: results.stage ?? '—',
+          hatched,
+          total,
+          percentage: total > 0 ? (hatched / total) * 100 : Number(results.percentageOut) || 0,
+          checkedAt: new Date(`${entry.check_date}T${entry.check_time || '00:00:00'}`).toISOString(),
+          entryId: entry.id,
+          stale: Date.now() - entryTimestamp(entry) > 6 * 60 * 60 * 1000,
         });
-      };
-
-      const todayByType = (t: QACheckType) => todayRows.filter((r) => inferType(r) === t);
-
-      const setterTargets = setters.map((m: any) => ({ key: m.id, label: m.machine_number }));
-      const hatcherTargets = hatchers.map((m: any) => ({ key: m.id, label: m.machine_number }));
-
-      const compliance: ComplianceRow[] = [
-        { type: 'temperature',        label: CHECK_TYPE_LABEL.temperature,
-          cells: buildCells(setterTargets, todayByType('temperature'), (r) => r.machine_id, 'temperature'),
-          doneCount: 0, totalCount: setterTargets.length },
-        { type: 'angles',             label: CHECK_TYPE_LABEL.angles,
-          cells: buildCells(setterTargets, todayByType('angles'), (r) => r.machine_id, 'angles'),
-          doneCount: 0, totalCount: setterTargets.length },
-        { type: 'humidity',           label: CHECK_TYPE_LABEL.humidity,
-          cells: buildCells(setterTargets, todayByType('humidity'), (r) => r.machine_id, 'humidity'),
-          doneCount: 0, totalCount: setterTargets.length },
-        { type: 'hatch_progression',  label: CHECK_TYPE_LABEL.hatch_progression,
-          cells: buildCells(hatcherTargets, todayByType('hatch_progression'), (r) => r.machine_id, 'hatch_progression'),
-          doneCount: 0, totalCount: hatcherTargets.length },
-        { type: 'tray_wash',          label: CHECK_TYPE_LABEL.tray_wash,
-          cells: buildCells([{ key: 'process', label: 'Daily Log' }],
-            todayByType('tray_wash'), () => 'process', 'tray_wash'),
-          doneCount: 0, totalCount: 1 },
-        { type: 'rectal_temperature', label: CHECK_TYPE_LABEL.rectal_temperature,
-          cells: buildCells(RECTAL_ROOMS, todayByType('rectal_temperature'),
-            (r) => parseCR(r.candling_results)?.location ?? null, 'rectal_temperature'),
-          doneCount: 0, totalCount: RECTAL_ROOMS.length },
-      ];
-      compliance.forEach((row) => {
-        row.doneCount = row.cells.filter((c) => c.status !== 'missing').length;
       });
 
-      // 5. Attention items
+      const coverage: CoverageDay[] = days.map((dayDate) => {
+        const date = format(dayDate, 'yyyy-MM-dd');
+        const dayRows = typed.filter(({ entry }) => entry.check_date === date);
+        const countTargets = (type: QACheckType, key: 'machine_id' | 'room', expected: number) => {
+          const matching = dayRows.filter((row) => row.type === type);
+          const done = key === 'machine_id'
+            ? new Set(matching.map(({ entry }) => entry.machine_id).filter(Boolean)).size
+            : new Set(matching.map(({ results }) => results.location ?? 'process')).size;
+          return { done, expected };
+        };
+        return {
+          date,
+          day: format(dayDate, 'EEE'),
+          isFuture: dayDate > new Date(),
+          values: {
+            hatch: countTargets('hatch_progression', 'machine_id', hatchers.length),
+            temperature: countTargets('temperature', 'machine_id', setters.length),
+            angles: countTargets('angles', 'machine_id', setters.length),
+            rectal: countTargets('rectal_temperature', 'room', 3),
+            trayWash: countTargets('tray_wash', 'room', 1),
+          },
+        };
+      });
+
+      const applicableCoverage = coverage.filter((day) => !day.isFuture);
+      const completion = applicableCoverage.reduce((total, day) => {
+        Object.values(day.values).forEach((value) => { total.done += Math.min(value.done, value.expected); total.expected += value.expected; });
+        return total;
+      }, { done: 0, expected: 0 });
+
+      const trend: DailyTrend[] = days.map((dayDate) => {
+        const date = format(dayDate, 'yyyy-MM-dd');
+        const rows = typed.filter(({ entry }) => entry.check_date === date);
+        const entriesOf = (type: QACheckType) => rows.filter((row) => row.type === type);
+        const hatchRows = entriesOf('hatch_progression');
+        const hatchTotal = hatchRows.reduce((sum, row) => sum + (Number(row.results.totalCount) || 0), 0);
+        const hatchCount = hatchRows.reduce((sum, row) => sum + (Number(row.results.hatchedCount) || 0), 0);
+        return {
+          date,
+          day: format(dayDate, 'EEE'),
+          eggshell: average(entriesOf('temperature').map(({ entry }) => entry.temp_avg_overall ?? entry.temperature)),
+          rectal: average(entriesOf('rectal_temperature').map(({ entry, results }) => Number(results.temperature ?? entry.temperature))),
+          trayWash: average(entriesOf('tray_wash').flatMap(({ results }) => [results.firstCheck, results.secondCheck, results.thirdCheck]).map(Number)),
+          leftAngle: average(entriesOf('angles').flatMap(({ entry }) => [entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left])),
+          rightAngle: average(entriesOf('angles').flatMap(({ entry }) => [entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right])),
+          hatch: hatchTotal > 0 ? (hatchCount / hatchTotal) * 100 : null,
+        };
+      });
+
       const attention: AttentionItem[] = [];
-
-      // out-of-range readings in last 24h
-      last24h.forEach((r) => {
-        const t = inferType(r);
-        if (!t) return;
-        if (!checkInRange(r, t)) {
-          const cr = parseCR(r.candling_results);
-          const target =
-            r.machine?.machine_number ??
-            (cr?.location ? String(cr.location).replace(/_/g, ' ') : null) ??
-            r.batch?.batch_number ?? '—';
-          let reason = 'Out of range';
-          if (t === 'temperature') {
-            const v = r.temp_avg_overall ?? r.temperature;
-            reason = `Temp ${v?.toFixed(1)}°F outside 99.5–100.5`;
-          } else if (t === 'humidity') {
-            reason = `Humidity ${r.humidity?.toFixed(1)}% outside 53–58`;
-          } else if (t === 'tray_wash') {
-            reason = 'Tray wash temp/PPM outside spec';
-          } else if (t === 'rectal_temperature') {
-            const v = cr?.temperature ?? r.temperature;
-            reason = `Rectal ${v?.toFixed(1)}°F outside target`;
-          } else if (t === 'angles') {
-            reason = 'Angle outside 38–47°';
-          }
-          attention.push({
-            id: `oor-${r.id}`,
-            severity: 'critical',
-            type: t,
-            target,
-            reason,
-            timestamp: r.created_at,
-            entryId: r.id,
-          });
-        }
+      temperatureRows.forEach(({ entry }) => {
+        const value = entry.temp_avg_overall ?? entry.temperature;
+        if (value != null && !isBetween(value, 99.5, 100.5)) attention.push({ id: `temp-${entry.id}`, type: 'temperature', target: entry.machine?.machine_number ?? 'Machine', reason: `Eggshell temperature ${value.toFixed(1)}°F`, entryId: entry.id });
       });
-
-      // overdue targets — no reading in last 24h
-      const lastByTypeTarget = new Map<string, number>();
-      qa.forEach((r) => {
-        const t = inferType(r);
-        if (!t) return;
-        const cr = parseCR(r.candling_results);
-        const key =
-          t === 'rectal_temperature' ? `${t}::${cr?.location ?? 'unknown'}`
-          : t === 'tray_wash'          ? `${t}::process`
-          : `${t}::${r.machine_id ?? 'null'}`;
-        const ts = new Date(r.created_at).getTime();
-        const prev = lastByTypeTarget.get(key);
-        if (!prev || ts > prev) lastByTypeTarget.set(key, ts);
+      angleRows.forEach(({ entry }) => {
+        const left = average([entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left]);
+        const right = average([entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right]);
+        if ((left != null && !isBetween(left, 38, 47)) || (right != null && !isBetween(right, 38, 47))) attention.push({ id: `angle-${entry.id}`, type: 'angles', target: entry.machine?.machine_number ?? 'Setter', reason: `Setter angle outside 38–47°`, entryId: entry.id });
       });
-
-      const nowMs = now.getTime();
-      const pushOverdue = (type: QACheckType, targetKey: string, targetLabel: string, thresholdH: number) => {
-        const last = lastByTypeTarget.get(`${type}::${targetKey}`);
-        const hrs = last ? HOURS(nowMs - last) : Infinity;
-        if (hrs > thresholdH) {
-          attention.push({
-            id: `overdue-${type}-${targetKey}`,
-            severity: 'warning',
-            type: 'overdue',
-            target: targetLabel,
-            reason: `${CHECK_TYPE_LABEL[type]} overdue · ${last ? `${Math.floor(hrs)}h ago` : 'never'}`,
-            timestamp: new Date(last ?? nowMs - thresholdH * 3600 * 1000).toISOString(),
-          });
-        }
-      };
-      setters.forEach((m: any) => {
-        pushOverdue('temperature', m.id, m.machine_number, 24);
-        pushOverdue('humidity', m.id, m.machine_number, 24);
-        pushOverdue('angles', m.id, m.machine_number, 24);
+      rectalRows.forEach(({ entry, results }) => {
+        const value = Number(results.temperature ?? entry.temperature);
+        const location = results.location;
+        const ok = isBetween(value, location === 'chick_room' ? 103 : 104, location === 'chick_room' ? 105 : 106);
+        if (!ok) attention.push({ id: `rectal-${entry.id}`, type: 'rectal_temperature', target: String(location ?? 'Room').replace(/_/g, ' '), reason: `Rectal temperature ${value.toFixed(1)}°F`, entryId: entry.id });
       });
-      RECTAL_ROOMS.forEach((r) => pushOverdue('rectal_temperature', r.key, r.label, 24));
-      pushOverdue('tray_wash', 'process', 'Tray Wash', 24);
-
-      attention.sort((a, b) =>
-        a.severity === b.severity
-          ? new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          : a.severity === 'critical' ? -1 : 1
-      );
+      trayRows.forEach(({ entry, results }) => {
+        const temps = [results.firstCheck, results.secondCheck, results.thirdCheck].map(Number).filter(Number.isFinite);
+        const ppms = [1, 2, 3, 4, 5].map((i) => Number(results[`ppm_check_${i}`])).filter(Number.isFinite);
+        if (temps.some((v) => v < 140) || ppms.some((v) => !isBetween(v, 800, 1000))) attention.push({ id: `wash-${entry.id}`, type: 'tray_wash', target: 'Tray Wash', reason: 'Temperature or Quat PPM outside SOP', entryId: entry.id });
+      });
 
       return {
-        kpis: {
-          today: todayRows.length,
-          week: qa.length,
-          outOfRange24h,
-          overdue: attention.filter((a) => a.type === 'overdue').length,
-          activeMachinesToday,
-          totalActiveMachines: setters.length + hatchers.length,
+        weekStart,
+        weekEnd,
+        entries,
+        hatchProgress: Array.from(hatchByMachine.values()).sort((a, b) => a.machineLabel.localeCompare(b.machineLabel)),
+        trend,
+        coverage,
+        metrics: {
+          rectal: { value: average(rectalValues), count: rectalRows.length, inRange: rectalInRange, total: rectalRows.length },
+          trayWash: { value: average(trayTemps), count: trayRows.length, inRange: trayTemps.filter((v) => v >= 140).length, total: trayTemps.length, ppmInRange: ppmValues.filter((v) => isBetween(v, 800, 1000)).length, ppmTotal: ppmValues.length, completedDays: new Set(trayRows.map(({ entry }) => entry.check_date)).size },
+          eggshell: { value: average(temperatureValues), count: temperatureRows.length, inRange: temperatureValues.filter((v) => isBetween(v, 99.5, 100.5)).length, total: temperatureValues.length, front: average(temperatureRows.map(({ entry }) => entry.temp_avg_front)), middle: average(temperatureRows.map(({ entry }) => entry.temp_avg_middle)), back: average(temperatureRows.map(({ entry }) => entry.temp_avg_back)) },
+          angles: { left: average(leftValues), right: average(rightValues), count: angleRows.length, outOfRange: angleOutOfRange },
+          completion: { ...completion, percentage: completion.expected ? (completion.done / completion.expected) * 100 : 0 },
         },
-        compliance,
-        attention: attention.slice(0, 50),
-        recent: qa.slice(0, 25),
+        attention: attention.slice(0, 12),
       };
     },
   });
