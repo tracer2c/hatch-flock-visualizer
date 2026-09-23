@@ -25,6 +25,7 @@ interface Props {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
+  metrics?: Array<{ label: string; value: string | number }>;
 }
 
 /**
@@ -32,7 +33,14 @@ interface Props {
  * totals (not one house) so the user sees the same summary numbers as the
  * Weekly Flock Rollup that led them here.
  */
-export function FlockEntryHeader({ ctx, title, subtitle, icon }: Props) {
+export function FlockEntryHeader({ ctx, title, subtitle, icon, metrics }: Props) {
+  const summaryMetrics = metrics ?? [
+    { label: "Total Eggs Set", value: fmtInt(ctx.totalEggsSet) },
+    { label: "Injected", value: fmtInt(ctx.totalEggsInjected) },
+    { label: "Clears", value: fmtInt(ctx.totalEggsCleared) },
+    { label: "Chicks Hatched", value: fmtInt(ctx.totalChicksHatched) },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -65,30 +73,12 @@ export function FlockEntryHeader({ ctx, title, subtitle, icon }: Props) {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border bg-muted/30 p-4">
-          <div>
-            <div className="text-xs text-muted-foreground">Total Eggs Set</div>
-            <div className="text-xl font-semibold">
-              {fmtInt(ctx.totalEggsSet)}
+          {summaryMetrics.map((metric) => (
+            <div key={metric.label}>
+              <div className="text-xs text-muted-foreground">{metric.label}</div>
+              <div className="text-xl font-semibold tabular-nums">{metric.value}</div>
             </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Injected</div>
-            <div className="text-xl font-semibold">
-              {fmtInt(ctx.totalEggsInjected)}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Clears</div>
-            <div className="text-xl font-semibold">
-              {fmtInt(ctx.totalEggsCleared)}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Chicks Hatched</div>
-            <div className="text-xl font-semibold">
-              {fmtInt(ctx.totalChicksHatched)}
-            </div>
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>

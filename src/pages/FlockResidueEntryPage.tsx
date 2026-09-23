@@ -48,6 +48,10 @@ const FLOCK_FIELDS = [
   { key: "contaminated_eggs", label: "Contaminated" },
 ];
 
+const fmtInt = (value: number) => Math.round(value).toLocaleString();
+const fmtPct = (value: number, total: number) =>
+  total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "—";
+
 export default function FlockResidueEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
   const [params] = useSearchParams();
@@ -61,6 +65,12 @@ export default function FlockResidueEntryPage() {
   const [scope, setScope] = useState<"houses" | "flock">("houses");
   const [snapshot, setSnapshot] = useState<HouseMatrixRowSnapshot[]>([]);
   const [technician, setTechnician] = useState("");
+  const [totals, setTotals] = useState<Record<string, number>>({});
+  const sample = totals.sample_size ?? 0;
+  const totalDead =
+    (totals.early_dead ?? 0) +
+    (totals.mid_dead ?? 0) +
+    (totals.late_dead ?? 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -80,6 +90,12 @@ export default function FlockResidueEntryPage() {
           ctx={ctx}
           title="Residue Analysis"
           icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+          metrics={[
+            { label: "Sample Size", value: fmtInt(sample) },
+            { label: "Total Dead", value: fmtInt(totalDead) },
+            { label: "Total Dead %", value: fmtPct(totalDead, sample) },
+            { label: "Culls", value: fmtInt(totals.malformed_chicks ?? 0) },
+          ]}
         />
 
         {ctx.isLoading ? (
@@ -119,6 +135,7 @@ export default function FlockResidueEntryPage() {
                 periodStart={ctx.periodStart}
                 periodEnd={ctx.periodEnd}
                 fields={FLOCK_FIELDS}
+                onTotalsChange={setTotals}
               />
             ) : (
               <HouseMatrixEntry
@@ -130,6 +147,7 @@ export default function FlockResidueEntryPage() {
                 technicianKey="lab_technician"
                 dateKey="analysis_date"
                 readOnly={readOnly}
+                onTotalsChange={setTotals}
                 onSnapshot={(rows, tech) => {
                   setSnapshot(rows);
                   setTechnician(tech);

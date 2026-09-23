@@ -36,6 +36,12 @@ interface Props {
   readOnly?: boolean;
   onSaved?: () => void | Promise<void>;
   onSnapshot?: (rows: ClearsSheetRowSnapshot[], technician: string) => void;
+  onTotalsChange?: (totals: {
+    sample: number;
+    injectionPct: number | null;
+    hatchPct: number | null;
+    hoiPct: number | null;
+  }) => void;
 }
 
 type Cells = { sample: string; clears: string; hatch: string };
@@ -70,6 +76,7 @@ export default function WeeklyClearsSheet({
   readOnly,
   onSaved,
   onSnapshot,
+  onTotalsChange,
 }: Props) {
   const qc = useQueryClient();
   const { user, profile } = useAuth();
@@ -225,6 +232,10 @@ export default function WeeklyClearsSheet({
       hoiPct: injected > 0 ? (hatch / injected) * 100 : null,
     };
   }, [cells, rowsKey]);
+
+  useEffect(() => {
+    onTotalsChange?.(totals);
+  }, [totals, onTotalsChange]);
 
   const dirtyCount = Object.values(dirty).filter(Boolean).length;
 

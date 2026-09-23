@@ -25,6 +25,11 @@ const FIELDS: HouseMatrixField[] = [
   { key: "grade_b", label: "Grade B" },
   { key: "grade_c", label: "Grade C" },
 ];
+const FLOCK_FIELDS = FIELDS.map(({ key, label }) => ({ key, label }));
+
+const fmtInt = (value: number) => Math.round(value).toLocaleString();
+const fmtPct = (value: number, total: number) =>
+  total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "—";
 
 export default function FlockEggPackEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
@@ -39,6 +44,14 @@ export default function FlockEggPackEntryPage() {
   const [scope, setScope] = useState<"houses" | "flock">("houses");
   const [snapshot, setSnapshot] = useState<HouseMatrixRowSnapshot[]>([]);
   const [technician, setTechnician] = useState("");
+  const [totals, setTotals] = useState<Record<string, number>>({});
+  const sample = totals.sample_size ?? 0;
+  const gradeA = totals.grade_a ?? 0;
+  const defects =
+    (totals.cracked ?? 0) +
+    (totals.dirty ?? 0) +
+    (totals.small ?? 0) +
+    (totals.large ?? 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -59,6 +72,12 @@ export default function FlockEggPackEntryPage() {
           title="Egg Pack Worksheet – Pre-Incubation Quality"
           subtitle="Standard sampling: 648 eggs per flock"
           icon={<Package className="h-5 w-5 text-primary" />}
+          metrics={[
+            { label: "Sample Inspected", value: fmtInt(sample) },
+            { label: "Grade A", value: fmtInt(gradeA) },
+            { label: "Grade A %", value: fmtPct(gradeA, sample) },
+            { label: "Egg Pack Defects", value: fmtInt(defects) },
+          ]}
         />
 
         {ctx.isLoading ? (
@@ -97,7 +116,8 @@ export default function FlockEggPackEntryPage() {
                 flockNumber={ctx.flockNumber}
                 periodStart={ctx.periodStart}
                 periodEnd={ctx.periodEnd}
-                fields={FIELDS.map(({ key, label }) => ({ key, label }))}
+                fields={FLOCK_FIELDS}
+                onTotalsChange={setTotals}
               />
             ) : (
               <HouseMatrixEntry
@@ -109,6 +129,7 @@ export default function FlockEggPackEntryPage() {
                 technicianKey="inspector_name"
                 dateKey="inspection_date"
                 readOnly={readOnly}
+                onTotalsChange={setTotals}
                 onSnapshot={(rows, tech) => {
                   setSnapshot(rows);
                   setTechnician(tech);

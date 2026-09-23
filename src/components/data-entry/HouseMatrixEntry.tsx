@@ -43,6 +43,8 @@ interface Props {
   readOnly?: boolean;
   /** Emits the current on-screen rows so the page can print them. */
   onSnapshot?: (rows: HouseMatrixRowSnapshot[], technician: string) => void;
+  /** Emits combined live field totals for the page summary. */
+  onTotalsChange?: (totals: Record<string, number>) => void;
 }
 
 const todayISO = () => new Date().toISOString().split("T")[0];
@@ -63,6 +65,7 @@ export function HouseMatrixEntry({
   dateKey,
   readOnly,
   onSnapshot,
+  onTotalsChange,
 }: Props) {
   const qc = useQueryClient();
   const [loading, setLoading] = useState(true);
@@ -199,6 +202,10 @@ export function HouseMatrixEntry({
     });
     return out;
   }, [values, fields, batches]);
+
+  useEffect(() => {
+    onTotalsChange?.(totals);
+  }, [totals, onTotalsChange]);
 
   const dirtyCount = Object.values(dirty).filter(Boolean).length;
 

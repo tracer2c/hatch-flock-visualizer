@@ -22,6 +22,11 @@ const FIELDS: HouseMatrixField[] = [
   { key: "early_dead", label: "Early Dead" },
   { key: "late_dead", label: "Late Dead" },
 ];
+const FLOCK_FIELDS = FIELDS.map(({ key, label }) => ({ key, label }));
+
+const fmtInt = (value: number) => Math.round(value).toLocaleString();
+const fmtPct = (value: number, total: number) =>
+  total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "—";
 
 export default function FlockFertilityEntryPage() {
   const { flockKey = "" } = useParams<{ flockKey: string }>();
@@ -36,6 +41,10 @@ export default function FlockFertilityEntryPage() {
   const [scope, setScope] = useState<"houses" | "flock">("houses");
   const [snapshot, setSnapshot] = useState<HouseMatrixRowSnapshot[]>([]);
   const [technician, setTechnician] = useState("");
+  const [totals, setTotals] = useState<Record<string, number>>({});
+  const sample = totals.sample_size ?? 0;
+  const fertile = totals.fertile_eggs ?? 0;
+  const infertile = totals.infertile_eggs ?? 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -55,6 +64,12 @@ export default function FlockFertilityEntryPage() {
           ctx={ctx}
           title="Fertility Analysis"
           icon={<Egg className="h-5 w-5 text-primary" />}
+          metrics={[
+            { label: "Sample Size", value: fmtInt(sample) },
+            { label: "Fertile Eggs", value: fmtInt(fertile) },
+            { label: "Fertility %", value: fmtPct(fertile, sample) },
+            { label: "Infertile %", value: fmtPct(infertile, sample) },
+          ]}
         />
 
         {ctx.isLoading ? (
@@ -93,7 +108,8 @@ export default function FlockFertilityEntryPage() {
                 flockNumber={ctx.flockNumber}
                 periodStart={ctx.periodStart}
                 periodEnd={ctx.periodEnd}
-                fields={FIELDS.map(({ key, label }) => ({ key, label }))}
+                fields={FLOCK_FIELDS}
+                onTotalsChange={setTotals}
               />
             ) : (
               <HouseMatrixEntry
@@ -105,6 +121,7 @@ export default function FlockFertilityEntryPage() {
                 technicianKey="technician_name"
                 dateKey="analysis_date"
                 readOnly={readOnly}
+                onTotalsChange={setTotals}
                 onSnapshot={(rows, tech) => {
                   setSnapshot(rows);
                   setTechnician(tech);
