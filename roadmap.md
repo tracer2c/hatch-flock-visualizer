@@ -15,3 +15,11 @@
 - [x] Flock list badge, edit hatcheries, search by any linked hatchery
 - [x] House creation & multi-setter pickers include shared flocks
 - [x] Reports filter by house hatchery
+
+# Management Reports
+
+- [x] Replace report cards with the executive report workbench
+- [x] Add combined hatchery fertility with prior-period trends
+- [x] Add by-house breeder performance metrics
+- [x] Add 2–5 flock side-by-side comparison
+- [x] Add shared filters, print, PDF, and partial-data states

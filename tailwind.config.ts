@@ -26,7 +26,16 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'report-heading': ['Sora', 'ui-sans-serif', 'system-ui'],
+				'report-body': ['Manrope', 'ui-sans-serif', 'system-ui'],
+			},
 			colors: {
+				report: {
+					navy: 'hsl(var(--report-navy))',
+					accent: 'hsl(var(--report-accent))',
+					soft: 'hsl(var(--report-soft))',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
