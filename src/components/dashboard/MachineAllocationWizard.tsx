@@ -1,4 +1,5 @@
 /**
+import { useFlockUnitLinks, flockInUnit } from "@/hooks/useFlockUnitLinks";
  * Machine Allocation Wizard
  * 
  * Multi-step wizard for creating houses with capacity visualization
