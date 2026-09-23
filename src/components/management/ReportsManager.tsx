@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns";
-import { BarChart3, Calendar, Download, FileSpreadsheet, Home, Info, Layers3, Search, UsersRound } from "lucide-react";
+import { BarChart3, Calendar, Download, FileSpreadsheet, Home, Info, Search, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsPageWrapper } from "@/components/management/SettingsPageWrapper";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
