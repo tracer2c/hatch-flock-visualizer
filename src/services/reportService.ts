@@ -45,12 +45,19 @@ export interface ManagementReportPdfOptions {
 
 const REPORT_COLORS = {
   ink: [36, 54, 75] as const,
+  navy: [29, 45, 65] as const,
   muted: [100, 116, 139] as const,
   line: [203, 213, 225] as const,
   soft: [231, 237, 243] as const,
+  softer: [248, 250, 252] as const,
   red: [185, 28, 28] as const,
+  redSoft: [254, 226, 226] as const,
   green: [21, 128, 61] as const,
+  greenSoft: [220, 252, 231] as const,
   orange: [221, 85, 12] as const,
+  blue: [65, 105, 225] as const,
+  blueSoft: [232, 238, 255] as const,
+  white: [255, 255, 255] as const,
 };
 
 const pct = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? '—' : `${value.toFixed(1)}%`;
@@ -84,11 +91,11 @@ function totals(rows: ReportRow[]) {
 }
 
 function deltaLabel(current: number | null | undefined, previous: number | null | undefined, inverse = false) {
-  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous)) return { label: '—', tone: 'neutral' as const };
+  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous)) return { label: 'No prior', tone: 'neutral' as const };
   const delta = current - previous;
-  if (Math.abs(delta) < 0.05) return { label: '→ 0.0', tone: 'neutral' as const };
+  if (Math.abs(delta) < 0.05) return { label: 'Steady', tone: 'neutral' as const };
   const good = inverse ? delta < 0 : delta > 0;
-  return { label: `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(1)}`, tone: good ? 'good' as const : 'bad' as const };
+  return { label: `${delta > 0 ? 'Up' : 'Down'} ${Math.abs(delta).toFixed(1)} pts`, tone: good ? 'good' as const : 'bad' as const };
 }
 
 function sameGroupRows(previousRows: ReportRow[], row: ReportRow) {
