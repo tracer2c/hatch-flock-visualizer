@@ -9,3 +9,9 @@
 
 - [x] Replace horizontal flock cards with a searchable vertical list
 - [x] Automatically record the signed-in user on flock updates
+
+## Shared flocks across hatcheries
+- [x] One shared flock when several hatcheries selected (flock_units link)
+- [x] Flock list badge, edit hatcheries, search by any linked hatchery
+- [x] House creation & multi-setter pickers include shared flocks
+- [x] Reports filter by house hatchery
