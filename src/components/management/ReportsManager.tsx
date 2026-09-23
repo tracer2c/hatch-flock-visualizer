@@ -1,224 +1,105 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { FileText, Download, Calendar, Home, TrendingUp } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { ReportService } from '@/services/reportService';
-import { toast } from 'sonner';
-import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
+import { useMemo, useState } from "react";
+import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Check, ChevronsUpDown, Download, FileSpreadsheet, Home, Layers3, Printer, Search, UsersRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useHatcheries } from "@/hooks/useQAHubData";
+import { useManagementReportData, type ReportRow } from "@/hooks/useManagementReportData";
+import { usePrintMeta } from "@/hooks/usePrintMeta";
+import { ReportService } from "@/services/reportService";
+import { toast } from "sonner";
 
-const ReportsManager = () => {
-  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  const [weeklyDateFrom, setWeeklyDateFrom] = useState(format(startOfWeek(new Date()), 'yyyy-MM-dd'));
-  const [weeklyDateTo, setWeeklyDateTo] = useState(format(endOfWeek(new Date()), 'yyyy-MM-dd'));
-  const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
-  const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
+type ReportType = "house" | "fertility" | "comparison";
+const REPORTS = [
+  { id: "house" as const, label: "House Performance", description: "Production and quality by house", icon: Home },
+  { id: "fertility" as const, label: "Combined Fertility", description: "One sheet across hatcheries", icon: BarChart3 },
+  { id: "comparison" as const, label: "Flock Comparison", description: "Compare two to five flocks", icon: UsersRound },
+];
+const fmtInt = (value: number) => Math.round(value).toLocaleString();
+const fmtPct = (value: number | null) => value == null ? "—" : `${value.toFixed(1)}%`;
 
-  // Fetch batches for selection
-  const { data: batches } = useQuery({
-    queryKey: ['batches-for-reports'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('batches')
-        .select(`
-          id, batch_number, set_date, status,
-          flock:flocks(flock_name)
-        `)
-        .order('set_date', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data;
-    }
-  });
+function totalize(rows: ReportRow[]) {
+  const eggsSet = rows.reduce((sum, row) => sum + row.eggsSet, 0);
+  const chicksHatched = rows.reduce((sum, row) => sum + row.chicksHatched, 0);
+  const fertilitySample = rows.reduce((sum, row) => sum + row.fertilitySample, 0);
+  const fertileEggs = rows.reduce((sum, row) => sum + row.fertileEggs, 0);
+  const residueSample = rows.reduce((sum, row) => sum + row.residueSample, 0);
+  const contaminatedEggs = rows.reduce((sum, row) => sum + row.contaminatedEggs, 0);
+  const lateDead = rows.reduce((sum, row) => sum + row.lateDead, 0);
+  return { eggsSet, chicksHatched, fertilitySample, fertileEggs, fertilityPercent: fertilitySample ? fertileEggs / fertilitySample * 100 : null, contaminationPercent: residueSample ? contaminatedEggs / residueSample * 100 : null, lateDeadPercent: residueSample ? lateDead / residueSample * 100 : null, hatchPercent: eggsSet ? chicksHatched / eggsSet * 100 : null };
+}
 
-  const handleGenerateBatchReport = async () => {
-    if (!selectedBatchId) {
-      toast.error('Please select a house first');
-      return;
-    }
+function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
+  return <div className="min-w-0 border-l-2 border-report-accent/30 pl-4 first:border-l-0 first:pl-0"><p className="text-[11px] font-bold uppercase text-muted-foreground">{label}</p><p className="mt-1 font-report-heading text-2xl font-bold text-report-navy tabular-nums dark:text-foreground">{value}</p>{note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}</div>;
+}
 
-    setIsGeneratingBatch(true);
-    try {
-      const blob = await ReportService.generateBatchReport(selectedBatchId);
-      const batch = batches?.find(b => b.id === selectedBatchId);
-      const filename = `house-report-${batch?.batch_number || 'unknown'}-${format(new Date(), 'yyyyMMdd')}.pdf`;
-      ReportService.downloadBlob(blob, filename);
-      toast.success('House report downloaded successfully');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      toast.error('Failed to generate report');
-    } finally {
-      setIsGeneratingBatch(false);
-    }
-  };
+function EmptyReport() {
+  return <div className="flex min-h-72 flex-col items-center justify-center border-t px-6 text-center"><FileSpreadsheet className="mb-3 h-9 w-9 text-report-accent" /><h3 className="font-report-heading text-base font-semibold">No report rows in this range</h3><p className="mt-1 max-w-md text-sm text-muted-foreground">Choose a different week or hatchery. Data appears after set sheets are saved.</p></div>;
+}
 
-  const handleGenerateWeeklyReport = async () => {
-    setIsGeneratingWeekly(true);
-    try {
-      const blob = await ReportService.generateWeeklyReport(weeklyDateFrom, weeklyDateTo);
-      const filename = `weekly-report-${weeklyDateFrom}-to-${weeklyDateTo}.pdf`;
-      ReportService.downloadBlob(blob, filename);
-      toast.success('Weekly report downloaded successfully');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      toast.error('Failed to generate report');
-    } finally {
-      setIsGeneratingWeekly(false);
-    }
-  };
+function Trend({ current, previous }: { current: number | null; previous: number | null }) {
+  if (current == null || previous == null) return <span className="text-xs text-muted-foreground">No prior result</span>;
+  const delta = current - previous;
+  const Icon = delta > .05 ? ArrowUpRight : delta < -.05 ? ArrowDownRight : ArrowRight;
+  return <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", delta > .05 ? "text-success" : delta < -.05 ? "text-destructive" : "text-muted-foreground")}><Icon className="h-3.5 w-3.5" />{Math.abs(delta).toFixed(1)} pts</span>;
+}
 
-  const quickDateRanges = [
-    { label: 'This Week', from: startOfWeek(new Date()), to: endOfWeek(new Date()) },
-    { label: 'Last Week', from: startOfWeek(subDays(new Date(), 7)), to: endOfWeek(subDays(new Date(), 7)) },
-    { label: 'Last 7 Days', from: subDays(new Date(), 7), to: new Date() },
-    { label: 'Last 30 Days', from: subDays(new Date(), 30), to: new Date() },
-  ];
+type FlockOption = { id: string; label: string; ageWeeks: number | null };
+function FlockMultiSelect({ options, values, onChange }: { options: FlockOption[]; values: string[]; onChange: (ids: string[]) => void }) {
+  const [search, setSearch] = useState("");
+  const filtered = options.filter((option) => option.label.toLowerCase().includes(search.toLowerCase()));
+  return <Popover><PopoverTrigger asChild><Button variant="outline" className="h-10 w-full justify-between font-normal"><span className="truncate">{values.length ? `${values.length} flocks selected` : "Select 2–5 flocks"}</span><ChevronsUpDown className="h-4 w-4" /></Button></PopoverTrigger><PopoverContent align="start" className="w-80 p-0"><div className="flex items-center border-b px-3"><Search className="h-4 w-4 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search flocks" className="border-0 shadow-none focus-visible:ring-0" /></div><div className="max-h-64 overflow-y-auto p-1">{filtered.map((option) => { const selected = values.includes(option.id); return <Button key={option.id} variant="ghost" disabled={!selected && values.length >= 5} onClick={() => onChange(selected ? values.filter((id) => id !== option.id) : [...values, option.id])} className="h-auto w-full justify-start gap-2 px-2 py-2 font-normal"><span className={cn("flex h-4 w-4 items-center justify-center rounded-sm border", selected && "border-primary bg-primary text-primary-foreground")}>{selected && <Check className="h-3 w-3" />}</span><span className="min-w-0 flex-1 truncate text-left">{option.label}</span><span className="text-xs text-muted-foreground">{option.ageWeeks == null ? "Age —" : `${option.ageWeeks} wk`}</span></Button>; })}</div></PopoverContent></Popover>;
+}
 
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* House Report Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-primary" />
-              House Performance Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Generate a detailed PDF report for a specific house including production metrics, 
-              fertility analysis, and residue analysis data.
-            </p>
-            
-            <div className="space-y-2">
-              <Label>Select House</Label>
-              <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a house..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {batches?.map(batch => (
-                    <SelectItem key={batch.id} value={batch.id}>
-                      {batch.batch_number} - {(batch.flock as any)?.flock_name || 'N/A'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+function HouseReport({ rows }: { rows: ReportRow[] }) {
+  if (!rows.length) return <EmptyReport />;
+  const totals = totalize(rows);
+  return <><section className="grid grid-cols-2 gap-x-8 gap-y-5 border-b p-6 md:grid-cols-4"><div><p className="report-label">Flock</p><p className="report-value">{rows.length === 1 ? `${rows[0].flockNumber} · ${rows[0].flockName}` : `${new Set(rows.map((row) => row.flockId)).size} flocks`}</p></div><div><p className="report-label">Grower</p><p className="report-value text-muted-foreground">Not recorded</p></div><div><p className="report-label">House scope</p><p className="report-value">{rows.length === 1 ? rows[0].houseNumber : `${rows.length} houses`}</p></div><div><p className="report-label">Hatchery scope</p><p className="report-value">{new Set(rows.map((row) => row.unitName)).size === 1 ? rows[0].unitName : "Combined hatcheries"}</p></div></section><section className="grid grid-cols-2 gap-5 border-b p-6 md:grid-cols-4"><Metric label="Eggs set" value={fmtInt(totals.eggsSet)} /><Metric label="Fertility" value={fmtPct(totals.fertilityPercent)} note={`${fmtInt(totals.fertileEggs)} fertile`} /><Metric label="Contamination" value={fmtPct(totals.contaminationPercent)} /><Metric label="Weekly hatch" value={fmtPct(totals.hatchPercent)} note={`${fmtInt(totals.chicksHatched)} chicks`} /></section><div className="overflow-x-auto"><table className="w-full min-w-[1080px] border-collapse text-sm"><thead><tr className="bg-report-soft/60 text-left text-[11px] uppercase text-report-navy/70 dark:text-muted-foreground"><th className="report-th">Flock / House</th><th className="report-th">Hatchery</th><th className="report-th text-right">Eggs set</th><th className="report-th text-right">Fertility</th><th className="report-th text-right">Contamination</th><th className="report-th text-right">Late dead</th><th className="report-th text-right">Upside down</th><th className="report-th text-right">Early dead</th><th className="report-th text-right">Hatch</th><th className="report-th">Coverage</th></tr></thead><tbody>{rows.map((row) => <tr key={row.key} className="border-t hover:bg-muted/30"><td className="report-td"><p className="font-semibold">{row.flockNumber} · House {row.houseNumber}</p><p className="text-xs text-muted-foreground">{row.flockName}</p></td><td className="report-td">{row.unitName}</td><td className="report-td text-right tabular-nums">{fmtInt(row.eggsSet)}</td><td className="report-td text-right tabular-nums">{fmtPct(row.fertilityPercent)}</td><td className="report-td text-right tabular-nums">{fmtPct(row.contaminationPercent)}</td><td className="report-td text-right tabular-nums">{fmtPct(row.lateDeadPercent)}</td><td className="report-td text-right tabular-nums">{fmtInt(row.upsideDown)}</td><td className="report-td text-right tabular-nums">{fmtInt(row.earlyDead)}</td><td className="report-td text-right font-semibold tabular-nums">{fmtPct(row.hatchPercent)}</td><td className="report-td"><Badge variant={row.completeness >= 3 ? "secondary" : "outline"}>{row.completeness >= 3 ? "Complete" : `${row.completeness}/4 sources`}</Badge></td></tr>)}</tbody></table></div></>;
+}
 
-            <Button 
-              onClick={handleGenerateBatchReport} 
-              disabled={!selectedBatchId || isGeneratingBatch}
-              className="w-full"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingBatch ? 'Generating...' : 'Download House Report'}
-            </Button>
-          </CardContent>
-        </Card>
+function FertilityReport({ rows, previousRows }: { rows: ReportRow[]; previousRows: ReportRow[] }) {
+  if (!rows.length) return <EmptyReport />;
+  const totals = totalize(rows);
+  const previous = new Map(previousRows.map((row) => [row.key, row]));
+  return <><section className="grid grid-cols-2 gap-5 border-b p-6 md:grid-cols-4"><Metric label="Weighted fertility" value={fmtPct(totals.fertilityPercent)} note={`${fmtInt(totals.fertilitySample)} eggs sampled`} /><Metric label="Fertile eggs" value={fmtInt(totals.fertileEggs)} /><Metric label="Hatcheries" value={fmtInt(new Set(rows.map((row) => row.unitName)).size)} note="shown on one sheet" /><Metric label="Houses reported" value={fmtInt(rows.filter((row) => row.fertilityPercent != null).length)} /></section><div className="overflow-x-auto"><table className="w-full min-w-[820px] border-collapse text-sm"><thead><tr className="bg-report-soft/60 text-left text-[11px] uppercase text-report-navy/70 dark:text-muted-foreground"><th className="report-th">Hatchery</th><th className="report-th">Flock</th><th className="report-th">House</th><th className="report-th text-right">Sample</th><th className="report-th text-right">Fertile</th><th className="report-th text-right">Fertility</th><th className="report-th">Prior period change</th></tr></thead><tbody>{rows.map((row) => <tr key={row.key} className="border-t hover:bg-muted/30"><td className="report-td font-medium">{row.unitName}</td><td className="report-td">{row.flockNumber} · {row.flockName}</td><td className="report-td">{row.houseNumber}</td><td className="report-td text-right">{fmtInt(row.fertilitySample)}</td><td className="report-td text-right">{fmtInt(row.fertileEggs)}</td><td className="report-td text-right font-semibold">{fmtPct(row.fertilityPercent)}</td><td className="report-td"><Trend current={row.fertilityPercent} previous={previous.get(row.key)?.fertilityPercent ?? null} /></td></tr>)}</tbody></table></div></>;
+}
 
-        {/* Weekly Report Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Weekly Summary Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Generate a weekly summary report showing all houses set during the selected 
-              period with aggregate metrics and performance data.
-            </p>
+function ComparisonReport({ rows, ids }: { rows: ReportRow[]; ids: string[] }) {
+  const selected = ids.map((id) => { const flockRows = rows.filter((row) => row.flockId === id); return flockRows.length ? { id, rows: flockRows, first: flockRows[0], totals: totalize(flockRows) } : null; }).filter(Boolean) as Array<{ id: string; rows: ReportRow[]; first: ReportRow; totals: ReturnType<typeof totalize> }>;
+  if (selected.length < 2) return <div className="flex min-h-72 flex-col items-center justify-center border-t px-6 text-center"><Layers3 className="mb-3 h-9 w-9 text-report-accent" /><h3 className="font-report-heading font-semibold">Select at least two flocks</h3><p className="mt-1 text-sm text-muted-foreground">Choose up to five flocks above.</p></div>;
+  const ages = selected.map((item) => item.first.ageWeeks).filter((age): age is number => age != null);
+  const metrics = [{ label: "Eggs set", get: (x: typeof selected[number]) => x.totals.eggsSet, pct: false, high: true }, { label: "Fertility", get: (x: typeof selected[number]) => x.totals.fertilityPercent, pct: true, high: true }, { label: "Contamination", get: (x: typeof selected[number]) => x.totals.contaminationPercent, pct: true, high: false }, { label: "Late dead", get: (x: typeof selected[number]) => x.totals.lateDeadPercent, pct: true, high: false }, { label: "Upside down", get: (x: typeof selected[number]) => x.rows.reduce((sum, row) => sum + row.upsideDown, 0), pct: false, high: false }, { label: "Early dead", get: (x: typeof selected[number]) => x.rows.reduce((sum, row) => sum + row.earlyDead, 0), pct: false, high: false }, { label: "Weekly hatch", get: (x: typeof selected[number]) => x.totals.hatchPercent, pct: true, high: true }];
+  return <><div className="flex justify-between gap-3 border-b px-6 py-4 text-sm text-muted-foreground"><span>{selected.length} flocks selected</span><Badge variant={ages.length && Math.max(...ages) - Math.min(...ages) > 2 ? "outline" : "secondary"}>{ages.length && Math.max(...ages) - Math.min(...ages) > 2 ? `Age spread ${Math.max(...ages) - Math.min(...ages)} weeks` : "Comparable age range"}</Badge></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="bg-report-soft/60"><th className="report-th text-left">Metric</th>{selected.map((item) => <th key={item.id} className="report-th min-w-44 text-right"><span className="block">Flock {item.first.flockNumber}</span><span className="font-normal text-muted-foreground">{item.first.ageWeeks == null ? "Age not recorded" : `${item.first.ageWeeks} weeks`}</span></th>)}</tr></thead><tbody>{metrics.map((metric) => { const values = selected.map(metric.get).filter((value): value is number => value != null); const best = values.length ? (metric.high ? Math.max(...values) : Math.min(...values)) : null; const average = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null; return <tr key={metric.label} className="border-t"><td className="report-td font-medium text-muted-foreground">{metric.label}</td>{selected.map((item) => { const value = metric.get(item); return <td key={item.id} className={cn("report-td text-right tabular-nums", value != null && value === best && "bg-success/5 font-bold text-success")}><span className="block">{metric.pct ? fmtPct(value) : fmtInt(value || 0)}</span>{value != null && average != null && <span className="text-[10px] font-normal text-muted-foreground">{value >= average ? "+" : ""}{(value - average).toFixed(1)} vs group</span>}</td>; })}</tr>; })}</tbody></table></div></>;
+}
 
-            {/* Quick Date Range Buttons */}
-            <div className="flex flex-wrap gap-2">
-              {quickDateRanges.map(range => (
-                <Button
-                  key={range.label}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setWeeklyDateFrom(format(range.from, 'yyyy-MM-dd'));
-                    setWeeklyDateTo(format(range.to, 'yyyy-MM-dd'));
-                  }}
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>From Date</Label>
-                <Input 
-                  type="date" 
-                  value={weeklyDateFrom}
-                  onChange={e => setWeeklyDateFrom(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>To Date</Label>
-                <Input 
-                  type="date" 
-                  value={weeklyDateTo}
-                  onChange={e => setWeeklyDateTo(e.target.value)}
-                />
-              </div>
-            </div>
+export default function ReportsManager() {
+  const now = new Date();
+  const [reportType, setReportType] = useState<ReportType>("house");
+  const [from, setFrom] = useState(startOfWeek(now, { weekStartsOn: 1 }));
+  const [to, setTo] = useState(endOfWeek(now, { weekStartsOn: 1 }));
+  const [unitId, setUnitId] = useState("all");
+  const [flockId, setFlockId] = useState("all");
+  const [house, setHouse] = useState("all");
+  const [selectedFlocks, setSelectedFlocks] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
+  const { data, isLoading, error, dataUpdatedAt } = useManagementReportData({ from, to });
+  const { data: hatcheries = [] } = useHatcheries();
+  const printMeta = usePrintMeta();
+  const rows = data?.rows || [];
+  const filtered = useMemo(() => rows.filter((row) => (unitId === "all" || row.unitId === unitId) && (flockId === "all" || row.flockId === flockId) && (house === "all" || row.houseNumber === house)), [rows, unitId, flockId, house]);
+  const previous = (data?.previousRows || []).filter((row) => unitId === "all" || row.unitId === unitId);
+  const flockOptions = useMemo(() => Array.from(new Map(rows.filter((row) => unitId === "all" || row.unitId === unitId).map((row) => [row.flockId, { id: row.flockId, label: `${row.flockNumber} · ${row.flockName}`, ageWeeks: row.ageWeeks }])).values()).filter((option) => option.id), [rows, unitId]);
+  const houses = useMemo(() => Array.from(new Set(rows.filter((row) => (unitId === "all" || row.unitId === unitId) && (flockId === "all" || row.flockId === flockId)).map((row) => row.houseNumber))).sort(), [rows, unitId, flockId]);
+  const report = REPORTS.find((item) => item.id === reportType) || REPORTS[0];
+  const setWeek = (date: Date) => { setFrom(startOfWeek(date, { weekStartsOn: 1 })); setTo(endOfWeek(date, { weekStartsOn: 1 })); };
+  const exportPdf = async () => { setExporting(true); try { await ReportService.generateVisualReport({ title: report.label, subtitle: `${format(from, "MMM d, yyyy")} – ${format(to, "MMM d, yyyy")}`, summary: [`${filtered.length} house rows are included.`, "Percentages use combined counts rather than percentage averages.", `Prepared for ${printMeta.companyName} by ${printMeta.userName}.`], captureElementId: "report-print-root", filename: `${reportType}-report-${format(from, "yyyy-MM-dd")}` }); toast.success("Report PDF downloaded"); } catch (reason) { console.error(reason); toast.error("The PDF could not be generated"); } finally { setExporting(false); } };
 
-            <Button 
-              onClick={handleGenerateWeeklyReport} 
-              disabled={isGeneratingWeekly}
-              className="w-full"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingWeekly ? 'Generating...' : 'Download Weekly Report'}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Report Types Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Available Reports
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 border rounded-lg">
-              <h4 className="font-medium mb-2">House Performance Report</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• House information and status</li>
-                <li>• Production metrics (eggs set, injected, hatched)</li>
-                <li>• Fertility analysis data</li>
-                <li>• Residue analysis breakdown</li>
-                <li>• Hatchability percentages (HOF%, HOI%)</li>
-              </ul>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <h4 className="font-medium mb-2">Weekly Summary Report</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Total houses set during period</li>
-                <li>• Aggregate egg and chick counts</li>
-                <li>• Average hatch rate across all houses</li>
-                <li>• House-by-house summary table</li>
-                <li>• Performance trends overview</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-export default ReportsManager;
+  return <div className="report-workbench min-h-[calc(100vh-5rem)] bg-report-soft p-3 font-report-body md:p-6"><div className="mx-auto flex min-h-[760px] max-w-[1500px] flex-col overflow-hidden rounded-lg border bg-card shadow-lg lg:flex-row"><aside className="report-print-hide flex shrink-0 flex-col bg-report-navy p-4 text-primary-foreground lg:w-64 lg:p-6"><p className="mb-4 font-report-heading text-[11px] font-bold uppercase text-primary-foreground/60 lg:mb-7">Report center</p><nav className="flex gap-2 overflow-x-auto lg:flex-col">{REPORTS.map((item) => { const Icon = item.icon; return <Button key={item.id} variant="ghost" onClick={() => setReportType(item.id)} className={cn("h-auto min-w-52 justify-start gap-3 px-3 py-3 text-left hover:bg-primary-foreground/10 hover:text-primary-foreground lg:min-w-0", reportType === item.id ? "border-l-2 border-report-accent bg-primary-foreground/5 text-report-accent" : "text-primary-foreground/70")}><Icon className="h-4 w-4" /><span><span className="block text-sm font-semibold">{item.label}</span><span className="block text-[10px] font-normal opacity-70">{item.description}</span></span></Button>; })}</nav><div className="mt-auto hidden rounded-md bg-report-accent/15 p-4 lg:block"><p className="text-[10px] font-bold uppercase text-report-accent">Data freshness</p><p className="mt-1 text-xs text-primary-foreground/60">{dataUpdatedAt ? `Synced ${format(new Date(dataUpdatedAt), "MMM d, h:mm a")}` : "Waiting for data"}</p></div></aside><main className="min-w-0 flex-1 bg-background"><header className="report-print-hide flex flex-col gap-4 border-b px-5 py-5 md:flex-row md:items-center md:justify-between md:px-8"><div><h1 className="font-report-heading text-2xl font-bold text-report-navy dark:text-foreground">{report.label}</h1><p className="mt-1 text-sm text-muted-foreground">{report.description}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</Button><Button onClick={exportPdf} disabled={exporting}><Download className="mr-2 h-4 w-4" />{exporting ? "Preparing…" : "Export PDF"}</Button></div></header><section className="report-print-hide border-b bg-card px-5 py-4 md:px-8"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><div><Label className="report-filter-label">From</Label><DatePicker date={from} onSelect={(date) => date && setFrom(date)} maxDate={to} className="h-10" /></div><div><Label className="report-filter-label">To</Label><DatePicker date={to} onSelect={(date) => date && setTo(date)} minDate={from} className="h-10" /></div><div><Label className="report-filter-label">Hatchery</Label><Select value={unitId} onValueChange={(value) => { setUnitId(value); setHouse("all"); }}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All hatcheries</SelectItem>{hatcheries.map((unit) => <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>)}</SelectContent></Select></div>{reportType === "comparison" ? <div className="sm:col-span-2"><Label className="report-filter-label">Flocks</Label><FlockMultiSelect options={flockOptions} values={selectedFlocks} onChange={setSelectedFlocks} /></div> : <><div><Label className="report-filter-label">Flock</Label><Select value={flockId} onValueChange={(value) => { setFlockId(value); setHouse("all"); }}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All flocks</SelectItem>{flockOptions.map((option) => <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>)}</SelectContent></Select></div><div><Label className="report-filter-label">House</Label><Select value={house} onValueChange={setHouse}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All houses</SelectItem>{houses.map((value) => <SelectItem key={value} value={value}>House {value}</SelectItem>)}</SelectContent></Select></div></>}</div><div className="mt-3 flex gap-2"><Button size="sm" variant="ghost" onClick={() => setWeek(now)}>This week</Button><Button size="sm" variant="ghost" onClick={() => setWeek(subWeeks(now, 1))}>Last week</Button></div></section><div className="p-3 md:p-6"><article id="report-print-root" className="overflow-hidden rounded-md border bg-card shadow-sm"><div className="flex flex-col gap-3 border-b px-6 py-5 md:flex-row md:justify-between"><div><p className="font-report-heading text-lg font-bold text-report-navy dark:text-foreground">{report.label}</p><p className="mt-1 text-sm text-muted-foreground">{format(from, "MMMM d, yyyy")} – {format(to, "MMMM d, yyyy")} · {unitId === "all" ? "All hatcheries" : hatcheries.find((unit) => unit.id === unitId)?.name}</p></div><div className="text-xs text-muted-foreground md:text-right"><p className="font-semibold text-foreground">{printMeta.companyName}</p><p>Prepared by {printMeta.userName}</p><p>{format(new Date(), "MMM d, yyyy · h:mm a")}</p></div></div>{isLoading ? <div className="space-y-3 p-6"><Skeleton className="h-16" /><Skeleton className="h-52" /></div> : error ? <div className="p-8 text-center text-destructive">Report data could not be loaded.</div> : reportType === "house" ? <HouseReport rows={filtered} /> : reportType === "fertility" ? <FertilityReport rows={filtered} previousRows={previous} /> : <ComparisonReport rows={rows.filter((row) => unitId === "all" || row.unitId === unitId)} ids={selectedFlocks} />}<footer className="flex flex-wrap justify-between gap-2 border-t bg-report-soft/40 px-6 py-3 text-[11px] text-muted-foreground"><span>Percentages use combined counts, not percentage averages.</span><span>{filtered.some((row) => row.completeness < 3) ? "Some rows contain partial data." : "All displayed sources complete."}</span></footer></article></div></main></div></div>;
+}
