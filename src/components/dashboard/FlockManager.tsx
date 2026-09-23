@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { formatLocalDate } from "@/utils/localDate";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2, Users, Home, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, User, Egg, Archive, ArchiveRestore } from "lucide-react";
+import { Plus, Trash2, Users, Calendar, Filter, X, ChevronDown, Building2, Pencil, Clock, Egg, Archive, ArchiveRestore, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
@@ -21,6 +19,7 @@ import { FlockHistoryService } from "@/services/flockHistoryService";
 import FlockUpdateHistory from "./FlockUpdateHistory";
 import { useArchive } from "@/hooks/useArchive";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 
 interface Flock {
   id: string;
@@ -60,6 +59,7 @@ const FlockManager = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [flockToDelete, setFlockToDelete] = useState<Flock | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { archive: archiveFlock, restore: restoreFlock, isMutating: archiveBusy } = useArchive("flocks");
   const { hasWriteAccess } = usePermissions();
   const canArchive = hasWriteAccess("flocks_management");
@@ -82,6 +82,7 @@ const FlockManager = () => {
   const [selectedHatcheries, setSelectedHatcheries] = useState<string[]>([]);
   const [birdCountsPerHatchery, setBirdCountsPerHatchery] = useState<Record<string, string>>({});
   const { toast } = useToast();
+  const currentUserName = useCurrentUserName();
 
   // Units
   type Unit = { id: string; name: string; code?: string; status?: string };
@@ -219,17 +220,8 @@ const FlockManager = () => {
       return;
     }
 
-    // Require technician name when editing
-    if (editingFlock && !formData.technician_name) {
-      toast({
-        title: "Technician Name Required",
-        description: "Please enter the technician name who is making this update",
-        variant: "destructive"
-      });
-      return;
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
+    const technicianName = currentUserName || user?.email || '';
 
     // Creating new flock(s)
     if (!editingFlock) {
@@ -263,7 +255,7 @@ const FlockManager = () => {
           notes: formData.notes || null,
           unit_id: unitId,
           flock_group_id: groupId,
-          technician_name: formData.technician_name || null,
+          technician_name: technicianName || null,
           data_type: 'original' as const,
           created_by: user?.id,
           updated_by: user?.id,
@@ -290,7 +282,7 @@ const FlockManager = () => {
             await FlockHistoryService.logFlockCreation(
               flock.id,
               user?.id || '',
-              formData.technician_name || ''
+              technicianName
             );
           }
         }
@@ -373,7 +365,7 @@ const FlockManager = () => {
         total_birds: formData.total_birds ? parseInt(formData.total_birds) : null,
         notes: formData.notes || null,
         unit_id: newUnitId,
-        technician_name: formData.technician_name || null,
+        technician_name: technicianName || null,
         updated_by: user?.id,
         last_modified_at: new Date().toISOString()
       })
@@ -392,7 +384,7 @@ const FlockManager = () => {
           editingFlock.id,
           changes,
           user?.id || '',
-          formData.technician_name || 'Unknown'
+          technicianName || 'Signed-in user'
         );
       }
       
@@ -412,7 +404,7 @@ const FlockManager = () => {
       arrival_date: flock.arrival_date,
       total_birds: flock.total_birds?.toString() || '',
       notes: flock.notes || '',
-      technician_name: flock.technician_name || '',
+      technician_name: currentUserName,
     });
     setSelectedHatcheries(flock.unit_id ? [flock.unit_id] : []);
     setShowDialog(true);
@@ -449,6 +441,13 @@ const FlockManager = () => {
 
   const filteredFlocks = useMemo(() => {
     return flocks.filter(flock => {
+      const search = searchQuery.trim().toLowerCase();
+      if (search && ![
+        flock.flock_number.toString(),
+        flock.flock_name,
+        flock.unit?.name ?? '',
+        flock.house_number ?? '',
+      ].some(value => value.toLowerCase().includes(search))) return false;
       if ((filters as any).flockNumber && !flock.flock_number.toString().includes((filters as any).flockNumber)) return false;
       if ((filters as any).flockName && !flock.flock_name.toLowerCase().includes((filters as any).flockName.toLowerCase())) return false;
       if ((filters as any).houseNumber && (filters as any).houseNumber !== "all" && flock.house_number !== (filters as any).houseNumber) return false;
@@ -456,7 +455,7 @@ const FlockManager = () => {
       if ((filters as any).maxAge && flock.age_weeks > parseInt((filters as any).maxAge)) return false;
       return true;
     });
-  }, [flocks, filters]);
+  }, [flocks, filters, searchQuery]);
 
   const uniqueHouseNumbers = useMemo(() => {
     return [...new Set(flocks.map(f => f.house_number).filter(Boolean))].sort();
@@ -491,19 +490,18 @@ const FlockManager = () => {
 
   return (
     <>
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
           <span className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Flock Management
+            <span className="text-lg font-semibold">Flock Management</span>
             {activeFilterCount > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
               </Badge>
             )}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant={showArchived ? "secondary" : "outline"}
               size="sm"
@@ -665,16 +663,6 @@ const FlockManager = () => {
                   />
                 </div>
 
-                {/* 7. Technician Name */}
-                <div className="space-y-2">
-                  <Label>Technician Name</Label>
-                  <Input
-                    value={formData.technician_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, technician_name: e.target.value }))}
-                    placeholder="Enter technician name"
-                  />
-                </div>
-
                 {/* 8. Notes */}
                 <div className="space-y-2 md:col-span-2">
                   <Label>Notes</Label>
@@ -697,12 +685,34 @@ const FlockManager = () => {
             </DialogContent>
           </Dialog>
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      <div className="relative max-w-xl">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search by flock number, name, hatchery, or house…"
+          className="pl-9 pr-9"
+        />
+        {searchQuery && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+            onClick={() => setSearchQuery('')}
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      <div>
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent className="mb-6">
-            <div className="p-4 bg-gray-50 rounded-lg border">
+            <div className="border-y bg-muted/30 py-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Flock Number</Label>
@@ -820,168 +830,41 @@ const FlockManager = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {(() => {
-          const groupedFlocks = Object.entries(
-            filteredFlocks.reduce((groups, flock) => {
-              const groupId = flock.flock_group_id || `single-${flock.id}`;
-              if (!groups[groupId]) groups[groupId] = [];
-              groups[groupId].push(flock);
-              return groups;
-            }, {} as Record<string, typeof filteredFlocks>)
-          );
-          
-          const midpoint = Math.ceil(groupedFlocks.length / 2);
-          const firstRow = groupedFlocks.slice(0, midpoint);
-          const secondRow = groupedFlocks.slice(midpoint);
-          
-          const renderFlockCards = (groups: typeof groupedFlocks) => groups.map(([groupId, flocks]) => (
-            <div key={groupId} className="flex-shrink-0 space-y-3" style={{ width: flocks[0].flock_group_id ? `${Math.min(flocks.length * 320, 1000)}px` : '300px' }}>
-              {flocks[0].flock_group_id && (
-                <div className="px-3 py-2 bg-primary/10 border-l-4 border-primary rounded">
-                  <p className="text-sm font-medium text-primary flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Flock Group #{flocks[0].flock_number} - {flocks[0].flock_name}
-                    <Badge variant="secondary" className="ml-2">{flocks.length} hatcheries</Badge>
-                  </p>
-                </div>
-              )}
-              <div className="flex gap-4">
-                {flocks.map(flock => (
-                  <div key={flock.id} className={`flex-shrink-0 w-[300px] p-4 border rounded-lg hover:border-primary/50 transition-colors ${flock.archived_at ? 'opacity-60 bg-muted/30' : ''}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg">{flock.flock_number}</h3>
-                        {flock.archived_at && (
-                          <Badge variant="outline" className="text-xs">
-                            <Archive className="h-3 w-3 mr-1" />
-                            Archived
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
-                        {!flock.archived_at && (
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(flock)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canArchive && (
-                          flock.archived_at ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={archiveBusy}
-                              onClick={() => restoreFlock(flock.id)}
-                              title="Restore flock"
-                            >
-                              <ArchiveRestore className="h-4 w-4 text-primary" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={archiveBusy}
-                              onClick={() => {
-                                if (confirm(`Archive flock #${flock.flock_number} (${flock.flock_name})?\n\nIt will be hidden from active dropdowns but all batches and historical data remain visible.`)) {
-                                  archiveFlock(flock.id);
-                                }
-                              }}
-                              title="Archive flock"
-                            >
-                              <Archive className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          )
-                        )}
-                        {!flock.archived_at && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(flock.id, flock.flock_number, flock.flock_name)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <p className="font-medium text-muted-foreground">{flock.flock_name}</p>
-                      {flock.unit && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="h-4 w-4" />
-                          <span>{flock.unit.name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>{formatLocalDate(flock.arrival_date)}</span>
-                        <Badge variant="outline" className="ml-auto">{flock.age_weeks} weeks</Badge>
-                      </div>
-                      {flock.total_birds && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Egg className="h-4 w-4" />
-                          <span>{flock.total_birds.toLocaleString()} eggs</span>
-                        </div>
-                      )}
-                      {flock.last_modified_at && (
-                        <div className="pt-2 border-t flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <HoverCard>
-                            <HoverCardTrigger asChild>
-                              <button className="hover:text-primary transition-colors">
-                                Updated {format(new Date(flock.last_modified_at), 'MMM d, h:mm a')}
-                              </button>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-80">
-                              <div className="space-y-2">
-                                <h4 className="font-semibold text-sm">Update History</h4>
-                                <div className="space-y-1 text-xs">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Last Updated:</span>
-                                    <span>{format(new Date(flock.last_modified_at), 'PPp')}</span>
-                                  </div>
-                                  {flock.updated_by_profile && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Updated By:</span>
-                                      <span className="font-medium">
-                                        {flock.updated_by_profile.first_name} {flock.updated_by_profile.last_name}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {flock.technician_name && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Technician:</span>
-                                      <span className="font-medium">{flock.technician_name}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </HoverCardContent>
-                          </HoverCard>
-                          {flock.technician_name && (
-                            <Badge variant="outline" className="ml-auto">
-                              {flock.technician_name}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
+        {filteredFlocks.length > 0 && (
+          <div className="overflow-hidden rounded-md border">
+            <div className="hidden grid-cols-[100px_minmax(180px,1.5fr)_minmax(140px,1fr)_120px_120px_150px_120px] gap-4 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid">
+              <span>Flock</span><span>Name</span><span>Hatchery</span><span>Arrival</span><span>Age</span><span>Eggs</span><span className="text-right">Actions</span>
+            </div>
+            <div className="divide-y">
+              {filteredFlocks.map((flock) => (
+                <div key={flock.id} className={`grid gap-3 px-4 py-3 transition-colors hover:bg-muted/30 lg:grid-cols-[100px_minmax(180px,1.5fr)_minmax(140px,1fr)_120px_120px_150px_120px] lg:items-center lg:gap-4 ${flock.archived_at ? 'bg-muted/20 opacity-70' : ''}`}>
+                  <div className="flex items-center gap-2 font-semibold">
+                    {flock.flock_number}
+                    {flock.archived_at && <Badge variant="outline">Archived</Badge>}
                   </div>
-                ))}
-              </div>
-            </div>
-          ));
-          
-          return (
-            <div className="space-y-6">
-              {/* First Row */}
-              <div className="flex overflow-x-auto gap-4 pb-4">
-                {renderFlockCards(firstRow)}
-              </div>
-              
-              {/* Second Row */}
-              {secondRow.length > 0 && (
-                <div className="flex overflow-x-auto gap-4 pb-4">
-                  {renderFlockCards(secondRow)}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{flock.flock_name}</p>
+                    {flock.house_number && <p className="text-xs text-muted-foreground">House {flock.house_number}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="h-4 w-4 shrink-0" /><span className="truncate">{flock.unit?.name ?? 'Not assigned'}</span></div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4 shrink-0" />{formatLocalDate(flock.arrival_date)}</div>
+                  <div className="text-sm text-muted-foreground">{flock.age_weeks} weeks</div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Egg className="h-4 w-4 shrink-0" />{flock.total_birds?.toLocaleString() ?? '—'} eggs</div>
+                  <div className="flex justify-end gap-1">
+                    {!flock.archived_at && <Button variant="ghost" size="icon" onClick={() => handleEdit(flock)} title="Edit flock"><Pencil className="h-4 w-4" /></Button>}
+                    {canArchive && (flock.archived_at ? (
+                      <Button variant="ghost" size="icon" disabled={archiveBusy} onClick={() => restoreFlock(flock.id)} title="Restore flock"><ArchiveRestore className="h-4 w-4 text-primary" /></Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" disabled={archiveBusy} onClick={() => { if (confirm(`Archive flock #${flock.flock_number} (${flock.flock_name})?\n\nIt will be hidden from active dropdowns but all batches and historical data remain visible.`)) archiveFlock(flock.id); }} title="Archive flock"><Archive className="h-4 w-4 text-muted-foreground" /></Button>
+                    ))}
+                    {!flock.archived_at && <Button variant="ghost" size="icon" onClick={() => handleDelete(flock.id, flock.flock_number, flock.flock_name)} title="Delete flock"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                  </div>
+                  {flock.last_modified_at && <div className="flex items-center gap-1 text-xs text-muted-foreground lg:col-span-7"><Clock className="h-3 w-3" />Updated {format(new Date(flock.last_modified_at), 'MMM d, h:mm a')}{flock.technician_name ? ` by ${flock.technician_name}` : ''}</div>}
                 </div>
-              )}
+              ))}
             </div>
-          );
-        })()}
+          </div>
+        )}
       {filteredFlocks.length === 0 && flocks.length > 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No flocks match your current filters. Try adjusting your search criteria.
@@ -992,8 +875,8 @@ const FlockManager = () => {
           No flocks found. Create your first flock to get started.
         </div>
        )}
-       </CardContent>
-     </Card>
+       </div>
+     </div>
 
      <AlertDialog open={!!flockToDelete} onOpenChange={() => setFlockToDelete(null)}>
        <AlertDialogContent>
