@@ -327,7 +327,11 @@ const FlockManager = () => {
     // Editing existing flock
     // Track changes for history
     const changes: FlockChange[] = [];
-    const newUnitId = selectedHatcheries[0] || null;
+    if (selectedHatcheries.length === 0) {
+      toast({ title: "Hatchery Required", description: "Please select at least one hatchery", variant: "destructive" });
+      return;
+    }
+    const newUnitId = selectedHatcheries.length === 1 ? selectedHatcheries[0] : null;
     
     if (parseInt(formData.flock_number) !== editingFlock.flock_number) {
       changes.push({
@@ -371,12 +375,10 @@ const FlockManager = () => {
         new_value: formData.notes || 'null'
       });
     }
-    if (newUnitId !== (editingFlock.unit_id || null)) {
-      changes.push({
-        field_changed: 'unit',
-        old_value: editingFlock.unit?.name || 'null',
-        new_value: units.find(u => u.id === newUnitId)?.name || 'null'
-      });
+    const oldNames = getFlockUnitNames(editingFlock).sort().join(', ');
+    const newNames = selectedHatcheries.map(id => units.find(u => u.id === id)?.name).filter(Boolean).sort().join(', ');
+    if (oldNames !== newNames) {
+      changes.push({ field_changed: 'unit', old_value: oldNames || 'null', new_value: newNames || 'null' });
     }
 
     const { error } = await supabase
@@ -394,6 +396,22 @@ const FlockManager = () => {
         last_modified_at: new Date().toISOString()
       })
       .eq('id', editingFlock.id);
+
+    if (!error) {
+      // Sync hatchery links
+      const before = getFlockUnitIds(editingFlock);
+      const toAdd = selectedHatcheries.filter(id => !before.includes(id));
+      const toRemove = before.filter(id => !selectedHatcheries.includes(id));
+      const { data: prof } = await supabase.from('user_profiles').select('company_id').eq('id', user?.id).maybeSingle();
+      if (toAdd.length && prof?.company_id) {
+        await (supabase as any).from('flock_units').insert(
+          toAdd.map(unit_id => ({ flock_id: editingFlock.id, unit_id, company_id: prof.company_id }))
+        );
+      }
+      if (toRemove.length) {
+        await (supabase as any).from('flock_units').delete().eq('flock_id', editingFlock.id).in('unit_id', toRemove);
+      }
+    }
 
     if (error) {
       toast({
