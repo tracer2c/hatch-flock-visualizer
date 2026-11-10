@@ -36,7 +36,8 @@ const RIGHT_LINES = BUGGY_LINES.slice(10);
 export { TALL_BUGGY_EGGS, SHORT_BUGGY_EGGS } from "@/config/multiStage";
 export type { HeightCode } from "@/config/multiStage";
 
-type Cell = { flock_id: string; height: HeightCode };
+/** `house` is the optional grower house the buggy came from (e.g. "2"). */
+type Cell = { flock_id: string; height: HeightCode; house?: string };
 type CellMap = Map<string, Cell>; // `${machine_id}:${line}` → cell
 
 
@@ -58,16 +59,19 @@ const key = (machineId: string, line: number) => `${machineId}:${line}`;
  * Explode saved rows back into per-line cells. A row carries the lines it
  * occupies in `buggy_numbers` and its egg height in `notes`.
  */
-function rowsToCells(rows: SingleStageRow[]): CellMap {
+function rowsToCells(rows: SingleStageRow[], flocks: FlockOption[]): CellMap {
   const cells: CellMap = new Map();
   for (const r of rows) {
     if (!r.flock_id) continue;
     const height: HeightCode = r.notes === "S" ? "S" : "T";
+    // A house only counts as typed when it differs from the flock's default.
+    const flockHouse = flocks.find((f) => f.id === r.flock_id)?.house_number ?? "";
+    const house = r.house_number && r.house_number !== flockHouse ? r.house_number : undefined;
     const lines = (r.buggy_numbers ?? [])
       .map((n) => parseInt(String(n), 10))
       .filter((n) => Number.isFinite(n));
     for (const line of lines) {
-      cells.set(key(r.machine_id, line), { flock_id: r.flock_id, height });
+      cells.set(key(r.machine_id, line), { flock_id: r.flock_id, height, house });
     }
   }
   return cells;
@@ -84,12 +88,22 @@ function cellsToRows(
   flocks: FlockOption[],
   sizes: HeightSizes
 ): SingleStageRow[] {
-  const groups = new Map<string, { flock_id: string; height: HeightCode; lines: number[] }>();
+  const groups = new Map<
+    string,
+    { flock_id: string; height: HeightCode; house: string; lines: number[] }
+  >();
   for (const line of BUGGY_LINES) {
     const cell = cells.get(key(machineId, line));
     if (!cell?.flock_id) continue;
-    const gk = `${cell.flock_id}|${cell.height}`;
-    const g = groups.get(gk) ?? { flock_id: cell.flock_id, height: cell.height, lines: [] };
+    // Buggies from different houses of the same flock are separate rows so each
+    // keeps its house number for the weekly fertility / egg pack sheets.
+    const gk = `${cell.flock_id}|${cell.height}|${cell.house ?? ""}`;
+    const g = groups.get(gk) ?? {
+      flock_id: cell.flock_id,
+      height: cell.height,
+      house: cell.house ?? "",
+      lines: [],
+    };
     g.lines.push(line);
     groups.set(gk, g);
   }
@@ -99,7 +113,7 @@ function cellsToRows(
       tempId: crypto.randomUUID(),
       machine_id: machineId,
       flock_id: g.flock_id,
-      house_number: flock?.house_number ?? "",
+      house_number: g.house || flock?.house_number || "",
       age_weeks: flock?.age_weeks ?? null,
       expected_hatch_percent: null,
       buggies_set: g.lines.length,
@@ -137,7 +151,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
   const [activeFlockCell, setActiveFlockCell] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const cells = useMemo(() => rowsToCells(rows), [rows]);
+  const cells = useMemo(() => rowsToCells(rows, flocks), [rows, flocks]);
 
   // flock_number → flock (first match wins when a number repeats per hatchery)
   const flocksByNumber = useMemo(() => {
@@ -199,7 +213,18 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
       return;
     }
     const existing = cells.get(key(machineId, line));
-    setCell(machineId, line, { flock_id: flock.id, height: existing?.height ?? "T" });
+    setCell(machineId, line, {
+      flock_id: flock.id,
+      height: existing?.height ?? "T",
+      house: existing?.house,
+    });
+  };
+
+  /** Set which grower house this buggy came from (optional). */
+  const onHouseChange = (machineId: string, line: number, house: string) => {
+    const existing = cells.get(key(machineId, line));
+    if (!existing) return;
+    setCell(machineId, line, { ...existing, house: house.trim() || undefined });
   };
 
   const onHeightChange = (machineId: string, line: number, height: HeightCode) => {
@@ -318,7 +343,7 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
     const unknown = !!text.trim() && !resolved;
     const isActive = activeFlockCell === key(s.id, line);
     return (
-      <div key={line} className="grid grid-cols-[20px_1fr_52px] gap-1 items-center">
+      <div key={line} className="grid grid-cols-[20px_1fr_44px_52px] gap-1 items-center">
         <span className="text-[10px] text-muted-foreground tabular-nums text-right">
           {line}
         </span>
@@ -341,6 +366,16 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
             } ${unknown ? "border-destructive" : ""}`}
           />
         </div>
+        <Input
+          inputMode="numeric"
+          value={cell?.house ?? ""}
+          disabled={!canWrite || !cell}
+          placeholder="—"
+          aria-label={`Line ${line} house number`}
+          title="Grower house this buggy came from (optional)"
+          onChange={(e) => onHouseChange(s.id, line, e.target.value)}
+          className="h-7 px-1 text-center text-xs tabular-nums"
+        />
         <Select
           value={cell?.height ?? "T"}
           onValueChange={(v) => onHeightChange(s.id, line, v as HeightCode)}
@@ -465,17 +500,19 @@ const SingleStageSetSheetGrid: React.FC<Props> = ({
                 {/* Two columns of 10 lines, exactly like the sheet */}
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                   <div className="space-y-1">
-                    <div className="grid grid-cols-[20px_1fr_52px] gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <div className="grid grid-cols-[20px_1fr_44px_52px] gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                       <span />
                       <span>Flock #</span>
+                      <span className="text-center">House</span>
                       <span>T/S</span>
                     </div>
                     {LEFT_LINES.map((line) => renderLine(s, machineIdx, line))}
                   </div>
                   <div className="space-y-1">
-                    <div className="grid grid-cols-[20px_1fr_52px] gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <div className="grid grid-cols-[20px_1fr_44px_52px] gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                       <span />
                       <span>Flock #</span>
+                      <span className="text-center">House</span>
                       <span>T/S</span>
                     </div>
                     {RIGHT_LINES.map((line) => renderLine(s, machineIdx, line))}

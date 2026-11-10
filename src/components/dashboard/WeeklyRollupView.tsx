@@ -71,7 +71,7 @@ export default function WeeklyRollupView({ onOpenFlock, anchor: anchorProp, onAn
   const { data, isLoading, isError, error } = useWeeklyFlockRollup({ weekStart, weekEnd });
 
   const totalEggs = (data ?? []).reduce((a, r) => a + r.total_eggs_set, 0);
-  const totalHouses = (data ?? []).reduce((a, r) => a + r.house_count, 0);
+  const totalHouses = (data ?? []).reduce((a, r) => a + r.record_count, 0);
 
   return (
     <div className="space-y-4">
@@ -119,7 +119,7 @@ export default function WeeklyRollupView({ onOpenFlock, anchor: anchorProp, onAn
               <div className="text-2xl font-semibold">{(data ?? []).length}</div>
             </div>
             <div>
-              <div className="text-muted-foreground">Houses</div>
+              <div className="text-muted-foreground">Buggies</div>
               <div className="text-2xl font-semibold">{totalHouses}</div>
             </div>
             <div>
@@ -144,7 +144,7 @@ export default function WeeklyRollupView({ onOpenFlock, anchor: anchorProp, onAn
                 <TableHeader>
                   <TableRow>
                     <TableHead>Flock</TableHead>
-                    <TableHead className="text-center">Houses</TableHead>
+                    <TableHead className="text-center">Buggies</TableHead>
                     <TableHead className="text-right">Eggs Set</TableHead>
                     <TableHead className="text-right">Injected</TableHead>
                     <TableHead className="text-right">Clears</TableHead>
@@ -171,7 +171,7 @@ export default function WeeklyRollupView({ onOpenFlock, anchor: anchorProp, onAn
                           #{row.flock_number ?? "—"}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">{row.house_count}</TableCell>
+                      <TableCell className="text-center">{row.record_count}</TableCell>
                       <TableCell className="text-right font-medium">
                         {fmtInt(row.total_eggs_set)}
                       </TableCell>

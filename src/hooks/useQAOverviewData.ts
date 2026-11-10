@@ -40,14 +40,19 @@ export interface WeeklyMetric {
   total: number;
 }
 
+/** One hatcher's hatch progression, averaged over every check logged in the week. */
 export interface HatchProgressRow {
   machineId: string;
   machineLabel: string;
+  /** Stages checked this week, e.g. "A, C". */
   stage: string;
-  hatched: number;
-  total: number;
+  /** Average percentage out across all of the week's checks. */
   percentage: number;
+  /** Number of checks the average is based on. */
+  checks: number;
+  /** Time of the most recent check. */
   checkedAt: string;
+  /** Most recent entry, opened when the card is clicked. */
   entryId: string;
   stale: boolean;
 }
@@ -190,25 +195,45 @@ export function useQAOverviewData(referenceDate?: string, unitId?: string) {
       const rightValues = angleRows.flatMap(({ entry }) => [entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right]).filter((v): v is number => typeof v === 'number');
       const angleOutOfRange = angleRows.filter(({ entry }) => [...[entry.angle_top_left, entry.angle_mid_left, entry.angle_bottom_left], ...[entry.angle_top_right, entry.angle_mid_right, entry.angle_bottom_right]].filter((v): v is number => typeof v === 'number').some((v) => !isBetween(v, 38, 47))).length;
 
-      const hatchByMachine = new Map<string, HatchProgressRow>();
-      byType('hatch_progression').forEach(({ entry, results }) => {
-        const machineId = entry.machine_id ?? `unassigned-${entry.id}`;
-        const previous = hatchByMachine.get(machineId);
-        if (previous && entryTimestamp(entry) <= new Date(previous.checkedAt).getTime()) return;
+      // Average every hatch progression check of the week per hatcher. Each check
+      // covers one section (stage) of the machine, so the latest reading alone
+      // is not representative of the machine.
+      const hatchAccumulator = new Map<string, {
+        machineId: string;
+        machineLabel: string;
+        percentages: number[];
+        stages: Set<string>;
+        latest: QAEntry;
+      }>();
+      const entryPercentage = (results: any) => {
         const total = Number(results.totalCount) || 0;
         const hatched = Number(results.hatchedCount) || 0;
-        hatchByMachine.set(machineId, {
+        return total > 0 ? (hatched / total) * 100 : Number(results.percentageOut) || 0;
+      };
+      byType('hatch_progression').forEach(({ entry, results }) => {
+        const machineId = entry.machine_id ?? `unassigned-${entry.id}`;
+        const current = hatchAccumulator.get(machineId) ?? {
           machineId,
           machineLabel: entry.machine?.machine_number ?? 'Unassigned hatcher',
-          stage: results.stage ?? '—',
-          hatched,
-          total,
-          percentage: total > 0 ? (hatched / total) * 100 : Number(results.percentageOut) || 0,
-          checkedAt: new Date(`${entry.check_date}T${entry.check_time || '00:00:00'}`).toISOString(),
-          entryId: entry.id,
-          stale: Date.now() - entryTimestamp(entry) > 6 * 60 * 60 * 1000,
-        });
+          percentages: [],
+          stages: new Set<string>(),
+          latest: entry,
+        };
+        current.percentages.push(entryPercentage(results));
+        if (results.stage) current.stages.add(String(results.stage));
+        if (entryTimestamp(entry) > entryTimestamp(current.latest)) current.latest = entry;
+        hatchAccumulator.set(machineId, current);
       });
+      const hatchRows: HatchProgressRow[] = Array.from(hatchAccumulator.values()).map((acc) => ({
+        machineId: acc.machineId,
+        machineLabel: acc.machineLabel,
+        stage: acc.stages.size ? Array.from(acc.stages).sort().join(', ') : '—',
+        percentage: average(acc.percentages) ?? 0,
+        checks: acc.percentages.length,
+        checkedAt: new Date(`${acc.latest.check_date}T${acc.latest.check_time || '00:00:00'}`).toISOString(),
+        entryId: acc.latest.id,
+        stale: Date.now() - entryTimestamp(acc.latest) > 6 * 60 * 60 * 1000,
+      }));
 
       const coverage: CoverageDay[] = days.map((dayDate) => {
         const date = format(dayDate, 'yyyy-MM-dd');
@@ -285,7 +310,7 @@ export function useQAOverviewData(referenceDate?: string, unitId?: string) {
         weekStart,
         weekEnd,
         entries,
-        hatchProgress: Array.from(hatchByMachine.values()).sort((a, b) => a.machineLabel.localeCompare(b.machineLabel)),
+        hatchProgress: hatchRows.sort((a, b) => a.machineLabel.localeCompare(b.machineLabel)),
         trend,
         coverage,
         metrics: {

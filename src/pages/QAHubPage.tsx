@@ -212,7 +212,7 @@ const QAHubPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="process" className="space-y-4">
-          <ProcessScopedShell key={processTab} initialTab={processTab} checkDate={checkDate} />
+          <ProcessScopedShell key={processTab} initialTab={processTab} checkDate={checkDate} onCheckDateChange={setCheckDate} />
         </TabsContent>
 
         <TabsContent value="flock" className="space-y-4">

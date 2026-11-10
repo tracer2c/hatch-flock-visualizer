@@ -172,8 +172,27 @@ const MachineWideAnglesEntry: React.FC<MachineWideAnglesEntryProps> = ({
           isPastDay={isPastDay}
           emptyLabel="No angle checks yet today."
           renderSummary={(e) => {
-            const l = e.candling_results?.angle_top_left;
-            const r = e.candling_results?.angle_top_right;
+            // Saved angles live in the angle_* columns; older entries may hold
+            // them in candling_results instead.
+            const cr = e.candling_results ?? {};
+            const sideAverage = (
+              columns: Array<number | null | undefined>,
+              fallback: Array<number | null | undefined>
+            ) => {
+              const fromColumns = columns.filter((v): v is number => typeof v === 'number');
+              const nums = fromColumns.length
+                ? fromColumns
+                : fallback.filter((v): v is number => typeof v === 'number');
+              return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+            };
+            const l = sideAverage(
+              [e.angle_top_left, e.angle_mid_left, e.angle_bottom_left],
+              [cr.angle_top_left, cr.angle_mid_left, cr.angle_bottom_left]
+            );
+            const r = sideAverage(
+              [e.angle_top_right, e.angle_mid_right, e.angle_bottom_right],
+              [cr.angle_top_right, cr.angle_mid_right, cr.angle_bottom_right]
+            );
             return (
               <span>
                 Left <span className="font-medium">{typeof l === 'number' ? `${l}°` : '—'}</span>

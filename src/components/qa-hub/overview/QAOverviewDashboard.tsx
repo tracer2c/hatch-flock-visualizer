@@ -73,7 +73,12 @@ const QAOverviewDashboard: React.FC<Props> = ({ checkDate, unitId, onJumpTo }) =
         <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-primary/5 pb-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base"><Timer className="h-4 w-4 text-primary" /> Hatch Progression</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Latest weekly reading for each active hatcher</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Weekly average of every check for each hatcher
+              {data.hatchProgress.length > 0 && (
+                <> · All hatchers {(data.hatchProgress.reduce((s, r) => s + r.percentage, 0) / data.hatchProgress.length).toFixed(1)}%</>
+              )}
+            </p>
           </div>
           <Button size="sm" variant="outline" onClick={() => onJumpTo?.({ group: 'machine', sub: 'hatch' })}>Log hatch <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
         </CardHeader>
@@ -84,10 +89,10 @@ const QAOverviewDashboard: React.FC<Props> = ({ checkDate, unitId, onJumpTo }) =
             <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
               {data.hatchProgress.map((row) => (
                 <button key={row.machineId} onClick={() => openEntry(row.entryId)} className="p-4 text-left transition-colors hover:bg-muted/40">
-                  <div className="flex items-center justify-between gap-2"><span className="font-semibold">{row.machineLabel}</span><Badge variant={row.stale ? 'secondary' : 'outline'}>Stage {row.stage}</Badge></div>
-                  <div className="mt-3 flex items-end justify-between"><span className="text-2xl font-semibold tabular-nums">{row.percentage.toFixed(1)}%</span><span className="text-xs text-muted-foreground">{row.hatched.toLocaleString()} / {row.total.toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="font-semibold">{row.machineLabel}</span><Badge variant={row.stale ? 'secondary' : 'outline'}>{row.stage.includes(',') ? `Stages ${row.stage}` : `Stage ${row.stage}`}</Badge></div>
+                  <div className="mt-3 flex items-end justify-between"><span className="text-2xl font-semibold tabular-nums">{row.percentage.toFixed(1)}%</span><span className="text-xs text-muted-foreground">{row.checks} {row.checks === 1 ? 'check' : 'checks'} avg</span></div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(row.percentage, 100)}%` }} /></div>
-                  <p className="mt-2 text-[11px] text-muted-foreground">{row.stale ? 'Update due' : 'Current'} · {format(new Date(row.checkedAt), 'EEE h:mm a')}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">{row.stale ? 'Update due' : 'Current'} · last check {format(new Date(row.checkedAt), 'EEE h:mm a')}</p>
                 </button>
               ))}
             </div>

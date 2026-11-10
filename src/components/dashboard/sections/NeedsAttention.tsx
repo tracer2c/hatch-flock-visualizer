@@ -41,7 +41,8 @@ export function NeedsAttention({ rows, criticalAlerts, emptyState }: Props) {
       const setDate = row.earliest_set_date
         ? `Set date: ${format(new Date(row.earliest_set_date), "MMM d, yyyy")}`
         : "Set date unavailable";
-      const impact = `Affects ${row.house_count || 1} house${row.house_count === 1 ? "" : "s"}`;
+      const buggyCount = row.record_count || 1;
+      const impact = `Affects ${buggyCount} ${buggyCount === 1 ? "buggy" : "buggies"}`;
 
       if (row.fertility_pct == null && row.total_eggs_set > 0) {
         out.push({

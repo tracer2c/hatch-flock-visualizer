@@ -59,7 +59,7 @@ export default function FlockClearsInjectedEntryPage() {
         <FlockEntryHeader
           ctx={ctx}
           title="Clears, Injected & Hatch (set week)"
-          subtitle="One line per set record — fill in as counts come through the week"
+          subtitle="One line per day — fill in as counts come through the week"
           icon={<Syringe className="h-5 w-5 text-primary" />}
           metrics={[
             { label: "Sample Size", value: fmtInt(totals.sample) },

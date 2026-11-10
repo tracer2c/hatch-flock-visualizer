@@ -12,11 +12,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentUserName } from "@/hooks/useCurrentUserName";
 import { parseLocalDate } from "@/utils/localDate";
+import { allocateByWeight } from "@/utils/houseGroups";
 import type { FlockWeekBatch } from "@/hooks/useFlockWeekBatches";
 import type { FlockWeeklyClear } from "@/hooks/useFlockWeeklyClears";
 
 export interface ClearsSheetRowSnapshot {
   setDate: string;
+  /** Row label for the print view, e.g. "4 buggies". */
   houseNumber: string;
   sampleSize: number;
   clears: number | null;
@@ -45,6 +47,17 @@ interface Props {
 }
 
 type Cells = { sample: string; clears: string; hatch: string };
+type Scope = "day" | "flock";
+
+interface Line {
+  key: string;
+  label: string;
+  setDate: string;
+  batches: FlockWeekBatch[];
+  eggsSet: number;
+}
+
+const EMPTY: Cells = { sample: "", clears: "", hatch: "" };
 
 const toNum = (raw: string): number | null => {
   if (raw.trim() === "") return null;
@@ -60,12 +73,16 @@ const dayLabel = (iso: string) => {
   return d ? format(d, "EEE MMM d") : iso;
 };
 
+const buggyText = (n: number) => `${n} ${n === 1 ? "buggy" : "buggies"}`;
+const buggiesIn = (batches: FlockWeekBatch[]) =>
+  batches.reduce((sum, b) => sum + (b.buggies ?? 1), 0);
+
 /**
- * Weekly Clears / Injected / Hatch sheet — one line per set record of the
- * flock's set week. Sample size pre-fills from eggs set (editable), Injected
- * derives as sample − clears, and percentages compute per line plus a weighted
- * flock total. Only edited lines are written, so the sheet can be filled in
- * across the week (Mon, Tue, Thu, Fri) as counts come in.
+ * Weekly Clears / Injected / Hatch sheet. Counts are typed once per day (or
+ * once for the whole flock) instead of once per buggy. Saving splits each
+ * total across that day's set records in proportion to eggs set, so the
+ * per-record numbers always add back up to what was typed and every other
+ * screen keeps reading the same `batches` columns.
  */
 export default function WeeklyClearsSheet({
   batches,
@@ -83,41 +100,75 @@ export default function WeeklyClearsSheet({
   const [saving, setSaving] = useState(false);
   const technician = useCurrentUserName();
   const [notes, setNotes] = useState(existingRow?.notes ?? "");
+  const [scope, setScope] = useState<Scope>("day");
   const [cells, setCells] = useState<Record<string, Cells>>({});
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const rows = useMemo(
-    () =>
-      [...batches].sort(
-        (a, b) =>
-          a.set_date.localeCompare(b.set_date) ||
-          String(a.house_number).localeCompare(String(b.house_number))
-      ),
-    [batches]
-  );
-  const rowsKey = rows.map((r) => r.id).join(",");
+  const lines = useMemo<Line[]>(() => {
+    const sorted = [...batches].sort(
+      (a, b) => a.set_date.localeCompare(b.set_date) || a.id.localeCompare(b.id)
+    );
+    if (scope === "flock") {
+      if (sorted.length === 0) return [];
+      return [
+        {
+          key: "all",
+          label: "Whole flock",
+          setDate: periodStart,
+          batches: sorted,
+          eggsSet: sorted.reduce((s, b) => s + (b.total_eggs_set || 0), 0),
+        },
+      ];
+    }
+    const byDay = new Map<string, FlockWeekBatch[]>();
+    sorted.forEach((b) => byDay.set(b.set_date, [...(byDay.get(b.set_date) ?? []), b]));
+    return Array.from(byDay.entries()).map(([date, list]) => ({
+      key: date,
+      label: dayLabel(date),
+      setDate: date,
+      batches: list,
+      eggsSet: list.reduce((s, b) => s + (b.total_eggs_set || 0), 0),
+    }));
+  }, [batches, scope, periodStart]);
+  const linesKey = `${scope}:${lines.map((l) => l.key).join(",")}:${batches
+    .map((b) => b.id)
+    .join(",")}`;
 
-  // Prefill from the set sheet + whatever was already saved on each batch.
+  // Prefill from the set sheet + whatever was already saved on each record.
   useEffect(() => {
     const next: Record<string, Cells> = {};
-    rows.forEach((b) => {
-      const clears = b.eggs_cleared;
-      const injected = b.eggs_injected;
-      const sample =
-        clears != null && injected != null
-          ? clears + injected
-          : b.total_eggs_set || 0;
-      next[b.id] = {
+    lines.forEach((line) => {
+      const withClears = line.batches.filter((b) => b.eggs_cleared != null);
+      const withHatch = line.batches.filter((b) => b.chicks_hatched != null);
+      // Buggies already counted contribute what was counted (clears + injected);
+      // buggies set later or not counted yet contribute their eggs set. That way
+      // a buggy added after the day was saved raises the sample instead of being
+      // mistaken for extra injected eggs.
+      const sample = line.batches.reduce(
+        (s, b) =>
+          s +
+          (b.eggs_cleared != null && b.eggs_injected != null
+            ? b.eggs_cleared + b.eggs_injected
+            : b.total_eggs_set || 0),
+        0
+      );
+      next[line.key] = {
         sample: sample ? String(sample) : "",
-        clears: clears == null ? "" : String(clears),
-        hatch: b.chicks_hatched == null ? "" : String(b.chicks_hatched),
+        clears:
+          withClears.length === 0
+            ? ""
+            : String(withClears.reduce((s, b) => s + (b.eggs_cleared ?? 0), 0)),
+        hatch:
+          withHatch.length === 0
+            ? ""
+            : String(withHatch.reduce((s, b) => s + (b.chicks_hatched ?? 0), 0)),
       };
     });
     setCells(next);
     setDirty({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rowsKey]);
+  }, [linesKey]);
 
   useEffect(() => {
     setNotes(existingRow?.notes ?? "");
@@ -142,11 +193,11 @@ export default function WeeklyClearsSheet({
   useEffect(() => {
     if (!onSnapshot) return;
     onSnapshot(
-      rows.map((b) => {
-        const d = derive(cells[b.id]);
+      lines.map((line) => {
+        const d = derive(cells[line.key]);
         return {
-          setDate: b.set_date,
-          houseNumber: b.house_number,
+          setDate: line.setDate,
+          houseNumber: buggyText(buggiesIn(line.batches)),
           sampleSize: d.sample,
           clears: d.clears,
           injected: d.injected,
@@ -159,51 +210,45 @@ export default function WeeklyClearsSheet({
       technician
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cells, technician, rowsKey]);
+  }, [cells, technician, linesKey]);
 
-  const setCell = (id: string, key: keyof Cells, raw: string) => {
-    setCells((c) => ({
-      ...c,
-      [id]: { ...(c[id] ?? { sample: "", clears: "", hatch: "" }), [key]: raw },
-    }));
-    setDirty((d) => ({ ...d, [id]: true }));
+  const setCell = (key: string, field: keyof Cells, raw: string) => {
+    setCells((c) => ({ ...c, [key]: { ...(c[key] ?? EMPTY), [field]: raw } }));
+    setDirty((d) => ({ ...d, [key]: true }));
   };
 
-  const fillDown = (key: keyof Cells) => {
-    const first = cells[rows[0]?.id]?.[key] ?? "";
+  const fillDown = (field: keyof Cells) => {
+    const first = cells[lines[0]?.key]?.[field] ?? "";
     if (!first) return;
     setCells((c) => {
       const next = { ...c };
       const flags: Record<string, boolean> = {};
-      rows.slice(1).forEach((b) => {
-        next[b.id] = {
-          ...(next[b.id] ?? { sample: "", clears: "", hatch: "" }),
-          [key]: first,
-        };
-        flags[b.id] = true;
+      lines.slice(1).forEach((line) => {
+        next[line.key] = { ...(next[line.key] ?? EMPTY), [field]: first };
+        flags[line.key] = true;
       });
       setDirty((d) => ({ ...d, ...flags }));
       return next;
     });
   };
 
-  const focusCell = (idx: number, key: keyof Cells) => {
-    const b = rows[idx];
-    if (!b) return;
-    inputs.current[`${b.id}:${key}`]?.focus();
+  const focusCell = (idx: number, field: keyof Cells) => {
+    const line = lines[idx];
+    if (!line) return;
+    inputs.current[`${line.key}:${field}`]?.focus();
   };
 
   const onKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     idx: number,
-    key: keyof Cells
+    field: keyof Cells
   ) => {
     if (e.key === "Enter" || e.key === "ArrowDown") {
       e.preventDefault();
-      focusCell(idx + 1, key);
+      focusCell(idx + 1, field);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      focusCell(idx - 1, key);
+      focusCell(idx - 1, field);
     }
   };
 
@@ -213,13 +258,13 @@ export default function WeeklyClearsSheet({
     let injected = 0;
     let hatch = 0;
     let eggsSet = 0;
-    rows.forEach((b) => {
-      const d = derive(cells[b.id]);
+    lines.forEach((line) => {
+      const d = derive(cells[line.key]);
       sample += d.sample;
       clears += d.clears ?? 0;
       injected += d.injected ?? 0;
       hatch += d.hatch ?? 0;
-      eggsSet += b.total_eggs_set || 0;
+      eggsSet += line.eggsSet;
     });
     return {
       sample,
@@ -231,7 +276,7 @@ export default function WeeklyClearsSheet({
       hatchPct: sample > 0 ? (hatch / sample) * 100 : null,
       hoiPct: injected > 0 ? (hatch / injected) * 100 : null,
     };
-  }, [cells, rowsKey]);
+  }, [cells, linesKey]);
 
   useEffect(() => {
     onTotalsChange?.(totals);
@@ -250,21 +295,34 @@ export default function WeeklyClearsSheet({
     }
     setSaving(true);
     try {
-      for (const b of rows) {
-        if (!dirty[b.id]) continue;
-        const d = derive(cells[b.id]);
-        const patch: Record<string, number | null> = {};
-        if (d.clears != null) {
-          patch.eggs_cleared = d.clears;
-          patch.eggs_injected = d.injected;
+      for (const line of lines) {
+        if (!dirty[line.key]) continue;
+        const d = derive(cells[line.key]);
+        if (d.clears == null && d.hatch == null) continue;
+
+        // Split the typed totals across this line's set records by eggs set.
+        const weights = line.batches.map((b) => b.total_eggs_set || 0);
+        const samples = allocateByWeight(d.sample, weights);
+        const clearParts = d.clears != null ? allocateByWeight(d.clears, weights) : null;
+        const hatchParts = d.hatch != null ? allocateByWeight(d.hatch, weights) : null;
+
+        for (let i = 0; i < line.batches.length; i++) {
+          const patch: Record<string, number | null> = {};
+          if (clearParts) {
+            patch.eggs_cleared = clearParts[i];
+            patch.eggs_injected = Math.max(0, samples[i] - clearParts[i]);
+          }
+          if (hatchParts) patch.chicks_hatched = hatchParts[i];
+          const { error } = await supabase
+            .from("batches")
+            .update(patch)
+            .eq("id", line.batches[i].id);
+          if (error) throw error;
         }
-        if (d.hatch != null) patch.chicks_hatched = d.hatch;
-        if (Object.keys(patch).length === 0) continue;
-        const { error } = await supabase.from("batches").update(patch).eq("id", b.id);
-        if (error) throw error;
       }
 
       if (flockId) {
+        // Roll-up uses the whole week, including lines that were not edited.
         const { error } = await supabase.from("flock_weekly_clears").upsert(
           {
             company_id: profile.company_id,
@@ -287,7 +345,9 @@ export default function WeeklyClearsSheet({
 
       setDirty({});
       toast.success(
-        `Saved ${dirtyCount} ${dirtyCount === 1 ? "line" : "lines"} for this week.`
+        scope === "flock"
+          ? "Saved the whole flock for this week."
+          : `Saved ${dirtyCount} ${dirtyCount === 1 ? "day" : "days"} for this week.`
       );
       qc.invalidateQueries({ queryKey: ["flock-weekly-clears", periodStart, periodEnd] });
       qc.invalidateQueries({ queryKey: ["batches"] });
@@ -301,26 +361,37 @@ export default function WeeklyClearsSheet({
     }
   };
 
-  const numCell = (
-    b: FlockWeekBatch,
-    idx: number,
-    key: keyof Cells,
-    placeholder: string
-  ) => (
+  const numCell = (line: Line, idx: number, field: keyof Cells, placeholder: string) => (
     <Input
       ref={(el) => {
-        inputs.current[`${b.id}:${key}`] = el;
+        inputs.current[`${line.key}:${field}`] = el;
       }}
       type="number"
       inputMode="numeric"
       min={0}
       className="h-8 w-28 text-right tabular-nums"
-      value={cells[b.id]?.[key] ?? ""}
-      onChange={(e) => setCell(b.id, key, e.target.value)}
-      onKeyDown={(e) => onKeyDown(e, idx, key)}
+      value={cells[line.key]?.[field] ?? ""}
+      onChange={(e) => setCell(line.key, field, e.target.value)}
+      onKeyDown={(e) => onKeyDown(e, idx, field)}
       disabled={readOnly}
       placeholder={placeholder}
     />
+  );
+
+  const fillHeader = (label: string, field: keyof Cells) => (
+    <div className="flex items-center gap-1">
+      {label}
+      {!readOnly && lines.length > 1 && (
+        <button
+          type="button"
+          title="Fill this column down"
+          onClick={() => fillDown(field)}
+          className="text-muted-foreground hover:text-primary"
+        >
+          <ArrowDownToLine className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
   );
 
   return (
@@ -332,14 +403,30 @@ export default function WeeklyClearsSheet({
             Clears, Injected &amp; Hatch — Set Week
           </CardTitle>
           <Badge variant="secondary" className="bg-primary/10 text-primary">
-            {rows.length} {rows.length === 1 ? "set record" : "set records"}
+            {buggyText(buggiesIn(batches))} this week
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          One line per set record. Sample size pre-fills from the set sheet — type
-          in clears and hatch as they are counted, save any day of the week, and
-          come back for the rest.
+          Enter the day's totals — not each buggy. Sample size pre-fills from the
+          eggs set that day; type in clears and hatch as they are counted, save
+          any day of the week, and come back for the rest.
         </p>
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            variant={scope === "day" ? "default" : "outline"}
+            onClick={() => setScope("day")}
+          >
+            By day
+          </Button>
+          <Button
+            size="sm"
+            variant={scope === "flock" ? "default" : "outline"}
+            onClick={() => setScope("flock")}
+          >
+            Whole flock
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="overflow-x-auto rounded-md border">
@@ -347,40 +434,16 @@ export default function WeeklyClearsSheet({
             <thead className="bg-muted/50">
               <tr>
                 <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-semibold whitespace-nowrap">
-                  Set Date
+                  {scope === "flock" ? "Week" : "Set Date"}
                 </th>
                 <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                  House
+                  Buggies
                 </th>
                 <th className="px-2 py-2 text-left font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    Sample Size
-                    {!readOnly && rows.length > 1 && (
-                      <button
-                        type="button"
-                        title="Fill this column down"
-                        onClick={() => fillDown("sample")}
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <ArrowDownToLine className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  {fillHeader("Sample Size", "sample")}
                 </th>
                 <th className="px-2 py-2 text-left font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    Clears
-                    {!readOnly && rows.length > 1 && (
-                      <button
-                        type="button"
-                        title="Fill this column down"
-                        onClick={() => fillDown("clears")}
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <ArrowDownToLine className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  {fillHeader("Clears", "clears")}
                 </th>
                 <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
                   Injected
@@ -389,19 +452,7 @@ export default function WeeklyClearsSheet({
                   Injection %
                 </th>
                 <th className="px-2 py-2 text-left font-semibold whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    Hatch
-                    {!readOnly && rows.length > 1 && (
-                      <button
-                        type="button"
-                        title="Fill this column down"
-                        onClick={() => fillDown("hatch")}
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <ArrowDownToLine className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  {fillHeader("Hatch", "hatch")}
                 </th>
                 <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
                   Hatch %
@@ -412,30 +463,28 @@ export default function WeeklyClearsSheet({
               </tr>
             </thead>
             <tbody>
-              {rows.map((b, idx) => {
-                const d = derive(cells[b.id]);
+              {lines.map((line, idx) => {
+                const d = derive(cells[line.key]);
                 return (
-                  <tr key={b.id} className="border-t">
+                  <tr key={line.key} className="border-t">
                     <td className="sticky left-0 z-10 bg-background px-3 py-1.5 font-medium whitespace-nowrap">
-                      {dayLabel(b.set_date)}
+                      {line.label}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      House {b.house_number || "—"}
-                      {b.machine_number ? (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {b.machine_number}
-                        </span>
-                      ) : null}
+                    <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                      {buggiesIn(line.batches)}
+                      <span className="ml-2 text-xs">
+                        {line.eggsSet.toLocaleString()} eggs
+                      </span>
                     </td>
-                    <td className="px-1 py-1">{numCell(b, idx, "sample", "0")}</td>
-                    <td className="px-1 py-1">{numCell(b, idx, "clears", "0")}</td>
+                    <td className="px-1 py-1">{numCell(line, idx, "sample", "0")}</td>
+                    <td className="px-1 py-1">{numCell(line, idx, "clears", "0")}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
                       {fmtInt(d.injected)}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
                       {fmtPct(d.injectionPct)}
                     </td>
-                    <td className="px-1 py-1">{numCell(b, idx, "hatch", "0")}</td>
+                    <td className="px-1 py-1">{numCell(line, idx, "hatch", "0")}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
                       {fmtPct(d.hatchPct)}
                     </td>
@@ -451,7 +500,7 @@ export default function WeeklyClearsSheet({
                 <td className="sticky left-0 z-10 bg-muted/40 px-3 py-2 whitespace-nowrap">
                   Flock total
                 </td>
-                <td className="px-3 py-2" />
+                <td className="px-3 py-2">{buggiesIn(batches)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   {fmtInt(totals.sample)}
                 </td>

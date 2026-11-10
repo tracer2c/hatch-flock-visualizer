@@ -85,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
     const alerts = overdueSchedules.map((schedule: ScheduleRecord) => ({
       alert_type: 'schedule_reminder',
       batch_id: schedule.batch_id,
-      severity: 'high',
+      severity: 'critical', // alert_severity enum is info | warning | critical
       status: 'active',
       title: 'Overdue Residue Analysis',
       message: `Residue analysis for batch ${schedule.batch.batch_number} (${schedule.batch.flock.flock_name}) is overdue. Due date was ${schedule.due_date}.`

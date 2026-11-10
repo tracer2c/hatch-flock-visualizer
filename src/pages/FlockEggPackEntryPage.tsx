@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFlockWeekBatches } from "@/hooks/useFlockWeekBatches";
 import { FlockEntryHeader } from "@/components/dashboard/FlockEntryHeader";
-import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
 import HouseMatrixEntry, {
   type HouseMatrixField,
   type HouseMatrixRowSnapshot,
@@ -25,7 +24,6 @@ const FIELDS: HouseMatrixField[] = [
   { key: "grade_b", label: "Grade B" },
   { key: "grade_c", label: "Grade C" },
 ];
-const FLOCK_FIELDS = FIELDS.map(({ key, label }) => ({ key, label }));
 
 const fmtInt = (value: number) => Math.round(value).toLocaleString();
 const fmtPct = (value: number, total: number) =>
@@ -36,7 +34,7 @@ export default function FlockEggPackEntryPage() {
   const [params] = useSearchParams();
   const weekParam = params.get("week");
   const goBack = useSmartBack("/data-entry");
-  const { profile, isStaff } = useAuth();
+  const { isStaff } = useAuth();
   const printMeta = usePrintMeta();
   const readOnly = isStaff();
 
@@ -105,37 +103,23 @@ export default function FlockEggPackEntryPage() {
               </Button>
             </div>
 
-            {scope === "flock" ? (
-              <FlockWeeklyEntryCard
-                title="Egg Pack — Whole Flock Entry"
-                icon={<Package className="h-5 w-5 text-primary" />}
-                table="flock_weekly_egg_pack"
-                companyId={profile?.company_id ?? null}
-                flockId={ctx.flockId}
-                flockName={ctx.flockName}
-                flockNumber={ctx.flockNumber}
-                periodStart={ctx.periodStart}
-                periodEnd={ctx.periodEnd}
-                fields={FLOCK_FIELDS}
-                onTotalsChange={setTotals}
-              />
-            ) : (
-              <HouseMatrixEntry
-                title="Egg Pack — All Houses"
-                icon={<Package className="h-5 w-5 text-primary" />}
-                table="egg_pack_quality"
-                batches={ctx.batches}
-                fields={FIELDS}
-                technicianKey="inspector_name"
-                dateKey="inspection_date"
-                readOnly={readOnly}
-                onTotalsChange={setTotals}
-                onSnapshot={(rows, tech) => {
-                  setSnapshot(rows);
-                  setTechnician(tech);
-                }}
-              />
-            )}
+            <HouseMatrixEntry
+              title="Egg Pack — All Houses"
+              icon={<Package className="h-5 w-5 text-primary" />}
+              table="egg_pack_quality"
+              batches={ctx.batches}
+              fields={FIELDS}
+              technicianKey="inspector_name"
+              dateKey="inspection_date"
+              readOnly={readOnly}
+              view={scope}
+              onTotalsChange={setTotals}
+              onSnapshot={(rows, tech) => {
+                setSnapshot(rows);
+                setTechnician(tech);
+              }}
+            />
+            {/* Whole flock is the average of the house rows above. */}
           </>
         )}
       </div>

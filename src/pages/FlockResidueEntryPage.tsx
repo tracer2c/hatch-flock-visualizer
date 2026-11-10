@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFlockWeekBatches } from "@/hooks/useFlockWeekBatches";
 import { FlockEntryHeader } from "@/components/dashboard/FlockEntryHeader";
-import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
 import HouseMatrixEntry, {
   type HouseMatrixField,
   type HouseMatrixRowSnapshot,
@@ -36,18 +35,6 @@ const FIELDS: HouseMatrixField[] = [
   { key: "upside_down", label: "Upside Down" },
 ];
 
-const FLOCK_FIELDS = [
-  { key: "sample_size", label: "Sample Size" },
-  { key: "infertile_eggs", label: "Infertile" },
-  { key: "early_dead", label: "Early Dead" },
-  { key: "mid_dead", label: "Mid Dead" },
-  { key: "late_dead", label: "Late Dead" },
-  { key: "live_pip_number", label: "Live Pip" },
-  { key: "dead_pip_number", label: "Dead Pip" },
-  { key: "malformed_chicks", label: "Culls" },
-  { key: "contaminated_eggs", label: "Contaminated" },
-];
-
 const fmtInt = (value: number) => Math.round(value).toLocaleString();
 const fmtPct = (value: number, total: number) =>
   total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "—";
@@ -57,7 +44,7 @@ export default function FlockResidueEntryPage() {
   const [params] = useSearchParams();
   const weekParam = params.get("week");
   const goBack = useSmartBack("/data-entry");
-  const { profile, isStaff } = useAuth();
+  const { isStaff } = useAuth();
   const printMeta = usePrintMeta();
   const readOnly = isStaff();
 
@@ -123,37 +110,23 @@ export default function FlockResidueEntryPage() {
               </Button>
             </div>
 
-            {scope === "flock" ? (
-              <FlockWeeklyEntryCard
-                title="Residue — Whole Flock Entry"
-                icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
-                table="flock_weekly_residue"
-                companyId={profile?.company_id ?? null}
-                flockId={ctx.flockId}
-                flockName={ctx.flockName}
-                flockNumber={ctx.flockNumber}
-                periodStart={ctx.periodStart}
-                periodEnd={ctx.periodEnd}
-                fields={FLOCK_FIELDS}
-                onTotalsChange={setTotals}
-              />
-            ) : (
-              <HouseMatrixEntry
-                title="Residue — All Houses"
-                icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
-                table="residue_analysis"
-                batches={ctx.batches}
-                fields={FIELDS}
-                technicianKey="lab_technician"
-                dateKey="analysis_date"
-                readOnly={readOnly}
-                onTotalsChange={setTotals}
-                onSnapshot={(rows, tech) => {
-                  setSnapshot(rows);
-                  setTechnician(tech);
-                }}
-              />
-            )}
+            <HouseMatrixEntry
+              title="Residue — All Houses"
+              icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+              table="residue_analysis"
+              batches={ctx.batches}
+              fields={FIELDS}
+              technicianKey="lab_technician"
+              dateKey="analysis_date"
+              readOnly={readOnly}
+              view={scope}
+              onTotalsChange={setTotals}
+              onSnapshot={(rows, tech) => {
+                setSnapshot(rows);
+                setTechnician(tech);
+              }}
+            />
+            {/* Whole flock is the average of the house rows above. */}
           </>
         )}
       </div>

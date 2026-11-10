@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatSetWeekLabel } from "@/hooks/useFlockWeekHouses";
 import type { FlockWeekContext } from "@/hooks/useFlockWeekBatches";
 import type { ReactNode } from "react";
+import { groupBatchesByHouse } from "@/utils/houseGroups";
 
 const fmtInt = (n: number | null | undefined) =>
   n == null ? "—" : Math.round(n).toLocaleString();
@@ -34,6 +35,7 @@ interface Props {
  * Weekly Flock Rollup that led them here.
  */
 export function FlockEntryHeader({ ctx, title, subtitle, icon, metrics }: Props) {
+  const houseCount = groupBatchesByHouse(ctx.batches).length;
   const summaryMetrics = metrics ?? [
     { label: "Total Eggs Set", value: fmtInt(ctx.totalEggsSet) },
     { label: "Injected", value: fmtInt(ctx.totalEggsInjected) },
@@ -61,8 +63,8 @@ export function FlockEntryHeader({ ctx, title, subtitle, icon, metrics }: Props)
               </span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {ctx.batches.length}{" "}
-              {ctx.batches.length === 1 ? "house" : "houses"} this week
+              {houseCount} {houseCount === 1 ? "house" : "houses"} ·{" "}
+              {ctx.batches.length} {ctx.batches.length === 1 ? "buggy" : "buggies"} this week
               {subtitle ? ` · ${subtitle}` : ""}
             </p>
           </div>

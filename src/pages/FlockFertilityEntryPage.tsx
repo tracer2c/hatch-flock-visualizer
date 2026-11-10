@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFlockWeekBatches } from "@/hooks/useFlockWeekBatches";
 import { FlockEntryHeader } from "@/components/dashboard/FlockEntryHeader";
-import { FlockWeeklyEntryCard } from "@/components/dashboard/FlockWeeklyEntryCard";
 import HouseMatrixEntry, {
   type HouseMatrixField,
   type HouseMatrixRowSnapshot,
@@ -22,7 +21,6 @@ const FIELDS: HouseMatrixField[] = [
   { key: "early_dead", label: "Early Dead" },
   { key: "late_dead", label: "Late Dead" },
 ];
-const FLOCK_FIELDS = FIELDS.map(({ key, label }) => ({ key, label }));
 
 const fmtInt = (value: number) => Math.round(value).toLocaleString();
 const fmtPct = (value: number, total: number) =>
@@ -33,7 +31,7 @@ export default function FlockFertilityEntryPage() {
   const [params] = useSearchParams();
   const weekParam = params.get("week");
   const goBack = useSmartBack("/data-entry");
-  const { profile, isStaff } = useAuth();
+  const { isStaff } = useAuth();
   const printMeta = usePrintMeta();
   const readOnly = isStaff();
 
@@ -97,37 +95,23 @@ export default function FlockFertilityEntryPage() {
               </Button>
             </div>
 
-            {scope === "flock" ? (
-              <FlockWeeklyEntryCard
-                title="Fertility — Whole Flock Entry"
-                icon={<Egg className="h-5 w-5 text-primary" />}
-                table="flock_weekly_fertility"
-                companyId={profile?.company_id ?? null}
-                flockId={ctx.flockId}
-                flockName={ctx.flockName}
-                flockNumber={ctx.flockNumber}
-                periodStart={ctx.periodStart}
-                periodEnd={ctx.periodEnd}
-                fields={FLOCK_FIELDS}
-                onTotalsChange={setTotals}
-              />
-            ) : (
-              <HouseMatrixEntry
-                title="Fertility — All Houses"
-                icon={<Egg className="h-5 w-5 text-primary" />}
-                table="fertility_analysis"
-                batches={ctx.batches}
-                fields={FIELDS}
-                technicianKey="technician_name"
-                dateKey="analysis_date"
-                readOnly={readOnly}
-                onTotalsChange={setTotals}
-                onSnapshot={(rows, tech) => {
-                  setSnapshot(rows);
-                  setTechnician(tech);
-                }}
-              />
-            )}
+            <HouseMatrixEntry
+              title="Fertility — All Houses"
+              icon={<Egg className="h-5 w-5 text-primary" />}
+              table="fertility_analysis"
+              batches={ctx.batches}
+              fields={FIELDS}
+              technicianKey="technician_name"
+              dateKey="analysis_date"
+              readOnly={readOnly}
+              view={scope}
+              onTotalsChange={setTotals}
+              onSnapshot={(rows, tech) => {
+                setSnapshot(rows);
+                setTechnician(tech);
+              }}
+            />
+            {/* Whole flock is the average of the house rows above. */}
           </>
         )}
       </div>

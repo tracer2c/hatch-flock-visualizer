@@ -21,7 +21,8 @@ type ProcessTab = 'wash' | 'rectal' | 'humidity';
 const ProcessScopedShell: React.FC<{
   initialTab?: ProcessTab;
   checkDate: string;
-}> = ({ initialTab = 'wash', checkDate }) => {
+  onCheckDateChange?: (date: string) => void;
+}> = ({ initialTab = 'wash', checkDate, onCheckDateChange }) => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const technicianName = profile
@@ -221,6 +222,8 @@ const ProcessScopedShell: React.FC<{
             loadingExisting={trayWashLoading}
             onSubmit={handleTrayWash}
             readOnly={!unitId}
+            readOnlyReason="Select a hatchery above to enter tray wash data. You can still change the date."
+            onDateChange={onCheckDateChange}
           />
         </TabsContent>
 
@@ -231,6 +234,7 @@ const ProcessScopedShell: React.FC<{
             machineId={null}
             entryMode="room"
             onSubmit={handleRectalTemp}
+            onDateChange={onCheckDateChange}
             isPastDay={!unitId}
           />
         </TabsContent>

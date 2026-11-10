@@ -38,7 +38,14 @@ interface TrayWashEntryProps {
   } | null;
   /** True when checkDate is in the past — the whole card renders read-only. */
   readOnly?: boolean;
+  /** Why the form is read-only, shown in the banner (defaults to the past-date message). */
+  readOnlyReason?: string;
   loadingExisting?: boolean;
+  /**
+   * Called when the user picks another date so the page can load that day's
+   * log. The date picker is never locked, even when the form is read-only.
+   */
+  onDateChange?: (date: string) => void;
   onSubmit: (data: TrayWashSubmitData) => void;
 }
 
@@ -63,7 +70,9 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
   checkDate,
   existingRow,
   readOnly = false,
+  readOnlyReason,
   loadingExisting = false,
+  onDateChange,
   onSubmit,
 }) => {
   const [firstCheck, setFirstCheck] = useState('');
@@ -216,7 +225,7 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
           <Alert className="border-amber-200 bg-amber-50">
             <Eye className="h-4 w-4 text-amber-700" />
             <AlertDescription className="text-amber-800">
-              Viewing {prettyDate} — read-only. Switch the date to today to edit.
+              {readOnlyReason ?? `Viewing ${prettyDate} — read-only. Switch the date to today to edit.`}
             </AlertDescription>
           </Alert>
         )}
@@ -231,7 +240,6 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                disabled={inputDisabled}
                 className={cn("w-full justify-start text-left font-normal", !entryDate && "text-muted-foreground")}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -242,7 +250,12 @@ const TrayWashEntry: React.FC<TrayWashEntryProps> = ({
               <Calendar
                 mode="single"
                 selected={parsedEntryDate}
-                onSelect={(d) => d && setEntryDate(format(d, 'yyyy-MM-dd'))}
+                onSelect={(d) => {
+                  if (!d) return;
+                  const next = format(d, 'yyyy-MM-dd');
+                  setEntryDate(next);
+                  onDateChange?.(next);
+                }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />

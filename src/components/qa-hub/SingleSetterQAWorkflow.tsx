@@ -603,6 +603,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
             checkDate={checkDate}
             machineId={selectedMachine?.id}
             isPastDay={false}
+            onDateChange={setCheckDate}
             onSubmit={handleSubmitRectalTemp}
           />
         </TabsContent>
@@ -614,6 +615,7 @@ const SingleSetterQAWorkflow: React.FC<SingleSetterQAWorkflowProps> = ({
             existingRow={existingTrayWash ?? null}
             readOnly={false}
             loadingExisting={trayWashLoading}
+            onDateChange={setCheckDate}
             onSubmit={handleSubmitTrayWash}
           />
         </TabsContent>

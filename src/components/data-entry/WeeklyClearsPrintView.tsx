@@ -71,7 +71,7 @@ const WeeklyClearsPrintView = ({
         <thead>
           <tr className="border-b border-black text-left">
             <th className="px-1 py-0.5 font-semibold">Set Date</th>
-            <th className="px-1 py-0.5 font-semibold">House</th>
+            <th className="px-1 py-0.5 font-semibold">Buggies</th>
             <th className="px-1 py-0.5 font-semibold text-right">Sample Size</th>
             <th className="px-1 py-0.5 font-semibold text-right">Clears</th>
             <th className="px-1 py-0.5 font-semibold text-right">Injected</th>
@@ -85,7 +85,7 @@ const WeeklyClearsPrintView = ({
           {rows.map((r, i) => (
             <tr key={`${r.setDate}-${r.houseNumber}-${i}`} className="border-b border-neutral-300">
               <td className="px-1 py-0.5">{dayLabel(r.setDate)}</td>
-              <td className="px-1 py-0.5">House {r.houseNumber || "—"}</td>
+              <td className="px-1 py-0.5">{r.houseNumber || "—"}</td>
               <td className="px-1 py-0.5 text-right tabular-nums">{fmtInt(r.sampleSize)}</td>
               <td className="px-1 py-0.5 text-right tabular-nums">{fmtInt(r.clears)}</td>
               <td className="px-1 py-0.5 text-right tabular-nums">{fmtInt(r.injected)}</td>

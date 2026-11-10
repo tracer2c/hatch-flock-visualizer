@@ -3527,6 +3527,7 @@ export type Database = {
         | "mortality_spike"
         | "hatch_approaching"
         | "batch_status_change"
+        | "transfer_overdue"
       batch_status:
         | "planned"
         | "setting"
@@ -3690,6 +3691,7 @@ export const Constants = {
         "mortality_spike",
         "hatch_approaching",
         "batch_status_change",
+        "transfer_overdue",
       ],
       batch_status: [
         "planned",

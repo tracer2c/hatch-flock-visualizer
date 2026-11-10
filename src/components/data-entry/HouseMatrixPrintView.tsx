@@ -57,7 +57,8 @@ const HouseMatrixPrintView = ({
               </div>
             )}
             <div>
-              {rows.length} {rows.length === 1 ? "house" : "houses"}
+              {rows.length} {rows.length === 1 ? "house" : "houses"} ·{" "}
+              {rows.reduce((s, r) => s + r.buggies, 0)} buggies
             </div>
           </div>
         </div>
@@ -67,7 +68,7 @@ const HouseMatrixPrintView = ({
         <thead>
           <tr className="border-b border-black text-left">
             <th className="px-1 py-0.5 font-semibold">House</th>
-            <th className="px-1 py-0.5 font-semibold">Machine</th>
+            <th className="px-1 py-0.5 font-semibold text-right">Buggies</th>
             <th className="px-1 py-0.5 font-semibold text-right">Eggs Set</th>
             {fields.map((f) => (
               <th key={f.key} className="px-1 py-0.5 font-semibold text-right">
@@ -79,8 +80,8 @@ const HouseMatrixPrintView = ({
         <tbody>
           {rows.map((r, i) => (
             <tr key={`${r.houseNumber}-${i}`} className="border-b border-neutral-300">
-              <td className="px-1 py-0.5">House {r.houseNumber || "—"}</td>
-              <td className="px-1 py-0.5">{r.machineNumber || ""}</td>
+              <td className="px-1 py-0.5">{r.houseNumber ? `House ${r.houseNumber}` : "No house number"}</td>
+              <td className="px-1 py-0.5 text-right tabular-nums">{r.buggies}</td>
               <td className="px-1 py-0.5 text-right tabular-nums">
                 {r.eggsSet.toLocaleString()}
               </td>
@@ -95,7 +96,9 @@ const HouseMatrixPrintView = ({
         <tfoot>
           <tr className="border-t-2 border-black font-semibold">
             <td className="px-1 py-0.5">Flock total</td>
-            <td className="px-1 py-0.5" />
+            <td className="px-1 py-0.5 text-right tabular-nums">
+              {rows.reduce((s, r) => s + r.buggies, 0)}
+            </td>
             <td className="px-1 py-0.5 text-right tabular-nums">
               {rows.reduce((s, r) => s + r.eggsSet, 0).toLocaleString()}
             </td>

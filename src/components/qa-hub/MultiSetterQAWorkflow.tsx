@@ -795,7 +795,8 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             checkDate={checkDate} 
             machineId={selectedMachine.id}
             isPastDay={false}
-            onSubmit={handleSubmitRectalTemp} 
+            onDateChange={setCheckDate}
+            onSubmit={handleSubmitRectalTemp}
           />
         </TabsContent>
 
@@ -806,6 +807,7 @@ const MultiSetterQAWorkflow: React.FC<MultiSetterQAWorkflowProps> = ({ focusSect
             existingRow={existingTrayWash ?? null}
             readOnly={false}
             loadingExisting={trayWashLoading}
+            onDateChange={setCheckDate}
             onSubmit={handleSubmitTrayWash}
           />
         </TabsContent>

@@ -17,6 +17,16 @@ export interface FlockWeekBatch {
   flock_name: string;
   flock_number: number | string;
   machine_number: string | null;
+  /** Buggies on the set sheet row that created this record (null if unknown). */
+  buggies: number | null;
+}
+
+/**
+ * Houses created by hand are numbered per flock ("Ammu Valley #3"), so the
+ * trailing #N is the house number when there is no set sheet row to read it from.
+ */
+export function houseFromBatchNumber(batchNumber: string | null | undefined): string {
+  return /#\s*(\d+)\s*$/.exec(batchNumber ?? "")?.[1] ?? "";
 }
 
 export interface FlockWeekContext {
@@ -57,7 +67,7 @@ export function useFlockWeekBatches(
       const { data, error } = await supabase
         .from("batches")
         .select(
-          `id, set_date, total_eggs_set, eggs_injected, eggs_cleared,
+          `id, batch_number, set_date, total_eggs_set, eggs_injected, eggs_cleared,
            chicks_hatched, status,
            flocks!inner(id, flock_name, flock_number, house_number),
            machines(machine_number)`
@@ -67,12 +77,43 @@ export function useFlockWeekBatches(
         .lte("set_date", periodEnd);
       if (error) throw error;
       const norm = normalizeFlockNumber(flockKey!);
-      return (data || [])
-        .filter((b: any) => normalizeFlockNumber(b.flocks?.flock_number) === norm)
+      const matching = (data || []).filter(
+        (b: any) => normalizeFlockNumber(b.flocks?.flock_number) === norm
+      );
+
+      // The grower house a set record belongs to is stored on the set sheet row
+      // that created it (multi-stage or single-stage), not on the flock.
+      const ids = matching.map((b: any) => b.id);
+      const setRowByBatch = new Map<string, { house: string; buggies: number | null }>();
+      if (ids.length > 0) {
+        const [multi, single] = await Promise.all([
+          supabase
+            .from("multi_stage_operation_rows")
+            .select("batch_id, house_number, buggies_set")
+            .in("batch_id", ids),
+          supabase
+            .from("single_stage_operation_rows")
+            .select("batch_id, house_number, buggies_set")
+            .in("batch_id", ids),
+        ]);
+        [...(multi.data || []), ...(single.data || [])].forEach((r: any) => {
+          if (!r.batch_id) return;
+          const prev = setRowByBatch.get(r.batch_id);
+          setRowByBatch.set(r.batch_id, {
+            house: String(r.house_number ?? "").trim() || prev?.house || "",
+            buggies: (prev?.buggies ?? 0) + (Number(r.buggies_set) || 0) || null,
+          });
+        });
+      }
+
+      return matching
         .map((b: any) => ({
           id: b.id,
           set_date: b.set_date,
-          house_number: String(b.flocks?.house_number ?? ""),
+          house_number:
+            setRowByBatch.get(b.id)?.house ||
+            String(b.flocks?.house_number ?? "").trim() ||
+            houseFromBatchNumber(b.batch_number),
           total_eggs_set: Number(b.total_eggs_set) || 0,
           eggs_injected: b.eggs_injected,
           eggs_cleared: b.eggs_cleared,
@@ -82,11 +123,13 @@ export function useFlockWeekBatches(
           flock_name: b.flocks?.flock_name ?? "",
           flock_number: b.flocks?.flock_number,
           machine_number: b.machines?.machine_number ?? null,
+          buggies: setRowByBatch.get(b.id)?.buggies ?? null,
         }))
         .sort(
           (a, b) =>
-            String(a.house_number).localeCompare(String(b.house_number)) ||
-            a.set_date.localeCompare(b.set_date)
+            String(a.house_number).localeCompare(String(b.house_number), undefined, {
+              numeric: true,
+            }) || a.set_date.localeCompare(b.set_date)
         );
     },
   });

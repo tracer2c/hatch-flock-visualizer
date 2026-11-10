@@ -17,6 +17,8 @@ interface RectalTempEntryProps {
   machineId?: string | null;
   entryMode?: 'house' | 'machine' | 'room';
   isPastDay?: boolean;
+  /** Called when another date is picked so the page loads that day's readings. */
+  onDateChange?: (date: string) => void;
   onSubmit: (data: {
     location: string;
     temperature: number;
@@ -31,7 +33,7 @@ const locationOptions = [
   { value: 'separator_room', label: 'Separator Room (104-106°F)', min: 104, max: 106 },
 ];
 
-const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, entryMode, isPastDay = false, onSubmit }) => {
+const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, checkDate, machineId, entryMode, isPastDay = false, onDateChange, onSubmit }) => {
   const [location, setLocation] = useState('hatcher');
   const [temperature, setTemperature] = useState('');
   const [checkTime, setCheckTime] = useState(new Date().toTimeString().slice(0, 5));
@@ -119,7 +121,12 @@ const RectalTempEntry: React.FC<RectalTempEntryProps> = ({ technicianName, check
                 <Calendar
                   mode="single"
                   selected={parsedEntryDate}
-                  onSelect={(d) => d && setEntryDate(format(d, 'yyyy-MM-dd'))}
+                  onSelect={(d) => {
+                    if (!d) return;
+                    const next = format(d, 'yyyy-MM-dd');
+                    setEntryDate(next);
+                    onDateChange?.(next);
+                  }}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />

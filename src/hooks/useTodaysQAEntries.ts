@@ -20,6 +20,13 @@ export interface TodaysQAEntry {
   temperature: number | null;
   humidity: number | null;
   candling_results: any;
+  /** Setter angles are stored in their own columns, not in candling_results. */
+  angle_top_left: number | null;
+  angle_mid_left: number | null;
+  angle_bottom_left: number | null;
+  angle_top_right: number | null;
+  angle_mid_right: number | null;
+  angle_bottom_right: number | null;
 }
 
 export function useTodaysQAEntries(
@@ -38,7 +45,10 @@ export function useTodaysQAEntries(
     queryFn: async (): Promise<TodaysQAEntry[]> => {
       let query = supabase
         .from('qa_monitoring')
-        .select('id, check_date, check_time, created_at, inspector_name, temperature, humidity, candling_results')
+        .select(
+          'id, check_date, check_time, created_at, inspector_name, temperature, humidity, candling_results, ' +
+            'angle_top_left, angle_mid_left, angle_bottom_left, angle_top_right, angle_mid_right, angle_bottom_right'
+        )
         .eq('check_date', checkDate as string)
         .order('created_at', { ascending: false })
         .limit(100);

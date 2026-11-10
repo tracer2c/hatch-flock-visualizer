@@ -369,7 +369,7 @@ export const FlockSummaryView = ({ data, dateFrom, dateTo, readOnly, onDataUpdat
                         <span>{g.flock_name}</span>
                         {g.batch_slices.length > 1 && (
                           <Badge variant="secondary" className="text-[10px]">
-                            {g.house_count} {g.house_count === 1 ? "house" : "houses"}
+                            {g.batch_slices.length} {g.batch_slices.length === 1 ? "buggy" : "buggies"}
                           </Badge>
                         )}
                         {g.name_variants.length > 1 && (
